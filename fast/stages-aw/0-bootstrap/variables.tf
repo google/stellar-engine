@@ -333,8 +333,26 @@ variable "regime_mapping" {
   }
 }
 
-
-
+variable "workforce_identity_providers" {
+  description = "Workforce Identity Federation pools."
+  type = map(object({
+    attribute_condition = optional(string)
+    issuer              = string
+    display_name        = string
+    description         = string
+    disabled            = optional(bool, false)
+    provider_type       = optional(string, "saml")
+    saml = optional(object({
+      idp_metadata_xml = string
+    }), null)
+    oidc = optional(object({
+      issuer_uri = string
+      client_id  = string
+    }), null)
+  }))
+  default  = {}
+  nullable = false
+}
 
 variable "federated_identity_providers" {
   description = "Workload Identity Federation providers."

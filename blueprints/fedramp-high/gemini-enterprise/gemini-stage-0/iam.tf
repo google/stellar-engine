@@ -58,3 +58,10 @@ resource "google_project_iam_member" "users_serviceusage_consumer" {
   role     = "roles/serviceusage.serviceUsageConsumer"
   member   = each.value
 }
+
+# --- Service Agent Roles ---
+resource "google_project_iam_member" "discoveryengine_sa_storage_admin" {
+  project = var.main_project_id
+  role    = "roles/storage.admin"
+  member  = "serviceAccount:${google_project_service_identity.discoveryengine.email}"
+}

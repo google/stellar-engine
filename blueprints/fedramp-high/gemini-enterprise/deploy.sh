@@ -47,7 +47,7 @@ print_header() {
 
 pause() {
     echo ""
-    read -p "Press Enter to acknowledge and continue..."
+    read -p "Press Enter to continue..."
 }
 
 normalize_environment() {
@@ -97,7 +97,6 @@ configure_data_stores() {
                 
                 if [[ "$BUCKET_EXISTS" =~ ^[Yy]$ ]]; then
                     read -p "Enter Bucket Name (exclude 'gs://' prefix, e.g., company-docs): " GCS_NAME
-                    GCS_NAME=$(echo "$GCS_NAME" | tr -dc 'a-z0-9_.-') # Sanitize bucket name
                     read -p "Enter Display Name for the Data Store: " DISPLAY_NAME
                     
                     if [[ -n "$GCS_NAME" && -n "$DISPLAY_NAME" ]]; then
@@ -117,7 +116,7 @@ EOF
                             echo -e "${GREEN}Import configuration generated for ${GCS_NAME}.${NC}"
                         fi
 
-                        GCS_LIST+=("\"$GCS_INDEX\" = {name = \"$GCS_NAME\", create_bucket = $CREATE_BUCKET, display_name = \"$DISPLAY_NAME\"}")
+                        GCS_LIST+=("{name = \"$GCS_NAME\", create_bucket = $CREATE_BUCKET, display_name = \"$DISPLAY_NAME\"}")
                         echo -e "${GREEN}Added GCS Data Store: ${DISPLAY_NAME} (Bucket: ${GCS_NAME})${NC}"
                     else
                         echo -e "${RED}Invalid Bucket Name or Display Name.${NC}"
@@ -144,7 +143,7 @@ EOF
                             CREATE_BUCKET="true"
                             echo -e "${GREEN}Data Store '${DISPLAY_NAME}' will generate Terraform Bucket key: '${GCS_NAME}'${NC}"
                             
-                            GCS_LIST+=("\"$CLEAN_NAME\" = {name = \"$GCS_NAME\", create_bucket = $CREATE_BUCKET, display_name = \"$DISPLAY_NAME\"}")
+                            GCS_LIST+=("{name = \"$GCS_NAME\", create_bucket = $CREATE_BUCKET, display_name = \"$DISPLAY_NAME\"}")
                             echo -e "${GREEN}Added GCS Data Store: ${DISPLAY_NAME}${NC}"
                         fi
                     else
@@ -157,9 +156,7 @@ EOF
                 
                 if [[ "$DATASET_EXISTS" =~ ^[Yy]$ ]]; then
                     read -p "Enter Dataset ID (e.g., my_dataset): " BQ_DATASET
-                    BQ_DATASET=$(echo "$BQ_DATASET" | tr -dc 'a-zA-Z0-9_') # Sanitize dataset ID
                     read -p "Enter Table ID (e.g., my_table): " BQ_TABLE
-                    BQ_TABLE=$(echo "$BQ_TABLE" | tr -dc 'a-zA-Z0-9_-') # Sanitize table ID
                     read -p "Enter Display Name for the Data Store: " DISPLAY_NAME
                     
                     if [[ -n "$BQ_DATASET" && -n "$BQ_TABLE" && -n "$DISPLAY_NAME" ]]; then
@@ -169,7 +166,7 @@ EOF
                         read -p "Would you like to import this dataset into Terraform state to be managed? [y/N]: " IMPORT_BQ
                         if [[ "$IMPORT_BQ" =~ ^[Yy]$ ]]; then
                             CREATE_DATASET="true"
-                            BQ_INDEX=$(echo "$DISPLAY_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed 's/^-//;s/-$//')
+                            BQ_INDEX=${#BQ_LIST[@]}
                             cat <<EOF >> gemini-stage-0/import.tf
 import {
   to = google_bigquery_dataset.gemini_enterprise_bq_dataset["${BQ_INDEX}"]
@@ -179,8 +176,7 @@ EOF
                             echo -e "${GREEN}Import configuration generated for ${BQ_DATASET}.${NC}"
                         fi
 
-                        BQ_INDEX=$(echo "$DISPLAY_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed 's/^-//;s/-$//')
-                        BQ_LIST+=("\"$BQ_INDEX\" = {dataset_id = \"$BQ_DATASET\", table_id = \"$BQ_TABLE\", create_dataset = $CREATE_DATASET, display_name = \"$DISPLAY_NAME\"}")
+                        BQ_LIST+=("{dataset_id = \"$BQ_DATASET\", table_id = \"$BQ_TABLE\", create_dataset = $CREATE_DATASET, display_name = \"$DISPLAY_NAME\"}")
                         echo -e "${GREEN}Added BigQuery Data Store: ${DISPLAY_NAME} (Table: ${BQ_DATASET}.${BQ_TABLE})${NC}"
                     else
                          echo -e "${RED}Invalid Dataset ID, Table ID, or Display Name.${NC}"
@@ -192,14 +188,12 @@ EOF
                         # Clean display name for BQ Dataset: underscores and alphanumeric only
                         BQ_DATASET=$(echo "$DISPLAY_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/_/g' | sed 's/^_//;s/_$//')
                         read -p "Enter Table ID for the new Data Store (e.g., my_table): " BQ_TABLE
-                        BQ_TABLE=$(echo "$BQ_TABLE" | tr -dc 'a-zA-Z0-9_-') # Sanitize table ID
                         
                         if [[ -n "$BQ_TABLE" ]]; then
                             CREATE_DATASET="true"
                             echo -e "${GREEN}Data Store '${DISPLAY_NAME}' will generate Terraform Dataset ID: '${BQ_DATASET}'${NC}"
                             
-                            BQ_INDEX=$(echo "$DISPLAY_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed 's/^-//;s/-$//')
-                            BQ_LIST+=("\"$BQ_INDEX\" = {dataset_id = \"$BQ_DATASET\", table_id = \"$BQ_TABLE\", create_dataset = $CREATE_DATASET, display_name = \"$DISPLAY_NAME\"}")
+                            BQ_LIST+=("{dataset_id = \"$BQ_DATASET\", table_id = \"$BQ_TABLE\", create_dataset = $CREATE_DATASET, display_name = \"$DISPLAY_NAME\"}")
                             echo -e "${GREEN}Added BigQuery Data Store: ${DISPLAY_NAME} (Table: ${BQ_DATASET}.${BQ_TABLE})${NC}"
                         else
                              echo -e "${RED}Invalid Table ID.${NC}"
@@ -217,11 +211,6 @@ EOF
                 ;;
         esac
     done
-
-    # Clean up empty import.tf if no existing resources were imported
-    if [[ ! -s "gemini-stage-0/import.tf" ]]; then
-        rm -f gemini-stage-0/import.tf
-    fi
 }
 
 # --- Authentication & Setup ---
@@ -251,7 +240,7 @@ auth_and_project_setup() {
         echo -e "${YELLOW}Note: Ensure your ADC matches the current account: ${CURRENT_ACCOUNT}${NC}"
         if [[ "$SKIP_PROMPTS" != "true" ]]; then
              read -p "Do you want to force refresh ADC credentials? (y/N): " REFRESH_ADC
-             if [[ "$REFRESH_ADC" =~ ^[Yy]$ ]]; then
+             if [[ "$REFRESH_ADC" == "y" || "$REFRESH_ADC" == "Y" ]]; then
                   gcloud auth application-default login
              fi
         fi
@@ -274,7 +263,6 @@ auth_and_project_setup() {
             PROJECT_ID=$CURRENT_PROJECT_ID
         else
             read -p "Enter the Google Cloud Project ID: " PROJECT_ID
-            PROJECT_ID=$(echo "$PROJECT_ID" | tr -dc 'a-z0-9-')
             if [[ -n "$PROJECT_ID" ]]; then
                 gcloud config set project "${PROJECT_ID}"
             fi
@@ -283,7 +271,6 @@ auth_and_project_setup() {
 
     if [[ -z "$PROJECT_ID" ]]; then
         read -p "Enter the Google Cloud Project ID: " PROJECT_ID
-        PROJECT_ID=$(echo "$PROJECT_ID" | tr -dc 'a-z0-9-')
         if [[ -n "$PROJECT_ID" ]]; then
             gcloud config set project "${PROJECT_ID}"
         fi
@@ -594,7 +581,7 @@ hydrate_from_state() {
     if [[ -n "$BUCKET_NAME" ]]; then
         bucket="$BUCKET_NAME"
     elif [[ -n "$STATE_BUCKET" ]]; then
-        bucket=$(echo "$STATE_BUCKET" | sed 's#gs://##' | sed 's/\/$//')
+        bucket=$(echo "$STATE_BUCKET" | sed 's/gs:\/\/ //' | sed 's/\/$//')
     fi
 
     if [[ -z "$bucket" ]]; then
@@ -1179,8 +1166,7 @@ configure_stage_0() {
         3)
             echo -e "${RED}WARNING: Gemini for Government currently only supports deployment within FedRAMP High / IL4 Assured Workloads folders.${NC}"
             echo -e "${RED}Proceed at your own risk.${NC}"
-            echo ""
-            read -p "Press Enter to acknowledge and continue..."
+            read -p "Press Enter to acknowledge..."
             ;;
         *)
             echo -e "${RED}Invalid selection. Defaulting to FedRAMP High.${NC}"
@@ -1208,7 +1194,7 @@ configure_stage_0() {
                     echo -e "2. Click on the ${REGIME_DISPLAY} Assured Workload named: ${GREEN}${WORKLOAD_NAME}${NC}"
                     echo -e "3. Click on the button to ${GREEN}\"Review available updates\"${NC} and apply them."
                     echo ""
-                    read -p "Press Enter to acknowledge and continue..."
+                    read -p "Press Enter after you have confirmed the updates have been made..."
                     echo -e "${GREEN}Assured Workload folder ${WORKLOAD_NAME} validated / updated${NC}"
                 fi
             fi
@@ -1439,7 +1425,7 @@ configure_stage_0() {
         echo -e "5. Ensure that the attribute ${YELLOW}google.email${NC} is mapped from your identity provider's email attribute."
         echo -e "   (Example mapping: ${YELLOW}assertion.email${NC} or ${YELLOW}assertion.sub${NC})"
         echo ""
-        read -p "Press Enter to acknowledge and continue..."
+        read -p "Press Enter after you have confirmed the attribute mapping is correct..."
     fi
 
     # 7. Groups
@@ -1483,7 +1469,7 @@ configure_stage_0() {
     local ACCESS_TOKEN
     if ACCESS_TOKEN=$(gcloud auth print-access-token 2>/dev/null); then
         local CACHE_CONFIG_URL="https://us-central1-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/cacheConfig"
-        local CACHE_PAYLOAD=$(jq -n --arg pid "$PROJECT_ID" '{name: "projects/\($pid)/cacheConfig", disableCache: true}')
+        local CACHE_PAYLOAD="{\"name\": \"projects/${PROJECT_ID}/cacheConfig\", \"disableCache\": true}"
         
         local CACHE_RESPONSE
         CACHE_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
@@ -1576,8 +1562,8 @@ configure_stage_0() {
     read -p "Create Data Stores? (y/N): " DS_CHOICE
     CREATE_DS_BOOL="false"
     ENABLE_DS_CMEK="true" # Default to true even if not creating, though irrelevant
-    GCS_DATA_STORES="{}"
-    BQ_DATA_STORES="{}"
+    GCS_DATA_STORES="[]"
+    BQ_DATA_STORES="[]"
     
     if [[ "$DS_CHOICE" == "y" || "$DS_CHOICE" == "Y" ]]; then
         CREATE_DS_BOOL="true"
@@ -1598,13 +1584,12 @@ configure_stage_0() {
         configure_data_stores
         
         if [[ ${#GCS_LIST[@]} -gt 0 ]]; then
-            GCS_DATA_STORES="{ $(IFS=,; echo "${GCS_LIST[*]}") }"
+            GCS_DATA_STORES="[$(IFS=,; echo "${GCS_LIST[*]}")]"
         fi
         if [[ ${#BQ_LIST[@]} -gt 0 ]]; then
-            BQ_DATA_STORES="{ $(IFS=,; echo "${BQ_LIST[*]}") }"
+            BQ_DATA_STORES="[$(IFS=,; echo "${BQ_LIST[*]}")]"
         fi
     fi
-
 
     # 10. Organization Policy Check
     echo ""
@@ -1832,14 +1817,12 @@ deploy_stage_0() {
         echo ""
         echo -e "${YELLOW}ACTION REQUIRED: Populate the created Data Stores with data.${NC}"
         echo ""
-        echo -e "${BLUE}GCS${NC}: Upload your documents to the GCS bucket(s) created by Terraform (see output above \`gcs_data_stores\`)."
-        echo -e "${BLUE}BigQuery${NC}: Populate the BigQuery table(s) created by Terraform (see output above \`bq_data_stores\`)"
+        echo -e "${BLUE}GCS${NC}: Upload your documents to the GCS bucket(s) created by Terraform (see output above \`gcs_data_store_to_bucket\`)."
+        echo -e "${BLUE}BigQuery${NC}: Populate the BigQuery table(s) created by Terraform (see output above \`bq_data_store_to_dataset_table\`)"
         echo ""
-        echo -e "After uploading documents into the bucket / table, navigate to:"
-        echo -e "${YELLOW}Helper Functions${NC} > ${YELLOW}3. Import Documents to Gemini Enterprise Data Store (Cloud Storage / BigQuery)${NC}"
+        echo -e "After uploading documents into the bucket / table, navigate to ${YELLOW}Helper Functions${NC} > ${YELLOW}Populate Data Stores${NC}"
         echo -e "to import the data into the Gemini Enterprise Data Stores and begin the indexing process."
-        echo ""
-        read -p "Press Enter to acknowledge and continue..."
+        read -p "Press Enter to continue..."
     fi
     
     echo ""
@@ -1891,13 +1874,25 @@ configure_gem4gov() {
     # Parse Load Balancer IP for display
     GEMINI_IP=$(echo "$STATE_CONTENT" | jq -r '.outputs.gemini_enterprise_ip.value // "N/A"')
     
-    # Parse Data Stores
-    GCS_JSON_RAW=$(echo "$STATE_CONTENT" | jq -c '.outputs.gcs_data_stores.value // {} | to_entries | map(select(.value.data_store_id != null)) | map(.value)' 2>/dev/null)
-    BQ_JSON_RAW=$(echo "$STATE_CONTENT" | jq -c '.outputs.bq_data_stores.value // {} | to_entries | map(select(.value.data_store_id != null)) | map(.value)' 2>/dev/null)
+    # Construct command
+    CMD="gem4gov app create --project-id ${PROJECT_ID} --compliance-regime FEDRAMP_HIGH"
     
+    # Parse GCS Data Stores
+    # We read the map and filter out entries where data_store_id is null (not yet created)
+    GCS_JSON_RAW=$(echo "$STATE_CONTENT" | jq -c '
+      .outputs.gcs_data_stores.value // {} | to_entries | map(select(.value.data_store_id != null)) | map(.value)
+    ' 2>/dev/null)
+    
+    # Parse BigQuery Data Stores
+    BQ_JSON_RAW=$(echo "$STATE_CONTENT" | jq -c '
+      .outputs.bq_data_stores.value // {} | to_entries | map(select(.value.data_store_id != null)) | map(.value)
+    ' 2>/dev/null)
+    
+    # Check if empty array
     if [[ "$GCS_JSON_RAW" == "[]" || -z "$GCS_JSON_RAW" ]]; then GCS_JSON_RAW=""; fi
     if [[ "$BQ_JSON_RAW" == "[]" || -z "$BQ_JSON_RAW" ]]; then BQ_JSON_RAW=""; fi
 
+    # Convert to arrays
     DS_ID_ARRAY=()
     DS_DISPLAY_ARRAY=()
     
@@ -1910,70 +1905,54 @@ configure_gem4gov() {
         while IFS= read -r disp; do [[ -n "$disp" ]] && DS_DISPLAY_ARRAY+=("$disp"); done < <(echo "$BQ_JSON_RAW" | jq -r '.[].display_name')
     fi
 
-    echo ""
-    echo -e "${BLUE}--- Application Details ---${NC}"
-    echo -e "${YELLOW}Please provide details for the Gemini Enterprise Application.${NC}"
-    APP_LIST=()
+    SELECTED_IDS=""
     
-    while true; do
-        APP_DISPLAY=""
-        while [[ -z "$APP_DISPLAY" ]]; do
-            read -p "Please enter a Display Name for the Application: " APP_DISPLAY
+    if [[ ${#DS_ID_ARRAY[@]} -gt 0 ]]; then
+        echo -e "${BLUE}Available Data Stores:${NC}"
+        i=1
+        for idx in "${!DS_ID_ARRAY[@]}"; do
+            echo "$i. ${DS_DISPLAY_ARRAY[$idx]} (${DS_ID_ARRAY[$idx]})"
+            ((i++))
         done
-        
-        APP_COMPANY=""
-        while [[ -z "$APP_COMPANY" ]]; do
-            read -p "Please enter the Agency / Department Name (no abbreviations): " APP_COMPANY
-        done
-        
-        # Determine App Key
-        APP_SUFFIX=$(python3 -c "import random, string; print(''.join(random.choices(string.ascii_lowercase + string.digits, k=4)))")
-        ENG_ID="g4g-gem-ent-app-${APP_SUFFIX}"
-        
-        SELECTED_IDS=""
-        if [[ ${#DS_ID_ARRAY[@]} -gt 0 ]]; then
-            echo -e "${YELLOW}Available Data Stores for association:${NC}"
-            i=1
-            for idx in "${!DS_ID_ARRAY[@]}"; do
-                echo "$i. ${DS_DISPLAY_ARRAY[$idx]} (${DS_ID_ARRAY[$idx]})"
-                ((i++))
-            done
-            read -p "Select Data Stores to associate (comma-separated numbers, e.g. 1,3) [Enter to skip]: " APP_DS_SEL
-            
-            if [[ -n "$APP_DS_SEL" ]]; then
-                IFS=',' read -ra SELECTED_INDICES <<< "$APP_DS_SEL"
-                SELECTED_DS_LIST=()
-                for index in "${SELECTED_INDICES[@]}"; do
-                    index=$(echo "$index" | xargs)
-                    if [[ "$index" =~ ^[0-9]+$ ]] && (( index >= 1 && index <= ${#DS_ID_ARRAY[@]} )); then
-                        SELECTED_DS_LIST+=("${DS_ID_ARRAY[$((index-1))]}")
-                    fi
-                done
-                if [[ ${#SELECTED_DS_LIST[@]} -gt 0 ]]; then
-                    SELECTED_IDS=$(IFS=,; echo "${SELECTED_DS_LIST[*]}")
-                fi
-            fi
-        fi
-        
-        APP_JSON=$(jq -n \
-            --arg id "$ENG_ID" \
-            --arg display "$APP_DISPLAY" \
-            --arg company "$APP_COMPANY" \
-            --arg ds "$SELECTED_IDS" \
-            '{engine_id: $id, display_name: $display, company_name: $company, data_stores: $ds}')
-        APP_LIST+=("$APP_JSON")
         
         echo ""
-        read -p "Do you want to create another Gemini Enterprise Application? [y/N]: " CREATE_APP
-        if [[ ! "$CREATE_APP" =~ ^[Yy]$ ]]; then
-            break
+        read -p "Select Data Stores to associate (comma-separated numbers, e.g. 1,3) [Enter for ALL]: " DS_SELECTION
+        
+        if [[ -z "$DS_SELECTION" ]]; then
+            echo "Selecting ALL data stores."
+            # Join all with commas
+            SELECTED_IDS=$(IFS=,; echo "${DS_ID_ARRAY[*]}")
+        else
+            # Parse selection
+            IFS=',' read -ra SELECTED_INDICES <<< "$DS_SELECTION"
+            SELECTED_DS_LIST=()
+            
+            for index in "${SELECTED_INDICES[@]}"; do
+                # Trim whitespace
+                index=$(echo "$index" | xargs)
+                
+                # Validate index (1-based)
+                if [[ "$index" =~ ^[0-9]+$ ]] && (( index >= 1 && index <= ${#DS_ID_ARRAY[@]} )); then
+                    # Arrays are 0-based, so subtract 1
+                    SELECTED_DS_LIST+=("${DS_ID_ARRAY[$((index-1))]}")
+                else
+                    echo -e "${YELLOW}Warning: Invalid selection '$index' ignored.${NC}"
+                fi
+            done
+            
+            if [[ ${#SELECTED_DS_LIST[@]} -gt 0 ]]; then
+                SELECTED_IDS=$(IFS=,; echo "${SELECTED_DS_LIST[*]}")
+                echo -e "${GREEN}Selected Data Stores: $SELECTED_IDS${NC}"
+            else
+                echo -e "${YELLOW}No valid data stores selected. Proceeding without data stores.${NC}"
+            fi
         fi
-    done
-    
-    if [[ ${#APP_LIST[@]} -eq 0 ]]; then
-         echo "No applications generated."
-         pause
-         return 0
+    else
+        echo -e "${YELLOW}No Data Stores found in state.${NC}"
+    fi
+
+    if [[ -n "$SELECTED_IDS" ]]; then
+        CMD="$CMD --data-stores $SELECTED_IDS"
     fi
 
     # 2. Extract Workforce Identity Details
@@ -1990,43 +1969,20 @@ configure_gem4gov() {
         fi
     fi
     
-    WIF_ARGS=""
     if [[ -n "$POOL_NAME" && -n "$PROVIDER_ID" ]]; then
         # Extract Pool ID from full name (locations/global/workforcePools/POOL_ID)
         POOL_ID=$(basename "$POOL_NAME")
-        WIF_ARGS="--workforce-pool-id $POOL_ID --workforce-provider-id $PROVIDER_ID"
+        CMD="$CMD --workforce-pool-id $POOL_ID --workforce-provider-id $PROVIDER_ID"
     fi
 
+
+    echo "Running: $CMD"
+    echo ""
     export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"
     export GOOGLE_CLOUD_QUOTA_PROJECT="${PROJECT_ID}"
-
-    echo "Executing Application Configurations..."
+    $CMD
     
-    # Iterate apps
-    for APP_JSON in "${APP_LIST[@]}"; do
-        
-        ENG_ID=$(echo "$APP_JSON" | jq -r '.engine_id')
-        DISP_NAME=$(echo "$APP_JSON" | jq -r '.display_name')
-        COMP_NAME=$(echo "$APP_JSON" | jq -r '.company_name')
-        DS_KEYS=$(echo "$APP_JSON" | jq -r '.data_stores // empty')
-        
-        CMD="gem4gov app create --project-id \"${PROJECT_ID}\" --engine-id \"${ENG_ID}\" --display-name \"${DISP_NAME}\" --company-name \"${COMP_NAME}\" --compliance-regime FEDRAMP_HIGH"
-        
-        if [[ -n "$DS_KEYS" && "$DS_KEYS" != "null" && "$DS_KEYS" != "\"\"" ]]; then
-             CMD="$CMD --data-stores \"${DS_KEYS}\""
-        fi
-        
-        if [[ -n "$WIF_ARGS" ]]; then
-            CMD="$CMD $WIF_ARGS"
-        fi
-        
-        echo -e "${BLUE}Creating Application: ${DISP_NAME} (${ENG_ID})...${NC}"
-        echo "Running: $CMD"
-        eval "$CMD"
-        echo ""
-    done
-    
-    echo -e "${GREEN}Gemini Enterprise Applications configured.${NC}"
+    echo -e "${GREEN}Gemini Enterprise Application configured.${NC}"
 
     echo ""
     echo -e "${YELLOW}IMPORTANT NEXT STEPS:${NC}"
@@ -2285,10 +2241,11 @@ import_documents_helper() {
     echo ""
 
     if [[ "$SELECTED_TYPE" == "gcs" ]]; then
-        CMD_ARRAY=(gem4gov datastore import --project-id "${PROJECT_ID}" --data-store-id "${SELECTED_ID}" --source-type "${SELECTED_TYPE}" --gcs-bucket "${SELECTED_SOURCE}")
-        "${CMD_ARRAY[@]}"
+        CMD="gem4gov datastore import --project-id ${PROJECT_ID} --data-store-id ${SELECTED_ID} --source-type ${SELECTED_TYPE}"
+        echo "Running: $CMD"
         export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"
         export GOOGLE_CLOUD_QUOTA_PROJECT="${PROJECT_ID}"
+        $CMD
     elif [[ "$SELECTED_TYPE" == "bigquery" ]]; then
         echo -e "${YELLOW}--- BigQuery Document Import ---${NC}"
         
@@ -2323,29 +2280,10 @@ import_documents_helper() {
         if [[ "$USE_EXISTING" != "y" && "$USE_EXISTING" != "Y" ]]; then
             echo ""
             read -p "Enter the path to your custom JSON schema file: " CUSTOM_SCHEMA_FILE
-            
-            # 1. Check if the file exists and is a regular file
             if [[ ! -f "$CUSTOM_SCHEMA_FILE" ]]; then
-                echo -e "${RED}Error: File '$CUSTOM_SCHEMA_FILE' not found or is not a regular file.${NC}"
+                echo -e "${RED}Error: File '$CUSTOM_SCHEMA_FILE' not found.${NC}"
                 pause
                 return 1
-            fi
-
-            # 2. Prevent explicit path traversal strings
-            if [[ "$CUSTOM_SCHEMA_FILE" == *"../"* || "$CUSTOM_SCHEMA_FILE" == *".." ]]; then
-                echo -e "${RED}Error: Invalid file path. Path traversal sequences ('../') are not allowed.${NC}"
-                pause
-                return 1
-            fi
-            
-            # 3. Restrict execution to only files inside the project working directory
-            BASE_DIR=$(pwd)
-            ABS_PATH=$(realpath "$CUSTOM_SCHEMA_FILE" 2>/dev/null || echo "")
-            
-            if [[ -z "$ABS_PATH" || "$ABS_PATH" != "$BASE_DIR"* ]]; then
-                 echo -e "${RED}Error: Custom schema file must be located within the project folder directory (${BASE_DIR}).${NC}"
-                 pause
-                 return 1
             fi
         fi
         
@@ -2654,13 +2592,14 @@ distribute_gemini_licenses() {
 
         echo -e "${BLUE}Running API call via gem4gov CLI...${NC}"
         
-        # Build command as an array to prevent injection
-        CMD_ARRAY=(python3 "$GEM4GOV_PATH" license distribute --billing-account "$BILLING_ACCOUNT_ID" --config-id "$SELECTED_CONFIG_ID" --target-project-number "$TARGET_PROJECT_NUMBER" --location "$LOCATION" --count "$LICENSE_COUNT" --quota-project "$PROJECT_ID")
-        if [[ -n "$EXISTING_LICENSE_CONFIG_ID" ]]; then
-            CMD_ARRAY+=("--license-config-id" "$EXISTING_LICENSE_CONFIG_ID")
-        fi
+        # Build command
+        CMD="python3 \"$GEM4GOV_PATH\" license distribute --billing-account \"$BILLING_ACCOUNT_ID\" --config-id \"$SELECTED_CONFIG_ID\" --target-project-number \"$TARGET_PROJECT_NUMBER\" --location \"$LOCATION\" --count \"$LICENSE_COUNT\" --quota-project \"$PROJECT_ID\""
         
-        "${CMD_ARRAY[@]}"
+        if [[ -n "$EXISTING_LICENSE_CONFIG_ID" ]]; then
+            CMD="$CMD --license-config-id \"$EXISTING_LICENSE_CONFIG_ID\""
+        fi
+
+        eval $CMD
 
         if [[ $? -eq 0 ]]; then
             echo -e "${GREEN}Licenses distributed successfully!${NC}"
@@ -2872,8 +2811,7 @@ deploy_stage_1() {
         echo "5. Click 'Create'. (Do not add redirect URIs yet)."
         echo "6. Copy the 'Client ID' and 'Client Secret'."
         echo -e "${NC}"
-        echo ""
-        read -p "Press Enter to acknowledge and continue..."
+        read -p "Press Enter after you have created the client..."
 
         echo ""
         echo -e "${YELLOW}Step 2: Update Redirect URI${NC}"
@@ -2881,8 +2819,7 @@ deploy_stage_1() {
         echo -e "2. Add the following Authorized redirect URI (replace [CLIENT_ID] with the actual ID you just copied): ${BLUE}https://iap.googleapis.com/v1/oauth/clientIds/[CLIENT_ID]:handleRedirect${NC}"
         echo "3. Save the changes."
         echo -e "${NC}"
-        echo ""
-        read -p "Press Enter to acknowledge and continue..."
+        read -p "Press Enter after you have updated the redirect URI..."
 
         echo ""
         echo -e "${YELLOW}Step 3: Configure IAP for Workforce Identity${NC}"
@@ -2894,8 +2831,7 @@ deploy_stage_1() {
         echo "   - OAuth client secret: (Paste from Step 1)"
         echo "6. Click 'Save'."
         echo -e "${NC}"
-        echo ""
-        read -p "Press Enter to acknowledge and continue..."
+        read -p "Press Enter after you have configured IAP..."
         echo ""
         echo -e "${GREEN}OAuth and IAP Manual Configuration marked as complete.${NC}"
     fi

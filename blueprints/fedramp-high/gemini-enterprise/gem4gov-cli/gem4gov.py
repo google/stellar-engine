@@ -723,6 +723,116 @@ def distribute_licenses(billing_account, config_id, target_project_number, locat
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}")
 
+##############################################################
+################       gem4gov license        ################
+##############################################################
+
+@cli.group()
+def license():
+    """Manages Gemini for Government licenses."""
+    pass
+
+@license.command(name='list')
+@click.option('--billing-account', required=True, help='The billing account ID.')
+@click.option('--quota-project', required=False, help='The project ID to use for API quota.')
+@click.option('--format', type=click.Choice(['text', 'json']), default='text', help='The output format.')
+def list_licenses(billing_account, quota_project, format):
+    """Lists available Gemini for Government license configurations for a billing account."""
+    credentials = get_credentials()
+    if quota_project:
+        credentials = credentials.with_quota_project(quota_project)
+        
+    # Use discoveryengine v1alpha as per PDF
+    client_options = ClientOptions(api_endpoint="https://us-discoveryengine.googleapis.com")
+    service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
+    
+    try:
+        request = service.billingAccounts().billingAccountLicenseConfigs().list(
+            parent=f'billingAccounts/{billing_account}'
+        )
+        response = request.execute()
+        
+        configs = response.get('billingAccountLicenseConfigs', [])
+        
+        if format == 'json':
+            click.echo(json.dumps(configs, indent=2))
+            return
+
+        if not configs:
+            click.echo(f"No license configurations found for billing account {billing_account}.")
+            return
+
+        for config in configs:
+            name = config.get('subscriptionDisplayName', config.get('name'))
+            total = config.get('licenseCount', 0)
+            distributions = config.get('licenseConfigDistributions', {})
+            distributed = sum(int(v) for v in distributions.values())
+            available = int(total) - distributed
+            
+            # Extract ID from name: billingAccounts/ID/billingAccountLicenseConfigs/CONFIG_ID
+            config_id = config.get('name').split('/')[-1]
+            
+            click.echo(f"Subscription: {name}")
+            click.echo(f"  ID: {config_id}")
+            click.echo(f"  Total Licenses: {total}")
+            click.echo(f"  Distributed: {distributed}")
+            click.echo(f"  Available: {available}")
+            click.echo("---")
+            
+    except HttpError as e:
+        click.echo(f"An error occurred: {e}")
+    except Exception as e:
+        click.echo(f"An unexpected error occurred: {e}")
+
+@license.command(name='distribute')
+@click.option('--billing-account', required=True, help='The billing account ID.')
+@click.option('--config-id', required=True, help='The billing account license config ID.')
+@click.option('--target-project-number', required=True, help='The target project number.')
+@click.option('--location', default='global', type=click.Choice(['global', 'us', 'eu']), help='The location.')
+@click.option('--count', required=True, type=int, help='The number of licenses to distribute (incremental).')
+@click.option('--license-config-id', help='The existing project-level license config ID (optional).')
+@click.option('--quota-project', required=False, help='The project ID to use for API quota.')
+def distribute_licenses(billing_account, config_id, target_project_number, location, count, license_config_id, quota_project):
+    """Distributes Gemini for Government licenses to a project."""
+    credentials = get_credentials()
+    if quota_project:
+        credentials = credentials.with_quota_project(quota_project)
+    
+    endpoint = "https://discoveryengine.googleapis.com"
+    if location == 'us':
+        endpoint = "https://us-discoveryengine.googleapis.com"
+    elif location == 'eu':
+        endpoint = "https://eu-discoveryengine.googleapis.com"
+        
+    client_options = ClientOptions(api_endpoint=endpoint)
+    # v1alpha is needed for billingAccountLicenseConfigs
+    service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
+    
+    name = f'billingAccounts/{billing_account}/billingAccountLicenseConfigs/{config_id}'
+    
+    body = {
+        "projectNumber": target_project_number,
+        "location": location,
+        "licenseCount": count
+    }
+    if license_config_id:
+        body["licenseConfigId"] = license_config_id
+
+    try:
+        request = service.billingAccounts().billingAccountLicenseConfigs().distributeLicenseConfig(
+            name=name,
+            body=body
+        )
+        response = request.execute()
+        click.echo("Licenses distributed successfully!")
+        click.echo(json.dumps(response, indent=2))
+        
+    except HttpError as e:
+        click.echo(f"An error occurred: {e}")
+    except Exception as e:
+        click.echo(f"An unexpected error occurred: {e}")
+
+
 
 
 def import_documents_helper(credentials, project_id, source_type, data_store_id=None, gcs_bucket=None):
@@ -1151,8 +1261,7 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
         "solutionType": "SOLUTION_TYPE_SEARCH",
         "searchEngineConfig": {
             "searchTier": "SEARCH_TIER_ENTERPRISE",
-            "searchAddOns": ["SEARCH_ADD_ON_LLM"],
-            "requiredSubscriptionTier": "SUBSCRIPTION_TIER_SEARCH_AND_ASSISTANT"
+            "searchAddOns": ["SEARCH_ADD_ON_LLM"]
         },
         "features": engine_features.get('features'),
         "industryVertical": "GENERIC",

@@ -14,7 +14,6 @@ features:
   personalization-memory: "FEATURE_STATE_OFF"
   personalization-suggested-highlights: "FEATURE_STATE_OFF"
   disable-agent-sharing: "FEATURE_STATE_ON"
-  agent-sharing-without-admin-approval: "FEATURE_STATE_OFF"
   disable-image-generation: "FEATURE_STATE_ON"
   disable-video-generation: "FEATURE_STATE_ON"
   disable-onedrive-upload: "FEATURE_STATE_ON"

@@ -254,25 +254,25 @@ variable "shared_vpc_proxy_subnet_name" {
 }
 
 variable "gcs_data_store_configs" {
-  description = "A map of configurations for Google Cloud Storage (GCS) Data Stores. If create_bucket is true, the script will create the bucket."
-  type = map(object({
+  description = "A list of configurations for Google Cloud Storage (GCS) Data Stores. If create_bucket is true, the script will create the bucket."
+  type = list(object({
     name          = string
     create_bucket = bool
     display_name  = optional(string)
   }))
-  default = {}
+  default = []
 }
 
 variable "bq_data_store_configs" {
-  description = "A map of configurations for BigQuery Data Stores. If create_dataset is true, it creates the dataset. Schema provides the structure for the data."
-  type = map(object({
+  description = "A list of configurations for BigQuery Data Stores. If create_dataset is true, it creates the dataset. Schema provides the structure for the data."
+  type = list(object({
     dataset_id     = string
     table_id       = string
     create_dataset = bool
     schema         = optional(string)
     display_name   = optional(string)
   }))
-  default = {}
+  default = []
 }
 
 

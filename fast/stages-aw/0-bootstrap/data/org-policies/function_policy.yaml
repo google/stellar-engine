@@ -28,7 +28,7 @@ cloudfunctions.allowedIngressSettings:
   rules:
   - allow:
       values:
-        - ALLOW_INTERNAL_AND_GCLB
+        - is:ALLOW_INTERNAL_AND_GCLB
 
 # This list constraint defines the allowed VPC Connector egress settings for
 # deployment of a Cloud Function. When this constraint is enforced, functions

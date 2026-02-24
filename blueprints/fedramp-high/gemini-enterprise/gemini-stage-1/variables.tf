@@ -44,3 +44,8 @@ variable "host_project_id" {
   type        = string
   default     = ""
 }
+
+variable "automation_service_account" {
+  description = "Service account email to impersonate for accessing remote state."
+  type        = string
+}

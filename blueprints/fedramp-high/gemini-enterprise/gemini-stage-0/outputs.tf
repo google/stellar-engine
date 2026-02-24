@@ -104,7 +104,7 @@ output "shared_vpc_proxy_subnet_name" {
 
 output "gcs_data_stores" {
   description = "A mapping of formatted data store keys to their configuration, ID, and bucket details."
-  value = { for k, v in var.gcs_data_store_configs : k => {
+  value = { for k, v in local.gcs_configs : k => {
     display_name  = v.display_name
     data_store_id = can(google_discovery_engine_data_store.gemini_enterprise_gcs_data_store[k]) ? google_discovery_engine_data_store.gemini_enterprise_gcs_data_store[k].data_store_id : null
     bucket_name   = can(google_storage_bucket.gemini_enterprise_gcs_bucket[k]) ? google_storage_bucket.gemini_enterprise_gcs_bucket[k].name : v.name
@@ -113,7 +113,7 @@ output "gcs_data_stores" {
 
 output "bq_data_stores" {
   description = "A mapping of formatted data store keys to their configuration, ID, dataset, and table details."
-  value = { for k, v in var.bq_data_store_configs : k => {
+  value = { for k, v in local.bq_configs : k => {
     display_name  = v.display_name
     data_store_id = can(google_discovery_engine_data_store.gemini_enterprise_bq_data_store[k]) ? google_discovery_engine_data_store.gemini_enterprise_bq_data_store[k].data_store_id : null
     dataset_id    = can(google_bigquery_dataset.gemini_enterprise_bq_dataset[k]) ? google_bigquery_dataset.gemini_enterprise_bq_dataset[k].dataset_id : v.dataset_id
@@ -125,8 +125,3 @@ output "cmek_key_id" {
   description = "The CMEK Key ID used for encryption."
   value       = local.cmek_key_id
 }
-
-# output "engine_ids" {
-#   value       = { for k, v in google_discovery_engine_search_engine.gemini_enterprise_search_engine : k => v.engine_id }
-#   description = "A map of application keys to their corresponding Gemini Enterprise Search Engine IDs."
-# }

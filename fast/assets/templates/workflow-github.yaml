@@ -22,6 +22,9 @@ on:
       - closed
       - opened
       - synchronize
+    paths:
+      - ".github/workflows/${stage_name}.yaml"
+      - "${working_directory}/**"
 
 env:
   FAST_SERVICE_ACCOUNT: ${service_accounts.apply}
@@ -30,7 +33,7 @@ env:
   SSH_AUTH_SOCK: /tmp/ssh_agent.sock
   TF_PROVIDERS_FILE: ${tf_providers_files.apply}
   TF_PROVIDERS_FILE_PLAN: ${tf_providers_files.plan}
-  TF_VERSION: 1.6.5
+  TF_VERSION: 1.12.2
 
 jobs:
   fast-pr:
@@ -40,10 +43,14 @@ jobs:
       issues: write
       pull-requests: write
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${working_directory}
     steps:
       - id: checkout
         name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # set up SSH key authentication to the modules repository
 
@@ -100,7 +107,7 @@ jobs:
 
       - id: tf-setup
         name: Set up Terraform
-        uses: hashicorp/setup-terraform@v2.0.3
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: $${{env.TF_VERSION}}
 
@@ -121,7 +128,7 @@ jobs:
         name: Terraform plan
         continue-on-error: true
         run: |
-          terraform plan -input=false -out ../plan.out -no-color $${{env.plan_opts}}
+          terraform plan -input=false -out ../plan.out -no-color $${{env.plan_opts}} 2>&1 | tee plan.log
 
       - id: tf-apply
         if: github.event.pull_request.merged == true && success()
@@ -136,12 +143,14 @@ jobs:
       - id: pr-comment
         name: Post comment to Pull Request
         continue-on-error: true
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         if: github.event_name == 'pull_request'
-        env:
-          PLAN: $${{steps.tf-plan.outputs.stdout}}\n$${{steps.tf-plan.outputs.stderr}}
         with:
           script: |
+            const fs = require('fs');
+            const planLog = fs.readFileSync('${working_directory}/plan.log', 'utf8');
+            const planFull = planLog.split('\n').filter(l => l.match(/^([A-Z\s].*|)$$/)).join('\n');
+            const plan = planFull.length > 65000 ? planFull.substring(0, 65000) + "\n...[Truncated]..." : planFull;
             const output = `### Terraform Initialization \`$${{steps.tf-init.outcome}}\`
 
             ### Terraform Validation \`$${{steps.tf-validate.outcome}}\`
@@ -159,7 +168,7 @@ jobs:
             <details><summary>Show Plan</summary>
 
             \`\`\`\n
-            $${process.env.PLAN.split('\n').filter(l => l.match(/^([A-Z\s].*|)$$/)).join('\n')}
+            $${plan}
             \`\`\`
 
             </details>
@@ -177,7 +186,7 @@ jobs:
 
       - id: pr-short-comment
         name: Post comment to Pull Request (abbreviated)
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         if: github.event_name == 'pull_request' && steps.pr-comment.outcome != 'success'
         with:
           script: |

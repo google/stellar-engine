@@ -95,7 +95,7 @@ compute.restrictProtocolForwardingCreationForTypes:
   rules:
     - allow:
         values:
-          - INTERNAL
+          - is:INTERNAL
 
 # This list constraint defines the set of VPC networks that are allowed to be
 # peered with the VPC networks belonging to this project, folder, or

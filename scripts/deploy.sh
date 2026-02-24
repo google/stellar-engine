@@ -544,10 +544,17 @@ billing_account = {
   id = "${BILLING_ACCOUNT}"
 }
 
-# region configuration - this will automatically populate locations for GCS, BigQuery, KMS, and logging buckets
-# Default to us-east4 for IL5/FedRAMP compliance - adjust as needed
+# locations for GCS, BigQuery, KMS, and logging buckets created here
+locations = {
+  bq      = "${REGION}"
+  gcs     = "${REGION}"
+  logging = "${REGION}"
+  pubsub  = ["${REGION}"]
+  kms     = "us"
+}
+
 regions = {
-  primary = "${REGION}"  # Change to your preferred region - this will be used for all bootstrap resources
+  primary = "${REGION}"
 }
 
 # use \`gcloud organizations list\`
@@ -592,12 +599,63 @@ fast_features = {
 
 assured_workloads = {
   regime   = "${COMPLIANCE_REGIME}" # "IL4, IL5, FEDRAMP_HIGH, etc... if you wish to not use assured_workloads, set this value to COMPLIANCE_REGIME_UNSPECIFIED"
-  location = "${REGION}" # Uses the same region as other resources for consistency - change to match your regions.primary if different
+  location = "us" # Uses the same region as other resources for consistency
 }
 
 bootstrap_project = "${BOOTSTRAP_PROJECT_ID}"
 
 alert_email = "${LOGGING_ALERTS_EMAIL_ADDRESS}"
+
+# groups = {
+#   gcp-billing-admins      = "gcp-billing-admins"
+#   gcp-devops              = "gcp-devops"
+#   gcp-vpc-network-admins  = "gcp-vpc-network-admins"
+#   gcp-organization-admins = "gcp-organization-admins"
+#   gcp-security-admins     = "gcp-security-admins"
+#   gcp-support             = "gcp-devops"
+# }
+
+# workforce_identity_providers = {
+#   "entra-oidc" = {
+#     issuer = "entra-oidc" # Also available, "entra-saml"
+#     display_name = "Microsoft Entra - OIDC"
+#     description = "Microsoft Entra - OIDC"
+#     disabled = false
+#     provider_type = "oidc"
+#     oidc = {
+#       issuer_uri = "[ISSUER_URI]"
+#       client_id = "[CLIENT_ID]"
+#     }
+#   }
+# }
+
+# workload_identity_providers = {
+#   # Use a private instance of GitHub.
+#   # Specify a custom audience and a custom issuer_uri
+#   private-github-provider = {
+#     attribute_condition = "attribute.namespace_path==\"my-github-org\""
+#     issuer              = "github"
+#     custom_settings = {
+#       audiences         = ["https://github.example.com"]
+#       issuer_uri        = "https://github.example.com"
+#     }
+#   }
+# }
+
+# cicd_repositories = {
+#   bootstrap = {
+#     branch            = "main"
+#     identity_provider = "private-github-provider"
+#     name              = "my-github-org/fast-bootstrap"
+#     type              = "github"
+#   }
+#   resman = {
+#     branch            = "main"
+#     identity_provider = "private-github-provider"
+#     name              = "my-github-org/fast-resman"
+#     type              = "github"
+#   }
+# }
 EOF
   fi
 
@@ -921,7 +979,7 @@ envs_folders = {
  Prod = {
    admin = "gcp-organization-admins@${FULLY_QUALIFIED_DOMAIN_NAME}"
  },
- Int = {
+ Dev = {
   admin = "gcp-organization-admins@${FULLY_QUALIFIED_DOMAIN_NAME}"
  },
  Test = {

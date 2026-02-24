@@ -16,8 +16,9 @@
 data "terraform_remote_state" "stage_0" {
   backend = "gcs"
   config = {
-    bucket = var.stage_0_state_bucket
-    prefix = "terraform/state/stage-0"
+    bucket                      = var.stage_0_state_bucket
+    prefix                      = "terraform/state/stage-0"
+    impersonate_service_account = var.automation_service_account
   }
 }
 
@@ -156,11 +157,12 @@ resource "google_iap_web_region_backend_service_iam_member" "iap_admin" {
 }
 
 resource "google_iap_web_region_backend_service_iam_member" "iap_user" {
+  for_each                   = toset(data.terraform_remote_state.stage_0.outputs.user_groups)
   project                    = data.terraform_remote_state.stage_0.outputs.main_project_id
   region                     = data.terraform_remote_state.stage_0.outputs.region
   web_region_backend_service = data.google_compute_region_backend_service.gemini_enterprise_backend.name
   role                       = "roles/iap.httpsResourceAccessor"
-  member                     = data.terraform_remote_state.stage_0.outputs.user_group
+  member                     = each.value
   condition {
     title       = "User Access"
     description = data.terraform_remote_state.stage_0.outputs.enable_chrome_enterprise_premium ? "Access for Users with Moderate Device Policy" : "Access for Users with Basic Policy"

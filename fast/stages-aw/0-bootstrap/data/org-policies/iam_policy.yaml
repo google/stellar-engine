@@ -114,4 +114,4 @@ iam.serviceAccountKeyExposureResponse:
   rules:
     - allow:
         values:
-          - DISABLE_KEY
+          - is:DISABLE_KEY
