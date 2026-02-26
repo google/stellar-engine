@@ -61,9 +61,9 @@ variable "admin_group" {
   type        = string
 }
 
-variable "user_group" {
-  description = "The email address of the Gemini Enterprise users group."
-  type        = string
+variable "user_groups" {
+  description = "A list of email addresses or principal sets for the Gemini Enterprise users group."
+  type        = list(string)
 }
 
 variable "gemini_enterprise_gcs_bucket_name" {
@@ -253,20 +253,26 @@ variable "shared_vpc_proxy_subnet_name" {
   default     = ""
 }
 
-variable "gcs_data_store_names" {
-  description = "A list of names to use for creating GCS buckets and associated Discovery Engine Data Stores."
-  type        = list(string)
-  default     = []
+variable "gcs_data_store_configs" {
+  description = "A map of configurations for Google Cloud Storage (GCS) Data Stores. If create_bucket is true, the script will create the bucket."
+  type = map(object({
+    name          = string
+    create_bucket = bool
+    display_name  = optional(string)
+  }))
+  default = {}
 }
 
 variable "bq_data_store_configs" {
-  description = "A list of objects defining BigQuery datasets and tables to create and connect to Discovery Engine. Each object should have 'dataset_id' and 'table_id'."
-  type = list(object({
-    dataset_id = string
-    table_id   = string
-
+  description = "A map of configurations for BigQuery Data Stores. If create_dataset is true, it creates the dataset. Schema provides the structure for the data."
+  type = map(object({
+    dataset_id     = string
+    table_id       = string
+    create_dataset = bool
+    schema         = optional(string)
+    display_name   = optional(string)
   }))
-  default = []
+  default = {}
 }
 
 
@@ -286,4 +292,10 @@ variable "moderate_device_access_levels" {
   description = "List of Access Levels to include in the Moderate Device Policy."
   type        = list(string)
   default     = []
+}
+
+variable "enable_data_store_cmek" {
+  description = "Whether to encrypt Data Stores with CMEK. If false, Google-managed keys will be used."
+  type        = bool
+  default     = true
 }

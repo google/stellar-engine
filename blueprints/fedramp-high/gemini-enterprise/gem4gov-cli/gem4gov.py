@@ -504,11 +504,14 @@ def app():
 
 @app.command("create")
 @click.option('--project-id', required=True, help='GCP Project ID')
+@click.option('--engine-id', default=None, help='Gemini Enterprise Engine ID')
+@click.option('--display-name', default=None, help='Display Name for the Gemini Enterprise application')
+@click.option('--company-name', default=None, help='Agency / Department Name')
 @click.option('--data-stores', default="", help='Comma-separated list of Data Store IDs')
 @click.option('--workforce-pool-id', default=None, help='Workforce Identity Pool ID')
 @click.option('--workforce-provider-id', default=None, help='Workforce Identity Provider ID')
 @click.option('--compliance-regime', type=click.Choice(['FEDRAMP_HIGH', 'IL4', 'NONE']), default=None, help='Compliance Regime')
-def create_application(project_id, data_stores, workforce_pool_id, workforce_provider_id, compliance_regime):
+def create_application(project_id, engine_id, display_name, company_name, data_stores, workforce_pool_id, workforce_provider_id, compliance_regime):
     """Creates a Gemini Enterprise application."""
     credentials = get_credentials()
     # split comma separated string into list
@@ -523,7 +526,7 @@ def create_application(project_id, data_stores, workforce_pool_id, workforce_pro
     elif compliance_regime == 'NONE':
         compliance_regime_id = '3'
 
-    create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime_id)
+    create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime_id, engine_id, display_name, company_name)
 
 
 @app.command("update-compliance")
@@ -601,17 +604,18 @@ def datastore():
 @click.option('--project-id', required=True, help='GCP Project ID')
 @click.option('--source-type', required=True, type=click.Choice(['gcs', 'bigquery']), help='Source of the documents to import')
 @click.option('--data-store-id', required=False, help='Gemini Enterprise Data Store ID')
-def import_documents(project_id, source_type, data_store_id):
+@click.option('--gcs-bucket', required=False, help='Optional GCS Bucket name to simplify the prompt')
+def import_documents(project_id, source_type, data_store_id, gcs_bucket):
     """Import documents into a Gemini Enterprise data store."""
     credentials = get_credentials()
     
     # Set quota project
     credentials = credentials.with_quota_project(project_id)
     
-    import_documents_helper(credentials, project_id, source_type, data_store_id)
+    import_documents_helper(credentials, project_id, source_type, data_store_id, gcs_bucket)
 
 
-def import_documents_helper(credentials, project_id, source_type, data_store_id=None):
+def import_documents_helper(credentials, project_id, source_type, data_store_id=None, gcs_bucket=None):
     """Helper to import documents into a selected data store."""
     if not data_store_id:
         click.echo(nl=True)
@@ -637,17 +641,23 @@ def import_documents_helper(credentials, project_id, source_type, data_store_id=
     if source_type == 'gcs':
         # GCS Data Store
         click.echo(click.style("Importing from Google Cloud Storage.", fg='green'))
-        gcs_uri = click.prompt('Please enter the GCS URI to the documents (e.g., gs://my-bucket/path/to/docs)', type=str).strip()
         
-        if not gcs_uri.startswith("gs://"):
-            click.echo(click.style("Invalid URI. Must start with 'gs://'.", fg='red'))
-            return
+        if gcs_bucket:
+            relative_path = click.prompt(f'Please enter the path to the documents relative to the root of gs://{gcs_bucket}/ (leave blank for root)', type=str, default="").strip()
+            bucket_name = gcs_bucket
+            prefix = relative_path
+        else:
+            gcs_uri = click.prompt('Please enter the GCS URI to the documents (e.g., gs://my-bucket/path/to/docs)', type=str).strip()
+            
+            if not gcs_uri.startswith("gs://"):
+                click.echo(click.style("Invalid URI. Must start with 'gs://'.", fg='red'))
+                return
 
-        # Parse bucket and prefix
-        # gs://bucket/prefix...
-        parts = gcs_uri[5:].split('/', 1)
-        bucket_name = parts[0]
-        prefix = parts[1] if len(parts) > 1 else ""
+            # Parse bucket and prefix
+            # gs://bucket/prefix...
+            parts = gcs_uri[5:].split('/', 1)
+            bucket_name = parts[0]
+            prefix = parts[1] if len(parts) > 1 else ""
         
         # Let's clean the prefix
         prefix = prefix.strip('/')
@@ -667,12 +677,18 @@ def import_documents_helper(credentials, project_id, source_type, data_store_id=
         click.echo("Please use the 'onboard' command for BigQuery data store creation and initial import.")
 
 
-def create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime=None):
+def create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime=None, engine_id=None, engine_display_name=None, company_name=None):
     """Shared logic for creating a Gemini Enterprise application."""
-    engine_display_name = click.prompt('Please enter a Display Name for the Gemini Enterprise application').strip()
-    company_name = click.prompt('Please enter the Agency / Department Name (no abbreviations)').strip()
-    click.echo(nl=True)
-    engine_id = generate_id('g4g-gem-ent-app-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=4)))
+    if not engine_display_name:
+        engine_display_name = click.prompt('Please enter a Display Name for the Gemini Enterprise application').strip()
+    if not company_name:
+        company_name = click.prompt('Please enter the Agency / Department Name (no abbreviations)').strip()
+    
+    if not engine_id:
+        click.echo(nl=True)
+        import random
+        import string
+        engine_id = 'g4g-gem-ent-app-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
     
     create_engine(credentials, project_id, engine_id, engine_display_name, company_name, data_store_list)
 
@@ -1047,6 +1063,18 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
         "commonConfig": {
             "companyName": company_name
         },
+        "knowledgeGraphConfig": {
+            "enablePrivateKnowledgeGraph": True,
+            "featureConfig": {}
+        },
+        "privateKnowledgeGraphMetadata": {
+            "privateKnowledgeGraphState": "ACTIVE"
+        },
+        "sessionConfig": {
+            "sessionManagementPolicy": "VERTEX_AI_MANAGED"
+        },
+        "disableCmekChanges": True,
+        "dataStores": [],
         "dataStoreIds": []
     }
 
@@ -1280,16 +1308,22 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         access_token = ""
 
     if access_token:
-        url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=generationConfig.defaultLanguage,webGroundingType,defaultWebGroundingToggleOff,enableEndUserAgentCreation,disableLocationContext"
+        url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=customerPolicy,agentConfigs,generationConfig,disableLocationContext,webGroundingType,defaultWebGroundingToggleOff"
 
         assistant_patch_body = {
-            "generationConfig": {
-                "defaultLanguage": "en"
-            },
-            "webGroundingType": "WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
-            "defaultWebGroundingToggleOff": False,
-            "enableEndUserAgentCreation": False,
-            "disableLocationContext": True
+          "displayName":"Default Assistant",
+          "googleSearchGroundingEnabled": False,
+          "webGroundingType":"WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
+          "customerPolicy":{
+            "bannedPhrases":[]
+          },
+          "generationConfig":{
+            "systemInstruction":{
+              "additionalSystemInstruction":""
+            }
+          },
+          "defaultWebGroundingToggleOff": False,
+          "disableLocationContext": True
         }
 
         # Use subprocess to run the curl command
