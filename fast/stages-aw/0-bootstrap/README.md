@@ -336,8 +336,6 @@ The remaining configuration is manual, as it regards the repositories themselves
       - create a key pair
       - create a [deploy key](https://docs.github.com/en/developers/overview/managing-deploy-keys#deploy-keys) in the modules repository with the public key
       - create a `CICD_MODULES_KEY` secret with the private key in each of the repositories that need to access modules (for Gitlab, please Base64 encode the private key for masking)
-    - for Gitlab
-      - TODO
     - for Source Repositories
       - assign the reader role to the CI/CD service accounts
 - create one repository for each stage

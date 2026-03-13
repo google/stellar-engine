@@ -68,10 +68,6 @@ keyring, for example <br />
 ```terraform apply``` to apply the infrastructure build<br />
 ```terraform destroy``` to destroy the built infrastructure<br />
 
-Verification of a successful deployment?
-The dataset in BigQuery will look like this in your Google Cloud Console.
-![Deployment of BigQuery Dataset](https://github.com/DarkWolf-Labs/dino-runner/assets/167789559/c34d61ae-6fdb-4b62-a33e-f441b84f94ed)
-
 It will take a few minutes. When complete, you should see an output stating the command completed successfully, a list of the created resources.
 The Output will look like following
 ```

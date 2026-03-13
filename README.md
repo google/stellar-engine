@@ -46,7 +46,7 @@ The suite of modules in this repository is designed for rapid composition and re
 
 All modules share a similar interface where each module tries to stay close to the underlying provider resources, support IAM together with resource creation and modification, offer the option of creating multiple resources where it makes sense (e.g. not for projects), and be completely free of side-effects (e.g. no external commands).
 
-A well defined naming standard is used across Stellar Engine to ensure adherence to Google Clouds best practices, naming requirements, and naming collision avoidance for global resources.  The Google Cloud naming standard documentation is [here](/documentation/naming-standard.md) and will be used before the Stellar Engine deployment begins by choosing a naming standard that will flow through the Google Cloud infrastructure state.
+A well-defined naming standard is used across Stellar Engine to ensure adherence to Google Cloud's best practices, naming requirements, and naming collision avoidance for global resources. The Google Cloud naming standard documentation is [here](documentation/naming-convention.md) and will be used before the Stellar Engine deployment begins by choosing a naming standard that will flow through the Google Cloud infrastructure state.
 
 The current modules support most of the core foundational and networking components used to design end-to-end infrastructure, with more modules in active development for specialized compute, security, and data scenarios.
 
@@ -54,14 +54,14 @@ For more information and usage examples see each module's README file, as well a
 
 ## End-to-End Blueprints
 
-Stellar Engine currently offers blueprints that are compliant with [FRH](https://github.com/gcp-stellar-engine/stellar-engine/tree/main/blueprints/fedramp-high) and [IL5](https://github.com/gcp-stellar-engine/stellar-engine/tree/main/blueprints/il5) baselines. </br>
+Stellar Engine currently offers blueprints that are compliant with [FRH](https://github.com/google/stellar-engine/tree/main/blueprints/fedramp-high) and [IL5](https://github.com/google/stellar-engine/tree/main/blueprints/il5) baselines. </br>
 These blueprints range from full end-to-end services like a Cloud Native Access Point (CNAP), to ad-hoc services that are designed to be molded to users' individual use cases.
 
 For more information, please look at each blueprint's README file.
 
 ## Cybersecurity Documentation
 
-In addition to the IaC, Stellar Engine provides supporting documentation that maps NIST 800-53r5 controls for users leveraging the IaC. This documentation is designed to streamline achieving ATO by providing generalized templates. All documentation is provided [here](https://drive.google.com/drive/folders/1NeWZcOuxysi7kUNRCFDd8CeHnxF14ywp). For how to utilize these documents, please see the following [Path to Authorization](https://docs.google.com/document/d/1vyrWgLIXWkZO3c5qkqLhltmo4LMrVfDHx0EQCuQMYac/edit?tab=t.0#heading=h.qyoze3epkux8) guide. NOTE: you will need to request permissions for it.
+In addition to the IaC, Stellar Engine provides supporting documentation that maps NIST 800-53r5 controls for users leveraging the IaC. This documentation is designed to streamline achieving ATO by providing generalized templates. All documentation is provided [here](https://drive.google.com/drive/folders/1NeWZcOuxysi7kUNRCFDd8CeHnxF14ywp). For how to utilize these documents, please see the following [Path to Authorization](docs/path-to-authorization.md) guide.
 
 ## Detailed Deployment Guide
 
@@ -71,7 +71,7 @@ Key stages include Stage 0 (Bootstrap), which initializes the infrastructure, cr
 
 The guide emphasizes the importance of compliance, providing instructions for enabling Access Transparency and managing IAM roles effectively. Appendices include steps for creating new GCP Organizations and troubleshooting common issues like KMS key errors. Overall, the document serves as a comprehensive manual for deploying compliant, scalable, and secure cloud environments tailored to government and regulated industry requirements.
 
-For more information, please look at the [DDG](https://docs.google.com/document/d/1UOaHefcxHCl2C4CbYsTl37ZRxB4xmDHbWmfLcF0VY70/edit?pli=1&tab=t.0#heading=h.7axmtvj2exmb). NOTE: you will need to request permissions for it.
+For more information, please look at the [DDG](docs/ddg.md).
 
 ## Technical Design Document
 
@@ -79,7 +79,7 @@ The Stellar Engine Technical Design Document (TDD) outlines a comprehensive fram
 
 The document delves into key aspects such as Identity and Access Management (IAM), Google Cloud Organization configuration, Google Cloud Project hierarchy, networking, and security. It emphasizes principles like least privilege for IAM, structured role group management, and secure service account configurations. The networking section introduces a hub-and-spoke VPC architecture, leveraging shared VPCs and service controls to ensure isolation and secure interservice communications. Additionally, it provides guidelines for implementing encryption at rest and in transit, logging and monitoring strategies, and robust access control mechanisms to meet compliance needs. This document is a vital resource for teams aiming to adopt GCP with a focus on security, compliance, and scalability. The TDD is used in conjunction with the Security Best Practices Guide for hardening the deployment against real-world cyber threats and attacks.
 
-For more information, please look at the [TDD](https://docs.google.com/document/d/15WMwslyCrkmuI7EutGBd7YXH3K8P3KrwzLOGcv-W4t8/edit?resourcekey=0-mjoA_PGM2MkIMPpr75SQbQ&tab=t.0). NOTE: you will need to request permissions for it.
+For more information, please look at the [TDD](docs/tdd.md).
 
 ## Security Best Practices Guide
 
@@ -91,14 +91,16 @@ Accompanied by the SBPG, the document incorporates recommendations from penetrat
 
 For more information, please look at the [Security Best Practices Guide](https://docs.google.com/document/d/1uv62Fqg73r9oJNP-NPZebpzoBom8rOgLoHkiMZPutbo/edit?usp=sharing). NOTE: you will need to request permissions for it.
 
-## How to Contribute
-This GitLab repository is for contributing, for view access to the Stellar Engine [GitHub](https://github.com/gcp-stellar-engine/stellar-engine/issues) please fill out this [form](https://docs.google.com/forms/d/e/1FAIpQLScetWXBErWaopYrGa8qKz6vFZOz1-_O0o_HAU4tr4vdhMzWpQ/viewform).
+## Contributing
 
-For issue reporting please create an issue on the GitHub repository and email [stellar-engine@google.com](mailto:stellar-engine@google.com) with details on the issue you are facing.
+We welcome contributions to Stellar Engine! Since this is an open-source project, you can contribute by forking the repository, making your changes, and submitting a pull request. 
 
-To contribute code to this repository, please email [stellar-engine@google.com](mailto:stellar-engine@google.com) with a request for developer access to Stellar Engine's codebase.
+Please ensure your code adheres to our formatting and security standards. 
 
-We'll review your request and grant you the necessary access as quickly as possible.
+## Issue Reporting
+
+If you encounter any bugs, have feature requests, or run into deployment issues, please [create an issue](https://github.com/google/stellar-engine/issues) on our GitHub repository. Keep the issue description clear and provide steps to reproduce if applicable.
+
 
 ## Google’s Open Source Software Vulnerability Rewards Program (OSS VRP)
 
