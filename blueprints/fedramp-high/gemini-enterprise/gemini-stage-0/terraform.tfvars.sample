@@ -33,7 +33,7 @@ acl_idp_type = "GSUITE"
 # If GSUITE, provide the Google Group name using IAM syntax (i.e. "group:[GROUP_NAME]@[DOMAIN]")
 # If THIRD_PARTY, provide the Workforce Identity Federation principalSet (i.e. "principalSet://iam.googleapis.com/locations/global/workforcePools/[WORKFORCE_POOL_ID]/group/[GROUP_ID]")
 admin_group = "group:gcp-gemini-enterprise-admins@customer-domain.com"
-user_group  = "group:gcp-gemini-enterprise-users@customer-domain.com"
+user_groups = ["group:gcp-gemini-enterprise-users@customer-domain.com"]
 
 # Security
 # Enable Chrome Enterprise Premium (Zero Trust) features

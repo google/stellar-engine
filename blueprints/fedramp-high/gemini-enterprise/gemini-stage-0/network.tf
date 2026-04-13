@@ -16,27 +16,28 @@
 #  Networking Resources                                                        #
 # ---------------------------------------------------------------------------- #
 locals {
-  vpc_network_id      = var.use_shared_vpc ? data.google_compute_network.shared_vpc[0].id : google_compute_network.gemini_enterprise_vpc[0].id
-  vpc_subnet_id       = var.use_shared_vpc ? data.google_compute_subnetwork.shared_subnet[0].id : google_compute_subnetwork.gemini_enterprise_vpc_subnet[0].id
-  vpc_proxy_subnet_id = var.use_shared_vpc ? data.google_compute_subnetwork.shared_proxy_subnet[0].id : google_compute_subnetwork.gemini_enterprise_vpc_proxy_subnet[0].id
+  # Safe lookups with try handles when deployment_type == "none"
+  vpc_network_id      = var.use_shared_vpc ? try(data.google_compute_network.shared_vpc[0].id, null) : try(google_compute_network.gemini_enterprise_vpc[0].id, null)
+  vpc_subnet_id       = var.use_shared_vpc ? try(data.google_compute_subnetwork.shared_subnet[0].id, null) : try(google_compute_subnetwork.gemini_enterprise_vpc_subnet[0].id, null)
+  vpc_proxy_subnet_id = var.use_shared_vpc ? try(data.google_compute_subnetwork.shared_proxy_subnet[0].id, null) : try(google_compute_subnetwork.gemini_enterprise_vpc_proxy_subnet[0].id, null)
   ip_address_type     = var.deployment_type == "internal" ? "INTERNAL" : "EXTERNAL"
 }
 
 resource "google_compute_network" "gemini_enterprise_vpc" {
-  count                   = var.use_shared_vpc ? 0 : 1
+  count                   = (var.use_shared_vpc || var.deployment_type == "none") ? 0 : 1
   project                 = var.main_project_id
   name                    = "${var.prefix}-vpc"
   auto_create_subnetworks = false
 }
 
 data "google_compute_network" "shared_vpc" {
-  count   = var.use_shared_vpc ? 1 : 0
+  count   = (var.use_shared_vpc && var.deployment_type != "none") ? 1 : 0
   project = var.network_project_id
   name    = var.shared_vpc_network_name
 }
 
 resource "google_compute_subnetwork" "gemini_enterprise_vpc_subnet" {
-  count                    = var.use_shared_vpc ? 0 : 1
+  count                    = (var.use_shared_vpc || var.deployment_type == "none") ? 0 : 1
   project                  = var.main_project_id
   name                     = "${var.prefix}-vpc-subnet"
   ip_cidr_range            = var.internal_lb_subnet_range
@@ -46,7 +47,7 @@ resource "google_compute_subnetwork" "gemini_enterprise_vpc_subnet" {
 }
 
 resource "google_compute_subnetwork" "gemini_enterprise_vpc_proxy_subnet" {
-  count         = var.use_shared_vpc ? 0 : 1
+  count         = (var.use_shared_vpc || var.deployment_type == "none") ? 0 : 1
   project       = var.main_project_id
   name          = "${var.prefix}-vpc-proxy-subnet"
   ip_cidr_range = "10.10.11.0/24"
@@ -57,20 +58,21 @@ resource "google_compute_subnetwork" "gemini_enterprise_vpc_proxy_subnet" {
 }
 
 data "google_compute_subnetwork" "shared_subnet" {
-  count   = var.use_shared_vpc ? 1 : 0
+  count   = (var.use_shared_vpc && var.deployment_type != "none") ? 1 : 0
   project = var.network_project_id
   region  = var.region
   name    = var.shared_vpc_subnet_name
 }
 
 data "google_compute_subnetwork" "shared_proxy_subnet" {
-  count   = var.use_shared_vpc ? 1 : 0
+  count   = (var.use_shared_vpc && var.deployment_type != "none") ? 1 : 0
   project = var.network_project_id
   region  = var.region
   name    = var.shared_vpc_proxy_subnet_name
 }
 
 resource "google_compute_address" "gemini_enterprise_ip" {
+  count        = var.deployment_type != "none" ? 1 : 0
   project      = var.main_project_id
   name         = "${var.prefix}-${var.deployment_type}-ip"
   region       = var.region
@@ -82,6 +84,7 @@ resource "google_compute_address" "gemini_enterprise_ip" {
 # Internet NEG for vertexaisearch.cloud.google.com FQDN
 # -----------------------------------------------------------------------------
 resource "google_compute_region_network_endpoint_group" "gemini_enterprise_neg" {
+  count                 = var.deployment_type != "none" ? 1 : 0
   name                  = "${var.prefix}-internet-neg"
   project               = var.main_project_id
   network               = local.vpc_network_id
@@ -90,8 +93,9 @@ resource "google_compute_region_network_endpoint_group" "gemini_enterprise_neg" 
 }
 
 resource "google_compute_region_network_endpoint" "gemini_enterprise_endpoint" {
+  count                         = var.deployment_type != "none" ? 1 : 0
   project                       = var.main_project_id
-  region_network_endpoint_group = google_compute_region_network_endpoint_group.gemini_enterprise_neg.name
+  region_network_endpoint_group = google_compute_region_network_endpoint_group.gemini_enterprise_neg[0].name
   region                        = var.region
   fqdn                          = "vertexaisearch.cloud.google.com"
   port                          = 443

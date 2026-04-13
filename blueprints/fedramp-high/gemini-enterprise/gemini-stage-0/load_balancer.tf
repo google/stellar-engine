@@ -18,6 +18,8 @@ locals {
 
 # Define the Backend Service on the Load Balancer and integrate all components.
 resource "google_compute_region_backend_service" "gemini_enterprise_backend" {
+  count                 = var.deployment_type != "none" ? 1 : 0
+  provider              = google-beta
   name                  = "${var.prefix}-backend-service"
   project               = var.main_project_id
   protocol              = "HTTPS"
@@ -26,7 +28,7 @@ resource "google_compute_region_backend_service" "gemini_enterprise_backend" {
 
   # Attach the Internet NEG
   backend {
-    group           = google_compute_region_network_endpoint_group.gemini_enterprise_neg.id
+    group           = google_compute_region_network_endpoint_group.gemini_enterprise_neg[0].id
     capacity_scaler = 1.0
   }
 
@@ -39,7 +41,7 @@ resource "google_compute_region_backend_service" "gemini_enterprise_backend" {
     enable      = true
     sample_rate = 1
   }
-  security_policy = google_compute_region_security_policy.gemini_enterprise_policy.self_link
+  security_policy = google_compute_region_security_policy.gemini_enterprise_policy[0].self_link
 
   lifecycle {
     ignore_changes = [
@@ -51,6 +53,7 @@ resource "google_compute_region_backend_service" "gemini_enterprise_backend" {
 # This is an optional but recommended companion to the HTTPS setup,
 # creating an HTTP load balancer to redirect HTTP traffic to HTTPS.
 resource "google_compute_region_url_map" "gemini_enterprise_http_redirect_url_map" {
+  count       = var.deployment_type != "none" ? 1 : 0
   project     = var.main_project_id
   name        = "${var.prefix}-http-redirect-url-map"
   region      = var.region
@@ -64,13 +67,15 @@ resource "google_compute_region_url_map" "gemini_enterprise_http_redirect_url_ma
 }
 
 resource "google_compute_region_target_http_proxy" "gemini_enterprise_http_proxy" {
+  count   = var.deployment_type != "none" ? 1 : 0
   project = var.main_project_id
   name    = "${var.prefix}-http-proxy"
   region  = var.region
-  url_map = google_compute_region_url_map.gemini_enterprise_http_redirect_url_map.id
+  url_map = google_compute_region_url_map.gemini_enterprise_http_redirect_url_map[0].id
 }
 
 resource "google_compute_forwarding_rule" "gemini_enterprise_http_forwarding_rule" {
+  count                 = var.deployment_type != "none" ? 1 : 0
   project               = var.main_project_id
   name                  = "${var.prefix}-http-forwarding-rule"
   region                = var.region
@@ -79,6 +84,18 @@ resource "google_compute_forwarding_rule" "gemini_enterprise_http_forwarding_rul
   load_balancing_scheme = local.load_balancing_scheme
   network               = local.vpc_network_id
   subnetwork            = var.deployment_type == "internal" ? local.vpc_subnet_id : null
-  ip_address            = google_compute_address.gemini_enterprise_ip.address
-  target                = google_compute_region_target_http_proxy.gemini_enterprise_http_proxy.id
+  ip_address            = google_compute_address.gemini_enterprise_ip[0].address
+  target                = google_compute_region_target_http_proxy.gemini_enterprise_http_proxy[0].id
+}
+
+# -----------------------------------------------------------------------------
+# Certificate Manager DNS Authorization
+# -----------------------------------------------------------------------------
+resource "google_certificate_manager_dns_authorization" "gemini_enterprise_dns_auth" {
+  count       = var.deployment_type != "none" && var.cert_management_choice == "google_managed" ? 1 : 0
+  name        = "${var.prefix}-dns-auth"
+  location    = var.region
+  project     = var.main_project_id
+  description = "DNS authorization for Gemini Enterprise Google-managed certificate"
+  domain      = var.custom_domain
 }

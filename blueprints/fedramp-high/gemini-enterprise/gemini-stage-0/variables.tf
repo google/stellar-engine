@@ -24,6 +24,12 @@ variable "tenant" {
   type        = string
 }
 
+variable "compliance_regime" {
+  description = "Compliance regime this environment is deployed in (e.g. FEDRAMP_HIGH, IL4, IL5, NONE)."
+  type        = string
+  default     = "NONE"
+}
+
 variable "kms_project_id" {
   description = "The Project ID where CMEK keys are stored."
   type        = string
@@ -61,9 +67,9 @@ variable "admin_group" {
   type        = string
 }
 
-variable "user_group" {
-  description = "The email address of the Gemini Enterprise users group."
-  type        = string
+variable "user_groups" {
+  description = "A list of email addresses or principal sets for the Gemini Enterprise users group."
+  type        = list(string)
 }
 
 variable "gemini_enterprise_gcs_bucket_name" {
@@ -132,13 +138,29 @@ variable "kms_key_id" {
 }
 
 variable "deployment_type" {
-  description = "Type of deployment: 'internal' or 'external'"
+  description = "Type of deployment: 'internal', 'external', or 'none'"
   type        = string
   default     = "external" # Default to external as per original design
   validation {
-    condition     = contains(["internal", "external"], var.deployment_type)
-    error_message = "Allowed values for deployment_type are 'internal' or 'external'."
+    condition     = contains(["internal", "external", "none"], var.deployment_type)
+    error_message = "Allowed values for deployment_type are 'internal', 'external', or 'none'."
   }
+}
+
+variable "cert_management_choice" {
+  description = "Certificate management choice for external deployments: 'google_managed' or 'self_managed'."
+  type        = string
+  default     = "self_managed"
+  validation {
+    condition     = contains(["google_managed", "self_managed"], var.cert_management_choice)
+    error_message = "Allowed values for cert_management_choice are 'google_managed' or 'self_managed'."
+  }
+}
+
+variable "custom_domain" {
+  description = "The fully qualified domain name (FQDN) to use for the Google-managed certificate."
+  type        = string
+  default     = ""
 }
 
 variable "create_ip_based_access" {
@@ -190,12 +212,12 @@ variable "create_data_stores" {
 }
 
 variable "acl_idp_type" {
-  description = "The Identity Provider type for Discovery Engine ACLs. Options: 'GSUITE', 'THIRD_PARTY'."
+  description = "The Identity Provider type for Discovery Engine ACLs. Options: 'GSUITE', 'THIRD_PARTY', 'GOOGLE_CLOUD_IDENTITY'."
   type        = string
-  default     = "GSUITE"
+  default     = "GOOGLE_CLOUD_IDENTITY"
   validation {
-    condition     = contains(["GSUITE", "THIRD_PARTY"], var.acl_idp_type)
-    error_message = "The acl_idp_type value must be either 'GSUITE' or 'THIRD_PARTY'."
+    condition     = contains(["GSUITE", "THIRD_PARTY", "GOOGLE_CLOUD_IDENTITY"], var.acl_idp_type)
+    error_message = "The acl_idp_type value must be either 'GSUITE', 'THIRD_PARTY', or 'GOOGLE_CLOUD_IDENTITY'."
   }
 }
 
@@ -253,20 +275,26 @@ variable "shared_vpc_proxy_subnet_name" {
   default     = ""
 }
 
-variable "gcs_data_store_names" {
-  description = "A list of names to use for creating GCS buckets and associated Discovery Engine Data Stores."
-  type        = list(string)
-  default     = []
+variable "gcs_data_store_configs" {
+  description = "A map of configurations for Google Cloud Storage (GCS) Data Stores. If create_bucket is true, the script will create the bucket."
+  type = map(object({
+    name          = string
+    create_bucket = bool
+    display_name  = optional(string)
+  }))
+  default = {}
 }
 
 variable "bq_data_store_configs" {
-  description = "A list of objects defining BigQuery datasets and tables to create and connect to Discovery Engine. Each object should have 'dataset_id' and 'table_id'."
-  type = list(object({
-    dataset_id = string
-    table_id   = string
-
+  description = "A map of configurations for BigQuery Data Stores. If create_dataset is true, it creates the dataset. Schema provides the structure for the data."
+  type = map(object({
+    dataset_id     = string
+    table_id       = string
+    create_dataset = bool
+    schema         = optional(string)
+    display_name   = optional(string)
   }))
-  default = []
+  default = {}
 }
 
 
@@ -286,4 +314,16 @@ variable "moderate_device_access_levels" {
   description = "List of Access Levels to include in the Moderate Device Policy."
   type        = list(string)
   default     = []
+}
+
+variable "enable_data_store_cmek" {
+  description = "Whether to encrypt Data Stores with CMEK. If false, Google-managed keys will be used."
+  type        = bool
+  default     = true
+}
+
+variable "enable_analytics" {
+  description = "Enable analytics for Gemini Enterprise via Discovery Engine Audit Logs."
+  type        = bool
+  default     = false
 }

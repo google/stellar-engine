@@ -19,25 +19,37 @@ data "google_project" "project" {
   project_id = var.main_project_id
 }
 
-resource "google_project_service" "services" {
-  project = var.main_project_id
-  for_each = toset([
+locals {
+  base_services = [
+    "aiplatform.googleapis.com",
     "discoveryengine.googleapis.com",
     "compute.googleapis.com",
     "cloudkms.googleapis.com",
     "bigquery.googleapis.com",
-    "aiplatform.googleapis.com",
     "storage.googleapis.com",
     "accesscontextmanager.googleapis.com",
-    "beyondcorp.googleapis.com",
-    "certificatemanager.googleapis.com",
     "iam.googleapis.com",
     "iap.googleapis.com",
     "orgpolicy.googleapis.com",
     "serviceusage.googleapis.com",
-    "secretmanager.googleapis.com" # Added Secret Manager API
-  ])
-  service = each.value
+    "secretmanager.googleapis.com"
+  ]
+
+  restricted_services = [
+    "beyondcorp.googleapis.com",
+    "certificatemanager.googleapis.com"
+  ]
+
+  enabled_services = concat(
+    local.base_services,
+    var.compliance_regime == "FEDRAMP_HIGH" || var.compliance_regime == "NONE" ? local.restricted_services : []
+  )
+}
+
+resource "google_project_service" "services" {
+  project  = var.main_project_id
+  for_each = toset(local.enabled_services)
+  service  = each.value
   timeouts {
     create = "30m"
     update = "40m"
@@ -96,9 +108,9 @@ resource "google_project_service_identity" "iap" {
 
 # service-projectid@gs-project-accounts.iam.gserviceaccount.com
 # service-projectid@gcp-sa-discoveryengine.iam.gserviceaccount.com
-# This wait time is needed to give time to the API enablement, and the service-agents to create the google service-agents above, which are required to utilize the cloud KMS key.
+# This wait time is needed to give time to the API enablement and to create the google service-agents above, which are required to utilize the cloud KMS key.
 resource "time_sleep" "wait_for_services" {
-  create_duration = "280s" #Wait for APIs, particularly to avoid the "Discovery Engine API has not been used in project" error.
+  create_duration = "180s" #Wait for APIs, particularly to avoid the "Discovery Engine API has not been used in project" error.
 
   depends_on = [
     google_project_service.services

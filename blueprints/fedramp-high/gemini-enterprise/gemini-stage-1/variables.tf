@@ -26,6 +26,17 @@ variable "gemini_enterprise_domain" {
 variable "ssl_certificate_name" {
   description = "The name of the pre-uploaded SSL certificate in Google Cloud."
   type        = string
+  default     = ""
+}
+
+variable "cert_management_choice" {
+  description = "Certificate management choice for external deployments: 'google_managed' or 'self_managed'."
+  type        = string
+  default     = "self_managed"
+  validation {
+    condition     = contains(["google_managed", "self_managed"], var.cert_management_choice)
+    error_message = "Allowed values for cert_management_choice are 'google_managed' or 'self_managed'."
+  }
 }
 
 variable "gemini_config_id" {

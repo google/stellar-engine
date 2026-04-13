@@ -17,6 +17,7 @@ locals {
 }
 
 resource "google_compute_region_security_policy" "gemini_enterprise_policy" {
+  count    = var.deployment_type != "none" ? 1 : 0
   provider = google-beta
   project  = var.main_project_id
   region   = var.region

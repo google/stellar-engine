@@ -17,19 +17,29 @@ output "admin_group" {
   description = "The principal for the Gemini Enterprise administrators group."
 }
 
-output "user_group" {
-  value       = var.user_group
-  description = "The principal for the Gemini Enterprise users group."
+output "user_groups" {
+  value       = var.user_groups
+  description = "The principals for the Gemini Enterprise users groups."
 }
 
 output "gemini_enterprise_ip" {
-  value       = google_compute_address.gemini_enterprise_ip.address
+  value       = var.deployment_type != "none" ? google_compute_address.gemini_enterprise_ip[0].address : null
   description = "The reserved IP address for the load balancer."
+}
+
+output "dns_auth_records" {
+  value       = var.deployment_type != "none" && var.cert_management_choice == "google_managed" ? google_certificate_manager_dns_authorization.gemini_enterprise_dns_auth[0].dns_resource_record : null
+  description = "DNS Authorization resource records for Google-managed certificate."
 }
 
 output "deployment_type" {
   value       = var.deployment_type
   description = "The deployment type of the load balancer (internal or external)."
+}
+
+output "compliance_regime" {
+  value       = var.compliance_regime
+  description = "The compliance regime selected during deployment."
 }
 
 output "tf_state_bucket_name" {
@@ -102,30 +112,26 @@ output "shared_vpc_proxy_subnet_name" {
   description = "The Shared VPC Proxy Subnet Name."
 }
 
-output "gcs_data_store_ids" {
-  description = "A list of GCS Discovery Engine Data Store IDs."
-  value       = [for v in google_discovery_engine_data_store.gemini_enterprise_gcs_data_store : v.data_store_id]
-}
-
-output "gcs_data_store_to_bucket" {
-  description = "A mapping of GCS Data Store IDs to their corresponding GCS Bucket names."
-  value       = { for k, v in google_discovery_engine_data_store.gemini_enterprise_gcs_data_store : v.data_store_id => google_storage_bucket.gemini_enterprise_gcs_bucket[k].name }
-}
-
-output "bq_data_store_ids" {
-  description = "A list of BigQuery Discovery Engine Data Store IDs."
-  value       = [for v in google_discovery_engine_data_store.gemini_enterprise_bq_data_store : v.data_store_id]
-}
-
-output "bq_data_store_to_dataset_table" {
-  description = "A mapping of BigQuery Data Store IDs to their corresponding Dataset and Table."
-  value = { for k, v in google_discovery_engine_data_store.gemini_enterprise_bq_data_store : v.data_store_id => {
-    dataset_id = google_bigquery_dataset.gemini_enterprise_bq_dataset[k].dataset_id
-    table_id   = google_bigquery_table.gemini_enterprise_bq_table[k].table_id
+output "gcs_data_stores" {
+  description = "A mapping of formatted data store keys to their configuration, ID, and bucket details."
+  value = { for k, v in var.gcs_data_store_configs : k => {
+    display_name  = v.display_name
+    data_store_id = can(google_discovery_engine_data_store.gemini_enterprise_gcs_data_store[k]) ? google_discovery_engine_data_store.gemini_enterprise_gcs_data_store[k].data_store_id : null
+    bucket_name   = can(google_storage_bucket.gemini_enterprise_gcs_bucket[k]) ? google_storage_bucket.gemini_enterprise_gcs_bucket[k].name : v.name
   } }
 }
 
-output "cmek_key_id" {
-  description = "The CMEK Key ID used for encryption."
-  value       = local.cmek_key_id
+output "bq_data_stores" {
+  description = "A mapping of formatted data store keys to their configuration, ID, dataset, and table details."
+  value = { for k, v in var.bq_data_store_configs : k => {
+    display_name  = v.display_name
+    data_store_id = can(google_discovery_engine_data_store.gemini_enterprise_bq_data_store[k]) ? google_discovery_engine_data_store.gemini_enterprise_bq_data_store[k].data_store_id : null
+    dataset_id    = can(google_bigquery_dataset.gemini_enterprise_bq_dataset[k]) ? google_bigquery_dataset.gemini_enterprise_bq_dataset[k].dataset_id : v.dataset_id
+    table_id      = v.table_id
+  } }
 }
+
+# output "engine_ids" {
+#   value       = { for k, v in google_discovery_engine_search_engine.gemini_enterprise_search_engine : k => v.engine_id }
+#   description = "A map of application keys to their corresponding Gemini Enterprise Search Engine IDs."
+# }

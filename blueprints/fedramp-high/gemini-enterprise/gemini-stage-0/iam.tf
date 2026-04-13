@@ -46,13 +46,15 @@ resource "google_project_iam_member" "admins_logging_viewer" {
 
 # --- User Group Roles ---
 resource "google_project_iam_member" "users_discoveryengine_user" {
-  project = var.main_project_id
-  role    = "roles/discoveryengine.user"
-  member  = var.user_group
+  for_each = toset(var.user_groups)
+  project  = var.main_project_id
+  role     = "roles/discoveryengine.user"
+  member   = each.value
 }
 
 resource "google_project_iam_member" "users_serviceusage_consumer" {
-  project = var.main_project_id
-  role    = "roles/serviceusage.serviceUsageConsumer"
-  member  = var.user_group
+  for_each = toset(var.user_groups)
+  project  = var.main_project_id
+  role     = "roles/serviceusage.serviceUsageConsumer"
+  member   = each.value
 }
