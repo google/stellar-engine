@@ -31,23 +31,23 @@ locals {
 # ---------------------------------------------------------------------------- #
 
 # CMEK Configuration for Discovery Engine (Conditional)
-resource "google_discovery_engine_cmek_config" "default" {
-  count = var.create_data_stores && var.enable_data_store_cmek ? 1 : 0
+# resource "google_discovery_engine_cmek_config" "default" {
+#   count = var.create_data_stores && var.enable_data_store_cmek ? 1 : 0
 
-  project        = var.main_project_id
-  location       = var.geolocation # should be "US"
-  cmek_config_id = "default_cmek_config"
-  kms_key        = local.cmek_key_id
-  set_default    = true
-  provider       = google-beta
+#   project        = var.main_project_id
+#   location       = var.geolocation # should be "US"
+#   cmek_config_id = "default_cmek_config"
+#   kms_key        = local.cmek_key_id
+#   set_default    = true
+#   provider       = google-beta
 
-  depends_on = [
-    google_kms_crypto_key_iam_member.discoveryengine_sa_kms_access,
-    google_kms_crypto_key_iam_member.gcs_sa_kms_access,
-    google_project_service.services,
-    time_sleep.wait_for_services,
-  ]
-}
+#   depends_on = [
+#     google_kms_crypto_key_iam_member.discoveryengine_sa_kms_access,
+#     google_kms_crypto_key_iam_member.gcs_sa_kms_access,
+#     google_project_service.services,
+#     time_sleep.wait_for_services,
+#   ]
+# }
 
 # ---------------------------------------------------------------------------- #
 #  Gemini Enterprise - Identity Config                                         #
