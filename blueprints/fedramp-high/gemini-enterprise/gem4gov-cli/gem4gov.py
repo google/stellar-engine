@@ -1,3 +1,4 @@
+import sys
 import click
 import google.auth
 from googleapiclient.discovery import build
@@ -29,7 +30,7 @@ from auth import (
 )
 
 # Global Varibles used in prompts
-supported_aw_boundaries = "FedRAMP High, IL4"
+supported_aw_boundaries = "FedRAMP High, IL4, IL5"
 required_apis = "Vertex AI, Discovery Engine, Cloud Resource Manager, Cloud Key Management Service (KMS), Identity and Access Management (IAM), Service Usage, Cloud Storage, BigQuery"
 supported_data_stores = "Cloud Storage, BigQuery"
 
@@ -62,7 +63,7 @@ def init():
     except (subprocess.CalledProcessError, FileNotFoundError):
         click.echo("Could not set the gcloud project configuration. Please ensure gcloud is installed and configured correctly.")
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
-        exit()
+        sys.exit(1)
     credentials = get_credentials()
     click.echo(f"Successfully set project ID to: {project_id}")
 
@@ -81,8 +82,9 @@ def onboard():
     click.echo("What compliance regime will Gemini for Government be deployed in?")
     click.echo("1) FedRAMP High")
     click.echo("2) IL4")
-    click.echo("3) None")
-    compliance_regime_id = click.prompt('Please enter the number for your response', type=click.Choice(['1', '2', '3']), default = '1', show_default = False)
+    click.echo("3) IL5")
+    click.echo("4) None")
+    compliance_regime_id = click.prompt('Please enter the number for your response', type=click.Choice(['1', '2', '3', '4']), default = '1', show_default = False)
     
     click.echo(nl=True)
     click.echo(nl=True)
@@ -93,7 +95,7 @@ def onboard():
     else:
         click.echo(click.style("Please create an Assured Workloads folder and a GCP Project within that folder before continuing.", fg='red'))
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
-        exit()
+        sys.exit(1)
 
     try:
         subprocess.run(['gcloud', 'config', 'set', 'project', project_id], check=True, capture_output=True)
@@ -102,7 +104,7 @@ def onboard():
     except (subprocess.CalledProcessError, FileNotFoundError):
         click.echo("Could not set the gcloud project configuration. Please ensure gcloud is installed and configured correctly.")
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
-        exit()
+        sys.exit(1)
     
     # Set the quota project on the credentials
     credentials = credentials.with_quota_project(project_id)
@@ -116,7 +118,7 @@ def onboard():
         if not click.confirm('Would you like to continue the Onboarding process anyway?'):
             click.echo(click.style("Please grant your user the list of IAM roles found in the README or have another user with those roles run the Onboarding process.", fg='red'))
             click.echo(click.style("Exiting Onboarding process...", fg="red"))
-            exit()
+            sys.exit(1)
     
     click.echo(nl=True)
     click.echo(nl=True)
@@ -147,7 +149,7 @@ def onboard():
             else:
                 click.echo(click.style("Please configure a Workforce Identity Pool and Provider before continuing the Onboarding process", fg='red'))
                 click.echo(click.style("Exiting Onboarding process...", fg="red"))
-                exit()
+                sys.exit(1)
         idp_type = configure_identity_provider(credentials, project_id, idp_select, workforce_pool_id)
     click.echo(nl=True)
     click.echo(nl=True)
@@ -175,11 +177,11 @@ def onboard():
                         click.echo("Failed to grant KMS permissions. Please check the error and try again.")
                         if not click.confirm('Would you like to try again?'):
                             click.echo(click.style("Exiting Onboarding process...", fg="red"))
-                            exit()
+                            sys.exit(1)
                 else:
                     if not click.confirm('The KMS key is invalid. Would you like to try again?'):
                         click.echo(click.style("Exiting Onboarding process...", fg="red"))
-                        exit()
+                        sys.exit(1)
 
         elif cmek_action == '2':
             click.echo('Please navigate to https://console.cloud.google.com/security/kms/keyrings and create a Cloud KMS Key Ring in the "us" multi-region.')
@@ -199,11 +201,11 @@ def onboard():
                         click.echo("Failed to grant KMS permissions. Please check the error and try again.")
                         if not click.confirm('Would you like to try again?'):
                             click.echo(click.style("Exiting Onboarding process...", fg="red"))
-                            exit()
+                            sys.exit(1)
                 else:
                     if not click.confirm('The KMS key is invalid. Would you like to try again?'):
                         click.echo(click.style("Exiting Onboarding process...", fg="red"))
-                        exit()
+                        sys.exit(1)
         else:
             click.echo('You can always setup the Gemini Enterprise CMEK configuration at a later time.')
             click.echo('NOTE: Ensure that Gemini Enterprise CMEK configuration is setup before adding any data stores to your Gemini Enterprise application.')
@@ -238,7 +240,7 @@ def onboard():
             if not click.confirm('Would you like to continue without setting up Gemini Enterprise CMEK configuration?'):
                 click.echo(click.style('Please run `gem4gov onboard` again to setup Gemini Enterprise CMEK configuration.', fg="red"))
                 click.echo(click.style("Exiting Onboarding process...", fg="red"))
-                exit()
+                sys.exit(1)
         click.echo(click.style(f"Gemini Enterprise data stores allow end-users to search and ask questions based on a variety of first and third-party datasets. Currently, the only data stores that are available in Gemini for Governement customers are: {supported_data_stores}", fg='yellow'))
         while True:
             if click.confirm('Do you have an existing data store(s) already created and loaded with data?'):
@@ -361,7 +363,7 @@ def onboard():
             if len(data_store_list) == 0:
                 if not click.confirm('Would you like to continue the Onboarding process for a Default Gemini Enterpise application?'):
                     click.echo(click.style("Exiting Onboarding process...", fg="red"))
-                    exit()
+                    sys.exit(1)
                 else:
                     app_type = '1'
                     break
@@ -441,7 +443,6 @@ def onboard():
         click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
         click.echo(click.style("- Prompt Gallery", fg="yellow"))
         click.echo(click.style("- Session Sharing", fg="yellow"))
-        click.echo(click.style("- Talk to Content", fg="yellow"))
         click.echo(click.style("- User Event Collection", fg="yellow"))
         click.echo(click.style("- User Feedback", fg="yellow"))
         configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine_id)
@@ -458,10 +459,25 @@ def onboard():
         click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
         click.echo(click.style("- Prompt Gallery", fg="yellow"))
         click.echo(click.style("- Session Sharing", fg="yellow"))
-        click.echo(click.style("- Talk to Content", fg="yellow"))
         click.echo(click.style("- User Event Collection", fg="yellow"))
         click.echo(click.style("- User Feedback", fg="yellow"))
         configure_gemini_enterprise_for_il4(credentials, project_id, engine_id)
+    elif compliance_regime_id == '3':
+        click.echo(click.style("Gemini Enterprise contains default features that are not yet authorized for IL5 and must be disabled. These features are currently:", fg="yellow"))
+        click.echo(click.style("- Grounding with OneDrive / Google Drive File Uploads", fg="yellow"))
+        click.echo(click.style("- Grounding with Google Search", fg="yellow"))
+        click.echo(click.style("- Image / Video Generation", fg="yellow"))
+        click.echo(click.style("- Implicit Model Data Caching", fg="yellow"))
+        click.echo(click.style("- Knowledge Graph / People Connectors", fg="yellow"))
+        click.echo(click.style("- Location Context", fg="yellow"))
+        click.echo(click.style("- Memory and Customization", fg="yellow"))
+        click.echo(click.style("- Model Armor", fg="yellow"))
+        click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
+        click.echo(click.style("- Prompt Gallery", fg="yellow"))
+        click.echo(click.style("- Session Sharing", fg="yellow"))
+        click.echo(click.style("- User Event Collection", fg="yellow"))
+        click.echo(click.style("- User Feedback", fg="yellow"))
+        configure_gemini_enterprise_for_il5(credentials, project_id, engine_id)
 
     click.echo(nl=True)
     click.echo(nl=True)
@@ -504,11 +520,15 @@ def app():
 
 @app.command("create")
 @click.option('--project-id', required=True, help='GCP Project ID')
+@click.option('--engine-id', default=None, help='Gemini Enterprise Engine ID')
+@click.option('--display-name', default=None, help='Display Name for the Gemini Enterprise application')
+@click.option('--company-name', default=None, help='Agency / Department Name')
 @click.option('--data-stores', default="", help='Comma-separated list of Data Store IDs')
 @click.option('--workforce-pool-id', default=None, help='Workforce Identity Pool ID')
 @click.option('--workforce-provider-id', default=None, help='Workforce Identity Provider ID')
-@click.option('--compliance-regime', type=click.Choice(['FEDRAMP_HIGH', 'IL4', 'NONE']), default=None, help='Compliance Regime')
-def create_application(project_id, data_stores, workforce_pool_id, workforce_provider_id, compliance_regime):
+@click.option('--compliance-regime', type=click.Choice(['FEDRAMP_HIGH', 'IL4', 'IL5', 'NONE']), default=None, help='Compliance Regime')
+@click.option('--enable-audit-logs', is_flag=True, default=False, help='Enable Gemini Enterprise Usage Audit logs')
+def create_application(project_id, engine_id, display_name, company_name, data_stores, workforce_pool_id, workforce_provider_id, compliance_regime, enable_audit_logs):
     """Creates a Gemini Enterprise application."""
     credentials = get_credentials()
     # split comma separated string into list
@@ -520,16 +540,18 @@ def create_application(project_id, data_stores, workforce_pool_id, workforce_pro
         compliance_regime_id = '1'
     elif compliance_regime == 'IL4':
         compliance_regime_id = '2'
-    elif compliance_regime == 'NONE':
+    elif compliance_regime == 'IL5':
         compliance_regime_id = '3'
+    elif compliance_regime == 'NONE':
+        compliance_regime_id = '4'
 
-    create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime_id)
+    create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime_id, engine_id, display_name, company_name, enable_audit_logs)
 
 
 @app.command("update-compliance")
 @click.option('--project-id', required=True, help='GCP Project ID')
 @click.option('--engine-id', required=True, help='Gemini Enterprise Engine ID')
-@click.option('--compliance-regime', required=True, type=click.Choice(['FEDRAMP_HIGH', 'IL4']), help='Compliance Regime')
+@click.option('--compliance-regime', required=True, type=click.Choice(['FEDRAMP_HIGH', 'IL4', 'IL5']), help='Compliance Regime')
 def update_compliance(project_id, engine_id, compliance_regime):
     """Configures a Gemini Enterprise application for a specific compliance regime."""
     credentials = get_credentials()
@@ -547,7 +569,6 @@ def update_compliance(project_id, engine_id, compliance_regime):
         click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
         click.echo(click.style("- Prompt Gallery", fg="yellow"))
         click.echo(click.style("- Session Sharing", fg="yellow"))
-        click.echo(click.style("- Talk to Content", fg="yellow"))
         click.echo(click.style("- User Event Collection", fg="yellow"))
         click.echo(click.style("- User Feedback", fg="yellow"))
         configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine_id)
@@ -564,10 +585,25 @@ def update_compliance(project_id, engine_id, compliance_regime):
         click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
         click.echo(click.style("- Prompt Gallery", fg="yellow"))
         click.echo(click.style("- Session Sharing", fg="yellow"))
-        click.echo(click.style("- Talk to Content", fg="yellow"))
         click.echo(click.style("- User Event Collection", fg="yellow"))
         click.echo(click.style("- User Feedback", fg="yellow"))
         configure_gemini_enterprise_for_il4(credentials, project_id, engine_id)
+    elif compliance_regime == 'IL5':
+        click.echo(click.style("Gemini Enterprise contains default features that are not yet authorized for IL5 and must be disabled. These features are currently:", fg="yellow"))
+        click.echo(click.style("- Grounding with OneDrive / Google Drive File Uploads", fg="yellow"))
+        click.echo(click.style("- Grounding with Google Search", fg="yellow"))
+        click.echo(click.style("- Image / Video Generation", fg="yellow"))
+        click.echo(click.style("- Implicit Model Data Caching", fg="yellow"))
+        click.echo(click.style("- Knowledge Graph / People Connectors", fg="yellow"))
+        click.echo(click.style("- Location Context", fg="yellow"))
+        click.echo(click.style("- Memory and Customization", fg="yellow"))
+        click.echo(click.style("- Model Armor", fg="yellow"))
+        click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
+        click.echo(click.style("- Prompt Gallery", fg="yellow"))
+        click.echo(click.style("- Session Sharing", fg="yellow"))
+        click.echo(click.style("- User Event Collection", fg="yellow"))
+        click.echo(click.style("- User Feedback", fg="yellow"))
+        configure_gemini_enterprise_for_il5(credentials, project_id, engine_id)
 
     click.echo(click.style("Compliance configuration complete!", fg='green'))
 
@@ -601,17 +637,238 @@ def datastore():
 @click.option('--project-id', required=True, help='GCP Project ID')
 @click.option('--source-type', required=True, type=click.Choice(['gcs', 'bigquery']), help='Source of the documents to import')
 @click.option('--data-store-id', required=False, help='Gemini Enterprise Data Store ID')
-def import_documents(project_id, source_type, data_store_id):
+@click.option('--gcs-bucket', required=False, help='Optional GCS Bucket name to simplify the prompt')
+def import_documents(project_id, source_type, data_store_id, gcs_bucket):
     """Import documents into a Gemini Enterprise data store."""
     credentials = get_credentials()
     
     # Set quota project
     credentials = credentials.with_quota_project(project_id)
     
-    import_documents_helper(credentials, project_id, source_type, data_store_id)
+    import_documents_helper(credentials, project_id, source_type, data_store_id, gcs_bucket)
+
+##############################################################
+################       gem4gov license        ################
+##############################################################
+
+@cli.group()
+def license():
+    """Manages Gemini for Government licenses."""
+    pass
+
+@license.command(name='list')
+@click.option('--billing-account', required=True, help='The billing account ID.')
+@click.option('--quota-project', required=False, help='The project ID to use for API quota.')
+@click.option('--format', type=click.Choice(['text', 'json']), default='text', help='The output format.')
+def list_licenses(billing_account, quota_project, format):
+    """Lists available Gemini for Government license configurations for a billing account."""
+    credentials = get_credentials()
+    if quota_project:
+        credentials = credentials.with_quota_project(quota_project)
+        
+    # Use discoveryengine v1alpha as per PDF
+    client_options = ClientOptions(api_endpoint="https://us-discoveryengine.googleapis.com")
+    service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
+    
+    try:
+        request = service.billingAccounts().billingAccountLicenseConfigs().list(
+            parent=f'billingAccounts/{billing_account}'
+        )
+        response = request.execute()
+        
+        configs = response.get('billingAccountLicenseConfigs', [])
+        
+        if format == 'json':
+            click.echo(json.dumps(configs, indent=2))
+            return
+
+        if not configs:
+            click.echo(f"No license configurations found for billing account {billing_account}.")
+            return
+
+        for config in configs:
+            name = config.get('subscriptionDisplayName', config.get('name'))
+            total = config.get('licenseCount', 0)
+            distributions = config.get('licenseConfigDistributions', {})
+            distributed = sum(int(v) for v in distributions.values())
+            available = int(total) - distributed
+            
+            # Extract ID from name: billingAccounts/ID/billingAccountLicenseConfigs/CONFIG_ID
+            config_id = config.get('name').split('/')[-1]
+            
+            click.echo(f"Subscription: {name}")
+            click.echo(f"  ID: {config_id}")
+            click.echo(f"  Total Licenses: {total}")
+            click.echo(f"  Distributed: {distributed}")
+            click.echo(f"  Available: {available}")
+            click.echo("---")
+            
+    except HttpError as e:
+        click.echo(f"An error occurred: {e}")
+    except Exception as e:
+        click.echo(f"An unexpected error occurred: {e}")
+
+@license.command(name='distribute')
+@click.option('--billing-account', required=True, help='The billing account ID.')
+@click.option('--config-id', required=True, help='The billing account license config ID.')
+@click.option('--target-project-number', required=True, help='The target project number.')
+@click.option('--location', default='global', type=click.Choice(['global', 'us', 'eu']), help='The location.')
+@click.option('--count', required=True, type=int, help='The number of licenses to distribute (incremental).')
+@click.option('--license-config-id', help='The existing project-level license config ID (optional).')
+@click.option('--quota-project', required=False, help='The project ID to use for API quota.')
+def distribute_licenses(billing_account, config_id, target_project_number, location, count, license_config_id, quota_project):
+    """Distributes Gemini for Government licenses to a project."""
+    credentials = get_credentials()
+    if quota_project:
+        credentials = credentials.with_quota_project(quota_project)
+    
+    endpoint = "https://discoveryengine.googleapis.com"
+    if location == 'us':
+        endpoint = "https://us-discoveryengine.googleapis.com"
+    elif location == 'eu':
+        endpoint = "https://eu-discoveryengine.googleapis.com"
+        
+    client_options = ClientOptions(api_endpoint=endpoint)
+    # v1alpha is needed for billingAccountLicenseConfigs
+    service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
+    
+    name = f'billingAccounts/{billing_account}/billingAccountLicenseConfigs/{config_id}'
+    
+    body = {
+        "projectNumber": target_project_number,
+        "location": location,
+        "licenseCount": count
+    }
+    if license_config_id:
+        body["licenseConfigId"] = license_config_id
+
+    try:
+        request = service.billingAccounts().billingAccountLicenseConfigs().distributeLicenseConfig(
+            name=name,
+            body=body
+        )
+        response = request.execute()
+        click.echo("Licenses distributed successfully!")
+        click.echo(json.dumps(response, indent=2))
+        
+    except HttpError as e:
+        click.echo(f"An error occurred: {e}")
+    except Exception as e:
+        click.echo(f"An unexpected error occurred: {e}")
+
+##############################################################
+################       gem4gov license        ################
+##############################################################
+
+@cli.group()
+def license():
+    """Manages Gemini for Government licenses."""
+    pass
+
+@license.command(name='list')
+@click.option('--billing-account', required=True, help='The billing account ID.')
+@click.option('--quota-project', required=False, help='The project ID to use for API quota.')
+@click.option('--format', type=click.Choice(['text', 'json']), default='text', help='The output format.')
+def list_licenses(billing_account, quota_project, format):
+    """Lists available Gemini for Government license configurations for a billing account."""
+    credentials = get_credentials()
+    if quota_project:
+        credentials = credentials.with_quota_project(quota_project)
+        
+    # Use discoveryengine v1alpha as per PDF
+    client_options = ClientOptions(api_endpoint="https://us-discoveryengine.googleapis.com")
+    service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
+    
+    try:
+        request = service.billingAccounts().billingAccountLicenseConfigs().list(
+            parent=f'billingAccounts/{billing_account}'
+        )
+        response = request.execute()
+        
+        configs = response.get('billingAccountLicenseConfigs', [])
+        
+        if format == 'json':
+            click.echo(json.dumps(configs, indent=2))
+            return
+
+        if not configs:
+            click.echo(f"No license configurations found for billing account {billing_account}.")
+            return
+
+        for config in configs:
+            name = config.get('subscriptionDisplayName', config.get('name'))
+            total = config.get('licenseCount', 0)
+            distributions = config.get('licenseConfigDistributions', {})
+            distributed = sum(int(v) for v in distributions.values())
+            available = int(total) - distributed
+            
+            # Extract ID from name: billingAccounts/ID/billingAccountLicenseConfigs/CONFIG_ID
+            config_id = config.get('name').split('/')[-1]
+            
+            click.echo(f"Subscription: {name}")
+            click.echo(f"  ID: {config_id}")
+            click.echo(f"  Total Licenses: {total}")
+            click.echo(f"  Distributed: {distributed}")
+            click.echo(f"  Available: {available}")
+            click.echo("---")
+            
+    except HttpError as e:
+        click.echo(f"An error occurred: {e}")
+    except Exception as e:
+        click.echo(f"An unexpected error occurred: {e}")
+
+@license.command(name='distribute')
+@click.option('--billing-account', required=True, help='The billing account ID.')
+@click.option('--config-id', required=True, help='The billing account license config ID.')
+@click.option('--target-project-number', required=True, help='The target project number.')
+@click.option('--location', default='global', type=click.Choice(['global', 'us', 'eu']), help='The location.')
+@click.option('--count', required=True, type=int, help='The number of licenses to distribute (incremental).')
+@click.option('--license-config-id', help='The existing project-level license config ID (optional).')
+@click.option('--quota-project', required=False, help='The project ID to use for API quota.')
+def distribute_licenses(billing_account, config_id, target_project_number, location, count, license_config_id, quota_project):
+    """Distributes Gemini for Government licenses to a project."""
+    credentials = get_credentials()
+    if quota_project:
+        credentials = credentials.with_quota_project(quota_project)
+    
+    endpoint = "https://discoveryengine.googleapis.com"
+    if location == 'us':
+        endpoint = "https://us-discoveryengine.googleapis.com"
+    elif location == 'eu':
+        endpoint = "https://eu-discoveryengine.googleapis.com"
+        
+    client_options = ClientOptions(api_endpoint=endpoint)
+    # v1alpha is needed for billingAccountLicenseConfigs
+    service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
+    
+    name = f'billingAccounts/{billing_account}/billingAccountLicenseConfigs/{config_id}'
+    
+    body = {
+        "projectNumber": target_project_number,
+        "location": location,
+        "licenseCount": count
+    }
+    if license_config_id:
+        body["licenseConfigId"] = license_config_id
+
+    try:
+        request = service.billingAccounts().billingAccountLicenseConfigs().distributeLicenseConfig(
+            name=name,
+            body=body
+        )
+        response = request.execute()
+        click.echo("Licenses distributed successfully!")
+        click.echo(json.dumps(response, indent=2))
+        
+    except HttpError as e:
+        click.echo(f"An error occurred: {e}")
+    except Exception as e:
+        click.echo(f"An unexpected error occurred: {e}")
 
 
-def import_documents_helper(credentials, project_id, source_type, data_store_id=None):
+
+
+def import_documents_helper(credentials, project_id, source_type, data_store_id=None, gcs_bucket=None):
     """Helper to import documents into a selected data store."""
     if not data_store_id:
         click.echo(nl=True)
@@ -637,17 +894,23 @@ def import_documents_helper(credentials, project_id, source_type, data_store_id=
     if source_type == 'gcs':
         # GCS Data Store
         click.echo(click.style("Importing from Google Cloud Storage.", fg='green'))
-        gcs_uri = click.prompt('Please enter the GCS URI to the documents (e.g., gs://my-bucket/path/to/docs)', type=str).strip()
         
-        if not gcs_uri.startswith("gs://"):
-            click.echo(click.style("Invalid URI. Must start with 'gs://'.", fg='red'))
-            return
+        if gcs_bucket:
+            relative_path = click.prompt(f'Please enter the path to the documents relative to the root of gs://{gcs_bucket}/ (leave blank for root)', type=str, default="").strip()
+            bucket_name = gcs_bucket
+            prefix = relative_path
+        else:
+            gcs_uri = click.prompt('Please enter the GCS URI to the documents (e.g., gs://my-bucket/path/to/docs)', type=str).strip()
+            
+            if not gcs_uri.startswith("gs://"):
+                click.echo(click.style("Invalid URI. Must start with 'gs://'.", fg='red'))
+                return
 
-        # Parse bucket and prefix
-        # gs://bucket/prefix...
-        parts = gcs_uri[5:].split('/', 1)
-        bucket_name = parts[0]
-        prefix = parts[1] if len(parts) > 1 else ""
+            # Parse bucket and prefix
+            # gs://bucket/prefix...
+            parts = gcs_uri[5:].split('/', 1)
+            bucket_name = parts[0]
+            prefix = parts[1] if len(parts) > 1 else ""
         
         # Let's clean the prefix
         prefix = prefix.strip('/')
@@ -667,31 +930,23 @@ def import_documents_helper(credentials, project_id, source_type, data_store_id=
         click.echo("Please use the 'onboard' command for BigQuery data store creation and initial import.")
 
 
-def create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime=None):
+def create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime=None, engine_id=None, engine_display_name=None, company_name=None, enable_audit_logs=False):
     """Shared logic for creating a Gemini Enterprise application."""
-    engine_display_name = click.prompt('Please enter a Display Name for the Gemini Enterprise application').strip()
-    company_name = click.prompt('Please enter the Agency / Department Name (no abbreviations)').strip()
-    click.echo(nl=True)
-    engine_id = generate_id('g4g-gem-ent-app-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=4)))
+    if not engine_display_name:
+        engine_display_name = click.prompt('Please enter a Display Name for the Gemini Enterprise application').strip()
+    if not company_name:
+        company_name = click.prompt('Please enter the Agency / Department Name (no abbreviations)').strip()
     
-    create_engine(credentials, project_id, engine_id, engine_display_name, company_name, data_store_list)
+    if not engine_id:
+        click.echo(nl=True)
+        import random
+        import string
+        engine_id = 'g4g-gem-ent-app-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+    
+    create_engine(credentials, project_id, engine_id, engine_display_name, company_name, data_store_list, enable_audit_logs)
 
     if workforce_pool_id and workforce_provider_id:
         configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_id, workforce_provider_id)
-    
-    # Check if we need to prompt for workforce identity if it wasn't provided but might be needed
-    # The CLI command argument is optional, so if not provided, we check IDP type like onboard does.
-    # However, 'onboard' does a specific check. For the 'create' command, we assume arguments provided are final.
-    # But since we are sharing logic, we should handle the 'onboard' flow's dynamic prompting if needed, 
-    # OR 'onboard' should gather everything before calling this.
-    # Let's assume 'onboard' gathers everything.
-
-    # The 'onboard' command had logic to check regulatory boundary and configure FedRAMP/IL4.
-    # The 'create' command should also do this? 
-    # The user request says "configure_gemini_enterprise_for_fedramp" should be run.
-    # We can ask the user here or assume default. Since 'onboard' asks, let's ask here if not passed?
-    # But the refactor request didn't specify a 'boundary' argument.
-    # Let's ask the user for the boundary as part of the application creation process if it's not contextually available.
     
     # Re-using the prompt from onboard for consistency
     if not compliance_regime:
@@ -699,15 +954,21 @@ def create_application_logic(credentials, project_id, data_store_list, workforce
         click.echo("What compliance regime will this application be deployed in?")
         click.echo("1) FedRAMP High")
         click.echo("2) IL4")
-        click.echo("3) None")
-        compliance_regime = click.prompt('Please enter the number for your response', type=click.Choice(['1', '2', '3']), default = '1', show_default = False)
+        click.echo("3) IL5")
+        click.echo("4) None")
+        compliance_regime = click.prompt('Please enter the number for your response', type=click.Choice(['1', '2', '3', '4']), default = '1', show_default = False)
 
-    if compliance_regime == '1':
+    if compliance_regime in ['1', 'FEDRAMP_HIGH']:
         click.echo(click.style("Configuring for FedRAMP High...", fg="yellow"))
         configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine_id)
-    elif compliance_regime == '2':
+    elif compliance_regime in ['2', 'IL4']:
         click.echo(click.style("Configuring for IL4...", fg="yellow"))
         configure_gemini_enterprise_for_il4(credentials, project_id, engine_id)
+    elif compliance_regime in ['3', 'IL5']:
+        click.echo(click.style("Configuring for IL5...", fg="yellow"))
+        configure_gemini_enterprise_for_il5(credentials, project_id, engine_id)
+    elif compliance_regime in ['4', 'NONE']:
+        click.echo(click.style("Skipping compliance-specific app configuration...", fg="yellow"))
 
     click.echo(nl=True)
     
@@ -793,7 +1054,7 @@ def check_apis(credentials, project_id):
         else:
             click.echo("Exiting. Please enable the missing APIs and re-run the script.")
             click.echo(click.style("Exiting Onboarding process...", fg="red"))
-            exit()
+            sys.exit(1)
 
     click.echo("All required APIs are enabled.")
 
@@ -816,7 +1077,7 @@ def enable_apis(credentials, project_id, apis_to_enable):
             click.echo(f"An error occurred while enabling {api}: {e}")
             click.echo("Please try enabling the APIs manually and re-run the script.")
             click.echo(click.style("Exiting Onboarding process...", fg="red"))
-            exit()
+            sys.exit(1)
 
 
 def check_identity_provider(credentials, project_id):
@@ -884,7 +1145,7 @@ def configure_identity_provider(credentials, project_id, idp_type, workforce_poo
     except Exception as e:
         click.echo(f"An error occurred while configuring the identity provider: {e}")
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
-        exit()
+        sys.exit(1)
 
 
 def check_cmek(credentials, project_id):
@@ -1015,10 +1276,10 @@ def configure_cmek(credentials, project_id, kms_key_name):
     except Exception as e:
         click.echo(f"An error occurred while configuring CMEK: {e}")
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
-        exit()
+        sys.exit(1)
 
 
-def create_engine(credentials, project_id, engine_id, display_name, company_name, data_store_list):
+def create_engine(credentials, project_id, engine_id, display_name, company_name, data_store_list, enable_audit_logs=False):
     """Creates a new engine."""
     client_options = ClientOptions(api_endpoint="https://us-discoveryengine.googleapis.com")
     service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
@@ -1035,7 +1296,6 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
     engine = {
         "displayName": display_name,
         "appType": "APP_TYPE_INTRANET",
-        "disableAnalytics": True,
         "solutionType": "SOLUTION_TYPE_SEARCH",
         "searchEngineConfig": {
             "searchTier": "SEARCH_TIER_ENTERPRISE",
@@ -1044,11 +1304,30 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
         },
         "features": engine_features.get('features'),
         "industryVertical": "GENERIC",
+        "disableAnalytics": True,
         "commonConfig": {
             "companyName": company_name
         },
+        # "knowledgeGraphConfig": {
+        #     "enablePrivateKnowledgeGraph": False,
+        #     "featureConfig": {}
+        # },
+        # "privateKnowledgeGraphMetadata": {
+        #     "privateKnowledgeGraphState": "ACTIVE"
+        # },
+        "sessionConfig": {
+            "sessionManagementPolicy": "VERTEX_AI_MANAGED"
+        },
+        "disableCmekChanges": True,
+        "dataStores": [],
         "dataStoreIds": []
     }
+
+    if enable_audit_logs:
+        engine["observabilityConfig"] = {
+            "observabilityEnabled": True,
+            "sensitiveLoggingEnabled": True
+        }
 
     if data_store_list:
         engine['dataStoreIds'] = data_store_list
@@ -1092,9 +1371,23 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
              click.echo(f"Engine created successfully!")
 
     except Exception as e:
-        click.echo(f"An error occurred while creating the engine: {e}")
-        click.echo(click.style("Exiting Onboarding process...", fg="red"))
-        exit()
+        click.echo("Received an API error during creation. Checking if engine was created asynchronously despite the error...")
+        engine_full_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}"
+        max_retries = 12
+        for attempt in range(max_retries):
+            try:
+                eng_request = service.projects().locations().collections().engines().get(name=engine_full_name)
+                eng_response = eng_request.execute()
+                click.echo("Engine verified successfully! Proceeding with configuration.")
+                return
+            except Exception as inner_e:
+                if attempt < max_retries - 1:
+                    click.echo(".", nl=False)
+                    time.sleep(5)
+                else:
+                    click.echo(f"\nAn error occurred while creating the engine: {e}")
+                    click.echo(click.style("Exiting Onboarding process...", fg="red"))
+                    sys.exit(1)
 
 
 def configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_id, workforce_provider_id):
@@ -1280,16 +1573,22 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         access_token = ""
 
     if access_token:
-        url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=generationConfig.defaultLanguage,webGroundingType,defaultWebGroundingToggleOff,enableEndUserAgentCreation,disableLocationContext"
+        url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=customerPolicy,agentConfigs,generationConfig,disableLocationContext,webGroundingType,defaultWebGroundingToggleOff"
 
         assistant_patch_body = {
-            "generationConfig": {
-                "defaultLanguage": "en"
-            },
-            "webGroundingType": "WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
-            "defaultWebGroundingToggleOff": False,
-            "enableEndUserAgentCreation": False,
-            "disableLocationContext": True
+          "displayName":"Default Assistant",
+          "googleSearchGroundingEnabled": False,
+          "webGroundingType":"WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
+          "customerPolicy":{
+            "bannedPhrases":[]
+          },
+          "generationConfig":{
+            "systemInstruction":{
+              "additionalSystemInstruction":""
+            }
+          },
+          "defaultWebGroundingToggleOff": False,
+          "disableLocationContext": True
         }
 
         # Use subprocess to run the curl command
@@ -1369,11 +1668,11 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
 
     try:
         engine_response = engine_request.execute()
-        click.echo(f"Engine {engine_id} configured for FedRAMP High.")
+        click.echo(f"Engine {engine_id} configured for IL4.")
     except Exception as e:
-        click.echo(f"An error occurred while configuring the engine for FedRAMP High: {e}")
+        click.echo(f"An error occurred while configuring the engine for IL4: {e}")
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
-        exit()
+        sys.exit(1)
 
     # Default Search Widget: Disable User Event Collection
     disable_user_event_collection(credentials, project_id, engine_id)
@@ -1388,7 +1687,7 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
     except subprocess.CalledProcessError as e:
         click.echo(f"Error getting access token: {e}")
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
-        exit()
+        sys.exit(1)
 
     url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=generationConfig.defaultLanguage,webGroundingType,defaultWebGroundingToggleOff,enableEndUserAgentCreation,disableLocationContext"
 
@@ -1422,12 +1721,124 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
              click.echo(result.stderr)
              click.echo(result.stdout)
              click.echo(click.style("Exiting Onboarding process...", fg="red"))
-             exit()
+             sys.exit(1)
 
     except Exception as e:
         click.echo(f"An error occurred while configuring the default assistant for IL4: {e}")
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
-        exit()
+        sys.exit(1)
+
+    # Project: Disable Implicit Model Caching
+    try:
+        aiplatform_client_options = ClientOptions(api_endpoint="https://us-central1-aiplatform.googleapis.com")
+        aiplatform_service = build('aiplatform', 'v1', credentials=credentials, client_options=aiplatform_client_options)
+        
+        cache_config_name = f"projects/{project_id}/cacheConfig"
+        cache_config_body = {
+            "name": cache_config_name,
+            "disableCache": True
+        }
+
+        request = aiplatform_service.projects().updateCacheConfig(
+            name=cache_config_name,
+            body=cache_config_body
+        )
+        request.execute()
+        click.echo("Successfully disabled Implicit Model Caching for the project.")
+    except Exception as e:
+        click.echo(f"An error occurred while disabling Implicit Model Caching: {e}")
+        # Do not exit, as this may not be a critical failure.
+
+
+def configure_gemini_enterprise_for_il5(credentials, project_id, engine_id):
+    """Configures the Gemini Enterprise engine and default assistant for IL5."""
+    client_options = ClientOptions(api_endpoint="https://us-discoveryengine.googleapis.com")
+    service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
+
+    # Get the absolute path to the directory containing the script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Construct the absolute path to the YAML file
+    yaml_path = os.path.join(script_dir, 'engine_features.yaml')
+
+    # Load features from the YAML file
+    with open(yaml_path, 'r') as f:
+        engine_features = yaml.safe_load(f)
+    
+    # Engine: Update IL5 authorized features and disable Private Knowledge Graph (People Connectors are not yet authorized for IL5)
+    engine_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}"
+    engine_patch_body = {
+        "features": engine_features.get('features'),
+        "disableAnalytics": True
+    }
+    engine_update_mask = "features"
+
+    engine_request = service.projects().locations().collections().engines().patch(
+        name=engine_name,
+        body=engine_patch_body,
+        updateMask=engine_update_mask
+    )
+
+    try:
+        engine_response = engine_request.execute()
+        click.echo(f"Engine {engine_id} configured for IL5.")
+    except Exception as e:
+        click.echo(f"An error occurred while configuring the engine for IL5: {e}")
+        click.echo(click.style("Exiting Onboarding process...", fg="red"))
+        sys.exit(1)
+
+    # Default Search Widget: Disable User Event Collection
+    disable_user_event_collection(credentials, project_id, engine_id)
+
+    # Assistant: Disable Grounding with Google Search / Location Context
+    assistant_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}/assistants/default_assistant"
+    
+    # Get access token
+    try:
+        token_process = subprocess.run(['gcloud', 'auth', 'print-access-token'], check=True, capture_output=True, text=True)
+        access_token = token_process.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        click.echo(f"Error getting access token: {e}")
+        click.echo(click.style("Exiting Onboarding process...", fg="red"))
+        sys.exit(1)
+
+    url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=generationConfig.defaultLanguage,webGroundingType,defaultWebGroundingToggleOff,enableEndUserAgentCreation,disableLocationContext"
+
+    assistant_patch_body = {
+        "generationConfig": {
+            "defaultLanguage": "en"
+        },
+        "webGroundingType": "WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
+        "defaultWebGroundingToggleOff": False,
+        "enableEndUserAgentCreation": False,
+        "disableLocationContext": True
+    }
+
+    # Use subprocess to run the curl command
+    curl_command = [
+        'curl', '-X', 'PATCH',
+        '-H', f"Authorization: Bearer {access_token}",
+        '-H', f"x-goog-user-project: {project_id}",
+        '-H', "Content-Type: application/json",
+        '-d', json.dumps(assistant_patch_body),
+        url
+    ]
+
+    try:
+        result = subprocess.run(curl_command, capture_output=True, text=True)
+        
+        if result.returncode == 0 and "error" not in result.stdout.lower():
+             click.echo(f"Default assistant for engine {engine_id} configured for IL5.")
+        else:
+             click.echo(f"An error occurred while configuring the default assistant for IL5:")
+             click.echo(result.stderr)
+             click.echo(result.stdout)
+             click.echo(click.style("Exiting Onboarding process...", fg="red"))
+             sys.exit(1)
+
+    except Exception as e:
+        click.echo(f"An error occurred while configuring the default assistant for IL5: {e}")
+        click.echo(click.style("Exiting Onboarding process...", fg="red"))
+        sys.exit(1)
 
     # Project: Disable Implicit Model Caching
     try:
