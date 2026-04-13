@@ -1,6 +1,6 @@
 # Gemini Enterprise for FedRAMP High - Comprehensive Documentation
 
-**Version:** 1.0.0
+**Version:** 1.2.0
 **Compliance:** FedRAMP High / IL4+
 **Scope:** Full System Documentation
 
@@ -22,11 +22,11 @@
 
 ## 1. Executive Overview
 
-This blueprint deploys a secure and compliant environment for hosting Gemini Enterprise on Google Cloud Platform, specifically tailored for FedRAMP High requirements. It leverages Vertex AI Search and Discovery Engine. The deployment is divided into two main Terraform stages (`gemini-stage-0` and `gemini-stage-1`) and interacts with the `gem4gov` CLI tool.
+This blueprint deploys a secure and compliant environment for hosting Gemini Enterprise on Google Cloud Platform, specifically tailored for FedRAMP High requirements. It leverages the Vertex AI Search and Discovery Engine APIs. The deployment is divided into two main Terraform stages (`gemini-stage-0` and `gemini-stage-1`) and interacts with the `gem4gov` CLI tool.
 
 **This blueprint supports both EXTERNAL and INTERNAL load balancer deployments, configurable via the `deployment_type` variable in `gemini-stage-0/terraform.tfvars`.**
 
-It is designed to be **fully automated** via the `deploy.sh` script, which serves as the central management interface for the entire lifecycle of the application—from initial infrastructure provisioning to application updates and certificate management.
+It is designed to be **fully automated** via the `deploy.sh` script, which serves as the central management interface for the entire lifecycle of the application—from initial infrastructure provisioning to application updates and ongoing maintenance.
 
 ### Overall Goal
 
@@ -36,34 +36,47 @@ The primary goal is to provide a turnkey ("Push Button") solution for setting up
 
 The blueprint establishes a robust infrastructure including:
 
-1.  **Networking:**
-    - **Greenfield:** Deploys a dedicated Virtual Private Cloud (VPC) with private subnets to isolate the environment.
-    - **Brownfield (Stellar Engine):** Automatically discovers and attaches to the existing Shared VPC and subnets provided by the Stellar Engine Host Project.
-    - **Load Balancing:**
-        - **Regional External LB:** Equipped with Cloud Armor (WAF) and Identity Aware Proxy (IAP) for zero-trust, hardened external access.
-        - **Regional Internal LB:** Limits access to traffic from the VPC/VPN/Interconnect.
-2.  **Data Storage:** CMEK-encrypted Google Cloud Storage (GCS) buckets and BigQuery datasets to securely store data for Discovery Engine.
-3.  **Discovery Engine:** Configuration of Discovery Engine data stores, and connectors for GCS and BigQuery.
-4.  **Security Controls:**
-    - **Identity-Aware Proxy (IAP):** Enforces fine-grained access control based on user identity and context (Supports Google Identity & Workforce Identity).
-    - **Access Context Manager:** Defines granular access policies (Time, Location, Device).
-    - **Chrome Enterprise Premium (Zero Trust):** Optional integration for strict device-based access policies.
-    - **Cloud Armor:** WAF capabilities and DDoS protection (US-only geo-fencing).
-    - **CMEK (Customer-managed encryption key):** Ensures data at rest is encrypted with customer-managed keys.
-    - **IAM & Org Policies:** Least privilege roles and automated policy validation.
+**1. Core Infrastructure (`gemini-stage-0`)**
+- **Networking:**
+  - **VPC & Subnets:** `google_compute_network` and `google_compute_subnetwork` for private and proxy-only subnets (Greenfield) or data source attachment to Shared VPC (Brownfield).
+  - **IP Addressing:** `google_compute_address` for reserved internal/external Load Balancer IP.
+  - **Network Endpoints:** `google_compute_region_network_endpoint_group` and `google_compute_region_network_endpoint` mapping to the Discovery Engine FQDN (`vertexaisearch.cloud.google.com`).
+  - **HTTP Redirect (External LB):** `google_compute_region_url_map`, `google_compute_region_target_http_proxy`, and `google_compute_forwarding_rule` to ensure all HTTP traffic upgrades to HTTPS.
+- **Security & Access Control:**
+  - **Cloud Armor (WAF):** `google_compute_region_security_policy` with predefined OWASP rules and US-only geo-fencing.
+  - **Access Context Manager:** `google_access_context_manager_access_level` defining conditions like Time of Day, IP Restrictions, Expiration Dates, and leniency tiers for Chrome Enterprise Premium device identity.
+  - **IAM Bindings:** `google_project_iam_member` ensuring least privilege for Gemini Enterprise Admins, Gemini Enterprise End Users, and required Service Accounts.
+- **Data Storage & Encryption:**
+  - **KMS / CMEK:** `google_kms_key_ring`, `google_kms_crypto_key`, and `google_kms_crypto_key_iam_member` for encrypting Discovery Engine data stores.
+  - **Discovery Engine Settings:** `google_discovery_engine_cmek_config` and `google_discovery_engine_acl_config`.
+  - **Data Sources:** `google_storage_bucket` (GCS) and `google_bigquery_dataset` (BQ) acting as safe data hubs.
+
+**2. Gemini Enterprise (`gem4gov-cli`):**
+- **Gemini Application:** Creates and configures the core Search Engine resource.
+- **Data Stores:** Configures and attaches Cloud Storage and BigQuery data stores to the Gemini Enterprise application.
+
+**3. Application Frontend (`gemini-stage-1`)**
+- **Gemini Application:** Creates the core Discovery Engine Application.
+- **Data Stores:** Configures and attaches Cloud Storage and BigQuery data stores to the Gemini application.
+- **Load Balancing:**
+  - **Backend Service:** `google_compute_region_backend_service` pointing to the Stage 0 NEG.
+  - **HTTPS Routing:** `google_compute_region_url_map` and `google_compute_region_target_https_proxy` (utilizing the managed/unmanaged SSL certificate).
+  - **Forwarding Rule:** `google_compute_forwarding_rule` to accept external/internal HTTPS traffic.
+- **Identity-Aware Proxy (IAP):**
+  - **IAP Access Control:** `google_iap_web_region_backend_service_iam_member` binding the specific Admin/User Groups (or Workforce Identity Principals) to the Backend Service, enforcing the zero-trust boundary.
 
 ### Deployment Automation (`deploy.sh`)
 
 The `deploy.sh` script is the recommended way to interact with this blueprint. It handles:
 
-1.  **Interactive Configuration:** Guides you through every step, including Project selection, Authentication, and Deployment Topology (Greenfield vs. Brownfield).
+1.  **Interactive Configuration:** Guides you through every step, including authentication, project selection, prerequisite checking,and deployment topology selection (Greenfield vs. Brownfield).
 2.  **Automated Discovery:**
-    -   **Context Awareness:** Automatically detects if you are in a "Bootstrap" or "Stellar Engine" environment.
+    -   **Session Persistence:** Uses remote Terraform state to track resources that have been already deployed in a separate session
     -   **Resource Discovery:** Finds existing constraints, keys, networks, and subnets to prevent misconfiguration.
 3.  **Variable Generation:** Auto-generates `terraform.tfvars` files for both stages, eliminating manual copy-pasting errors.
 4.  **Lifecycle Management:** Contains a **"Helper Functions"** menu for post-deployment tasks:
     -   **Update App Compliance:** Ensure an existing Gemini Enterprise application meets the most recent compliance standards and includes any recently authorized features
-    -   **Replace App / Routing:** Seamlessly swap the backend Gemini App while maintaining the Load Balancer.
+    -   **Replace App / Routing:** Seamlessly swap the backend Gemini Enterprise application while maintaining the Load Balancer.
     -   **Import Documents:** Interactive utility to ingest data into GCS/BigQuery Data Stores.
     -   **Upload SSL Certificate:** Validates and uploads PEM certificates to GCP Certificate Manager.
 
