@@ -416,6 +416,62 @@ resource "google_alloydb_instance" "secondary" {
   }
 }
 
+
+
+# 1. READ POOLS FOR THE PRIMARY CLUSTER
+resource "google_alloydb_instance" "primary_read_pools" {
+  for_each = var.primary_read_pools
+
+  instance_id   = each.key
+  cluster       = google_alloydb_cluster.primary.name
+  instance_type = "READ_POOL"
+
+  read_pool_config {
+    node_count = each.value.node_count
+  }
+
+  availability_type = each.value.availability_type
+  labels            = each.value.labels
+  annotations       = each.value.annotations
+  database_flags    = each.value.database_flags
+
+  machine_config {
+    cpu_count = each.value.cpu_count
+  }
+
+  depends_on = [google_alloydb_instance.primary]
+}
+
+# 2. READ POOLS FOR THE SECONDARY CLUSTER
+resource "google_alloydb_instance" "secondary_read_pools" {
+  for_each = var.secondary_read_pools
+
+  instance_id = each.key
+  # Note: The [0] is required because the secondary cluster uses 'count'
+  cluster       = google_alloydb_cluster.secondary[0].name
+  instance_type = "READ_POOL"
+
+  read_pool_config {
+    node_count = each.value.node_count
+  }
+
+  availability_type = each.value.availability_type
+  labels            = each.value.labels
+  annotations       = each.value.annotations
+  database_flags    = each.value.database_flags
+
+  machine_config {
+    cpu_count = each.value.cpu_count
+  }
+
+  # This depends on the secondary instance, which also uses 'count'
+  depends_on = [google_alloydb_instance.secondary[0]]
+}
+
+
+
+
+
 resource "random_password" "passwords" {
   for_each = toset([
     for k, v in coalesce(var.users, {}) :
