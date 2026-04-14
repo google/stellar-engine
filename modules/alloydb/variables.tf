@@ -349,3 +349,30 @@ variable "users" {
     error_message = "User type must one of 'ALLOYDB_BUILT_IN', 'ALLOYDB_IAM_USER'"
   }
 }
+
+
+variable "primary_read_pools" {
+  description = "A map of read pool configurations for the primary cluster. The key is the instance ID."
+  type = map(object({
+    node_count        = number
+    cpu_count         = optional(number, 2)
+    availability_type = optional(string, "REGIONAL")
+    labels            = optional(map(string))
+    annotations       = optional(map(string))
+    database_flags    = optional(map(string), {})
+  }))
+  default = {}
+}
+
+variable "secondary_read_pools" {
+  description = "A map of read pool configurations for the secondary cluster. The key is the instance ID."
+  type = map(object({
+    node_count        = number
+    cpu_count         = optional(number, 2)
+    availability_type = optional(string, "REGIONAL")
+    labels            = optional(map(string))
+    annotations       = optional(map(string))
+    database_flags    = optional(map(string), {})
+  }))
+  default = {}
+}

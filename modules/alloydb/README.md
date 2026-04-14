@@ -1,6 +1,6 @@
 # AlloyDB module
 
-This module manages the creation of an AlloyDB cluster. It also supports cross-region replication scenario by setting up a secondary cluster.
+This module manages the creation of an AlloyDB cluster. It also supports cross-region replication scenario by setting up a secondary cluster and the addition of read pools to support read offloads in both primary and secondary regions.
 It can also create an initial set of users via the `users` variable.
 
 Note that this module assumes that some options are the same for both the primary instance and the secondary one in case of cross regional replication configuration.
@@ -87,7 +87,7 @@ module "alloydb" {
   }
   cross_region_replication = {
     enabled = true
-    region  = "europe-west12"
+    region  = "us-central1"
   }
 }
 # tftest modules=1 resources=4 inventory=cross_region_replication.yaml e2e
