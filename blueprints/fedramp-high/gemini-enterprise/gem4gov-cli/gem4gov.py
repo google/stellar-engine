@@ -1,3 +1,17 @@
+# Copyright 2026 Google Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import sys
 import click
 import google.auth
@@ -1308,13 +1322,6 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
         "commonConfig": {
             "companyName": company_name
         },
-        # "knowledgeGraphConfig": {
-        #     "enablePrivateKnowledgeGraph": False,
-        #     "featureConfig": {}
-        # },
-        # "privateKnowledgeGraphMetadata": {
-        #     "privateKnowledgeGraphState": "ACTIVE"
-        # },
         "sessionConfig": {
             "sessionManagementPolicy": "VERTEX_AI_MANAGED"
         },
@@ -1562,13 +1569,6 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         access_token = token_process.stdout.strip()
     except subprocess.CalledProcessError as e:
         click.echo(f"Error getting access token not critical, but noted: {e}")
-        # We might not be able to proceed with curl if token fails, but let's try to continue or just return
-        # If we can't get a token, we can't do the rest.
-        # But user said "gracefully log... but continue". 
-        # Continuing without a token will just fail the next step. 
-        # I'll let it fail naturally or just return from this function logic?
-        # Actually proper "continue" means try the next steps. 
-        # If token fails, curl calls WILL fail. 
         pass
         access_token = ""
 
