@@ -19,9 +19,11 @@ A clear and concise description of what you want to happen.
 
 ## Compliance & Deployment Context
 *   **Target Deployment Type(s):**
+    *   [ ] US Regions
+    *   [ ] FedRAMP Medium
     *   [ ] FedRAMP High
-    *   [ ] DoD IL5
     *   [ ] DoD IL4
+    *   [ ] DoD IL5
     *   [ ] All / General
 *   **Relevant NIST 800-53r5 Controls:** (If applicable, list the controls this feature helps satisfy)
 
