@@ -11,10 +11,10 @@ assignees: ''
 What needs to be documented or updated?
 
 ## Target Audience
-Who is this documentation for? (e.g., Operators, Security Auditors, Developers).
+Who is this documentation for? e.g., Operators, Security Auditors, Developers.
 
 ## Proposed Location
-Where should this documentation live? (e.g., existing file in `docs/`, a new file, or within a module's `README.md`).
+Where should this documentation live? e.g., existing file in `docs/`, a new file, or within a module's `README.md`.
 
 ## Content Outline / Draft
 Please provide a draft or outline of the content you would like to add.
