@@ -155,10 +155,7 @@ permissions.**
   - gcp-security-admins@`<domain>`
 - We need to enable these Google Cloud Services by running the following
   command:
-  - **echo "iam cloudkms pubsub serviceusage cloudresourcemanager bigquery
-    assuredworkloads cloudbilling logging iamcredentials orgpolicy" | xargs
-    -n1 -I {} gcloud services enable
-    "{}.**[**googleapis.com**](http://googleapis.com)**"**
+  - `gcloud services enable {iam,cloudkms,pubsub,serviceusage,cloudresourcemanager,bigquery,assuredworkloads,cloudbilling,logging,iamcredentials,orgpolicy}.googleapis.com`
 - [Enable Access
   Transparency](https://console.cloud.google.com/iam-admin/settings) for your
   organization
