@@ -1,7 +1,7 @@
 ## Description
 Please include a summary of the change and which issue is fixed. Please also include relevant motivation and context.
 
-Fixes # (issue)
+Fixes # (GitHub issue id)
 
 ## Type of Change
 - [ ] Bug fix (non-breaking change which fixes an issue)
