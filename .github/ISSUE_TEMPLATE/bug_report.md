@@ -19,6 +19,8 @@ Please provide details about your deployment to help us reproduce the issue.
     *   [ ] FedRAMP High
     *   [ ] DoD IL5
     *   [ ] DoD IL4
+    *   [ ] FedRAMP Moderate
+    *   [ ] US Region Restricted (e.g., Access Policy constraint)
     *   [ ] Stand-alone / Custom
 *   **FAST Stage (if applicable):**
     *   [ ] Stage 0 (Bootstrap)
