@@ -11,9 +11,11 @@ Fixes # (GitHub issue id)
 
 ## Deployment & Compliance Impact
 *   **Applicable Regimes:**
+    *   [ ] US Region Restricted (e.g., Access Policy constraint)
+    *   [ ] FedRAMP Moderate
     *   [ ] FedRAMP High
-    *   [ ] DoD IL5
     *   [ ] DoD IL4
+    *   [ ] DoD IL5
     *   [ ] General / All
 *   **NIST 800-53r5 Controls:** (If this PR helps satisfy or modifies control implementations, list them here)
 
