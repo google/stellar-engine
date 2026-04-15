@@ -19,7 +19,7 @@ A clear and concise description of what you want to happen.
 
 ## Compliance & Deployment Context
 *   **Target Deployment Type(s):**
-    *   [ ] US Regions
+    *   [ ] US Region Restricted (e.g., Access Policy constraint)
     *   [ ] FedRAMP Medium
     *   [ ] FedRAMP High
     *   [ ] DoD IL4
