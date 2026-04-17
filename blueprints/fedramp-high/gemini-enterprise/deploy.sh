@@ -476,6 +476,41 @@ discover_infrastructure() {
     echo ""
     echo -e "${BLUE}--- Infrastructure Discovery ---${NC}"
 
+    # Region Selection
+    if [[ -z "$REGION" ]]; then
+        echo ""
+        echo -e "Select Default Region to deploy resources:"
+        echo "1) us-central1"
+        echo "2) us-central2"
+        echo "3) us-east1"
+        echo "4) us-east4 (Default)"
+        echo "5) us-east5"
+        echo "6) us-south1"
+        echo "7) us-west1"
+        echo "8) us-west2"
+        echo "9) us-west3"
+        echo "10) us-west4"
+        read -p "Enter selection [4]: " REGION_SEL
+        
+        case $REGION_SEL in
+            1) REGION="us-central1" ;;
+            2) REGION="us-central2" ;;
+            3) REGION="us-east1" ;;
+            4|"") REGION="us-east4" ;;
+            5) REGION="us-east5" ;;
+            6) REGION="us-south1" ;;
+            7) REGION="us-west1" ;;
+            8) REGION="us-west2" ;;
+            9) REGION="us-west3" ;;
+            10) REGION="us-west4" ;;
+            *)
+                echo -e "${YELLOW}Invalid selection. Defaulting to us-east4.${NC}"
+                REGION="us-east4"
+                ;;
+        esac
+    fi
+    echo -e "Using Default Region: ${YELLOW}${REGION}${NC}"
+
     # 0. Prefix Discovery
     if [[ "$IS_BROWNFIELD" == "true" ]]; then
         PREFIX=$(echo "$PROJECT_ID" | cut -d'-' -f1 | cut -d'-' -f1-6)
@@ -1350,14 +1385,14 @@ configure_stage_0() {
     # Enable APIs based on compliance regime
     if [[ "$COMPLIANCE_REGIME" == "IL5" ]]; then
         echo ""
-        echo -e "${YELLOW}WARNING: Discovery Engine API is not currently included in the Assured Workloads Service Usage Allowlist Org Policy for IL5.${NC}"
-        echo -e "${YELLOW}Gemini for Government can only be used by creating an exception and adding discoveryengine.googleapis.com to the allowlist.${NC}"
+        echo -e "${RED}WARNING: Discovery Engine API is not currently included in the Assured Workloads Service Usage Allowlist Org Policy for IL5.${NC}"
+        echo -e "${RED}Gemini for Government can only be used by creating an exception and adding discoveryengine.googleapis.com to the allowlist.${NC}"
         read -p "Do you want to attempt to enable Discovery Engine and Certificate Manager APIs? [y/N]: " ENABLE_APIS_NOW
         if [[ "$ENABLE_APIS_NOW" =~ ^[Yy]$ ]]; then
             echo "Attempting to enable APIs..."
             if ! gcloud services enable discoveryengine.googleapis.com certificatemanager.googleapis.com --project "${PROJECT_ID}"; then
-                echo -e "${RED}Warning: Failed to enable Discovery Engine or Certificate Manager APIs.${NC}"
-                echo -e "${YELLOW}This is expected if the APIs are not in your allowlist and you have not created an exception.${NC}"
+                echo -e "${RED}WARNING: Failed to enable Discovery Engine or Certificate Manager APIs.${NC}"
+                echo -e "${RED}This is expected if the APIs are not in your allowlist and you have not created an exception.${NC}"
             fi
         else
             echo -e "${YELLOW}Skipping API enablement. You may need to enable them manually after configuring exceptions.${NC}"
@@ -1365,8 +1400,8 @@ configure_stage_0() {
     else
         echo -e "${GREEN}Enabling Discovery Engine and Certificate Manager APIs automatically...${NC}"
         if ! gcloud services enable discoveryengine.googleapis.com certificatemanager.googleapis.com --project "${PROJECT_ID}"; then
-            echo -e "${RED}Warning: Failed to enable Discovery Engine or Certificate Manager APIs.${NC}"
-            echo -e "${YELLOW}Please ensure you have permissions to enable these APIs or they are allowed by your Org Policy.${NC}"
+            echo -e "${RED}WARNING: Failed to enable Discovery Engine or Certificate Manager APIs.${NC}"
+            echo -e "${RED}Please ensure you have permissions to enable these APIs or they are allowed by your Org Policy.${NC}"
         fi
     fi
 
@@ -1417,126 +1452,8 @@ configure_stage_0() {
     SHARED_VPC_PROXY_SUBNET=""
     echo ""
     echo -e "${BLUE}--- Networking ---${NC}"
-    read -p "Do you want to use an existing Shared VPC? (y/N) [N]: " USE_SHARED_VPC_CHOICE
-    if [[ "$USE_SHARED_VPC_CHOICE" == "y" || "$USE_SHARED_VPC_CHOICE" == "Y" ]]; then
-        USE_SHARED_VPC="true"
-        
-        # 1. Determine Host Project & Verify Attachment
-        SHARED_VPC_HOST_PROJECT=$(gcloud compute shared-vpc get-host-project "${PROJECT_ID}" --format="value(name)" 2>/dev/null || true)
-
-        # If not attached, fail and advise user
-        if [[ -z "$SHARED_VPC_HOST_PROJECT" ]]; then
-            POTENTIAL_HOST_PROJECT=$(echo "$PROJECT_ID" | cut -d'-' -f1-2 | sed 's/$/-net-host/')
-            
-            echo -e "${RED}ERROR: Project '${PROJECT_ID}' is not attached to a Shared VPC Host.${NC}"
-            echo -e "${YELLOW}To proceed, you must:${NC}"
-            echo -e "1. Attach this project to the Shared VPC Host Project."
-            echo -e "   (Command: gcloud compute shared-vpc associated-projects add ${PROJECT_ID} --host-project ${POTENTIAL_HOST_PROJECT})"
-            echo -e "2. Share the VPC Host Project subnets with this Service Project."
-            echo -e "${YELLOW}Please configure this and rerun deploy.sh.${NC}"
-            return 1
-        fi
-        
-        echo -e "Using Shared VPC: ${GREEN}Yes${NC}"
-        echo -e "Using Network Host Project: ${YELLOW}${SHARED_VPC_HOST_PROJECT}${NC}"
-
-        # 2. Auto-discover Network and Subnets
-        if [[ -z "$SHARED_VPC_NETWORK" ]]; then
-            echo "Scanning for subnets shared from ${SHARED_VPC_HOST_PROJECT} to ${PROJECT_ID}..."
-            
-            # Get all subnets from the Host Project directly in JSON format
-            USABLE_SUBNETS_JSON=$(gcloud compute networks subnets list --project "${SHARED_VPC_HOST_PROJECT}" --format="json" 2>/dev/null)
-            
-            if [[ -z "$USABLE_SUBNETS_JSON" || "$USABLE_SUBNETS_JSON" == "[]" ]]; then
-                 echo -e "${RED}ERROR: No subnets found in Host Project '${SHARED_VPC_HOST_PROJECT}' or permission denied.${NC}"
-                 echo -e "${YELLOW}Please ensure that:${NC}"
-                 echo -e "1. The Host Project exists and you have permissions to list subnets."
-                 echo -e "2. You have shared the necessary subnets with this Service Project."
-                 echo -e "3. You are authenticated correctly."
-                 return 1
-            fi
-
-            # 1. Discover Private Subnet & Network (Atomic operation to ensure consistency)
-            # We pick the first usable PRIVATE subnet in the Host Project AND in the correct Region (defaulting to us-east4 if not set)
-            DISCOVERY_REGION=$(gcloud config get-value compute/region 2>/dev/null)
-            DISCOVERY_REGION=${DISCOVERY_REGION:-"us-east4"}
-            
-            # We also normalize 'selfLink' to 'subnetwork' to handle both 'list-usable' and 'list' output formats
-            FIRST_USABLE_SUBNET_JSON=$(echo "$USABLE_SUBNETS_JSON" | jq -r ".[] | .subnetwork = (.subnetwork // .selfLink) | select(.network | contains(\"projects/${SHARED_VPC_HOST_PROJECT}/\")) | select(.subnetwork | contains(\"/${DISCOVERY_REGION}/\")) | select(.purpose == \"PRIVATE\" or .purpose == null) | {network: .network, subnetwork: .subnetwork} | tojson" | head -n 1)
-            
-            if [[ -n "$FIRST_USABLE_SUBNET_JSON" ]]; then
-                SHARED_VPC_NETWORK_URL=$(echo "$FIRST_USABLE_SUBNET_JSON" | jq -r .network)
-                SHARED_VPC_NETWORK=$(basename "$SHARED_VPC_NETWORK_URL")
-                
-                SHARED_VPC_SUBNET_URL=$(echo "$FIRST_USABLE_SUBNET_JSON" | jq -r .subnetwork)
-                SHARED_VPC_SUBNET=$(basename "$SHARED_VPC_SUBNET_URL")
-                
-                # Extract Region from Subnet URL to ensure consistency
-                # URL format: .../regions/REGION/subnetworks/SUBNET
-                REGION=$(echo "$SHARED_VPC_SUBNET_URL" | sed -E 's/.*\/regions\/([^\/]+)\/.*/\1/')
-            fi
-
-            # 2. Discover Proxy Subnet (purpose=REGIONAL_MANAGED_PROXY, in the SAME Network and Region)
-            if [[ -n "$SHARED_VPC_NETWORK_URL" ]]; then
-                SHARED_VPC_PROXY_SUBNET_URL=$(echo "$USABLE_SUBNETS_JSON" | jq -r ".[] | .subnetwork = (.subnetwork // .selfLink) | select(.network == \"$SHARED_VPC_NETWORK_URL\") | select(.subnetwork | contains(\"/${REGION}/\")) | select(.purpose == \"REGIONAL_MANAGED_PROXY\") | .subnetwork" | head -n 1)
-                SHARED_VPC_PROXY_SUBNET=$(basename "$SHARED_VPC_PROXY_SUBNET_URL")
-            fi
-        fi
-
-        # Fallbacks if discovery fails
-        if [[ -z "$SHARED_VPC_NETWORK" ]]; then
-            read -p "Enter Shared VPC Network Name: " INPUT_NETWORK
-            SHARED_VPC_NETWORK=${INPUT_NETWORK}
-        fi
-        if [[ -z "$SHARED_VPC_SUBNET" ]]; then
-            read -p "Enter Shared VPC Subnet Name: " INPUT_SUBNET
-            SHARED_VPC_SUBNET=${INPUT_SUBNET}
-        fi
-        if [[ -z "$SHARED_VPC_PROXY_SUBNET" ]]; then
-            read -p "Enter Shared VPC Proxy Subnet Name: " INPUT_PROXY_SUBNET
-            SHARED_VPC_PROXY_SUBNET=${INPUT_PROXY_SUBNET}
-        fi
-        
-        echo -e "Network: ${YELLOW}${SHARED_VPC_NETWORK}${NC}"
-        echo -e "Subnet: ${YELLOW}${SHARED_VPC_SUBNET}${NC}"
-        echo -e "Proxy Subnet: ${YELLOW}${SHARED_VPC_PROXY_SUBNET}${NC}"
-    fi
-
-    # 3. Region
-    if [[ -z "$REGION" ]]; then
-        echo ""
-        echo -e "Select Network Region:"
-        echo "1) us-central1"
-        echo "2) us-central2"
-        echo "3) us-east1"
-        echo "4) us-east4 (Default)"
-        echo "5) us-east5"
-        echo "6) us-south1"
-        echo "7) us-west1"
-        echo "8) us-west2"
-        echo "9) us-west3"
-        echo "10) us-west4"
-        read -p "Enter selection [4]: " REGION_SEL
-        
-        case $REGION_SEL in
-            1) REGION="us-central1" ;;
-            2) REGION="us-central2" ;;
-            3) REGION="us-east1" ;;
-            4|"") REGION="us-east4" ;;
-            5) REGION="us-east5" ;;
-            6) REGION="us-south1" ;;
-            7) REGION="us-west1" ;;
-            8) REGION="us-west2" ;;
-            9) REGION="us-west3" ;;
-            10) REGION="us-west4" ;;
-            *)
-                echo -e "${YELLOW}Invalid selection. Defaulting to us-east4.${NC}"
-                REGION="us-east4"
-                ;;
-        esac
-    fi
-    echo -e "Using Network Region: ${YELLOW}${REGION}${NC}"
-
+    echo -e "${YELLOW}NOTE: It is recommended to deploy a Load Balancer in front of the auto-generated Gemini Enterprise application endpoint to enforce additional security/access policies, Identity Aware Proxy, and custom routing.${NC}"
+    
     # 4. Load Balancer Type
     echo ""
     echo -e "Select Load Balancer Type:"
@@ -1576,6 +1493,96 @@ configure_stage_0() {
             echo -e "${GREEN}${COMPLIANCE_REGIME} Regime active. Automatically enforcing Self-Managed Certificate.${NC}"
         fi
     fi
+
+    # Skip Shared VPC if Load Balancer is None
+    if [[ "$DEPLOYMENT_TYPE" != "none" ]]; then
+        read -p "Do you want to use an existing Shared VPC? (y/N) [N]: " USE_SHARED_VPC_CHOICE
+        if [[ "$USE_SHARED_VPC_CHOICE" == "y" || "$USE_SHARED_VPC_CHOICE" == "Y" ]]; then
+            USE_SHARED_VPC="true"
+            
+            # 1. Determine Host Project & Verify Attachment
+            SHARED_VPC_HOST_PROJECT=$(gcloud compute shared-vpc get-host-project "${PROJECT_ID}" --format="value(name)" 2>/dev/null || true)
+
+            # If not attached, fail and advise user
+            if [[ -z "$SHARED_VPC_HOST_PROJECT" ]]; then
+                POTENTIAL_HOST_PROJECT=$(echo "$PROJECT_ID" | cut -d'-' -f1-2 | sed 's/$/-net-host/')
+                
+                echo -e "${RED}ERROR: Project '${PROJECT_ID}' is not attached to a Shared VPC Host.${NC}"
+                echo -e "${YELLOW}To proceed, you must:${NC}"
+                echo -e "1. Attach this project to the Shared VPC Host Project."
+                echo -e "   (Command: gcloud compute shared-vpc associated-projects add ${PROJECT_ID} --host-project ${POTENTIAL_HOST_PROJECT})"
+                echo -e "2. Share the VPC Host Project subnets with this Service Project."
+                echo -e "${YELLOW}Please configure this and rerun deploy.sh.${NC}"
+                return 1
+            fi
+            
+            echo -e "Using Shared VPC: ${GREEN}Yes${NC}"
+            echo -e "Using Network Host Project: ${YELLOW}${SHARED_VPC_HOST_PROJECT}${NC}"
+
+            # 2. Auto-discover Network and Subnets
+            if [[ -z "$SHARED_VPC_NETWORK" ]]; then
+                echo "Scanning for subnets shared from ${SHARED_VPC_HOST_PROJECT} to ${PROJECT_ID}..."
+                
+                # Get all subnets from the Host Project directly in JSON format
+                USABLE_SUBNETS_JSON=$(gcloud compute networks subnets list --project "${SHARED_VPC_HOST_PROJECT}" --format="json" 2>/dev/null)
+                
+                if [[ -z "$USABLE_SUBNETS_JSON" || "$USABLE_SUBNETS_JSON" == "[]" ]]; then
+                     echo -e "${RED}ERROR: No subnets found in Host Project '${SHARED_VPC_HOST_PROJECT}' or permission denied.${NC}"
+                     echo -e "${YELLOW}Please ensure that:${NC}"
+                     echo -e "1. The Host Project exists and you have permissions to list subnets."
+                     echo -e "2. You have shared the necessary subnets with this Service Project."
+                     echo -e "3. You are authenticated correctly."
+                     return 1
+                fi
+
+                # 1. Discover Private Subnet & Network (Atomic operation to ensure consistency)
+                # We pick the first usable PRIVATE subnet in the Host Project AND in the correct Region (defaulting to us-east4 if not set)
+                DISCOVERY_REGION=$(gcloud config get-value compute/region 2>/dev/null)
+                DISCOVERY_REGION=${DISCOVERY_REGION:-"us-east4"}
+                
+                # We also normalize 'selfLink' to 'subnetwork' to handle both 'list-usable' and 'list' output formats
+                FIRST_USABLE_SUBNET_JSON=$(echo "$USABLE_SUBNETS_JSON" | jq -r ".[] | .subnetwork = (.subnetwork // .selfLink) | select(.network | contains(\"projects/${SHARED_VPC_HOST_PROJECT}/\")) | select(.subnetwork | contains(\"/${DISCOVERY_REGION}/\")) | select(.purpose == \"PRIVATE\" or .purpose == null) | {network: .network, subnetwork: .subnetwork} | tojson" | head -n 1)
+                
+                if [[ -n "$FIRST_USABLE_SUBNET_JSON" ]]; then
+                    SHARED_VPC_NETWORK_URL=$(echo "$FIRST_USABLE_SUBNET_JSON" | jq -r .network)
+                    SHARED_VPC_NETWORK=$(basename "$SHARED_VPC_NETWORK_URL")
+                    
+                    SHARED_VPC_SUBNET_URL=$(echo "$FIRST_USABLE_SUBNET_JSON" | jq -r .subnetwork)
+                    SHARED_VPC_SUBNET=$(basename "$SHARED_VPC_SUBNET_URL")
+                    
+                    # Extract Region from Subnet URL to ensure consistency
+                    # URL format: .../regions/REGION/subnetworks/SUBNET
+                    REGION=$(echo "$SHARED_VPC_SUBNET_URL" | sed -E 's/.*\/regions\/([^\/]+)\/.*/\1/')
+                fi
+
+                # 2. Discover Proxy Subnet (purpose=REGIONAL_MANAGED_PROXY, in the SAME Network and Region)
+                if [[ -n "$SHARED_VPC_NETWORK_URL" ]]; then
+                    SHARED_VPC_PROXY_SUBNET_URL=$(echo "$USABLE_SUBNETS_JSON" | jq -r ".[] | .subnetwork = (.subnetwork // .selfLink) | select(.network == \"$SHARED_VPC_NETWORK_URL\") | select(.subnetwork | contains(\"/${REGION}/\")) | select(.purpose == \"REGIONAL_MANAGED_PROXY\") | .subnetwork" | head -n 1)
+                    SHARED_VPC_PROXY_SUBNET=$(basename "$SHARED_VPC_PROXY_SUBNET_URL")
+                fi
+            fi
+
+            # Fallbacks if discovery fails
+            if [[ -z "$SHARED_VPC_NETWORK" ]]; then
+                read -p "Enter Shared VPC Network Name: " INPUT_NETWORK
+                SHARED_VPC_NETWORK=${INPUT_NETWORK}
+            fi
+            if [[ -z "$SHARED_VPC_SUBNET" ]]; then
+                read -p "Enter Shared VPC Subnet Name: " INPUT_SUBNET
+                SHARED_VPC_SUBNET=${INPUT_SUBNET}
+            fi
+            if [[ -z "$SHARED_VPC_PROXY_SUBNET" ]]; then
+                read -p "Enter Shared VPC Proxy Subnet Name: " INPUT_PROXY_SUBNET
+                SHARED_VPC_PROXY_SUBNET=${INPUT_PROXY_SUBNET}
+            fi
+            
+            echo -e "Network: ${YELLOW}${SHARED_VPC_NETWORK}${NC}"
+            echo -e "Subnet: ${YELLOW}${SHARED_VPC_SUBNET}${NC}"
+            echo -e "Proxy Subnet: ${YELLOW}${SHARED_VPC_PROXY_SUBNET}${NC}"
+        fi
+    fi
+
+
 
     # 5. Domain
     if [[ -z "$DOMAIN" ]]; then
@@ -1759,71 +1766,116 @@ configure_stage_0() {
     fi
 
     # 9. Access Policy
-    echo ""
-    echo -e "${BLUE}--- Access Policies ---${NC}"
-    echo "Discovering Access Policy..."
-    ACCESS_POLICY_NUMBER=$(gcloud access-context-manager policies list --organization "${ORG_ID}" --format="value(name)" --quiet 2>/dev/null | head -n 1)
-    if [ -z "$ACCESS_POLICY_NUMBER" ]; then
-        echo -e "${RED}WARNING: Could not auto-discover Access Policy Number.${NC}"
-        read -p "Enter Access Policy Number: " ACCESS_POLICY_NUMBER
-    else
-        ACCESS_POLICY_NUMBER=$(basename "${ACCESS_POLICY_NUMBER}")
-        echo -e "Found Access Policy Number: ${YELLOW}${ACCESS_POLICY_NUMBER}${NC}"
-    fi
-
-    if [[ -z "$ACCESS_POLICY_NUMBER" ]]; then
-        echo -e "${RED}Error: Access Policy Number is required.${NC}"
-        return 1
-    fi
-    
-    # Pre-check Terraform State for managed Access Levels
-    # This requires determining BUCKET_NAME and running terraform init early
-    echo "Checking Terraform State for managed resources..."
-    cd gemini-stage-0
-    
-    # Resolve Bucket Name Logic (Duplicates logic from deploy_stage_0/configure_stage_0 reuse block)
-    # If using existing tfvars, use it. If not, use derived STATE_BUCKET.
-    TEMP_BUCKET_NAME="${BUCKET_NAME}"
-    if [[ -z "$TEMP_BUCKET_NAME" ]]; then
-         if [[ -f "terraform.tfvars" ]]; then
-             TEMP_BUCKET_NAME=$(grep 'terraform_state_bucket' terraform.tfvars | cut -d'=' -f2 | tr -d ' "')
-             TEMP_BUCKET_NAME=$(echo "$TEMP_BUCKET_NAME" | sed 's/gs:\/\/ //' | sed 's/\/$//')
-         fi
-    fi
-    # If still empty, fall back to global STATE_BUCKET
-    if [[ -z "$TEMP_BUCKET_NAME" && -n "$STATE_BUCKET" ]]; then
-        TEMP_BUCKET_NAME=$(echo "$STATE_BUCKET" | sed 's/gs:\/\/ //' | sed 's/\/$//')
-    fi
-    
-    MANAGED_ACCESS_LEVELS=""
-    if [[ -n "$TEMP_BUCKET_NAME" ]]; then
-        echo "Initializing Terraform (Read-Only) to check state in ${TEMP_BUCKET_NAME}..."
-        # We suppress output to keep UI clean, but allow errors to show if critical
-        if terraform init -migrate-state -backend-config="bucket=${TEMP_BUCKET_NAME}" -backend-config="prefix=terraform/state/stage-0" &>/dev/null; then
-             MANAGED_ACCESS_LEVELS=$(terraform state list | grep "google_access_context_manager_access_level" || true)
-             if [[ -n "$MANAGED_ACCESS_LEVELS" ]]; then
-                 echo -e "${GREEN}Found managed Access Levels in state.${NC}"
-             fi
+    if [[ "$DEPLOYMENT_TYPE" != "none" ]]; then
+        echo ""
+        echo -e "${BLUE}--- Access Policies ---${NC}"
+        echo "Discovering Access Policy..."
+        
+        # Capture output and exit code
+        ACCESS_POLICY_OUTPUT=$(gcloud access-context-manager policies list --organization "${ORG_ID}" --format="value(name)" --quiet 2>&1)
+        GCLOUD_STATUS=$?
+        
+        if [ $GCLOUD_STATUS -ne 0 ]; then
+            echo -e "${RED}WARNING: Could not auto-discover Access Policy Number.${NC}"
+            echo -e "${RED}REASON: gcloud command failed (API might be disabled or permission denied).${NC}"
+            echo -e "Error details:\n$ACCESS_POLICY_OUTPUT"
+            
+            echo ""
+            echo -e "${BLUE}Manual Steps Required:${NC}"
+            echo -e "1. Ensure the user running this script has the \"Access Context Manager Admin\" IAM role at the organization-level.${NC}"
+            echo -e "1. Navigate to \"Access Context Manager\" at the organization-level: ${BLUE}https://console.cloud.google.com/security/access-level?organizationId=${ORG_ID}${NC}"
+            echo -e "2. Click \"Create access level\" and create a sample Access Level (this will be deleted)."
+            echo -e "3. Capture the [ACCESS_POLICY_NUMBER] from the Access Level full name (e.g. accessPolicies/[ACCESS_POLICY_NUMBER]/accessLevels/[ACCESS_LEVEL_NAME])"
+            echo -e "4. Delete the created Access Level (if not needed)"
+            echo ""
+            
+            read -p "Enter Access Policy Number: " ACCESS_POLICY_NUMBER
         else
-             echo -e "${RED}WARNING: Could not initialize Terraform state check. Proceeding as fresh deployment.${NC}"
+            ACCESS_POLICY_NUMBER=$(echo "$ACCESS_POLICY_OUTPUT" | head -n 1)
+            if [ -z "$ACCESS_POLICY_NUMBER" ]; then
+                echo -e "${RED}WARNING: No Access Policies found for organization ${ORG_ID}.${NC}"
+                echo ""
+                echo -e "${BLUE}Manual Steps Required:${NC}"
+                echo -e "1. Ensure the user running this script has the \"Access Context Manager Admin\" IAM role at the organization-level.${NC}"
+                echo -e "1. Navigate to \"Access Context Manager\" at the organization-level: ${BLUE}https://console.cloud.google.com/security/access-level?organizationId=${ORG_ID}${NC}"
+                echo -e "2. Click \"Create access level\" and create a sample Access Level (this will be deleted)."
+                echo -e "3. Capture the [ACCESS_POLICY_NUMBER] from the Access Level full name (e.g. accessPolicies/[ACCESS_POLICY_NUMBER]/accessLevels/[ACCESS_LEVEL_NAME])"
+                echo -e "4. Delete the created Access Level (if not needed)"
+                echo ""            
+                read -p "Enter Access Policy Number: " ACCESS_POLICY_NUMBER
+            else
+                ACCESS_POLICY_NUMBER=$(basename "${ACCESS_POLICY_NUMBER}")
+                echo -e "Found Access Policy Number: ${YELLOW}${ACCESS_POLICY_NUMBER}${NC}"
+            fi
         fi
+
+        if [[ -z "$ACCESS_POLICY_NUMBER" ]]; then
+            echo -e "${RED}Error: Access Policy Number is required.${NC}"
+            return 1
+        fi
+        
+        # Pre-check Terraform State for managed Access Levels
+        # This requires determining BUCKET_NAME and running terraform init early
+        echo "Checking Terraform State for managed resources..."
+        cd gemini-stage-0
+        
+        # Resolve Bucket Name Logic (Duplicates logic from deploy_stage_0/configure_stage_0 reuse block)
+        # If using existing tfvars, use it. If not, use derived STATE_BUCKET.
+        TEMP_BUCKET_NAME="${BUCKET_NAME}"
+        if [[ -z "$TEMP_BUCKET_NAME" ]]; then
+             if [[ -f "terraform.tfvars" ]]; then
+                 TEMP_BUCKET_NAME=$(grep 'terraform_state_bucket' terraform.tfvars | cut -d'=' -f2 | tr -d ' "')
+                 TEMP_BUCKET_NAME=$(echo "$TEMP_BUCKET_NAME" | sed 's/gs:\/\/ //' | sed 's/\/$//')
+             fi
+        fi
+        # If still empty, fall back to global STATE_BUCKET
+        if [[ -z "$TEMP_BUCKET_NAME" && -n "$STATE_BUCKET" ]]; then
+            TEMP_BUCKET_NAME=$(echo "$STATE_BUCKET" | sed 's/gs:\/\/ //' | sed 's/\/$//')
+        fi
+        
+        MANAGED_ACCESS_LEVELS=""
+        if [[ -n "$TEMP_BUCKET_NAME" ]]; then
+            echo "Initializing Terraform (Read-Only) to check state in ${TEMP_BUCKET_NAME}..."
+            # We suppress output to keep UI clean, but allow errors to show if critical
+            if terraform init -migrate-state -backend-config="bucket=${TEMP_BUCKET_NAME}" -backend-config="prefix=terraform/state/stage-0" &>/dev/null; then
+                 MANAGED_ACCESS_LEVELS=$(terraform state list | grep "google_access_context_manager_access_level" || true)
+                 if [[ -n "$MANAGED_ACCESS_LEVELS" ]]; then
+                     echo -e "${GREEN}Found managed Access Levels in state.${NC}"
+                 fi
+            else
+                 echo -e "${RED}WARNING: Could not initialize Terraform state check. Proceeding as fresh deployment.${NC}"
+            fi
+        else
+            echo "State bucket not determined. Skipping managed resource check."
+        fi
+        cd ..
+
+        configure_access_policies
+
+        # Cloud Armor WAF Information
+        echo ""
+        echo -e "${BLUE}--- Cloud Armor (WAF) ---${NC}"
+        echo -e "${YELLOW}Cloud Armor will act as a Web Application Firewall (WAF) for your Gemini Enterprise application.${NC}"
+        echo -e "It will be deployed with predefined rules and sensitivity levels."
+        echo ""
+        echo -e "Please review the configuration in: ${BLUE}blueprints/fedramp-high/gemini-enterprise/gemini-stage-0/data/cloudarmor.yaml${NC}"
+        echo -e "For more information on predefined WAF rules, visit: ${BLUE}https://docs.cloud.google.com/armor/docs/waf-rules${NC}"
+        echo ""
+        read -p "Press Enter to acknowledge and continue..."
     else
-        echo "State bucket not determined. Skipping managed resource check."
+        ACCESS_POLICY_NUMBER="0"
+        CREATE_IP_BASED_ACCESS="false"
+        CREATE_US_ACCESS="false"
+        CREATE_TIME_ACCESS="false"
+        CREATE_EXPIRE_ACCESS="false"
+        CREATE_LENIENT_DEVICE_ACCESS="false"
+        CREATE_MODERATE_DEVICE_ACCESS="false"
+        CREATE_STRICT_DEVICE_ACCESS="false"
+        ENABLE_CEP_BOOL="false"
+        LENIENT_STR="[]"
+        MODERATE_STR="[]"
+        ALLOWED_IPS="[]"
     fi
-    cd ..
-
-    configure_access_policies
-
-    # Cloud Armor WAF Information
-    echo ""
-    echo -e "${BLUE}--- Cloud Armor (WAF) ---${NC}"
-    echo -e "${YELLOW}Cloud Armor will act as a Web Application Firewall (WAF) for your Gemini Enterprise application.${NC}"
-    echo -e "It will be deployed with predefined rules and sensitivity levels."
-    echo ""
-    echo -e "Please review the configuration in: ${BLUE}blueprints/fedramp-high/gemini-enterprise/gemini-stage-0/data/cloudarmor.yaml${NC}"
-    echo -e "For more information on predefined WAF rules, visit: ${BLUE}https://docs.cloud.google.com/armor/docs/waf-rules${NC}"
-    echo ""
-    read -p "Press Enter to acknowledge and continue..."
 
     # 9. Data Stores
     echo ""
@@ -1831,7 +1883,7 @@ configure_stage_0() {
     echo -e "${YELLOW}--- NOTE: Data Stores can be created and associated with a Gemini Enterprise application at a later time. ---${NC}"
     read -p "Create Data Stores? (y/N): " DS_CHOICE
     CREATE_DS_BOOL="false"
-    ENABLE_DS_CMEK="true" # Default to true even if not creating, though irrelevant
+    ENABLE_DS_CMEK="false" # Default to false, will be set to true if creating data stores and requested
     GCS_DATA_STORES="{}"
     BQ_DATA_STORES="{}"
     
@@ -1995,7 +2047,7 @@ configure_stage_0() {
                         done
                         echo ""
                     else
-                        echo -e "${RED}Warning: Could not extract operation name from response.${NC}"
+                        echo -e "${RED}WARNING: Could not extract operation name from response.${NC}"
                         echo -e "Response: $_PATCH_BODY"
                     fi
                 else
@@ -2029,24 +2081,28 @@ configure_stage_0() {
     fi
 
     # 11. Organization Policy Check
-    echo ""
-    echo -e "${BLUE}--- Organization Policies (Project-Level) ---${NC}"
-    check_org_policies
-    if [[ $? -ne 0 ]]; then
-        return 1
+    if [[ "$DEPLOYMENT_TYPE" != "none" ]]; then
+        echo ""
+        echo -e "${BLUE}--- Organization Policies (Project-Level) ---${NC}"
+        check_org_policies
+        if [[ $? -ne 0 ]]; then
+            return 1
+        fi
     fi
 
-    echo ""
-    echo -e "${BLUE}--- Manual Steps ---${NC}"
-    echo -e "${YELLOW}IMPORTANT: Before proceeding, ensure you have completed the following manual prerequisites:${NC}"
-    echo "1. OAuth Consent Screen: Configured as Internal."
-    echo -e "   Link: ${BLUE}https://console.cloud.google.com/auth/branding?orgonly=true&project=${PROJECT_ID}&supportedpurview=organizationId${NC}"
-    echo "2. User Role Groups: Created admin/user groups in Cloud Identity / third-party identity provider (${ADMIN_GROUP}, ${USER_GROUP})."
-    echo ""
-    read -p "Have you completed these steps? (y/N): " CONFIRM_PRE
-    if [[ "$CONFIRM_PRE" != "y" && "$CONFIRM_PRE" != "Y" ]]; then
-        echo "Please complete the prerequisites and try again."
-        return 1
+    if [[ "$DEPLOYMENT_TYPE" != "none" ]]; then
+        echo ""
+        echo -e "${BLUE}--- Manual Steps ---${NC}"
+        echo -e "${YELLOW}IMPORTANT: Before proceeding, ensure you have completed the following manual prerequisites:${NC}"
+        echo "1. OAuth Consent Screen: Configured as Internal."
+        echo -e "   Link: ${BLUE}https://console.cloud.google.com/auth/branding?orgonly=true&project=${PROJECT_ID}&supportedpurview=organizationId${NC}"
+        echo "2. User Role Groups: Created admin/user groups in Cloud Identity / third-party identity provider (${ADMIN_GROUP}, ${USER_GROUP})."
+        echo ""
+        read -p "Have you completed these steps? (y/N): " CONFIRM_PRE
+        if [[ "$CONFIRM_PRE" != "y" && "$CONFIRM_PRE" != "Y" ]]; then
+            echo "Please complete the prerequisites and try again."
+            return 1
+        fi
     fi
 
     # Greenfield: Create KeyRing and Key if needed
@@ -2094,7 +2150,24 @@ configure_stage_0() {
     if [[ -z "$BUCKET_NAME" && -n "$STATE_BUCKET" ]]; then
         BUCKET_NAME=$(echo "$STATE_BUCKET" | sed 's/gs:\/\/ //' | sed 's/\/$//')
     fi
+    
+    if [[ -z "$BUCKET_NAME" ]]; then
+        echo -e "${RED}Error: State bucket name could not be determined.${NC}"
+        cd ..
+        return 1
+    fi
+    
     rm -rf .terraform
+    
+    # Verify bucket access before init
+    echo "Verifying access to bucket gs://${BUCKET_NAME}..."
+    if ! gcloud storage objects list "gs://${BUCKET_NAME}" --limit=1 &>/dev/null; then
+        echo -e "${RED}Error: Cannot access bucket gs://${BUCKET_NAME} or permission denied.${NC}"
+            echo -e "${YELLOW}Please ensure the bucket exists and you have 'Storage Object Viewer' or 'Storage Admin' permissions.${NC}"
+            cd ..
+            return 1
+        fi
+
     terraform init -migrate-state -backend-config="bucket=${BUCKET_NAME}" -backend-config="prefix=terraform/state/stage-0" || echo -e "${RED}WARNING: Init failed during state check.${NC}"
 
     # Check if KeyRing is in state
@@ -2143,9 +2216,10 @@ EOF
 
     
     # Add example data stores
+    echo "enable_data_store_cmek = ${ENABLE_DS_CMEK}" >> gemini-stage-0/terraform.tfvars
+    
     if [[ "$CREATE_DS_BOOL" == "true" ]]; then
         cat >> gemini-stage-0/terraform.tfvars <<EOF
-enable_data_store_cmek = ${ENABLE_DS_CMEK}
 gcs_data_store_configs = ${GCS_DATA_STORES}
 bq_data_store_configs = ${BQ_DATA_STORES}
 EOF
@@ -2278,7 +2352,7 @@ deploy_stage_0() {
                     echo -e "You may need to manually register the key."
                 fi
             else
-                echo -e "${RED}Warning: CMEK key was enabled but no key ID was found in terraform output. Skipping registration.${NC}"
+                echo -e "${RED}WARNING: CMEK key was enabled but no key ID was found in terraform output. Skipping registration.${NC}"
             fi
         fi
     fi
@@ -2406,8 +2480,8 @@ configure_gem4gov() {
         done
         
         echo ""
-        echo -e "${YELLOW}WARNING: Enabling Gemini Enterprise Usage Audit logs will write user queries, model thinking, and model responses to Cloud Logging.${NC}"
-        echo -e "${YELLOW}You must ensure that logging permissions are set to allow only necessary principals to access.${NC}"
+        echo -e "${RED}WARNING: Enabling Gemini Enterprise Usage Audit logs will write user queries, model thinking, and model responses to Cloud Logging.${NC}"
+        echo -e "${RED}You must ensure that logging permissions are set to allow only necessary principals to access.${NC}"
         read -p "Would you like to enable Gemini Enterprise Usage Audit logs (conversation logging) for this application? [y/N]: " ENABLE_AUDIT_LOGS
         if [[ "$ENABLE_AUDIT_LOGS" =~ ^[Yy]$ ]]; then
             ENABLE_AUDIT_LOGS_FLAG="true"
@@ -2761,8 +2835,9 @@ import_documents_helper() {
         for i in $(jq -r 'keys[]' <<< "$GCS_DS_MAP"); do
             DS_ID=$(jq -r ".[$i].data_store_id" <<< "$GCS_DS_MAP")
             BUCKET=$(jq -r ".[$i].bucket_name" <<< "$GCS_DS_MAP")
+            DISPLAY_NAME=$(jq -r ".[$i].display_name" <<< "$GCS_DS_MAP")
             COUNT=$((COUNT+1))
-            echo "${COUNT}. [GCS] ${DS_ID} (Bucket: ${BUCKET})"
+            echo "${COUNT}. [GCS] ${DISPLAY_NAME} (${DS_ID}) (Bucket: ${BUCKET})"
             DS_IDS+=("$DS_ID")
             DS_TYPES+=("gcs")
             DS_SOURCES+=("$BUCKET")
@@ -2775,8 +2850,9 @@ import_documents_helper() {
             DS_ID=$(jq -r ".[$i].data_store_id" <<< "$BQ_DS_MAP")
             DATASET=$(jq -r ".[$i].dataset_id" <<< "$BQ_DS_MAP")
             TABLE=$(jq -r ".[$i].table_id" <<< "$BQ_DS_MAP")
+            DISPLAY_NAME=$(jq -r ".[$i].display_name" <<< "$BQ_DS_MAP")
             COUNT=$((COUNT+1))
-            echo "${COUNT}. [BigQuery] ${DS_ID} (Table: ${DATASET}.${TABLE})"
+            echo "${COUNT}. [BigQuery] ${DISPLAY_NAME} (${DS_ID}) (Table: ${DATASET}.${TABLE})"
             DS_IDS+=("$DS_ID")
             DS_TYPES+=("bigquery")
             DS_SOURCES+=("${DATASET}.${TABLE}")
@@ -3500,6 +3576,10 @@ main_menu() {
 # --- Entry Point ---
 
 check_dependencies
+if ! gcloud auth print-access-token &>/dev/null; then
+    echo "Starting authentication flow..."
+    gcloud auth login
+fi
 auth_and_project_setup
 enable_apis
 select_deployment_type
