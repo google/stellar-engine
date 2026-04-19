@@ -17,6 +17,13 @@
 # tfdoc:file:description NEG resources.
 
 locals {
+  _neg_endpoints_internet = flatten([
+    for k, v in local.neg_regional_internet : [
+      for kk, vv in v.internet.endpoints : merge(vv, {
+        key = "${k}-${kk}", neg = k, use_fqdn = v.internet.use_fqdn
+      })
+    ]
+  ])
   _neg_endpoints_zonal = flatten([
     for k, v in local.neg_zonal : [
       for kk, vv in v.endpoints : merge(vv, {
@@ -24,8 +31,15 @@ locals {
       })
     ]
   ])
+  neg_endpoints_internet = {
+    for v in local._neg_endpoints_internet : (v.key) => v
+  }
   neg_endpoints_zonal = {
     for v in local._neg_endpoints_zonal : (v.key) => v
+  }
+  neg_regional_internet = {
+    for k, v in var.neg_configs :
+    k => v if v.internet != null
   }
   neg_regional_psc = {
     for k, v in var.neg_configs :
@@ -77,6 +91,26 @@ resource "google_compute_network_endpoint" "default" {
   ip_address = each.value.ip_address
   port       = each.value.port
   zone       = each.value.zone
+}
+
+resource "google_compute_region_network_endpoint_group" "internet" {
+  for_each              = local.neg_regional_internet
+  project               = var.project_id
+  region                = var.region
+  name                  = "${var.name}-${each.key}"
+  description           = coalesce(each.value.description, var.description)
+  network_endpoint_type = each.value.internet.use_fqdn ? "INTERNET_FQDN_PORT" : "INTERNET_IP_PORT"
+  network               = var.vpc
+}
+
+resource "google_compute_region_network_endpoint" "internet" {
+  for_each                      = local.neg_endpoints_internet
+  project                       = google_compute_region_network_endpoint_group.internet[each.value.neg].project
+  region                        = var.region
+  region_network_endpoint_group = google_compute_region_network_endpoint_group.internet[each.value.neg].name
+  fqdn                          = each.value.use_fqdn ? each.value.destination : null
+  ip_address                    = each.value.use_fqdn ? null : each.value.destination
+  port                          = each.value.port
 }
 
 resource "google_compute_region_network_endpoint_group" "psc" {

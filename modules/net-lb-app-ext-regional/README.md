@@ -4,7 +4,7 @@ This module allows managing External Regional HTTP/HTTPS Application Load Balanc
 
 Due to the complexity of the underlying resources, changes to the configuration that involve recreation of resources are best applied in stages, starting by disabling the configuration in the urlmap that references the resources that need recreation, then doing the same for the backend service, etc.
 
-The variable space of this module closely mirrors that of  [net-lb-app-ext](../net-lb-app-ext), with the exception of certain features not supported by the regional version. These unsupported features include GCS backends and Internet NEGs, among others. For a comprehensive overview of feature disparities, please consult the [load balancer feature comparison matrix](https://cloud.google.com/load-balancing/docs/features).
+The variable space of this module closely mirrors that of  [net-lb-app-ext](../net-lb-app-ext), with the exception of certain features not supported by the regional version. For a comprehensive overview of feature disparities, please consult the [load balancer feature comparison matrix](https://cloud.google.com/load-balancing/docs/features).
 
 ## Examples
 

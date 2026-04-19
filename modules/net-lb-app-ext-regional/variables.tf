@@ -99,6 +99,13 @@ variable "neg_configs" {
         port       = number
       })))
     }))
+    internet = optional(object({
+      use_fqdn = optional(bool, true)
+      endpoints = optional(map(object({
+        destination = string
+        port        = number
+      })))
+    }))
     psc = optional(object({
       region         = string
       target_service = string
@@ -115,6 +122,7 @@ variable "neg_configs" {
         (try(v.cloudrun, null) == null ? 0 : 1) +
         (try(v.gce, null) == null ? 0 : 1) +
         (try(v.hybrid, null) == null ? 0 : 1) +
+        (try(v.internet, null) == null ? 0 : 1) +
         (try(v.psc, null) == null ? 0 : 1) == 1
       )
     ])
