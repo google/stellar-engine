@@ -126,6 +126,13 @@ variable "gcp_deletion_protection" {
   nullable    = false
 }
 
+variable "retain_backups_on_delete" {
+  description = "Whether existing automated and on-demand backups should be retained after the instance is deleted. Applies across all surfaces (UI, API, Terraform)."
+  type        = bool
+  default     = true
+  nullable    = false
+}
+
 variable "insights_config" {
   description = "Query Insights configuration. Defaults to null which disables Query Insights."
   type = object({
