@@ -41,6 +41,9 @@ resource "google_logging_project_sink" "discovery_engine_sink" {
   project                = var.main_project_id
   destination            = "bigquery.googleapis.com/${google_bigquery_dataset.analytics_dataset[0].id}"
   filter                 = "protoPayload.serviceName=\"discoveryengine.googleapis.com\""
+  bigquery_options {
+    use_partitioned_tables = true
+  }
   unique_writer_identity = true
 }
 
