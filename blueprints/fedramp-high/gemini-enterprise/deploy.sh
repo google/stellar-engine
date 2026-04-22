@@ -2397,6 +2397,16 @@ deploy_stage_0() {
         fi
         echo -e "4. From the Main Menu select ${BLUE}Step 3 - Configure & Deploy Load Balancer / Access Policies (gemini-stage-1)${NC}."
     fi
+    
+    ENABLE_ANALYTICS_TF=$(grep "enable_analytics" gemini-stage-0/terraform.tfvars | awk -F'=' '{print $2}' | tr -d ' "')
+    if [[ "$ENABLE_ANALYTICS_TF" == "true" ]]; then
+        echo ""
+        echo -e "${YELLOW}Analytics Views:${NC}"
+        echo -e "To create the analytics reporting views, you MUST first generate some activity in the Gemini Enterprise application (created in Step 2)."
+        echo -e "After activity is generated, run the helper function:"
+        echo -e "${YELLOW}Helper Functions${NC} > ${YELLOW}Create BigQuery Analytics Views${NC}"
+        echo ""
+    fi
     pause
 }
 
@@ -3263,6 +3273,161 @@ distribute_gemini_licenses() {
     done
 }
 
+create_bigquery_views() {
+    echo ""
+    echo -e "${BLUE}--- Create BigQuery Analytics Views ---${NC}"
+    
+    # Hydrate state to get project and prefix
+    hydrate_from_state
+    
+    # Ensure Project ID is set
+    if [[ -z "$PROJECT_ID" ]]; then
+        echo -e "${RED}Project ID is required. Please select a project first.${NC}"
+        pause
+        return 1
+    fi
+
+    PREFIX=$(echo "$STATE_CONTENT" | jq -r '.outputs.prefix.value // empty')
+    if [[ -z "$PREFIX" ]]; then
+        echo -e "${RED}Prefix not found in state. Cannot determine dataset ID.${NC}"
+        pause
+        return 1
+    fi
+    
+    DATASET_ID="${PREFIX//-/_}_gemini_analytics"
+    echo -e "Analytics Dataset: ${YELLOW}${DATASET_ID}${NC}"
+    
+    # Set environment variables for bq
+    export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"
+    export GOOGLE_CLOUD_QUOTA_PROJECT="${PROJECT_ID}"
+    
+    # Check if dataset exists
+    echo "Checking if dataset exists..."
+    BQ_OUTPUT=$(PYTHONPATH="" bq show --format=prettyjson "${PROJECT_ID}:${DATASET_ID}" 2>&1)
+    if [[ $? -ne 0 ]]; then
+        echo -e "${RED}Error checking dataset:${NC}"
+        echo "$BQ_OUTPUT"
+        echo -e "${RED}Dataset ${DATASET_ID} not found or not accessible.${NC}"
+        pause
+        return 1
+    fi
+    
+    # Check if tables exist
+    DATA_ACCESS_TABLE="cloudaudit_googleapis_com_data_access"
+    ACTIVITY_TABLE="cloudaudit_googleapis_com_activity"
+    
+    echo "Checking for audit log tables..."
+    
+    HAS_DATA_ACCESS=false
+    HAS_ACTIVITY=false
+    
+    if PYTHONPATH="" bq show --format=prettyjson "${PROJECT_ID}:${DATASET_ID}.${DATA_ACCESS_TABLE}" &>/dev/null; then
+        HAS_DATA_ACCESS=true
+        echo -e "${GREEN}Found ${DATA_ACCESS_TABLE}${NC}"
+    else
+        echo -e "${YELLOW}${DATA_ACCESS_TABLE} not found.${NC}"
+    fi
+    
+    if PYTHONPATH="" bq show --format=prettyjson "${PROJECT_ID}:${DATASET_ID}.${ACTIVITY_TABLE}" &>/dev/null; then
+        HAS_ACTIVITY=true
+        echo -e "${GREEN}Found ${ACTIVITY_TABLE}${NC}"
+    else
+        echo -e "${YELLOW}${ACTIVITY_TABLE} not found.${NC}"
+    fi
+    
+    if [[ "$HAS_DATA_ACCESS" == "false" && "$HAS_ACTIVITY" == "false" ]]; then
+        echo -e "${RED}No audit log tables found in the dataset.${NC}"
+        echo -e "Please generate some activity in the Gemini Enterprise application first."
+        echo -e "This will trigger the creation of the tables."
+        pause
+        return 1
+    fi
+    
+    # Create views
+    echo "Creating views..."
+    
+    # View 1: vw_discovery_engine_user_activity
+    if [[ "$HAS_DATA_ACCESS" == "true" ]]; then
+        QUERY1="CREATE OR REPLACE VIEW \`${PROJECT_ID}.${DATASET_ID}.vw_discovery_engine_user_activity\` AS
+        SELECT
+            timestamp,
+            DATE(timestamp) AS activity_date,
+            DATE_TRUNC(DATE(timestamp), WEEK(MONDAY)) AS activity_week,
+            DATE_TRUNC(DATE(timestamp), MONTH) AS activity_month,
+            protopayload_auditlog.authenticationInfo.principalEmail AS user_email,
+            protopayload_auditlog.methodName AS method_name,
+            CASE
+                WHEN protopayload_auditlog.methodName = 'google.cloud.discoveryengine.v1main.SearchService.Search' THEN 'Search'
+                WHEN protopayload_auditlog.methodName = 'google.cloud.discoveryengine.v1main.AssistantService.StreamAssist' THEN 'Assistant'
+                ELSE 'Other'
+            END AS interaction_type
+        FROM
+            \`${PROJECT_ID}.${DATASET_ID}.${DATA_ACCESS_TABLE}\`
+        WHERE
+            protopayload_auditlog.methodName IN (
+                'google.cloud.discoveryengine.v1main.AssistantService.StreamAssist',
+                'google.cloud.discoveryengine.v1main.SearchService.Search'
+            )"
+            
+        if PYTHONPATH="" bq query --use_legacy_sql=false "$QUERY1"; then
+            echo -e "${GREEN}View vw_discovery_engine_user_activity created successfully.${NC}"
+        else
+            echo -e "${RED}Failed to create view vw_discovery_engine_user_activity.${NC}"
+            echo -e "${YELLOW}Ensure that the table \`${DATA_ACCESS_TABLE}\` exists and contains data. You may need to perform searches in the application to generate these logs.${NC}"
+        fi
+        
+        # View 2: vw_discovery_engine_sessions
+        QUERY2="CREATE OR REPLACE VIEW \`${PROJECT_ID}.${DATASET_ID}.vw_discovery_engine_sessions\` AS
+        SELECT
+            timestamp,
+            DATE(timestamp) AS session_date,
+            DATE_TRUNC(DATE(timestamp), WEEK(MONDAY)) AS session_week,
+            DATE_TRUNC(DATE(timestamp), MONTH) AS session_month,
+            JSON_VALUE(protopayload_auditlog.responseJson, '$.name') AS session_id
+        FROM
+            \`${PROJECT_ID}.${DATASET_ID}.${DATA_ACCESS_TABLE}\`
+        WHERE
+            protopayload_auditlog.methodName = 'google.cloud.discoveryengine.v1main.ConversationalSearchService.CreateSession'"
+            
+        if PYTHONPATH="" bq query --use_legacy_sql=false "$QUERY2"; then
+            echo -e "${GREEN}View vw_discovery_engine_sessions created successfully.${NC}"
+        else
+            echo -e "${RED}Failed to create view vw_discovery_engine_sessions.${NC}"
+            echo -e "${YELLOW}Ensure that the table \`${DATA_ACCESS_TABLE}\` exists and contains data. You may need to start chat sessions in the application to generate these logs.${NC}"
+        fi
+    else
+        echo -e "${YELLOW}Skipping views that depend on ${DATA_ACCESS_TABLE} (User Activity, Sessions) as it does not exist yet.${NC}"
+        echo -e "${YELLOW}To generate these logs, please perform searches or start chat sessions in the Gemini Enterprise application.${NC}"
+    fi
+    
+    # View 3: vw_discovery_engine_agent_activity
+    if [[ "$HAS_ACTIVITY" == "true" ]]; then
+        QUERY3="CREATE OR REPLACE VIEW \`${PROJECT_ID}.${DATASET_ID}.vw_discovery_engine_agent_activity\` AS
+        SELECT
+            timestamp,
+            DATE(timestamp) AS activity_date,
+            TIMESTAMP_TRUNC(timestamp, MONTH) AS activity_month,
+            protopayload_auditlog.authenticationInfo.principalEmail AS user_email,
+            REGEXP_EXTRACT(JSON_EXTRACT_SCALAR(protopayload_auditlog.responseJson, '$.annotatedResourceName'), r'/agents/(.*)') AS agent_id
+        FROM
+            \`${PROJECT_ID}.${DATASET_ID}.${ACTIVITY_TABLE}\`
+        WHERE
+            protopayload_auditlog.methodName = 'google.cloud.discoveryengine.v1main.UserAnnotationService.AddUserAnnotation'"
+            
+        if PYTHONPATH="" bq query --use_legacy_sql=false "$QUERY3"; then
+            echo -e "${GREEN}View vw_discovery_engine_agent_activity created successfully.${NC}"
+        else
+            echo -e "${RED}Failed to create view vw_discovery_engine_agent_activity.${NC}"
+            echo -e "${YELLOW}Ensure that the table \`${ACTIVITY_TABLE}\` exists and contains data. You may need to create agents using the Agent Designeror add annotations to generate Activity logs.${NC}"
+        fi
+    else
+        echo -e "${YELLOW}Skipping views that depend on ${ACTIVITY_TABLE} (Agent Activity) as it does not exist yet.${NC}"
+        echo -e "${YELLOW}To generate these logs, please interact with agents or add annotations in the application.${NC}"
+    fi
+    
+    pause
+}
+
 helper_menu() {
     while true; do
         clear
@@ -3273,9 +3438,10 @@ helper_menu() {
         echo "3. Import Documents to Gemini Enterprise Data Store (Cloud Storage / BigQuery)"
         echo "4. Distribute Gemini for Government Licenses"
         echo "5. Upload SSL Certificate"
-        echo "6. Back to Main Menu"
+        echo "6. Create BigQuery Analytics Views"
+        echo "7. Back to Main Menu"
         echo "-----------------------------------"
-        read -p "Select an option [1-6]: " OPTION
+        read -p "Select an option [1-7]: " OPTION
 
         case $OPTION in
             1)
@@ -3294,6 +3460,9 @@ helper_menu() {
                 upload_ssl_certificate
                 ;;
             6)
+                create_bigquery_views
+                ;;
+            7)
                 return 0
                 ;;
             *)
