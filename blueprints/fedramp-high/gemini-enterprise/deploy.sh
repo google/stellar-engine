@@ -3354,7 +3354,7 @@ create_bigquery_views() {
             DATE(timestamp) AS activity_date,
             DATE_TRUNC(DATE(timestamp), WEEK(MONDAY)) AS activity_week,
             DATE_TRUNC(DATE(timestamp), MONTH) AS activity_month,
-            protopayload_auditlog.authenticationInfo.principalEmail AS user_email,
+            protopayload_auditlog.authenticationInfo.principalSubject AS principal,
             protopayload_auditlog.methodName AS method_name,
             CASE
                 WHEN protopayload_auditlog.methodName = 'google.cloud.discoveryengine.v1main.SearchService.Search' THEN 'Search'
@@ -3407,7 +3407,7 @@ create_bigquery_views() {
             timestamp,
             DATE(timestamp) AS activity_date,
             TIMESTAMP_TRUNC(timestamp, MONTH) AS activity_month,
-            protopayload_auditlog.authenticationInfo.principalEmail AS user_email,
+            protopayload_auditlog.authenticationInfo.principalSubject AS principal,
             REGEXP_EXTRACT(JSON_EXTRACT_SCALAR(protopayload_auditlog.responseJson, '$.annotatedResourceName'), r'/agents/(.*)') AS agent_id
         FROM
             \`${PROJECT_ID}.${DATASET_ID}.${ACTIVITY_TABLE}\`
