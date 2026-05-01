@@ -131,28 +131,11 @@ resource "google_discovery_engine_data_store" "gemini_enterprise_gcs_data_store"
   }
 
   depends_on = [
-    # google_discovery_engine_cmek_config.default,
     google_kms_crypto_key_iam_member.discoveryengine_sa_kms_access,
     google_kms_crypto_key_iam_member.gcs_sa_kms_access,
     google_project_service.services,
     time_sleep.wait_for_services,
-    time_sleep.wait_for_gcs_iam,
   ]
-}
-
-# Grant Storage Admin to Discovery Engine SA if GCS Data Stores are present
-resource "google_project_iam_member" "discoveryengine_sa_gcs_admin" {
-  count   = var.create_data_stores && length(var.gcs_data_store_configs) > 0 ? 1 : 0
-  project = var.main_project_id
-  role    = "roles/storage.admin"
-  member  = "serviceAccount:${google_project_service_identity.discoveryengine.email}"
-}
-
-# Wait for IAM propagation before creating Data store which triggers doc import
-resource "time_sleep" "wait_for_gcs_iam" {
-  count           = var.create_data_stores && length(var.gcs_data_store_configs) > 0 ? 1 : 0
-  create_duration = "60s"
-  depends_on      = [google_project_iam_member.discoveryengine_sa_gcs_admin]
 }
 
 # ---------------------------------------------------------------------------- #
@@ -223,13 +206,11 @@ resource "google_discovery_engine_data_store" "gemini_enterprise_bq_data_store" 
   }
 
   depends_on = [
-    # google_discovery_engine_cmek_config.default,
     google_kms_crypto_key_iam_member.discoveryengine_sa_kms_access,
     google_kms_crypto_key_iam_member.gcs_sa_kms_access,
     google_kms_crypto_key_iam_member.bq_sa_kms_access,
     google_project_service.services,
     time_sleep.wait_for_services,
-    time_sleep.wait_for_bq_iam,
   ]
 }
 
@@ -238,19 +219,4 @@ resource "time_sleep" "wait_for_bq_datastore" {
   for_each        = var.create_data_stores ? var.bq_data_store_configs : {}
   create_duration = "30s"
   depends_on      = [google_discovery_engine_data_store.gemini_enterprise_bq_data_store]
-}
-
-# Grant BigQuery Admin to Discovery Engine SA if BigQuery Data Stores are present
-resource "google_project_iam_member" "discoveryengine_sa_bq_admin" {
-  count   = var.create_data_stores && length(var.bq_data_store_configs) > 0 ? 1 : 0
-  project = var.main_project_id
-  role    = "roles/bigquery.admin"
-  member  = "serviceAccount:${google_project_service_identity.discoveryengine.email}"
-}
-
-# Wait for IAM propagation before creating Data store which triggers schema fetch/import
-resource "time_sleep" "wait_for_bq_iam" {
-  count           = var.create_data_stores && length(var.bq_data_store_configs) > 0 ? 1 : 0
-  create_duration = "60s"
-  depends_on      = [google_project_iam_member.discoveryengine_sa_bq_admin]
 }

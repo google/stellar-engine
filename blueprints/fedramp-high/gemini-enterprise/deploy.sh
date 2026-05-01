@@ -1970,6 +1970,8 @@ configure_stage_0() {
                     echo -e "${RED}WARNING: Failed to grant IAM binding to Discovery Engine service account.${NC}"
                     echo -e "${YELLOW}You might need 'roles/cloudkms.admin' on the key project.${NC}"
                 fi
+                
+
             else
                 echo -e "${RED}WARNING: Could not determine project number. Skipping IAM grant for Discovery Engine.${NC}"
             fi
@@ -1986,13 +1988,19 @@ configure_stage_0() {
             _OP_BODY=$(echo "$_CONFIG_RESPONSE" | sed '$d')
             
             _CURRENT_KEY=$(echo "$_OP_BODY" | jq -r .kmsKey 2>/dev/null || echo "")
+            _STATE=$(echo "$_OP_BODY" | jq -r .state 2>/dev/null || echo "")
             
             _PROCEED_WITH_PATCH=true
             
             if [[ "$_OP_HTTP_CODE" -eq 200 ]]; then
                 if [[ "$_CURRENT_KEY" == "${CMEK_US_RESOURCES_KEY}" ]]; then
-                    echo -e "${GREEN}CMEK key is already registered and matches.${NC}"
-                    _PROCEED_WITH_PATCH=false
+                    if [[ "$_STATE" == "ACTIVE" ]]; then
+                        echo -e "${GREEN}CMEK key is already registered and ACTIVE.${NC}"
+                        _PROCEED_WITH_PATCH=false
+                    else
+                        echo -e "${YELLOW}CMEK key matches but state is ${_STATE}. Proceeding with registration to attempt fix...${NC}"
+                        _PROCEED_WITH_PATCH=true
+                    fi
                 else
                     echo -e "${YELLOW}CMEK key is already registered with a different key: ${_CURRENT_KEY}${NC}"
                     echo -e "${YELLOW}Adopting the already registered key for infrastructure alignment.${NC}"
@@ -2036,9 +2044,22 @@ configure_stage_0() {
                                 if [[ -n "$_HAS_ERROR" && "$_HAS_ERROR" != "null" ]]; then
                                     echo -e "${RED}CMEK registration failed in operation.${NC}"
                                     echo -e "Error: $_HAS_ERROR"
-                                    break
+                                    return 1
                                 fi
                                 echo -e "\n${GREEN}CMEK registration completed successfully.${NC}"
+                                
+                                # Verify ACTIVE state
+                                echo "Verifying CMEK config state..."
+                                _VERIFY_RESPONSE=$(curl -s -H "Authorization: Bearer ${_ACCESS_TOKEN}" \
+                                    -H "x-goog-user-project: ${PROJECT_ID}" \
+                                    "https://us-discoveryengine.googleapis.com/v1/projects/${PROJECT_ID}/locations/us/cmekConfigs/default_cmek_config")
+                                
+                                _STATE=$(echo "$_VERIFY_RESPONSE" | jq -r .state 2>/dev/null || echo "")
+                                if [[ "$_STATE" != "ACTIVE" ]]; then
+                                    echo -e "${RED}CMEK config is not in ACTIVE state. Current state: ${_STATE}${NC}"
+                                    return 1
+                                fi
+                                echo -e "${GREEN}CMEK config is ACTIVE.${NC}"
                                 break
                             fi
                             
