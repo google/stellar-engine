@@ -1384,7 +1384,7 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
         for attempt in range(max_retries):
             try:
                 eng_request = service.projects().locations().collections().engines().get(name=engine_full_name)
-                eng_response = eng_request.execute()
+                eng_request.execute()
                 click.echo("Engine verified successfully! Proceeding with configuration.")
                 return
             except Exception as inner_e:
