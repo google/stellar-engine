@@ -36,11 +36,11 @@ resource "google_bigquery_dataset" "analytics_dataset" {
 }
 
 resource "google_logging_project_sink" "discovery_engine_sink" {
-  count                  = var.enable_analytics ? 1 : 0
-  name                   = "${var.prefix}-discovery-engine-analytics-sink"
-  project                = var.main_project_id
-  destination            = "bigquery.googleapis.com/${google_bigquery_dataset.analytics_dataset[0].id}"
-  filter                 = "protoPayload.serviceName=\"discoveryengine.googleapis.com\""
+  count       = var.enable_analytics ? 1 : 0
+  name        = "${var.prefix}-discovery-engine-analytics-sink"
+  project     = var.main_project_id
+  destination = "bigquery.googleapis.com/${google_bigquery_dataset.analytics_dataset[0].id}"
+  filter      = "protoPayload.serviceName=\"discoveryengine.googleapis.com\""
   bigquery_options {
     use_partitioned_tables = true
   }

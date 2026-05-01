@@ -145,9 +145,3 @@ output "analytics_repo_name" {
   value       = var.enable_analytics ? google_artifact_registry_repository.analytics_repo[0].name : null
   description = "The name of the Artifact Registry repository for Gemini Analytics."
 }
-
-# output "engine_ids" {
-#   value       = { for k, v in google_discovery_engine_search_engine.gemini_enterprise_search_engine : k => v.engine_id }
-#   description = "A map of application keys to their corresponding Gemini Enterprise Search Engine IDs."
-# }
-
