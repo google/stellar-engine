@@ -54,3 +54,70 @@ resource "google_bigquery_dataset_iam_member" "sink_bq_editor" {
   role       = "roles/bigquery.dataEditor"
   member     = google_logging_project_sink.discovery_engine_sink[0].writer_identity
 }
+
+resource "google_artifact_registry_repository" "analytics_repo" {
+  count         = var.enable_analytics ? 1 : 0
+  location      = var.region
+  repository_id = "${var.prefix}-gemini-analytics"
+  description   = "Docker repository for Gemini Analytics"
+  format        = "DOCKER"
+  project       = var.main_project_id
+}
+
+resource "google_service_account" "analytics_sa" {
+  count        = var.enable_analytics ? 1 : 0
+  account_id   = "${var.prefix}-analytics-sa"
+  display_name = "Gemini Analytics Service Account"
+  project      = var.main_project_id
+}
+
+resource "google_project_iam_member" "analytics_sa_bq_user" {
+  count   = var.enable_analytics ? 1 : 0
+  project = var.main_project_id
+  role    = "roles/bigquery.user"
+  member  = "serviceAccount:${google_service_account.analytics_sa[0].email}"
+}
+
+resource "google_bigquery_dataset_iam_member" "analytics_sa_dataset_viewer" {
+  count      = var.enable_analytics ? 1 : 0
+  dataset_id = google_bigquery_dataset.analytics_dataset[0].dataset_id
+  project    = var.main_project_id
+  role       = "roles/bigquery.dataViewer"
+  member     = "serviceAccount:${google_service_account.analytics_sa[0].email}"
+}
+
+resource "google_artifact_registry_repository_iam_member" "analytics_sa_repo_reader" {
+  count      = var.enable_analytics ? 1 : 0
+  project    = var.main_project_id
+  location   = google_artifact_registry_repository.analytics_repo[0].location
+  repository = google_artifact_registry_repository.analytics_repo[0].name
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${google_service_account.analytics_sa[0].email}"
+}
+
+resource "google_project_iam_member" "compute_sa_storage_viewer" {
+  count   = var.enable_analytics ? 1 : 0
+  project = var.main_project_id
+  role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
+resource "google_project_iam_member" "compute_sa_log_writer" {
+  count   = var.enable_analytics ? 1 : 0
+  project = var.main_project_id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
+resource "google_artifact_registry_repository_iam_member" "compute_sa_repo_writer" {
+  count      = var.enable_analytics ? 1 : 0
+  project    = var.main_project_id
+  location   = google_artifact_registry_repository.analytics_repo[0].location
+  repository = google_artifact_registry_repository.analytics_repo[0].name
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
+
+
+

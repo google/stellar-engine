@@ -3356,17 +3356,25 @@ create_bigquery_views() {
             DATE_TRUNC(DATE(timestamp), MONTH) AS activity_month,
             protopayload_auditlog.authenticationInfo.principalSubject AS principal,
             protopayload_auditlog.methodName AS method_name,
+            operation.id AS operation_id,
             CASE
-                WHEN protopayload_auditlog.methodName = 'google.cloud.discoveryengine.v1main.SearchService.Search' THEN 'Search'
+                WHEN protopayload_auditlog.methodName = 'google.cloud.discoveryengine.v1main.UserEventService.WriteUserEvent' THEN 'Search'
                 WHEN protopayload_auditlog.methodName = 'google.cloud.discoveryengine.v1main.AssistantService.StreamAssist' THEN 'Assistant'
                 ELSE 'Other'
             END AS interaction_type
         FROM
             \`${PROJECT_ID}.${DATASET_ID}.${DATA_ACCESS_TABLE}\`
         WHERE
-            protopayload_auditlog.methodName IN (
-                'google.cloud.discoveryengine.v1main.AssistantService.StreamAssist',
-                'google.cloud.discoveryengine.v1main.SearchService.Search'
+            -- Condition for searches: WriteUserEvent with eventType = 'search'
+            (
+                protopayload_auditlog.methodName = 'google.cloud.discoveryengine.v1main.UserEventService.WriteUserEvent'
+                AND JSON_VALUE(protopayload_auditlog.responseJson, '$.eventType') = 'search'
+            )
+            OR
+            -- Condition for Assistant answers
+            (
+                protopayload_auditlog.methodName = 'google.cloud.discoveryengine.v1main.AssistantService.StreamAssist'
+                AND protopayload_auditlog.resourceName LIKE '%/assistants/default_assistant'
             )"
             
         if PYTHONPATH="" bq query --use_legacy_sql=false "$QUERY1"; then
@@ -3428,6 +3436,276 @@ create_bigquery_views() {
     pause
 }
 
+deploy_analytics_dashboard() {
+    echo ""
+    echo -e "${BLUE}--- Deploy Streamlit Analytics Dashboard ---${NC}"
+    
+    # Hydrate state
+    hydrate_from_state
+    
+    # Try to read from state
+    local state_project_id=$(echo "$STATE_CONTENT" | jq -r '.outputs.main_project_id.value // empty')
+    local state_dataset_id=$(echo "$STATE_CONTENT" | jq -r '.outputs.analytics_dataset_id.value // empty')
+    local state_sa_email=$(echo "$STATE_CONTENT" | jq -r '.outputs.analytics_sa_email.value // empty')
+    local state_repo_name=$(echo "$STATE_CONTENT" | jq -r '.outputs.analytics_repo_name.value // empty')
+    
+    # Fallback or prompt
+    if [[ -z "$state_project_id" ]]; then
+        read -p "Enter Project ID: " PROJECT_ID_INPUT
+        state_project_id="$PROJECT_ID_INPUT"
+    fi
+    
+    if [[ -z "$state_dataset_id" ]]; then
+        read -p "Enter BigQuery Dataset ID: " DATASET_ID_INPUT
+        state_dataset_id="$DATASET_ID_INPUT"
+    fi
+    
+    if [[ -z "$state_project_id" || -z "$state_dataset_id" ]]; then
+        echo -e "${RED}Project ID and Dataset ID are required.${NC}"
+        pause
+        return 1
+    fi
+    
+    # Ensure required APIs are enabled
+    echo "Ensuring required APIs are enabled (Cloud Build, Cloud Run, Artifact Registry, Binary Authorization)..."
+    gcloud services enable cloudbuild.googleapis.com run.googleapis.com artifactregistry.googleapis.com binaryauthorization.googleapis.com --project "$state_project_id"
+
+    
+    # Substitute in app.py using env vars
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    
+    # Determine Region for AR and Cloud Run
+    local region="${REGION:-us-central1}"
+    
+    # Fallback for repo name if not in state
+    if [[ -z "$state_repo_name" ]]; then
+        local prefix=$(echo "$STATE_CONTENT" | jq -r '.outputs.prefix.value // empty')
+        if [[ -n "$prefix" ]]; then
+            state_repo_name="${prefix}-gemini-analytics"
+        else
+            state_repo_name="gemini-analytics"
+        fi
+    fi
+    
+    local image_name="$region-docker.pkg.dev/$state_project_id/$state_repo_name/streamlit-dashboard:latest"
+    
+    # Build Strategy
+    echo "Checking build strategy..."
+    local use_local_docker="false"
+    
+    if docker info &>/dev/null; then
+        echo -e "${GREEN}Local Docker detected.${NC}"
+        use_local_docker="true"
+    else
+        echo -e "${YELLOW}Local Docker not detected or not running.${NC}"
+    fi
+    
+    if [[ "$use_local_docker" == "true" ]]; then
+        echo "Building locally and pushing..."
+        gcloud auth configure-docker "$region-docker.pkg.dev" --quiet
+        docker build -t "$image_name" "$script_dir/analytics"
+        docker push "$image_name"
+    else
+        echo "Falling back to Cloud Build (US region)..."
+        
+        gcloud builds submit "$script_dir/analytics" \
+            --tag "$image_name" \
+            --project "$state_project_id" \
+            --region "$region"
+    fi
+    
+    # Deploy to Cloud Run
+    echo "Deploying to Cloud Run..."
+    local deploy_cmd="gcloud run deploy gemini-analytics-dashboard \
+        --image \"$image_name\" \
+        --project \"$state_project_id\" \
+        --region \"$region\" \
+        --no-allow-unauthenticated \
+        --binary-authorization=default \
+        --ingress internal-and-cloud-load-balancing \
+        --set-env-vars PROJECT_ID=\"$state_project_id\",DATASET_ID=\"$state_dataset_id\""
+
+
+        
+    if [[ -n "$state_sa_email" ]]; then
+        deploy_cmd="$deploy_cmd --service-account \"$state_sa_email\""
+    fi
+    
+    if eval "$deploy_cmd"; then
+        echo -e "${GREEN}Dashboard deployed successfully.${NC}"
+    else
+        echo -e "${RED}Failed to deploy dashboard.${NC}"
+    fi
+    
+    pause
+}
+
+connect_analytics_dashboard() {
+    echo ""
+    echo -e "${BLUE}--- Connect to Streamlit Dashboard (Local) ---${NC}"
+    
+    # Hydrate state
+    hydrate_from_state
+    
+    local state_project_id=$(echo "$STATE_CONTENT" | jq -r '.outputs.main_project_id.value // empty')
+    local prefix=$(echo "$STATE_CONTENT" | jq -r '.outputs.prefix.value // empty')
+    local region=$(echo "$STATE_CONTENT" | jq -r '.outputs.region.value // empty')
+    
+    if [[ -z "$state_project_id" || -z "$prefix" || -z "$region" ]]; then
+        echo -e "${RED}Error: Could not determine project details from state.${NC}"
+        pause
+        return 1
+    fi
+    
+    local LOCAL_PORT=8888
+    while true; do
+        read -p "Enter local port to use for port forwarding [default: 8888]: " PORT_INPUT
+        LOCAL_PORT=${PORT_INPUT:-$LOCAL_PORT}
+        
+        # Port availability check
+        local port_in_use=false
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            if lsof -Pi :$LOCAL_PORT -sTCP:LISTEN -t >/dev/null ; then
+                port_in_use=true
+            fi
+        else
+            if command -v ss &>/dev/null; then
+                if ss -lptn "sport = :$LOCAL_PORT" 2>/dev/null | grep -q LISTEN; then
+                    port_in_use=true
+                fi
+            elif command -v netstat &>/dev/null; then
+                if netstat -tuln 2>/dev/null | grep -q ":$LOCAL_PORT "; then
+                    port_in_use=true
+                fi
+            fi
+        fi
+        
+        if [[ "$port_in_use" == "true" ]]; then
+            echo -e "${RED}Error: Port $LOCAL_PORT is already in use.${NC}"
+            continue
+        fi
+        break
+    done
+    
+    echo -e "Using local port: ${GREEN}$LOCAL_PORT${NC}"
+    
+    # Check IAP permissions
+    echo "Checking IAP permissions..."
+    if ! gcloud projects get-iam-policy "$state_project_id" --filter="bindings.role:roles/iap.tunnelResourceAccessor" | grep -q "$(gcloud config get-value account)"; then
+        echo -e "${YELLOW}WARNING: You might not have 'roles/iap.tunnelResourceAccessor' on the project.${NC}"
+        echo -e "${YELLOW}If SSH fails, ensure you or your group has this role.${NC}"
+    fi
+    
+    # Bastion Host Verification
+    local sa_name="analytics-bastion-sa"
+    local sa_email="${sa_name}@${state_project_id}.iam.gserviceaccount.com"
+    
+    echo "Checking Service Account..."
+    if ! gcloud iam service-accounts describe "$sa_email" --project="$state_project_id" &>/dev/null; then
+        echo "Creating Service Account $sa_name..."
+        gcloud iam service-accounts create "$sa_name" \
+            --display-name="Analytics Bastion Service Account" \
+            --project="$state_project_id"
+    else
+        echo "Service Account already exists."
+    fi
+    
+    echo "Checking IAM bindings for Cloud Run..."
+    gcloud run services add-iam-policy-binding gemini-analytics-dashboard \
+        --member="serviceAccount:$sa_email" \
+        --role="roles/run.invoker" \
+        --project="$state_project_id" \
+        --region="$region" --quiet >/dev/null
+        
+    gcloud run services add-iam-policy-binding gemini-analytics-dashboard \
+        --member="serviceAccount:$sa_email" \
+        --role="roles/run.viewer" \
+        --project="$state_project_id" \
+        --region="$region" --quiet >/dev/null
+        
+    local vm_name="analytics-bastion"
+    local zone="${region}-a" # Assuming zone 'a' exists
+    
+    echo "Checking Bastion VM..."
+    if ! gcloud compute instances describe "$vm_name" --project="$state_project_id" --zone="$zone" &>/dev/null; then
+        echo -e "${YELLOW}Bastion VM not found.${NC}"
+        
+        local network_name="${prefix}-vpc"
+        local subnet_name="${prefix}-vpc-subnet"
+        
+        echo -e "Inferred Network: ${YELLOW}$network_name${NC}"
+        echo -e "Inferred Subnet: ${YELLOW}$subnet_name${NC}"
+        
+        read -p "Are these network details correct? [Y/n]: " NET_CONFIRM
+        if [[ "$NET_CONFIRM" =~ ^[Nn]$ ]]; then
+            read -p "Enter VPC Network Name: " network_name
+            read -p "Enter Subnet Name: " subnet_name
+        fi
+        
+        echo ""
+        echo -e "${YELLOW}We need to create a Compute Engine instance to act as a bastion host.${NC}"
+        echo -e "This allows you to securely tunnel to the internal Cloud Run service."
+        echo -e "Specs:"
+        echo -e "  - Name: $vm_name"
+        echo -e "  - Zone: $zone"
+        echo -e "  - Type: e2-micro"
+        echo -e "  - Image: Debian 12 (Shielded)"
+        echo -e "  - Network: $network_name"
+        echo -e "  - Subnet: $subnet_name"
+        echo -e "  - No Public IP"
+        echo ""
+        
+        read -p "Do you want to create this instance? [Y/n]: " CREATE_CONFIRM
+        if [[ "$CREATE_CONFIRM" =~ ^[Nn]$ ]]; then
+            echo -e "${YELLOW}Exiting. You can only access the dashboard from a machine on the same network as the Cloud Run service.${NC}"
+            pause
+            return 1
+        fi
+        
+        local startup_script="#!/bin/bash
+apt-get update
+apt-get install -y google-cloud-cli-cloud-run-proxy
+gcloud run services proxy gemini-analytics-dashboard --project=${state_project_id} --region=${region} --port=8080 > /var/log/cloud-run-proxy.log 2>&1 &"
+
+        echo "Creating Bastion VM..."
+        gcloud compute instances create "$vm_name" \
+            --project="$state_project_id" \
+            --zone="$zone" \
+            --machine-type=e2-micro \
+            --network="$network_name" \
+            --subnet="$subnet_name" \
+            --service-account="$sa_email" \
+            --scopes=https://www.googleapis.com/auth/cloud-platform \
+            --image-family=debian-12 \
+            --image-project=debian-cloud \
+            --no-address \
+            --shielded-secure-boot \
+            --shielded-vtpm \
+            --shielded-integrity-monitoring \
+            --metadata="startup-script=$startup_script"
+            
+        echo -e "${GREEN}Bastion VM created successfully.${NC}"
+        echo -e "${YELLOW}Waiting for startup script to finish (approx 1-2 minutes)...${NC}"
+        sleep 30 # Give it some time before trying to SSH
+    else
+        echo "Bastion VM already exists."
+        
+        # Ensure proxy is running (in case VM was restarted)
+        echo "Ensuring proxy is running on VM..."
+        gcloud compute ssh "$vm_name" --project="$state_project_id" --zone="$zone" --tunnel-through-iap --command="pgrep -f 'gcloud run services proxy' || (sudo apt-get update && sudo apt-get install -y google-cloud-cli-cloud-run-proxy && gcloud run services proxy gemini-analytics-dashboard --project=${state_project_id} --region=${region} --port=8080 > /var/log/cloud-run-proxy.log 2>&1 &)" --quiet
+    fi
+    
+    echo -e "${GREEN}Starting SSH Tunnel...${NC}"
+    echo -e "Navigate to ${BLUE}http://localhost:$LOCAL_PORT${NC} in your browser to view the dashboard."
+    echo -e "Press Ctrl+C in this terminal to stop the tunnel."
+    
+    gcloud compute ssh "$vm_name" \
+        --project="$state_project_id" \
+        --zone="$zone" \
+        --tunnel-through-iap \
+        -- -N -L "$LOCAL_PORT:localhost:8080"
+}
+
 helper_menu() {
     while true; do
         clear
@@ -3438,10 +3716,12 @@ helper_menu() {
         echo "3. Import Documents to Gemini Enterprise Data Store (Cloud Storage / BigQuery)"
         echo "4. Distribute Gemini for Government Licenses"
         echo "5. Upload SSL Certificate"
-        echo "6. Create BigQuery Analytics Views"
-        echo "7. Back to Main Menu"
+        echo "6. Usage Analytics: Create BigQuery Views"
+        echo "7. Usage Analytics: Deploy Streamlit Dashboard (Cloud Run)"
+        echo "8. Usage Analytics: Connect to Streamlit Dashboard (Local)"
+        echo "9. Back to Main Menu"
         echo "-----------------------------------"
-        read -p "Select an option [1-7]: " OPTION
+        read -p "Select an option [1-9]: " OPTION
 
         case $OPTION in
             1)
@@ -3463,6 +3743,12 @@ helper_menu() {
                 create_bigquery_views
                 ;;
             7)
+                deploy_analytics_dashboard
+                ;;
+            8)
+                connect_analytics_dashboard
+                ;;
+            9)
                 return 0
                 ;;
             *)

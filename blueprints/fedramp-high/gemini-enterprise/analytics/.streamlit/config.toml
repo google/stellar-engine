@@ -1,0 +1,9 @@
+[browser]
+# CRITICAL FOR IL4/IL5 COMPLIANCE: Disables telemetry
+gatherUsageStats = false
+
+[server]
+# Run headless for containerized deployment
+headless = true
+port = 8080
+enableCORS = false
