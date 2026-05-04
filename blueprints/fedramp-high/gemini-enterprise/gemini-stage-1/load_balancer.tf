@@ -39,7 +39,7 @@ data "google_compute_region_backend_service" "gemini_enterprise_backend" {
 
 # Data source to get the network created in stage-0 or Shared VPC
 data "google_compute_network" "gemini_enterprise_vpc" {
-  count   = data.terraform_remote_state.stage_0.outputs.deployment_type != "none" ? 1 : 0
+  count = data.terraform_remote_state.stage_0.outputs.deployment_type != "none" ? 1 : 0
   project = var.host_project_id != "" ? var.host_project_id : (
     try(data.terraform_remote_state.stage_0.outputs.use_shared_vpc, false) ? data.terraform_remote_state.stage_0.outputs.network_project_id : data.terraform_remote_state.stage_0.outputs.main_project_id
   )
@@ -128,14 +128,14 @@ resource "google_certificate_manager_certificate" "gemini_enterprise_managed_cer
 
 # This resource creates the target HTTPS proxy for the load balancer.
 resource "google_compute_region_target_https_proxy" "gemini_enterprise_https_proxy" {
-  count            = data.terraform_remote_state.stage_0.outputs.deployment_type != "none" ? 1 : 0
-  project          = data.terraform_remote_state.stage_0.outputs.main_project_id
-  name             = "${data.terraform_remote_state.stage_0.outputs.prefix}-gemini-enterprise-https-proxy"
-  region           = data.terraform_remote_state.stage_0.outputs.region
-  url_map          = google_compute_region_url_map.gemini_enterprise_load_balancer[0].id
-  
-  ssl_certificates = var.cert_management_choice == "self_managed" ? [data.google_compute_region_ssl_certificate.gemini_enterprise_cert[0].self_link] : []
-  certificate_manager_certificates = var.cert_management_choice == "google_managed" ? [google_certificate_manager_certificate.gemini_enterprise_managed_cert[0].id] : []
+  count   = data.terraform_remote_state.stage_0.outputs.deployment_type != "none" ? 1 : 0
+  project = data.terraform_remote_state.stage_0.outputs.main_project_id
+  name    = "${data.terraform_remote_state.stage_0.outputs.prefix}-gemini-enterprise-https-proxy"
+  region  = data.terraform_remote_state.stage_0.outputs.region
+  url_map = google_compute_region_url_map.gemini_enterprise_load_balancer[0].id
+
+  ssl_certificates                 = var.cert_management_choice == "self_managed" ? [data.google_compute_region_ssl_certificate.gemini_enterprise_cert[0].self_link] : null
+  certificate_manager_certificates = var.cert_management_choice == "google_managed" ? [google_certificate_manager_certificate.gemini_enterprise_managed_cert[0].id] : null
 }
 
 # This resource creates the forwarding rule for the load balancer.
