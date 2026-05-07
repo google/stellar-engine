@@ -41,6 +41,7 @@ variable "backup_configuration" {
     log_retention_days             = optional(number, 7)
     point_in_time_recovery_enabled = optional(bool)
     retention_count                = optional(number, 7)
+    retain_backups_on_delete       = optional(bool, true)
   })
   default = {
     enabled                        = false
@@ -50,6 +51,7 @@ variable "backup_configuration" {
     log_retention_days             = 7
     point_in_time_recovery_enabled = null
     retention_count                = 7
+    retain_backups_on_delete       = true
   }
 }
 
@@ -121,13 +123,6 @@ variable "flags" {
 
 variable "gcp_deletion_protection" {
   description = "Set Google's deletion protection attribute which applies across all surfaces (UI, API, & Terraform)."
-  type        = bool
-  default     = true
-  nullable    = false
-}
-
-variable "retain_backups_on_delete" {
-  description = "Whether existing automated and on-demand backups should be retained after the instance is deleted. Applies across all surfaces (UI, API, Terraform)."
   type        = bool
   default     = true
   nullable    = false
