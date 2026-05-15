@@ -288,6 +288,7 @@ variable "terraform_deletion_protection" {
 variable "tier" {
   description = "The machine type to use for the instances."
   type        = string
+  nullable    = false
 }
 
 variable "time_zone" {
