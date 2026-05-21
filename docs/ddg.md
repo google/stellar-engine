@@ -67,7 +67,7 @@ To make using this deployment guide easier, the variables described below need t
 | :------------------------------------ | :------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | <strong>Billing Account</strong>      | `billing_account.id`             | The billing account to use for the deployment of the environments. <a href='https://console.cloud.google.com/billing'>Console Link</a>                                                                                                                                                                         |
 | <strong>Bootstrap Project ID</strong> | `bootstrap_project`              | The bootstrap project id (created below)                                                                                                                                                                                                                                                                       |
-| <strong>Compliance Regime</strong>    | `assured_workloads.regime`       | The <a href='https://assuredworkloads.googleapis.com/$discovery/rest?version=v1'>compliance regime</a> for this environment, (confirmed working in IL4, IL5, FEDRAMP_HIGH, and COMPLIANCE_REGIME_UNSPECIFIED)                                                                                                           |
+| <strong>Compliance Regime</strong>    | `assured_workloads.regime`       | The <a href='https://assuredworkloads.googleapis.com/$discovery/rest?version=v1'>compliance regime</a> for this environment, (confirmed working in IL4, IL5, FEDRAMP_HIGH, and COMPLIANCE_REGIME_UNSPECIFIED)                                                                                                  |
 | <strong>Customer ID</strong>          | `organization.customer_id`       | The Google Workspace Directory Customer ID. <br/>Run <strong>gcloud organizations list</strong> to view.                                                                                                                                                                                                       |
 | <strong>Domain Name</strong>          | `organization.domain`            | The primary Fully Qualified Domain Name (FQDN). Run <strong>gcloud organizations list</strong> to view (make sure you have authorized as per prerequisites below)                                                                                                                                              |
 | <strong>Alert Email</strong>          | `alert_email`                    | The email address used for logging alerts notifications.                                                                                                                                                                                                                                                       |
@@ -75,6 +75,8 @@ To make using this deployment guide easier, the variables described below need t
 | <strong>Prefix</strong>               | `prefix`                         | This is the prefix appended to the beginning of projects and resources deployed selected by your or your organization. <strong>Full project names must be globally unique and the prefix must use a maximum of 6 characters</strong>. A 409 error will occur if a globally unique project name is not created. |
 | <strong>Region</strong>               | `assured_workloads.location`     | This is the (US) based region that we are deploying resources into (Dual regions like “NAM9” or continents are currently not supported)                                                                                                                                                                        |
 | <strong>Tenant Name</strong>          | `tenants` (Stage 1)              | The name for the first tenant that will be deployed via this document. <strong>Full project names must be globally unique and the tenant-name must use a maximum of 6 characters</strong>.                                                                                                                     |
+| <strong>Secondary Region</strong>     | `regions.secondary`              | The secondary region for resource deployment.                                                                                                                                                                                                                                                                  |
+
 
 ## Prerequisites
 
@@ -132,7 +134,7 @@ permissions.**
       automated by running the following script:
       - **Warning: You will lose all current permissions for your user
         besides Super User**
-      - **./setIam.sh \<your-email-address\> `<customer_id>`** from within the fast/stages-aw/0-bootstrap folder
+      - **./setIam.sh \<your-email-address\> `<organization_id>`** from within the fast/stages-aw/0-bootstrap folder
 
 - Navigate to the [Super Admin](https://admin.google.com/ac/roles) roles
   section in Google Workspace to ensure that the deploying user is a Super
@@ -204,7 +206,7 @@ locations = {
  bq = "`<region>`"
  gcs = "`<region>`"
  logging = "`<region>`"
- pubsub = "`<region>`"
+ pubsub = ["`<region>`"]
  kms = "`<region>`"
 }
 # use `gcloud organizations list`
@@ -219,19 +221,20 @@ prefix = "`<prefix>`" # full project names must be globally unique
 log_sinks = {
  audit-logs = {
  filter = "logName:\"/logs/cloudaudit.googleapis.com%2Factivity\" OR logName:\"/logs/cloudaudit.googleapis.com%2Fsystem_event\" OR protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.TransparencyLog\""
- type = "pubsub"
+ type = "logging"
  }
  vpc-sc = {
  filter = "protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.VpcServiceControlAuditMetadata\""
- type = "pubsub"
+ type = "logging"
  }
  workspace-audit-logs = {
  filter = "logName:\"/logs/cloudaudit.googleapis.com%2Fdata_access\" and protoPayload.serviceName:\"login.googleapis.com\""
- type = "pubsub"
+ type = "logging"
  }
+ # CIS Compliance Benchmark 2.2
  empty-audit-logs = {
  filter = ""
- type = "pubsub"
+ type = "logging"
  }
 }
 org_policies_config = {
@@ -242,18 +245,23 @@ org_policies_config = {
 fast_features = {
  envs = true
 }
+regions = {
+  primary = "`<region>`"
+}
+
+#regime must be in ALL CAPS
 assured_workloads = {
- regime = "`<compliance_regime>`"
- location = "`<region>`"
+ regime = "`<compliance_regime>`"  #"IL4, IL5, FEDRAMP_HIGH, etc... if you wish to not use assured_workloads, set this value to COMPLIANCE_REGIME_UNSPECIFIED"
+ location = "`<region>`" # Uses the same region as other resources for consistency - change to match your regions.primary if different
 }
 bootstrap_project = "`<bootstrap_project_id>`"
 alert_email = "`<alert_email>`"
+
 ```
 
-- Run **terraform init**
-- Run **terraform apply -var bootstrap_user=$(gcloud config list --format
-  'value(core.account)')**
-  - Type **yes** when prompted
+- Run `terraform init`
+- Run `terraform apply -var bootstrap_user=$(gcloud config list --format 'value(core.account)')`
+  - Type `yes` when prompted
   - **Note:** You may receive an error in this stage where it reports that
     ‘bigquery.googleapis.com\` is not usable in the Assured Workloads. 
     - If you see this error, go to the [Assured Workloads
@@ -271,18 +279,16 @@ alert_email = "`<alert_email>`"
     access to your billing account. If so [re-enable billing for your
     bootstrap project](https://console.cloud.google.com/billing/projects)
 - Switch project to your new project
-  - **gcloud config set project `<prefix>`-prod-iac-core-0**
+  - `gcloud config set project `<prefix>`-prod-iac-core-0`
 - Copy the new providers local
-  - **gcloud alpha storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/providers/0-bootstrap-providers.tf
-    ./**
+  - `gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/providers/0-bootstrap-providers.tf ./`
 - Migrate the state from local to remote using
-  - **terraform init --migrate-state**
-  - Type **yes** when prompted
-- Run ./**import.sh**
+  - `terraform init --migrate-state`
+  - Type `yes` when prompted
+- Run `./import.sh` 
 - Apply Terraform one more time before moving on to the next stage via
-  **terraform apply**
-  - Type **yes** when prompted
+  `terraform apply`
+  - Type `yes` when prompted
 
 ## Stage 1 - Resource Management
 
@@ -299,6 +305,17 @@ variable as seen below.
 - **Note:** If you are using an external billing account, you have to add the
   Billing Account Administrator for the following service account to the external billing account:
   - **`<prefix>`-prod-resman-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
+  
+**Note:** If you are using an external billing account  where the resman service account cannot be granted billing permissions, 
+you can use a **billing override** to run the project creation/billing links under your personal credentials. 
+To do this, define the `billing_override` variable in your `fast/stages-aw/1-resman/terraform.tfvars`:**
+
+```hcl
+billing_override = {
+  project         = "<your-quota-project-id>"
+  billing_project = "<your-quota-project-id>"
+}
+```
 
   **Steps to add the external billing account (if applicable):**
   - In the Google Cloud console (External billing Account), go to the
@@ -324,17 +341,17 @@ variable as seen below.
 
 ```hcl
 tenants = {
-`<tenant_name>` = { ## Change tenant_name here - 6 or less characters
+ten-1 = { ## Change tenant_name here - 6 or less characters
   admin_principal = "group:gcp-devops@`<domain>`"
-  descriptive_name = `<tenant_name>` ## Change descriptive_name here
+  descriptive_name = tenant-1 ## Change descriptive_name here
   locations = {
     gcs = `<region>`
     kms = `<region>`
     }
  },
- tenant_name-2 = { ## Change tenant_name-2 here - 6 or less characters
+ ten-2 = { ## Change tenant_name-2 here - 6 or less characters
   admin_principal = "group:gcp-devops@`<domain>`"
-  descriptive_name = "tenant-name-2" ## Change descriptive_name here
+  descriptive_name = "tenant-2" ## Change descriptive_name here
   locations = {
     gcs = `<region>`
     kms = `<region>`
@@ -359,17 +376,14 @@ envs_folders = {
 ```
 
 - Copy the tfvars files from GCS
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/providers/1-resman-providers.tf ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json
-    ./**
-- Run **terraform init**
-- Run **terraform apply**
-  - Type **yes** when prompted
+```
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/providers/1-resman-providers.tf ./ &&
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ &&
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ &&
+```
+- Run `terraform init`
+- Run `terraform apply`
+  - Type `yes` when prompted
 
 ## Stage 2 - Network Creation
 
@@ -380,6 +394,17 @@ envs_folders = {
 **Note:** If you are using an external billing account, you have to add the
   Billing Account Administrator for the following service account to the external billing account:
   - **`<prefix>`-prod-resman-net-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
+
+**Note: If you are using an external billing account where the networking service account cannot be granted billing permissions, 
+you can use a billing override to run the project creation/billing links under your personal credentials. 
+To do this, define the `billing_override` variable in the resman stage 1 tfvars file**
+
+```hcl
+billing_override = {
+  project         = "<your-quota-project-id>"
+  billing_project = "<your-quota-project-id>"
+}
+```
 
   **Steps to add the external billing account (if applicable):**
   - In the Google Cloud console (External billing Account), go to the
@@ -396,19 +421,16 @@ envs_folders = {
     Account Administrator”.
   - When done, click Save.
 - Change directory into **fast/stages-aw/2-networking-a-fedramp-high**
-- Copy the **terraform.tfvars.tf** files from the GCS buckets
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/providers/2-networking-providers.tf
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json
-    ./**
+- Copy the provider and global tfvars files from the GCS buckets:
+```bash
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./ && \
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ && \
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ && \
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+```
+- Copy the sample `terraform.tfvars` file and configure your network settings:
+  - **cp terraform.tfvars.sample terraform.tfvars**
+- Update custom subnets, proxy subnets, firewall rules, named CIDRs, and DNS response policy rules directly inside **`terraform.tfvars`**.
 - Run **terraform init**
 - **terraform apply**
   - Type **yes** when prompted
@@ -429,6 +451,17 @@ a VM code and register them. For more instructions, see the README in the the
   Billing Account Administrator for the following service account to the external billing account:
   - **`<prefix>`-prod-resman-net-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
 
+**Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
+you can use a **billing override** to run the project creation/billing links under your personal credentials. 
+To do this, define the `billing_override` variable in the resman stage 1 tfvars file
+
+```hcl
+billing_override = {
+  project         = "<your-quota-project-id>"
+  billing_project = "<your-quota-project-id>"
+}
+```
+
   **Steps to add the external billing account (if applicable):**
   - In the Google Cloud console (External billing Account), go to the
     Account management page for the Cloud Billing account, select the
@@ -444,19 +477,16 @@ a VM code and register them. For more instructions, see the README in the the
     Account Administrator”.
   - When done, click Save.
 - Change directory into **fast/stages-aw/2-networking-b-il5-ngfw**
-- Copy the **terraform.tfvars.tf** files from the GCS buckets
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/providers/2-networking-providers.tf
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json
-    ./**
+- Copy the provider and global tfvars files from the GCS buckets:
+```bash
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./ && \
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ && \
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ && \
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+```
+- Copy the sample `terraform.tfvars` file and configure your network settings:
+  - **cp terraform.tfvars.sample terraform.tfvars**
+- Update custom subnets (including mgmt), proxy subnets, firewall rules, named CIDRs, and DNS response policy rules directly inside **`terraform.tfvars`**.
 - Run **terraform init**
 - Run **terraform apply -target google_project_iam_custom_role.ngfw-custom-role**
   - Type **yes** when prompted
@@ -507,18 +537,13 @@ tls = {
 ```
 
 - Copy the **terraform.tfvars.tf** files from the GCS buckets
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/providers/2-networking-providers.tf
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json
-    ./**
+```
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./ &&
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ &&
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ &&
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+```
+
 - Run **terraform init**
 - Run **terraform apply -target google_project_iam_custom_role.ngfw-custom-role**
   - Type **yes** when prompted
@@ -562,6 +587,17 @@ are responsible for the audit project.
   Billing Account Administrator for the following service account to the external billing account:**
   - `<prefix>`-security-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com
   
+**Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
+you can use a **billing override** to run the project creation/billing links under your personal credentials. 
+To do this, define the `billing_override` variable in the resman stage 1 tfvars file
+
+```hcl
+billing_override = {
+  project         = "<your-quota-project-id>"
+  billing_project = "<your-quota-project-id>"
+}
+```
+
   **Steps to add the external billing account:**
   - In the Google Cloud console (External billing Account), go to the
     Account management page for the Cloud Billing account, select the
@@ -578,24 +614,18 @@ are responsible for the audit project.
   - When done, click Save.
 - Change directory into **fast/stages-aw/3-security**
 - Copy the **terraform.tfvars** files from the GCS buckets
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/providers/3-security-providers.tf
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json
-    ./**
-  - **gcloud storage cp
-    gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json
-    ./**
-- Run **terraform init**
-- Run **terraform apply**
-  - Type **yes** when prompted
+```
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/providers/3-security-providers.tf ./ &&
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ &&
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ &&
+gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+```
+- Run `terraform init`
+- Run `terraform apply`
+  - Type `yes` when prompted
   - **Note:** Any issues with Service Accounts can be resolved by rerunning
-    **terraform apply**
-- Run **./sa_lockdown.sh** to disable the Service Accounts used during the
+    `terraform apply`
+- Run `./sa_lockdown.sh` to disable the Service Accounts used during the
   deployment
   - **Note:** You may be unable to deploy certain blueprints until the Service Accounts are re-enabled. If you are deploying additional services/blueprints into the Stellar Engine environment, do not run this script until deployments are complete.
 

@@ -55,7 +55,6 @@ locals {
         "roles/cloudsupport.admin",
         "roles/compute.osAdminLogin",
         "roles/compute.osLoginExternalUser",
-        "roles/iam.organizationRoleAdmin",
         "roles/resourcemanager.folderAdmin",
         "roles/resourcemanager.organizationAdmin",
         "roles/resourcemanager.projectCreator",
@@ -65,7 +64,8 @@ locals {
       ]
       additive = concat(
         [
-          "roles/orgpolicy.policyAdmin"
+          "roles/orgpolicy.policyAdmin",
+          "roles/iam.organizationRoleAdmin"
         ],
         local.billing_mode != "org" ? [] : [
           "roles/billing.admin"
@@ -179,14 +179,16 @@ locals {
     "user:${var.bootstrap_user}" = {
       authoritative = [
         "roles/logging.admin",
-        "roles/iam.organizationRoleAdmin",
         "roles/resourcemanager.folderAdmin",
         "roles/resourcemanager.organizationAdmin",
         "roles/resourcemanager.projectCreator",
         "roles/resourcemanager.tagAdmin"
       ]
       # TODO: align additive roles with the README
-      additive = (
+      additive = concat(
+        [
+          "roles/iam.organizationRoleAdmin"
+        ],
         local.billing_mode != "org" ? [] : [
           "roles/billing.admin"
         ]

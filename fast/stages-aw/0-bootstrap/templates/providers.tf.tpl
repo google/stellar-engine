@@ -30,4 +30,22 @@ provider "google-beta" {
   impersonate_service_account = "${sa}"
 }
 
+%{~ if try(bootstrap_project, null) != null ~}
+# Billing-specific providers (Conditional Impersonation)
+provider "google" {
+  alias                       = "billing"
+  impersonate_service_account = try(var.billing_override, null) != null ? null : "${sa}"
+  project                     = try(var.billing_override.project, "${bootstrap_project}")
+  billing_project             = try(var.billing_override.billing_project, "${bootstrap_project}")
+  user_project_override       = true
+}
+provider "google-beta" {
+  alias                       = "billing"
+  impersonate_service_account = try(var.billing_override, null) != null ? null : "${sa}"
+  project                     = try(var.billing_override.project, "${bootstrap_project}")
+  billing_project             = try(var.billing_override.billing_project, "${bootstrap_project}")
+  user_project_override       = true
+}
+%{~ endif ~}
+
 # end provider.tf for ${name}

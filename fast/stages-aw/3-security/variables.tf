@@ -180,3 +180,85 @@ variable "vpc_sc" {
   default  = {}
   nullable = false
 }
+
+variable "billing_override" {
+  description = "Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects."
+  type = object({
+    project         = string
+    billing_project = string
+  })
+  default = null
+}
+
+variable "custom_roles" {
+  description = "Custom IAM roles defined during bootstrap."
+  type        = any
+  default     = null
+}
+
+variable "assured_workloads" {
+  description = "Assured Workloads configuration."
+  type        = any
+  default     = null
+}
+
+variable "regions" {
+  description = "GCP regions configuration."
+  type        = any
+  default     = null
+}
+
+variable "groups" {
+  description = "IAM groups configuration."
+  type        = any
+  default     = null
+}
+
+variable "regime_mapping" {
+  description = "Compliance regime shorthand mapping."
+  type        = any
+  default     = null
+}
+
+variable "federated_identity_providers" {
+  description = "Federated identity providers configuration."
+  type        = any
+  default     = null
+}
+
+variable "gcp_ranges" {
+  description = "GCP address ranges configuration."
+  type        = any
+  default     = null
+}
+
+variable "envs_folders" {
+  description = "Environment folders mappings."
+  type        = any
+  default     = null
+}
+
+variable "tenant_accounts" {
+  description = "Tenant accounts configuration."
+  type        = any
+  default     = null
+}
+
+variable "org_policy_classification_tags" {
+  description = "Org policy classification tags configuration."
+  type        = any
+  default     = null
+}
+
+variable "fast_features" {
+  description = "FAST features mapping."
+  type        = any
+  default     = null
+}
+
+variable "common_services_folder" {
+  description = "Common services folder ID."
+  type        = any
+  default     = null
+}
+

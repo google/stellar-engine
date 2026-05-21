@@ -17,8 +17,6 @@
 # tfdoc:file:description Dev spoke VPC and related resources.
 
 locals {
-  proxy_subnets = yamldecode(file("./data/subnets/proxy-subnets.yaml")).proxy-subnets
-
   tenant_subnets_map_of_maps = {
     for pairing in setproduct(values(var.tenant_accounts), values(var.regions)) : "${pairing[0].main_project}-${pairing[1]}" => {
       "project"         = pairing[0].main_project,
@@ -30,7 +28,11 @@ locals {
   }
 }
 module "env-spoke-projects" {
-  source          = "../../../modules/project"
+  source = "../../../modules/project"
+  providers = {
+    google      = google.billing
+    google-beta = google-beta.billing
+  }
   for_each        = var.envs_folders
   billing_account = var.billing_account.id
   name            = lower("${each.key}-net-host")
@@ -99,15 +101,12 @@ module "env-spoke-vpc" {
   create_googleapis_routes = {
     private = true
   restricted = true }
-  factories_config = {
-    context        = { regions = var.regions }
-    subnets_folder = lower("${var.factories_config.data_dir}/subnets/${each.key}")
-  }
+  subnets = try(var.subnets[lower(each.key)], [])
   subnets_proxy_only = [{
     region        = var.regions.primary
     active        = true
     name          = lower("proxy-${var.regions.primary}")
-    ip_cidr_range = local.proxy_subnets[each.key]
+    ip_cidr_range = var.proxy_subnets[each.key]
   }]
 
   shared_vpc_host             = true
@@ -145,10 +144,17 @@ module "env-spoke-firewall" {
   default_rules_config = {
     disabled = true
   }
-  factories_config = {
-    cidr_tpl_file = "${var.factories_config.data_dir}/cidrs.yaml"
-    rules_folder  = lower("${var.factories_config.data_dir}/firewall-rules/${each.key}")
-  }
+  named_ranges  = var.cidrs
+  ingress_rules = try(var.firewall_rules[lower(each.key)].ingress, {})
+  egress_rules  = try(var.firewall_rules[lower(each.key)].egress, {})
+}
+
+resource "time_sleep" "peering_delay" {
+  for_each = var.envs_folders
+
+  create_duration = "${index(keys(var.envs_folders), each.key) * 30}s"
+
+  depends_on = [module.env-spoke-vpc]
 }
 
 module "peering-envs" {
@@ -167,6 +173,9 @@ module "peering-envs" {
     }
   }
 
+  depends_on = [
+    time_sleep.peering_delay
+  ]
 }
 
 # DNS
@@ -206,10 +215,14 @@ module "env-dns-peer-landing-root" {
 }
 
 resource "google_compute_subnetwork_iam_member" "allow-admin-principals" {
-  for_each   = local.tenant_subnets_map_of_maps
-  project    = module.env-spoke-projects[each.value.env].project_id
-  region     = each.value.region
-  subnetwork = module.env-spoke-vpc[each.value.env].subnet_ids["${var.regions.primary}/default-primary-region"]
-  role       = "roles/compute.networkUser"
-  member     = each.value.admin_principal
+  for_each = local.tenant_subnets_map_of_maps
+  project  = module.env-spoke-projects[each.value.env].project_id
+  region   = each.value.region
+  subnetwork = module.env-spoke-vpc[each.value.env].subnet_ids[
+    "${each.value.region}/${one([
+      for s in try(var.subnets[lower(each.value.env)], []) : s.name if s.tenant == each.value.tenant
+    ])}"
+  ]
+  role   = "roles/compute.networkUser"
+  member = each.value.admin_principal
 }

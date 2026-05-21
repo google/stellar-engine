@@ -222,10 +222,12 @@ module "organization" {
   source          = "../../../modules/organization-se"
   organization_id = module.organization-logging.id
   prefix          = var.prefix
-  # human (groups) IAM bindings
   iam_by_principals = {
-    for k, v in local.iam_principals :
-    k => distinct(concat(v, lookup(var.iam_by_principals, k, [])))
+    for k in distinct(concat(keys(local.iam_principals), keys(var.iam_by_principals))) :
+    k => distinct(concat(
+      try(local.iam_principals[k], []),
+      try(var.iam_by_principals[k], [])
+    ))
   }
   # machine (service accounts) IAM bindings
   iam = merge(

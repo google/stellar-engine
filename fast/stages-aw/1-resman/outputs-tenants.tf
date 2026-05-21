@@ -18,19 +18,21 @@ locals {
   tenant_core_providers = {
     for k, v in local.tenant_envs :
     k => templatefile("${path.module}/templates/providers.tf.tpl", {
-      bucket        = module.tenant-core-gcs[k].name
-      name          = k
-      sa            = module.tenant-core-sa[k].email
-      backend_extra = null
+      bucket            = module.tenant-core-gcs[k].name
+      name              = k
+      sa                = module.tenant-core-sa[k].email
+      backend_extra     = null
+      bootstrap_project = null
     })
   }
   tenant_self_providers = {
     for k, v in local.tenant_envs :
     k => templatefile("${path.module}/templates/providers.tf.tpl", {
-      bucket        = module.tenant-self-iac-gcs-states[k].name
-      name          = k
-      sa            = module.tenant-self-iac-sa[k].email
-      backend_extra = null
+      bucket            = module.tenant-self-iac-gcs-states[k].name
+      name              = k
+      sa                = module.tenant-self-iac-sa[k].email
+      backend_extra     = null
+      bootstrap_project = null
     })
   }
   tenant_tfvars = {

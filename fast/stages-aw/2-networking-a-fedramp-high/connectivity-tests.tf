@@ -76,7 +76,7 @@ resource "google_compute_address" "env-source-addrs" {
   project = module.env-spoke-projects[each.key].project_id
 
   name         = lower("${each.key}-test-addr")
-  subnetwork   = module.env-spoke-vpc[each.key].subnets["${var.regions.primary}/default-primary-region"].self_link
+  subnetwork   = module.env-spoke-vpc[each.key].subnets["${var.regions.primary}/${[for s in try(var.subnets[lower(each.key)], []) : s.name if s.tenant != null][0]}"].self_link
   address_type = "INTERNAL"
   region       = var.regions.primary
   depends_on   = [module.env-spoke-vpc]

@@ -25,7 +25,11 @@ locals {
 }
 
 module "dev-sec-project" {
-  source          = "../../../modules/project"
+  source = "../../../modules/project"
+  providers = {
+    google      = google.billing
+    google-beta = google-beta.billing
+  }
   name            = "dev-sec-core-0"
   parent          = var.folder_ids.security
   prefix          = var.prefix

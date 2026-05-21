@@ -17,7 +17,11 @@
 # tfdoc:file:description Landing VPC and related resources.
 
 module "vdss-host-project" {
-  source          = "../../../modules/project"
+  source = "../../../modules/project"
+  providers = {
+    google      = google.billing
+    google-beta = google-beta.billing
+  }
   billing_account = var.billing_account.id
   name            = "net-vdss-host"
   lien_reason     = "Protected by default as a core project."
@@ -62,10 +66,7 @@ module "dmz-vpc" {
     logging = var.dns.enable_logging
   }
   create_googleapis_routes = null
-  factories_config = {
-    context        = { regions = var.regions }
-    subnets_folder = "${var.factories_config.data_dir}/subnets/dmz"
-  }
+  subnets                  = try(var.subnets.dmz, [])
 }
 
 module "dmz-firewall" {
@@ -75,10 +76,9 @@ module "dmz-firewall" {
   default_rules_config = {
     disabled = true
   }
-  factories_config = {
-    cidr_tpl_file = "${var.factories_config.data_dir}/cidrs.yaml"
-    rules_folder  = "${var.factories_config.data_dir}/firewall-rules/dmz"
-  }
+  named_ranges  = var.cidrs
+  ingress_rules = try(var.firewall_rules.dmz.ingress, {})
+  egress_rules  = try(var.firewall_rules.dmz.egress, {})
 }
 
 
@@ -89,10 +89,7 @@ module "vdss-vpc" {
   name                            = "vdss-landing-0"
   delete_default_routes_on_create = true
   mtu                             = 1500
-  factories_config = {
-    context        = { regions = var.regions }
-    subnets_folder = "${var.factories_config.data_dir}/subnets/landing"
-  }
+  subnets                         = try(var.subnets.landing, [])
   dns_policy = {
     inbound = true
     logging = var.dns.enable_logging
@@ -111,11 +108,9 @@ module "vdss-firewall" {
   default_rules_config = {
     disabled = true
   }
-  factories_config = {
-    cidr_tpl_file = "${var.factories_config.data_dir}/cidrs.yaml"
-    rules_folder  = "${var.factories_config.data_dir}/firewall-rules/vdss"
-  }
-
+  named_ranges  = var.cidrs
+  ingress_rules = try(var.firewall_rules.vdss.ingress, {})
+  egress_rules  = try(var.firewall_rules.vdss.egress, {})
 }
 
 # Mgmt (trusted) VPC
@@ -125,10 +120,7 @@ module "mgmt-vpc" {
   name                            = "vdss-mgmt-0"
   delete_default_routes_on_create = true
   mtu                             = 1500
-  factories_config = {
-    context        = { regions = var.regions }
-    subnets_folder = "${var.factories_config.data_dir}/subnets/mgmt"
-  }
+  subnets                         = try(var.subnets.mgmt, [])
   dns_policy = {
     inbound = true
     logging = var.dns.enable_logging
@@ -147,11 +139,9 @@ module "mgmt-firewall" {
   default_rules_config = {
     disabled = true
   }
-  factories_config = {
-    cidr_tpl_file = "${var.factories_config.data_dir}/cidrs.yaml"
-    rules_folder  = "${var.factories_config.data_dir}/firewall-rules/mgmt"
-  }
-
+  named_ranges  = var.cidrs
+  ingress_rules = try(var.firewall_rules.mgmt.ingress, {})
+  egress_rules  = try(var.firewall_rules.mgmt.egress, {})
 }
 
 
@@ -207,9 +197,7 @@ module "landing-dns-policy-googleapis" {
   source     = "../../../modules/dns-response-policy"
   project_id = module.vdss-host-project.project_id
   name       = "googleapis"
-  factories_config = {
-    rules = var.factories_config.dns_policy_rules_file
-  }
+  rules      = var.dns_policy_rules
   networks = {
     landing = module.vdss-vpc.self_link
   }

@@ -1,0 +1,319 @@
+# Sample terraform.tfvars file for Stage 2 (Networking - IL5 NGFW)
+# Replace values with your desired network topologies.
+
+# VPC Subnetwork Configurations
+subnets = {
+  landing = [
+    {
+      name          = "landing-default"
+      ip_cidr_range = "10.64.0.0/24"
+      region        = "us-central1"
+      description   = "Default subnet for vdss in primary region"
+      flow_logs_config = {
+        aggregation_interval = "INTERVAL_5_SEC"
+        flow_sampling        = 1
+        metadata             = "INCLUDE_ALL_METADATA"
+      }
+    }
+  ]
+  dmz = [
+    {
+      name          = "dmz-default"
+      ip_cidr_range = "10.64.128.0/24"
+      region        = "us-central1"
+      description   = "Default subnet for landing dmz in primary region"
+      flow_logs_config = {
+        aggregation_interval = "INTERVAL_5_SEC"
+        flow_sampling        = 1
+        metadata             = "INCLUDE_ALL_METADATA"
+      }
+    }
+  ]
+  mgmt = [
+    {
+      name          = "mgmt-default"
+      ip_cidr_range = "10.64.129.0/24"
+      region        = "us-central1"
+      description   = "Default subnet for landing mgmt in primary region"
+      flow_logs_config = {
+        aggregation_interval = "INTERVAL_5_SEC"
+        flow_sampling        = 1
+        metadata             = "INCLUDE_ALL_METADATA"
+      }
+    }
+  ]
+  prod = [
+    {
+      name          = "prod-tenant-1-subnet"
+      ip_cidr_range = "10.201.0.0/16"
+      region        = "us-central1"
+      description   = "Default subnet for prod environment in primary region"
+      flow_logs_config = {
+        aggregation_interval = "INTERVAL_5_SEC"
+        flow_sampling        = 1
+        metadata             = "INCLUDE_ALL_METADATA"
+      }
+      tenant        = "ten-1" # Links this subnet to tenant-1 project sharing
+    },
+    {
+      name          = "prod-tenant-2-subnet"
+      ip_cidr_range = "10.200.0.0/16"
+      region        = "us-central1"
+      description   = "Dedicated subnet for tenant-2 in prod spoke"
+      flow_logs_config = {
+        aggregation_interval = "INTERVAL_5_SEC"
+        flow_sampling        = 1
+        metadata             = "INCLUDE_ALL_METADATA"
+      }
+      tenant        = "ten-2" # Links this subnet to tenant-2 project sharing
+    }
+  ]
+  int = [
+    {
+      name          = "int-tenant-1-subnet"
+      ip_cidr_range = "10.150.0.0/16"
+      region        = "us-central1"
+      description   = "Default subnet for int environment in primary region"
+      flow_logs_config = {
+        aggregation_interval = "INTERVAL_5_SEC"
+        flow_sampling        = 1
+        metadata             = "INCLUDE_ALL_METADATA"
+      }
+      tenant        = "ten-1"
+    },
+    {
+      name          = "int-tenant-2-subnet"
+      ip_cidr_range = "10.151.0.0/16"
+      region        = "us-central1"
+      description   = "Dedicated subnet for tenant-2 in int spoke"
+      flow_logs_config = {
+        aggregation_interval = "INTERVAL_5_SEC"
+        flow_sampling        = 1
+        metadata             = "INCLUDE_ALL_METADATA"
+      }
+      tenant        = "ten-2"
+    }
+  ]
+  test = [
+    {
+      name          = "test-tenant-1-subnet"
+      ip_cidr_range = "10.100.0.0/16"
+      region        = "us-central1"
+      description   = "Default subnet for test environment in primary region"
+      flow_logs_config = {
+        aggregation_interval = "INTERVAL_5_SEC"
+        flow_sampling        = 1
+        metadata             = "INCLUDE_ALL_METADATA"
+      }
+      tenant        = "ten-1"
+    },
+    {
+      name          = "test-tenant-2-subnet"
+      ip_cidr_range = "10.101.0.0/16"
+      region        = "us-central1"
+      description   = "Dedicated subnet for tenant-2 in test spoke"
+      flow_logs_config = {
+        aggregation_interval = "INTERVAL_5_SEC"
+        flow_sampling        = 1
+        metadata             = "INCLUDE_ALL_METADATA"
+      }
+      tenant        = "ten-2"
+    }
+  ]
+}
+
+# Proxy-only Subnet CIDRs (used for regional load balancers)
+proxy_subnets = {
+  Prod = "10.1.1.0/24"
+  Int  = "10.1.2.0/24"
+  Test = "10.1.3.0/24"
+}
+
+# Named IP Ranges to reference in Firewall Rules
+cidrs = {
+  healthchecks = [
+    "35.191.0.0/16",
+    "130.211.0.0/22",
+    "209.85.152.0/22",
+    "209.85.204.0/22"
+  ]
+  rfc1918 = [
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16"
+  ]
+  iap = [
+    "35.235.240.0/20"
+  ]
+  internal = [
+    "10.0.0.0/8"
+  ]
+}
+
+# Custom Firewall Rules for each VPC / Spoke Spoke
+firewall_rules = {
+  vdss = {
+    ingress = {
+      allow-iap-ssh-landing = {
+        description   = "Allow traffic from Google IAP over SSH"
+        source_ranges = ["iap"]
+        rules = [
+          {
+            protocol = "tcp"
+            ports    = ["22"]
+          }
+        ]
+      }
+      allow-hc-nva-ssh-landing = {
+        description   = "Allow traffic from Google healthchecks to NVA appliances"
+        source_ranges = ["healthchecks"]
+        rules = [
+          {
+            protocol = "tcp"
+            ports    = ["22"]
+          }
+        ]
+      }
+      allow-traffic-internal = {
+        description   = "Allow traffic from inside the the networks"
+        targets       = ["nva"]
+        source_ranges = ["10.0.0.0/8"]
+      }
+    }
+  }
+  dmz = {
+    ingress = {
+      allow-iap-ssh-dmz = {
+        description   = "Allow traffic from Google IAP over SSH"
+        source_ranges = ["iap"]
+        rules = [
+          {
+            protocol = "tcp"
+            ports    = ["22"]
+          }
+        ]
+      }
+      allow-hc-nva-ssh-dmz = {
+        description   = "Allow traffic from Google healthchecks to NVA appliances"
+        source_ranges = ["healthchecks"]
+        rules = [
+          {
+            protocol = "tcp"
+            ports    = ["22"]
+          }
+        ]
+      }
+    }
+  }
+  mgmt = {
+    ingress = {
+      allow-hc-nva-ssh-mgmt = {
+        description   = "Allow traffic from Google healthchecks to NVA appliances"
+        source_ranges = ["healthchecks", "iap"]
+        rules = [
+          {
+            protocol = "tcp"
+            ports    = ["22"]
+          }
+        ]
+      }
+      allow-ssh-bastion-nva-mgmt = {
+        description   = "We expect the bastion host to be able to SSH into the NGFWs"
+        sources       = ["bastion"]
+        source_ranges = ["internal"]
+        targets       = ["nva"]
+        rules = [
+          {
+            protocol = "tcp"
+            ports    = ["22", "443"]
+          }
+        ]
+      }
+    }
+  }
+  prod = {
+    ingress = {
+      allow-iap-ssh = {
+        description   = "Allow traffic from Google IAP over SSH"
+        source_ranges = ["iap"]
+        rules = [
+          {
+            protocol = "tcp"
+            ports    = ["22"]
+          }
+        ]
+      }
+    }
+  }
+  int = {
+    ingress = {
+      allow-iap-ssh = {
+        description   = "Allow traffic from Google IAP over SSH"
+        source_ranges = ["iap"]
+        rules = [
+          {
+            protocol = "tcp"
+            ports    = ["22"]
+          }
+        ]
+      }
+    }
+  }
+  test = {
+    ingress = {
+      allow-iap-ssh = {
+        description   = "Allow traffic from Google IAP over SSH"
+        source_ranges = ["iap"]
+        rules = [
+          {
+            protocol = "tcp"
+            ports    = ["22"]
+          }
+        ]
+      }
+    }
+  }
+}
+
+# Private DNS Zone Response Policy Rules
+dns_policy_rules = {
+  accounts                      = { dns_name = "accounts.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  aiplatform-notebook-cloud-all = { dns_name = "*.aiplatform-notebook.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  aiplatform-notebook-gu-all    = { dns_name = "*.aiplatform-notebook.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  backupdr-cloud                = { dns_name = "backupdr.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  backupdr-cloud-all            = { dns_name = "*.backupdr.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  backupdr-gu                   = { dns_name = "backupdr.googleusercontent.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  backupdr-gu-all               = { dns_name = "*.backupdr.googleusercontent.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  cloudfunctions                = { dns_name = "*.cloudfunctions.net.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  cloudproxy                    = { dns_name = "*.cloudproxy.app.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  composer-cloud-all            = { dns_name = "*.composer.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  composer-gu-all               = { dns_name = "*.composer.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  datafusion-all                = { dns_name = "*.datafusion.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  datafusion-gu-all             = { dns_name = "*.datafusion.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  dataproc                      = { dns_name = "dataproc.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  dataproc-all                  = { dns_name = "*.dataproc.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  dataproc-gu                   = { dns_name = "dataproc.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  dataproc-gu-all               = { dns_name = "*.dataproc.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  dl                            = { dns_name = "dl.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  gcr                           = { dns_name = "gcr.io.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  gcr-all                       = { dns_name = "*.gcr.io.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  gke-all                       = { dns_name = "*.gke.goog.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  googleapis-all                = { dns_name = "*.googleapis.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  googleapis-private            = { dns_name = "private.googleapis.com.", local_data = { A = { rrdatas = ["199.36.153.8", "199.36.153.9", "199.36.153.10", "199.36.153.11"] } } }
+  googleapis-restricted         = { dns_name = "restricted.googleapis.com.", local_data = { A = { rrdatas = ["199.36.153.4", "199.36.153.5", "199.36.153.6", "199.36.153.7"] } } }
+  gstatic-all                   = { dns_name = "*.gstatic.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  kernels-gu                    = { dns_name = "kernels.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  kernels-gu-all                = { dns_name = "*.kernels.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  ltsapis-all                   = { dns_name = "*.ltsapis.goog.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  notebooks-all                 = { dns_name = "*.notebooks.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  notebooks-gu-all              = { dns_name = "*.notebooks.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  packages-cloud                = { dns_name = "packages.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  packages-cloud-all            = { dns_name = "*.packages.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  pkgdev                        = { dns_name = "pkg.dev.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  pkgdev-all                    = { dns_name = "*.pkg.dev.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  pkigoog                       = { dns_name = "pki.goog.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  pkigoog-all                   = { dns_name = "*.pki.goog.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  run-all                       = { dns_name = "*.run.app.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  source                        = { dns_name = "source.developers.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+  storage                       = { dns_name = "storage.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
+}

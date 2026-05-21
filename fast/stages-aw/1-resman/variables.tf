@@ -336,3 +336,12 @@ variable "tenants_config" {
   nullable = false
   default  = {}
 }
+
+variable "billing_override" {
+  description = "Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects."
+  type = object({
+    project         = string
+    billing_project = string
+  })
+  default = null
+}

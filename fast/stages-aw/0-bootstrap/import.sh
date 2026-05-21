@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 # Assign Organization ID
 ORG=$(gcloud organizations list --format='value(ID)')
 if [[ -z "${ORG}" ]]; then
@@ -22,47 +21,54 @@ if [[ -z "${ORG}" ]]; then
 fi
 
 # Import Organization Policies - get all existing policies
-policies=$(gcloud resource-manager org-policies list \
+policies=$(gcloud org-policies list \
   --organization="${ORG}" \
   --format='value(constraint)' 2>/dev/null)
 
 if [[ -z "${policies}" ]]; then
   echo "No existing organization policies found to import. This is normal for a fresh deployment."
-else
-  echo -e "Importing policies...\n"
+  exit 0
+fi
 
-  failed_imports=()
+echo "Fetching current Terraform state list..."
+state_list=$(terraform state list 2>/dev/null)
 
-  # Policy Iteration
-  while IFS= read -r constraint_path; do
-    constraint_name=${constraint_path##*/}
-    constraint_self_link="organizations/${ORG}/policies/${constraint_name}"
+rm -f imports.tf
+import_count=0
 
-    # Check Policy State
-    if terraform state show "module.organization.google_org_policy_policy.default[\"${constraint_name}\"]" > /dev/null 2>&1; then
-      # Skip Import
-      echo "${constraint_name} already managed, skipping import."
-    elif [[ "${constraint_name}" == custom.* ]]; then
-       echo "${constraint_name} is a custom policy, skipping import."
-    else
+# Policy Iteration
+while IFS= read -r constraint_path; do
+  constraint_name=${constraint_path##*/}
+  constraint_self_link="organizations/${ORG}/policies/${constraint_name}"
+  target_resource="module.organization.google_org_policy_policy.default[\"${constraint_name}\"]"
 
-      # Attempt Import
-      if ! terraform import \
-        "module.organization.google_org_policy_policy.default[\"${constraint_name}\"]" \
-        "${constraint_self_link}"; then
-        echo "Error: terraform import failed for constraint: ${constraint_name}" >&2
-        failed_imports+=("${constraint_name}")
-      fi
-    fi
-  done <<< "$policies"
-
-  if [[ ${#failed_imports[@]} -gt 0 ]]; then
-    echo -e "\nError: The following organizational policies failed to import:" >&2
-    for failed_policy in "${failed_imports[@]}"; do
-      echo "- ${failed_policy}" >&2
-    done
-    exit 1
-  else
-    echo -e "\nOrganization Policy import operation is complete!"
+  # Check if constraint is declared in local configuration files
+  if ! grep -rq "^${constraint_name}:" ./data/org-policies/ ./data/custom-org-policies/ 2>/dev/null; then
+    continue
   fi
+
+  # Check if already in state
+  if echo "${state_list}" | grep -qF "${target_resource}"; then
+    echo "${constraint_name} already managed, skipping."
+  elif [[ "${constraint_name}" == custom.* ]]; then
+     echo "${constraint_name} is a custom policy, skipping."
+  else
+    echo "Staging import for ${constraint_name}..."
+    cat <<EOF >> imports.tf
+import {
+  to = ${target_resource}
+  id = "${constraint_self_link}"
+}
+EOF
+    ((import_count++))
+  fi
+done <<< "$policies"
+
+if [[ $import_count -gt 0 ]]; then
+  echo -e "\nStaged $import_count imports. Running parallel import apply..."
+  terraform apply -auto-approve
+  rm -f imports.tf
+  echo -e "\nOrganization Policy import operation is complete!"
+else
+  echo "All policies are already up to date."
 fi

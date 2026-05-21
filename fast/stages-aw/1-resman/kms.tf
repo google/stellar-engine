@@ -16,6 +16,7 @@ module "tenant-project-keys" {
   source     = "../../../modules/kms"
   project_id = module.tenant-self-iac-projects[each.key].project_id
   for_each   = local.tenant_envs
+  depends_on = [time_sleep.tenant_project_iam_propagation_delay]
   iam = {
     "roles/cloudkms.cryptoKeyEncrypterDecrypter" = [
       module.tenant-core-sa[each.key].iam_email,
