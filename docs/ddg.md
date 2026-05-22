@@ -188,9 +188,9 @@ state.
   bootstrap project if it is not enabled
 - Change directory into **fast/stages-aw/0-bootstrap**
 - Copy file **terraform.tfvars.sample** to **terraform.tfvars**
-  - **cp terraform.tfvars.sample terraform.tfvars**
+  - `cp terraform.tfvars.sample terraform.tfvars`
 - Copy file **providers.tf.tmp** to **0-bootstrap-providers.tf**
-  - **cp providers.tf.tmp 0-bootstrap-providers.tf**
+  - `cp providers.tf.tmp 0-bootstrap-providers.tf`
 - Update information in **terraform.tfvars** as follows below, the variables
   from the above sections are already included
 
@@ -272,9 +272,8 @@ alert_email = "`<alert_email>`"
     - Click “Allow services” to bring in the BigQuery family of APIs. 
     - If prompted, say yes to the additional dialog confirming your choice. 
     - After making this change, you should wait \~2 minutes and then re-run:
-      - **terraform apply -var bootstrap_user=$(gcloud config list --format
-    'value(core.account)')**
-  - Type **yes** when prompted
+      - `terraform apply -var bootstrap_user=$(gcloud config list --format 'value(core.account)')`
+  - Type `yes` when prompted
   - **Note:** You may encounter a bug where your bootstrap project loses
     access to your billing account. If so [re-enable billing for your
     bootstrap project](https://console.cloud.google.com/billing/projects)
@@ -308,7 +307,7 @@ variable as seen below.
   
 **Note:** If you are using an external billing account  where the resman service account cannot be granted billing permissions, 
 you can use a **billing override** to run the project creation/billing links under your personal credentials. 
-To do this, define the `billing_override` variable in your `fast/stages-aw/1-resman/terraform.tfvars`:**
+To do this, define the `billing_override` variable in your **fast/stages-aw/1-resman/terraform.tfvars**:
 
 ```hcl
 billing_override = {
@@ -332,8 +331,8 @@ billing_override = {
     Account Administrator”.
   - When done, click Save.
 - Change directory into **fast/stages-aw/1-resman**
-- Copy file **terraform.tfvars.sample** to **terraform.tfvars **
-  - **cp terraform.tfvars.sample terraform.tfvars**
+- Copy file **terraform.tfvars.sample** to **terraform.tfvars**
+  - `cp terraform.tfvars.sample terraform.tfvars`
 - Update information in **terraform.tfvars** as follows
   - Note: Change “tenant_name(s)” below
 
@@ -429,11 +428,11 @@ gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.aut
 gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
 ```
 - Copy the sample `terraform.tfvars` file and configure your network settings:
-  - **cp terraform.tfvars.sample terraform.tfvars**
+  - `cp terraform.tfvars.sample terraform.tfvars`
 - Update custom subnets, proxy subnets, firewall rules, named CIDRs, and DNS response policy rules directly inside **`terraform.tfvars`**.
-- Run **terraform init**
-- **terraform apply**
-  - Type **yes** when prompted
+- Run `terraform init`
+  - `terraform apply`
+  - Type `yes` when prompted
 
 ## IL4/IL5 Stage 2.1 - Networking
 
@@ -443,7 +442,7 @@ This step deploys a pair of Palo Alto vm-series Next-Generation Firewalls
 (NGFWs) into the network account. They use the Bring Your Own License (BYOL)
 deployment image and will require you to use the Palo Alto web console to upload
 a VM code and register them. For more instructions, see the README in the the
-**2-networking-b-il5-ngfw **stage folder.
+**2-networking-b-il5-ngfw** stage folder.
 
 ### Steps
 
@@ -485,12 +484,12 @@ gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.aut
 gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
 ```
 - Copy the sample `terraform.tfvars` file and configure your network settings:
-  - **cp terraform.tfvars.sample terraform.tfvars**
+  - `cp terraform.tfvars.sample terraform.tfvars`
 - Update custom subnets (including mgmt), proxy subnets, firewall rules, named CIDRs, and DNS response policy rules directly inside **`terraform.tfvars`**.
-- Run **terraform init**
-- Run **terraform apply -target google_project_iam_custom_role.ngfw-custom-role**
-  - Type **yes** when prompted
-  - **Note: **If you receive an error relating to a service account and/or
+- Run `terraform init`
+- Run `terraform apply -target google_project_iam_custom_role.ngfw-custom-role`
+  - Type `yes` when prompted
+  - **Note:** If you receive an error relating to a service account and/or
     KMS not existing, please click “Settings” in the `<prefix>`-net-vdss-host
     storage account on the console, and it will generate the service account
     for you
@@ -544,10 +543,10 @@ gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.aut
 gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
 ```
 
-- Run **terraform init**
-- Run **terraform apply -target google_project_iam_custom_role.ngfw-custom-role**
-  - Type **yes** when prompted
-  - **Note: **If you receive an error relating to a service account and/or
+- Run `terraform init`
+- Run `terraform apply -target google_project_iam_custom_role.ngfw-custom-role`
+  - Type `yes` when prompted
+  - **Note:** If you receive an error relating to a service account and/or
     KMS not existing, please click “Settings” in the `<prefix>`-net-vdss-host
     storage account on the console, and it will generate the service account
     for you    
@@ -697,7 +696,7 @@ Perform the following steps when adding or removing tenants projects for an exis
   the keys back on in [KMS
   Management](https://console.cloud.google.com/security/kms/keyrings). If you
   receive these additional errors, please wait \~1 minute and rerun
-  **terraform apply**
+  `terraform apply`
 - On a Windows Machine, symlinks may not work, and specific files may need to be copied over manually, specifically psc.tf and log-metric-alerts.tf during the “2-network” stages
 - If you run into billing/quota issues, make sure your quota project is set. You can set it by running `gcloud auth application-default set-quota-project xxx-prod-iac-core-0`, or change it to a project of your choice.
 
