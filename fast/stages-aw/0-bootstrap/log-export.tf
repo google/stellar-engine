@@ -37,9 +37,10 @@ locals {
 }
 
 module "log-export-project" {
-  source = "../../../modules/project"
-  name   = "audit-logs-0"
-  lien_reason     = "Protected by default as a core project."
+  source                  = "../../../modules/project"
+  name                    = "audit-logs-0"
+  default_service_account = "deprivilege"
+  lien_reason             = "Protected by default as a core project."
   parent = coalesce(
     var.project_parent_ids.logging, module.branch-common-services-folder.folder.name
   )
