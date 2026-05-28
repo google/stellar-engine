@@ -19,7 +19,7 @@ locals {
   # local.routing_config[0] sets up the first interface, and so on.
   # tflint-ignore: terraform_unused_declarations
   nva_zones   = { for k, v in var.regions : k => slice(data.google_compute_zones.available[k].names, 0, 2) }
-  cidr_ranges = yamldecode(file("${path.module}/data/cidrs.yaml"))
+  cidr_ranges = var.cidrs
 }
 
 data "google_storage_project_service_account" "gcs_account" {
