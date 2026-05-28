@@ -108,3 +108,9 @@ variable "compute_image" {
   type        = string
   default     = "projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20241219"
 }
+
+variable "gitlab_install_script_sha256" {
+  description = "Expected SHA-256 hash for the GitLab package repository install script."
+  type        = string
+  default     = "47c124527729776870cf09cd6bd46a9b94f55d40c7545ca26640c75de86b560d"
+}
