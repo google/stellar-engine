@@ -259,6 +259,10 @@ alert_email = "`<alert_email>`"
 
 ```
 
+- Export the prefix as an environment variable to simplify subsequent commands:
+  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' terraform.tfvars)`
+  - **Note:** If you open a new terminal or change directories during the deployment, you can re-run this command from the repository root to restore the variable:
+    - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
 - Run `terraform init`
 - Run `terraform apply -var bootstrap_user=$(gcloud config list --format 'value(core.account)')`
   - Type `yes` when prompted
@@ -278,9 +282,9 @@ alert_email = "`<alert_email>`"
     access to your billing account. If so [re-enable billing for your
     bootstrap project](https://console.cloud.google.com/billing/projects)
 - Switch project to your new project
-  - `gcloud config set project `<prefix>`-prod-iac-core-0`
+  - `gcloud config set project ${FAST_PREFIX}-prod-iac-core-0`
 - Copy the new providers local
-  - `gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/providers/0-bootstrap-providers.tf ./`
+  - `gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/0-bootstrap-providers.tf ./`
 - Migrate the state from local to remote using
   - `terraform init --migrate-state`
   - Type `yes` when prompted
@@ -301,20 +305,22 @@ variable as seen below.
 
 ### Steps
 
+- **Note:** If you are using an environment variable for the prefix, make sure it is set:
+  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
 - **Note:** If you are using an external billing account, you have to add the
   Billing Account Administrator for the following service account to the external billing account:
   - **`<prefix>`-prod-resman-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
   
-**Note:** If you are using an external billing account  where the resman service account cannot be granted billing permissions, 
+- **Note:** If you are using an external billing account  where the resman service account cannot be granted billing permissions, 
 you can use a **billing override** to run the project creation/billing links under your personal credentials. 
 To do this, define the `billing_override` variable in your **fast/stages-aw/1-resman/terraform.tfvars**:
 
-```hcl
-billing_override = {
-  project         = "<your-quota-project-id>"
-  billing_project = "<your-quota-project-id>"
-}
-```
+  ```hcl
+  billing_override = {
+    project         = "<your-quota-project-id>"
+    billing_project = "<your-quota-project-id>"
+  }
+  ```
 
   **Steps to add the external billing account (if applicable):**
   - In the Google Cloud console (External billing Account), go to the
@@ -341,21 +347,21 @@ billing_override = {
 ```hcl
 tenants = {
 ten-1 = { ## Change tenant_name here - 6 or less characters
-  admin_principal = "group:gcp-devops@`<domain>`"
-  descriptive_name = tenant-1 ## Change descriptive_name here
+  admin_principal = "group:gcp-devops@<domain>"
+  descriptive_name = "tenant-1" ## Change descriptive_name here
   locations = {
-    gcs = `<region>`
-    kms = `<region>`
+    gcs = "<region>"
+    kms = "<region>"
     }
- },
+  },
  ten-2 = { ## Change tenant_name-2 here - 6 or less characters
-  admin_principal = "group:gcp-devops@`<domain>`"
+  admin_principal = "group:gcp-devops@<domain>"
   descriptive_name = "tenant-2" ## Change descriptive_name here
   locations = {
-    gcs = `<region>`
-    kms = `<region>`
+    gcs = "<region>"
+    kms = "<region>"
     }
- }
+  }
 ## You can have “n” number of tenants
 }
 fast_features = {
@@ -363,22 +369,22 @@ fast_features = {
 }
 envs_folders = {
  Prod = {
-  admin = "gcp-organization-admins@`<domain>`"
+  admin = "gcp-organization-admins@<domain>"
  },
  Int = {
-  admin = "gcp-organization-admins@`<domain>`"
+  admin = "gcp-organization-admins@<domain>"
  },
  Test = {
-  admin = "gcp-organization-admins@`<domain>`"
+  admin = "gcp-organization-admins@<domain>"
  }
 }
 ```
 
 - Copy the tfvars files from GCS
 ```
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/providers/1-resman-providers.tf ./ &&
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ &&
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ &&
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/1-resman-providers.tf ./ &&
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ &&
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./
 ```
 - Run `terraform init`
 - Run `terraform apply`
@@ -390,20 +396,22 @@ gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.aut
 
 ### Steps
 
-**Note:** If you are using an external billing account, you have to add the
+- **Note:** If you are using an environment variable for the prefix, make sure it is set:
+  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
+- **Note:** If you are using an external billing account, you have to add the
   Billing Account Administrator for the following service account to the external billing account:
   - **`<prefix>`-prod-resman-net-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
 
-**Note: If you are using an external billing account where the networking service account cannot be granted billing permissions, 
-you can use a billing override to run the project creation/billing links under your personal credentials. 
-To do this, define the `billing_override` variable in the resman stage 1 tfvars file**
+- **Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
+you can use a **billing override** to run the project creation/billing links under your personal credentials. 
+To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/terraform.tfvars** file
 
-```hcl
-billing_override = {
-  project         = "<your-quota-project-id>"
-  billing_project = "<your-quota-project-id>"
-}
-```
+  ```hcl
+  billing_override = {
+    project         = "<your-quota-project-id>"
+    billing_project = "<your-quota-project-id>"
+  }
+  ```
 
   **Steps to add the external billing account (if applicable):**
   - In the Google Cloud console (External billing Account), go to the
@@ -422,10 +430,10 @@ billing_override = {
 - Change directory into **fast/stages-aw/2-networking-a-fedramp-high**
 - Copy the provider and global tfvars files from the GCS buckets:
 ```bash
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./ && \
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ && \
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ && \
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./ && \
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ && \
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ && \
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
 ```
 - Copy the sample `terraform.tfvars` file and configure your network settings:
   - `cp terraform.tfvars.sample terraform.tfvars`
@@ -446,20 +454,22 @@ a VM code and register them. For more instructions, see the README in the the
 
 ### Steps
 
-**Note:** If you are using an external billing account, you have to add the
+- **Note:** If you are using an environment variable for the prefix, make sure it is set:
+  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
+- **Note:** If you are using an external billing account, you have to add the
   Billing Account Administrator for the following service account to the external billing account:
   - **`<prefix>`-prod-resman-net-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
 
-**Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
+- **Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
 you can use a **billing override** to run the project creation/billing links under your personal credentials. 
-To do this, define the `billing_override` variable in the resman stage 1 tfvars file
+To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/terraform.tfvars** file
 
-```hcl
-billing_override = {
-  project         = "<your-quota-project-id>"
-  billing_project = "<your-quota-project-id>"
-}
-```
+  ```hcl
+  billing_override = {
+    project         = "<your-quota-project-id>"
+    billing_project = "<your-quota-project-id>"
+  }
+  ```
 
   **Steps to add the external billing account (if applicable):**
   - In the Google Cloud console (External billing Account), go to the
@@ -478,73 +488,16 @@ billing_override = {
 - Change directory into **fast/stages-aw/2-networking-b-il5-ngfw**
 - Copy the provider and global tfvars files from the GCS buckets:
 ```bash
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./ && \
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ && \
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ && \
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./ && \
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ && \
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ && \
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
 ```
 - Copy the sample `terraform.tfvars` file and configure your network settings:
   - `cp terraform.tfvars.sample terraform.tfvars`
 - Update custom subnets (including mgmt), proxy subnets, firewall rules, named CIDRs, and DNS response policy rules directly inside **`terraform.tfvars`**.
 - Run `terraform init`
-- Run `terraform apply -target google_project_iam_custom_role.ngfw-custom-role`
-  - Type `yes` when prompted
-  - **Note:** If you receive an error relating to a service account and/or
-    KMS not existing, please click “Settings” in the `<prefix>`-net-vdss-host
-    storage account on the console, and it will generate the service account
-    for you
-
-## IL2/FedRAMP Mod Stage 2.1 - Networking
-
-### Steps
-
-**Note:** If you are using an external billing account, you have to add the
-  Billing Account Administrator for the following service account to the external billing account:
-  - **`<prefix>`-prod-resman-net-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
-
-  **Steps to add the external billing account (if applicable):**
-  - In the Google Cloud console (External billing Account), go to the
-    Account management page for the Cloud Billing account, select the
-    Organization level and Go to Account management in Cloud Billing
-  - At the prompt, choose the Cloud Billing account you want to view.
-  - In the Permissions panel, To add new principals and assign permissions,
-    do the following:
-  - Click Add principal.
-  - In the New principals field, enter the email address for the principals
-    you want to add for example:
-    - `<prefix>`-prod-resman-net-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com
-  - Select a permission for the principal(s) from Select a role as “Billing
-    Account Administrator”.
-  - When done, click Save.
-
-- Change directory into **fast/stages-aw/2-networking-c-fedramp-mod**
-- Copy file terraform.tfvars.sample to terraform.tfvars 
-  - `cp terraform.tfvars.sample terraform.tfvars`
-- Update information in terraform.tfvars as follows
-  - The `ngfw` variable determines whether or not firewall endpoints will be created for your network.
-  - Available options for `min_tls_version`: TLS_VERSION_UNSPECIFIED, TLS_1_0, TLS_1_1, TLS_1_2, TLS_1_3.
-  - Available options for `tls_feature_profile`: PROFILE_UNSPECIFIED, PROFILE_COMPATIBLE, PROFILE_MODERN, PROFILE_RESTRICTED, PROFILE_CUSTOM.
-  - You may also delete the `tls` variable if you wish to have no TLS  inspection policy associated with your firewall endpoints.
-
-**`fast/stages-aw/2-networking-c-fedramp-mod/terraform.tfvars`**
-```hcl
-ngfw = true
-tls = {
-  min_tls_version = "TLS_1_2",
-  tls_feature_profile = "PROFILE_MODERN"
-}
-```
-
-- Copy the **terraform.tfvars.tf** files from the GCS buckets
-```
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./ &&
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ &&
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ &&
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
-```
-
-- Run `terraform init`
-- Run `terraform apply -target google_project_iam_custom_role.ngfw-custom-role`
+- Run `terraform apply`
   - Type `yes` when prompted
   - **Note:** If you receive an error relating to a service account and/or
     KMS not existing, please click “Settings” in the `<prefix>`-net-vdss-host
@@ -582,20 +535,22 @@ are responsible for the audit project.
 
 ### Steps
 
-- **Note: If you are using an external billing account, you have to add the
+- **Note:** If you are using an environment variable for the prefix, make sure it is set:
+  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
+- **Note:** If you are using an external billing account, you have to add the
   Billing Account Administrator for the following service account to the external billing account:**
   - `<prefix>`-security-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com
   
-**Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
+- **Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
 you can use a **billing override** to run the project creation/billing links under your personal credentials. 
-To do this, define the `billing_override` variable in the resman stage 1 tfvars file
+To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/terraform.tfvars** file
 
-```hcl
-billing_override = {
-  project         = "<your-quota-project-id>"
-  billing_project = "<your-quota-project-id>"
-}
-```
+  ```hcl
+  billing_override = {
+    project         = "<your-quota-project-id>"
+    billing_project = "<your-quota-project-id>"
+  }
+  ```
 
   **Steps to add the external billing account:**
   - In the Google Cloud console (External billing Account), go to the
@@ -614,10 +569,10 @@ billing_override = {
 - Change directory into **fast/stages-aw/3-security**
 - Copy the **terraform.tfvars** files from the GCS buckets
 ```
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/providers/3-security-providers.tf ./ &&
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ &&
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ &&
-gcloud storage cp gs://`<prefix>`-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/3-security-providers.tf ./ &&
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ &&
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ &&
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
 ```
 - Run `terraform init`
 - Run `terraform apply`
@@ -657,7 +612,7 @@ Perform the following steps when adding or removing tenants projects for an exis
 
 #### Authenticate and Set Active Project
 - `gcloud auth login `
-- `gcloud config set project xxx-prod-iac-core-0`
+- `gcloud config set project ${FAST_PREFIX}-prod-iac-core-0`
 - `gcloud auth application-default login `
 
 #### Enable FAST Stages Service Accounts
@@ -675,9 +630,8 @@ Perform the following steps when adding or removing tenants projects for an exis
 - Change directory into appropriate network folder for your Stellar Engine deployment:
   - fast/stages-aw/2-networking-a-fedramp-high
   - fast/stages-aw/2-networking-b-il5-ngfw
-  - fast/stages-aw/2-networking-c-fedramp-mod
 - Copy the 1-resman 1-resman tfvars file from the GCS bucket
-  - `gcloud storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./`
+  - `gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./`
 - Run terraform init
 - Run terraform apply
   - Type yes when prompted
@@ -698,6 +652,6 @@ Perform the following steps when adding or removing tenants projects for an exis
   receive these additional errors, please wait \~1 minute and rerun
   `terraform apply`
 - On a Windows Machine, symlinks may not work, and specific files may need to be copied over manually, specifically psc.tf and log-metric-alerts.tf during the “2-network” stages
-- If you run into billing/quota issues, make sure your quota project is set. You can set it by running `gcloud auth application-default set-quota-project xxx-prod-iac-core-0`, or change it to a project of your choice.
+- If you run into billing/quota issues, make sure your quota project is set. You can set it by running `gcloud auth application-default set-quota-project ${FAST_PREFIX}-prod-iac-core-0`, or change it to a project of your choice.
 
 ####
