@@ -150,7 +150,10 @@ sudo apt update -y
 sudo apt install google-cloud-cli -y
 sudo apt install kubectl -y
 sudo apt install google-cloud-cli-gke-gcloud-auth-plugin -y
-curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh | sudo bash
+GITLAB_INSTALL_SCRIPT="$(mktemp)"
+trap 'rm -f "$GITLAB_INSTALL_SCRIPT"' EXIT
+curl --fail --show-error --location --output "$GITLAB_INSTALL_SCRIPT" https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh
+echo "${var.gitlab_install_script_sha256}  $GITLAB_INSTALL_SCRIPT" | sha256sum --check - && sudo bash "$GITLAB_INSTALL_SCRIPT"
 
 sudo EXTERNAL_URL="${var.gitlab_uri}" apt install gitlab-ee -y
       EOT
