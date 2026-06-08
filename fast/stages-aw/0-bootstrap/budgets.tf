@@ -1,5 +1,5 @@
 /**
- * Copyright 2024 Google LLC
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,17 @@
 
 # tfdoc:file:description Billing budgets.
 
+locals {
+    folder_name = var.assured_workloads.regime != "COMPLIANCE_REGIME_UNSPECIFIED" ? "${google_assured_workloads_workload.primary[0].display_name}" : "${module.no-compliance-folder[0].folder.name}"
+}
+
 module "billing-account" {
   source = "../../../modules/billing-account"
   count  = var.billing_budget_amount != null ? 1 : 0
   id     = var.billing_account.id
   budgets = {
     aw-folder-budget = {
-      display_name = "AW Folder Budget - ${var.prefix}"
+      display_name = "Budget for ${local.folder_name} Folder"
       amount = {
         units = var.billing_budget_amount.amount
       }

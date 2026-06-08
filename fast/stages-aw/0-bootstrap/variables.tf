@@ -42,7 +42,7 @@ variable "billing_account" {
 }
 
 variable "billing_budget_amount" {
-  description = "Budget configuration for the AW folder. Includes amount and optional threshold rules (defaults to 0.5, 0.75, 0.9). If null, no budget will be created."
+  description = "Optional Budget configuration for the AW folder. Includes amount and optional threshold rules (defaults to 0.5, 0.75, 0.9). If null, no budget will be created."
   type = object({
     amount          = number
     threshold_rules = optional(list(number), [0.5, 0.75, 0.9])
