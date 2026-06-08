@@ -114,6 +114,10 @@ For details on configuring the different billing account modes, refer to the [Ho
 
 Due to limitations of API availability, manual steps have to be followed to enable billing export within the billing Google Cloud Project to BigQuery dataset `billing_export`, which will be created as part of the bootstrap stage. The process to share billing data [is outlined here](https://cloud.google.com/billing/docs/how-to/export-data-bigquery-setup#enable-bq-export).
 
+#### Billing Budgets
+
+A default billing budget can be created for the top-level folder of the landing zone by setting the `billing_budget_amount` variable. This budget will cover all projects created within the Assured Workload folder (or the "no-compliance" folder if Assured Workloads are disabled). The variable is an object that allows specifying the budget amount and optional threshold rules (defaults to 0.5, 0.75, and 0.9).
+
 ### Google Cloud Organization Level Logging
 
 We create Google Cloud Organization level log sinks early in the bootstrap process to ensure a proper audit trail is in place from the very beginning. By default, we provide log filters to capture [Cloud Audit Logs](https://cloud.google.com/logging/docs/audit), [VPC Service Controls violations](https://cloud.google.com/vpc-service-controls/docs/troubleshooting#vpc-sc-errors) and [Workspace Logs](https://cloud.google.com/logging/docs/audit/configure-gsuite-audit-logs) into logging buckets in the top-level audit logging Google Cloud Project. In addition, a log sink with an empty filter is included to comply with [Center for Internet Security (CIS) Benchmarks](https://cloud.google.com/security/compliance/cis) related to log sinks.
@@ -374,6 +378,7 @@ The `fast_features` variable consists of 4 toggles
 |---|---|:---:|:---:|:---:|
 | [alert_email](variables.tf#L16) | Email to receive log alerts. | <code>string</code> | ✓ |  |
 | [billing_account](variables.tf#L34) | Billing account id. If billing account is not part of the same org set `is_org_level` to `false`. To disable handling of billing IAM roles set `no_iam` to `true`. | <code title="object&#40;&#123;&#10;  id           &#61; string&#10;  is_org_level &#61; optional&#40;bool, true&#41;&#10;  no_iam       &#61; optional&#40;bool, false&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [billing_budget_amount](variables.tf#L44) | Budget configuration for the AW folder. Includes amount and optional threshold rules (defaults to 0.5, 0.75, 0.9). If null, no budget will be created. | <code title="object&#40;&#123;&#10;  amount          &#61; number&#10;  threshold_rules &#61; optional&#40;list&#40;number&#41;, &#91;0.5, 0.75, 0.9&#93;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [bootstrap_project](variables.tf#L44) | Bootstrap project ID. | <code>string</code> | ✓ |  |
 | [organization](variables.tf#L260) | Organization details. | <code title="object&#40;&#123;&#10;  id          &#61; number&#10;  domain      &#61; optional&#40;string&#41;&#10;  customer_id &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [prefix](variables.tf#L275) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |

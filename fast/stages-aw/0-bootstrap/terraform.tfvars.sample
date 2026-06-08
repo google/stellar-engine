@@ -4,6 +4,11 @@ billing_account = {
   id = "012345-67890A-BCDEF0"
 }
 
+# Optional Billing budget for the Assured Workload folder. If not set, no budget will be created.
+# billing_budget_amount = {
+#   amount = 1000
+# }
+
 # region configuration - this will automatically populate locations for GCS, BigQuery, KMS, and logging buckets
 # Default to us-east4 for IL5/FedRAMP compliance - adjust as needed
 regions = {
