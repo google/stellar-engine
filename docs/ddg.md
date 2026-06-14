@@ -80,6 +80,11 @@ To make using this deployment guide easier, the variables described below need t
 
 ## Prerequisites
 
+Before starting Stage 0, review the centralized
+[deployment prerequisites checklist](prerequisites.md). It collects the local
+tooling, bootstrap project, required APIs, IAM grants, administrative groups,
+and quota checks that must be ready before the deployment steps below.
+
 In a testing environment, it is possible that one user may have administrator
 roles of all three types of resources. However, in a production environment, it
 is more likely that we need to have multiple administrators involved during the
@@ -158,9 +163,9 @@ permissions.**
   - gcp-security-admins@`<domain>`
 - We need to enable these Google Cloud Services by running the following
   script:
-    - fast/stages-aw/0-bootstrap/enable_services.sh
+    - fast/stages-aw/0-bootstrap/enableServices.sh
       - If you run into issues with the above command, you can simply run the following deprecated command (on MacOS, works on other *nix variants)
-        - `echo "iam cloudkms pubsub serviceusage cloudresourcemanager bigquery assuredworkloads cloudbilling logging iamcredentials orgpolicy" | xargs -n1 -I {} gcloud services enable "{}.googleapis.com”`
+        - `echo "iam cloudkms pubsub serviceusage cloudresourcemanager bigquery assuredworkloads cloudbilling logging iamcredentials orgpolicy" | xargs -n1 -I {} gcloud services enable "{}.googleapis.com"`
 - [Enable Access
   Transparency](https://console.cloud.google.com/iam-admin/settings) for your
   organization
