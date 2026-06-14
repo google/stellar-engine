@@ -201,19 +201,16 @@ state.
 billing_account = {
  id = "`<billing_account_id>`" # taken from Google Cloud Console Billing Accounts -> Manage Billing Account
 }
-# locations for GCS, BigQuery, and logging buckets created here
-locations = {
- bq = "`<region>`"
- gcs = "`<region>`"
- logging = "`<region>`"
- pubsub = ["`<region>`"]
- kms = "`<region>`"
+# region configuration - this will automatically populate locations for GCS, BigQuery, KMS, and logging buckets
+# Default to us-east4 for IL5/FedRAMP compliance - adjust as needed
+regions = {
+ primary = "`<region>`"
 }
 # use `gcloud organizations list`
 organization = {
  domain = "`<domain>`" # DISPLAY_NAME
  id = "`<organization_id>`"
- customer_id = "`<organization_id>`"
+ customer_id = "`<customer_id>`"
 }
 outputs_location = "~/fast-config"
 # use something unique and no longer than 6 characters
@@ -244,9 +241,6 @@ org_policies_config = {
   }
 fast_features = {
  envs = true
-}
-regions = {
-  primary = "`<region>`"
 }
 
 #regime must be in ALL CAPS
