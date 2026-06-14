@@ -1,12 +1,10 @@
-[//]: # Tab Start: Tab 1
-
 # Path to Authorization
 
 _Impact Level 5 (H-H-X) & FedRAMP High_
 
 **Created Date:**
 
-**Last Modified: **
+**Last Modified:**
 
 **Google POC(s):** stellar-engine@google.com
 
@@ -33,8 +31,10 @@ deployments in the cloud.
 
 **RMF & Stellar Engine**:
 
-_Red Text indicates MAJOR ARTIFACTS for ATO submission; Blue Text indicates
-AO ACTIONS_
+The source document used color to distinguish major ATO submission artifacts
+from Authorizing Official (AO) actions. This Markdown version uses explicit
+section labels, linked artifact names, and AO wording instead of color-only
+cues.
 
 [**Step 0;
 Prepare**](https://csrc.nist.gov/Projects/risk-management/about-rmf/prepare-step)**:**
@@ -252,5 +252,3 @@ Continuously **monitor** control implementation and risks to the system
     organizations to protect against a diverse set of threats and risks.
 - [Stellar Engine Technical Design
   Document](https://docs.google.com/document/d/15WMwslyCrkmuI7EutGBd7YXH3K8P3KrwzLOGcv-W4t8/edit?resourcekey=0-mjoA_PGM2MkIMPpr75SQbQ&tab=t.0)
-
-[//]: # Tab End: Tab 1
