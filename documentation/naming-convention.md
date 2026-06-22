@@ -11,7 +11,7 @@ _Throughout this documentation we use example naming and diagrams to show exampl
 - [Google Cloud Naming Convention](#google-cloud-naming-convention)
 - [Table of Contents](#table-of-contents)
   - [Google Cloud Org Domain](#google-cloud-org-domain)
-  - [Base](#base)
+  - [Prefix](#prefix)
   - [Google Cloud Folders](#google-cloud-folders)
   - [Google Cloud Projects](#google-cloud-projects)
   - [Google Cloud Networks](#google-cloud-networks)
@@ -24,13 +24,13 @@ _Throughout this documentation we use example naming and diagrams to show exampl
 ## Google Cloud Org Domain
 `acme.dev`
 
-## Base
+## Prefix
 
-_acme_ - `ACME` is the example we will use for this codebase.
+_acme_ - `ACME` is the example prefix we will use for this codebase.
 
-3 or 4 letters representing the company name and or team name that will flow down through the infrastructure for all named resources.  We use this `base` to ensure we comply with any globally unique naming, like `Google Cloud Projects`.  
+A short prefix of no more than 6 characters representing the company name and or team name that will flow down through the infrastructure for all named resources.  We use this `prefix` to ensure we comply with any globally unique naming, like `Google Cloud Projects`.
 
-_Note: The only place we _do not_ use or need the base is in the `Google Cloud Folders` which are only viewable within the Google Cloud WebUI.  Brevity in the Google Cloud Folder structure is paramount for clean Resource Management._
+_Note: The only place we _do not_ use or need the prefix is in the `Google Cloud Folders` which are only viewable within the Google Cloud WebUI.  Brevity in the Google Cloud Folder structure is paramount for clean Resource Management._
 
 ## Google Cloud Folders
 
@@ -55,15 +55,15 @@ Google Cloud Folder naming is:
 - [ ] _only_ viewable within the Google Cloud Org
 - [ ] _not_ globally unique
 - [ ] _not_ burnable
-- [ ] _does not use_ the `base` block
+- [ ] _does not use_ the `prefix` block
 
 ## Google Cloud Projects
 
 Spec:
 
-`{base}-{compliance regime}-{environment}-{role}-{0-9}`
+`{prefix}-{compliance regime}-{environment}-{role}-{0-9}`
 
-`{base}-org-{environment}-{role}-{0-9}`
+`{prefix}-org-{environment}-{role}-{0-9}`
 
 Example:
 
@@ -83,7 +83,7 @@ Google Cloud Project - IL5 Wing Directorate Sandbox Environment
 
 `acme-il5-sbx-wingdir-0`
 
-Google Cloud Projects Documentation](https://cloud.google.com/resource-manager/docs/creating-managing-projects)
+[Google Cloud Projects Documentation](https://cloud.google.com/resource-manager/docs/creating-managing-projects)
 
 Google Cloud Projects should be following Google Cloud best practices by following these naming standards:
 
@@ -105,19 +105,19 @@ Google Cloud Projects naming is:
 ## Google Cloud Networks
 
 VPC Network
-  * spec: `{base}-{compliance regime}-{environment}-vpc-{region}`
+  * spec: `{prefix}-{compliance regime}-{environment}-vpc-{region}`
   * example: `acme-il2-prod-vpc-uswest`
 
 Subnet
-  * spec: `{base}-{compliance regime}-{environment}-subnet-{region}-{app}`
+  * spec: `{prefix}-{compliance regime}-{environment}-subnet-{region}-{app}`
   * example: `acme-il2-prod-subnet-uswest-gke`
 
 Internal Firewall
-  * spec: `{base}-{compliance regime}-{environment}-fw-{source}-{dest}-{protocal}-{port}-{action}`
+  * spec: `{prefix}-{compliance regime}-{environment}-fw-{source}-{dest}-{protocal}-{port}-{action}`
   * example: `acme-il2-prod-fw-gke-lb-http-80-allow`
 
 IP Route
-  * spec: `{base}-{compliance regime}-{environment}-route-{source}-{nexthop}`
+  * spec: `{prefix}-{compliance regime}-{environment}-route-{source}-{nexthop}`
   * example `acme-il2-prod-route-gke-niprnet`
 
 [Google Cloud VPCs Documentation](https://cloud.google.com/architecture/best-practices-vpc-design#naming)
@@ -139,7 +139,7 @@ Google Cloud Networks naming is:
 
 Spec:
 
-`custom.{base}{custom constraint}{00}`
+`custom.{prefix}{custom constraint}{00}`
 
 Example:
 
@@ -163,7 +163,7 @@ Google Cloud Org Policy Custom Constraints naming is:
 
 Spec:
 
-`{base}-{compliance regime}-{environment}-{rolename}-{rw ro}`
+`{prefix}-{compliance regime}-{environment}-{rolename}-{rw ro}`
 
 Example:
 
@@ -189,7 +189,7 @@ IAM Custom Roles naming is:
 
 Spec:
 
-`{base}-{compliance regime}-{environment}-{role}-({public})`
+`{prefix}-{compliance regime}-{environment}-{role}-({public})`
 
 Example:
 
@@ -215,7 +215,7 @@ GCS Bucket naming is:
 
 Spec:
 
-`{base}-{compliance regime}-{environment}-{role}-{000-999}`
+`{prefix}-{compliance regime}-{environment}-{role}-{000-999}`
 
 Example:
 
