@@ -298,6 +298,9 @@ variable "regions" {
     primary = string
   })
   nullable = false
+  default  = {
+    primary = "us-east4"
+  }
 }
 
 variable "regime_mapping" {
