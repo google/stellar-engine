@@ -122,7 +122,7 @@ This is a list of the variables that need edited to set the Tenant name.
 
 ```tfvars
 tenants = {
-{{EDIT_THIS_VARIABLE_TO_THE_FIRST_TENANT_NAME}} =
+{{EDIT_THIS_VARIABLE_TO_THE_FIRST_TENANT_NAME}} = {
   admin_principal  = "group:gcp-devops@example.com"
   descriptive_name = "{{EDIT_THIS_VARIABLE_TO_THE_FIRST_TENANT_DESCRIPTION}}"
   locations = {
@@ -130,7 +130,7 @@ tenants = {
     kms = "us-east4" # Must match GCS Region
    }
  },
-  {{EDIT_THIS_VARIABLE_TO_THE_SECOND_TENANT_NAME}} =
+  {{EDIT_THIS_VARIABLE_TO_THE_SECOND_TENANT_NAME}} = {
    admin_principal  = "group:gcp-devops@example.com"
    descriptive_name = "{{EDIT_THIS_VARIABLE_TO_THE_SECOND_TENANT_DESCRIPTION}}"
    locations = {
@@ -145,7 +145,7 @@ This is an example that shows a configured variable block with two example Tenan
 
 ```tfvars
 tenants = {
-wingarch =
+wingarch = {
   admin_principal  = "group:gcp-devops@example.com"
   descriptive_name = "Wing Architect Research Group"
   locations = {
@@ -153,7 +153,7 @@ wingarch =
     kms = "us-east4" # Must match GCS Region
    }
  },
-  fuselagerd =
+  fuselagerd = {
    admin_principal  = "group:gcp-devops@example.com"
    descriptive_name = "Fuselage Research & Development Group"
    locations = {

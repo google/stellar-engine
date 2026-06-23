@@ -158,7 +158,7 @@ permissions.**
   - gcp-security-admins@`<domain>`
 - We need to enable these Google Cloud Services by running the following
   script:
-    - fast/stages-aw/0-bootstrap/enable_services.sh
+    - fast/stages-aw/0-bootstrap/enableServices.sh
       - If you run into issues with the above command, you can simply run the following deprecated command (on MacOS, works on other *nix variants)
         - `echo "iam cloudkms pubsub serviceusage cloudresourcemanager bigquery assuredworkloads cloudbilling logging iamcredentials orgpolicy" | xargs -n1 -I {} gcloud services enable "{}.googleapis.com”`
 - [Enable Access
@@ -263,7 +263,7 @@ alert_email = "`<alert_email>`"
   - **Note:** You may receive an error in this stage where it reports that
     ‘bigquery.googleapis.com\` is not usable in the Assured Workloads. 
     - If you see this error, go to the [Assured Workloads
-    ](https://console.cloud.google.com/compliance/assuredworkload)page
+    ](https://console.cloud.google.com/compliance/assuredworkloads) page
     - Click the  StellarEngine-`<compliance_regime>` folder (and Networking folder, if applicable)
     - Click “Review Available Updates”, 
     - Go to “Allowed Services”

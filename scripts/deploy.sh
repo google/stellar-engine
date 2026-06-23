@@ -538,7 +538,7 @@ if promptUser "Stage 0 - Bootstrap -"; then
   read -r -n 1 -s -p ""
 
   # Generate TF Vars - This will NOT work indented
-  if handle_prompt_if "Would you to generate a new tfvars file?"; then
+  if handle_prompt_if "Would you like to generate a new tfvars file?"; then
 cat <<EOF > terraform.tfvars
 billing_account = {
   id = "${BILLING_ACCOUNT}"
