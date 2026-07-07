@@ -564,21 +564,21 @@ prefix = "${PREFIX}"
 log_sinks = {
   audit-logs = {
     filter = "logName:\"/logs/cloudaudit.googleapis.com%2Factivity\" OR logName:\"/logs/cloudaudit.googleapis.com%2Fsystem_event\" OR protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.TransparencyLog\""
-    type   = "pubsub"
+    type   = "logging"
   }
   vpc-sc = {
     filter = "protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.VpcServiceControlAuditMetadata\""
-    type   = "pubsub"
+    type   = "logging"
   }
   workspace-audit-logs = {
     filter = "logName:\"/logs/cloudaudit.googleapis.com%2Fdata_access\" and protoPayload.serviceName:\"login.googleapis.com\""
-    type   = "pubsub"
+    type   = "logging"
   }
 
   # CIS Compliance Benchmark 2.2
   empty-audit-logs = {
     filter = ""
-    type   = "pubsub"
+    type   = "logging"
   }
 }
 
