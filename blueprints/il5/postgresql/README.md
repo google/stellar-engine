@@ -63,5 +63,5 @@ google_service_networking_connection.postgres
 
 | name | description | sensitive |
 |---|---|:---:|
-| [connection_internal_ip](outputs.tf#L17) | Conntection internal IP address. |  |
+| [connection_internal_ip](outputs.tf#L17) | Connection internal IP address. |  |
 <!-- END TFDOC -->
