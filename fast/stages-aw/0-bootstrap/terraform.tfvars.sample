@@ -24,6 +24,9 @@ organization = {
 
 outputs_location = "~/fast-config"
 
+# Retention period (in days) for organization logging buckets (defaults to 365 days for compliance)
+# logging_bucket_retention = 365
+
 # use something unique and no longer than 9 characters
 prefix = "abcd"
 log_sinks = {
