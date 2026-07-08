@@ -1346,10 +1346,11 @@ configure_stage_0() {
     # 1. Assured Workloads Check
     echo ""
     echo -e "${BLUE}--- Compliance Regime (Assured Workloads) ---${NC}"
-    echo "1. FedRAMP High (Default)"
-    echo "2. IL4"
-    echo "3. IL5"
-    echo "4. None"
+    echo "1. FedRAMP High"
+    echo "2. FedRAMP Moderate"
+    echo "3. IL4"
+    echo "4. IL5"
+    echo "5. None"
     read -p "What compliance regime will you be using? [1]: " REGIME_CHOICE
     REGIME_CHOICE=${REGIME_CHOICE:-1}
 
@@ -1362,15 +1363,19 @@ configure_stage_0() {
             REGIME_DISPLAY="FedRAMP High"
             ;;
         2)
+            COMPLIANCE_REGIME="FEDRAMP_MODERATE"
+            REGIME_DISPLAY="FedRAMP Moderate"
+            ;;
+        3)
             COMPLIANCE_REGIME="IL4"
             REGIME_DISPLAY="IL4"
             ;;
-        3)
+        4)
             COMPLIANCE_REGIME="IL5"
             REGIME_DISPLAY="IL5"
             ;;
-        4)
-            echo -e "${RED}WARNING: Gemini for Government currently only supports deployment within FedRAMP High / IL4 Assured Workloads folders.${NC}"
+        5)
+            echo -e "${RED}WARNING: Gemini for Government currently only supports deployment within FedRAMP High / Moderate & IL4 / IL5 Assured Workloads folders.${NC}"
             echo -e "${RED}Proceed at your own risk.${NC}"
             echo ""
             read -p "Press Enter to acknowledge and continue..."
@@ -1433,7 +1438,7 @@ configure_stage_0() {
         fi
     fi
     # 2. Access Transparency (Conditional on Compliance Regime)
-    if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_HIGH" || "$COMPLIANCE_REGIME" == "IL4" || "$COMPLIANCE_REGIME" == "IL5" ]]; then
+    if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_HIGH" || "$COMPLIANCE_REGIME" == "FEDRAMP_MODERATE" || "$COMPLIANCE_REGIME" == "IL4" || "$COMPLIANCE_REGIME" == "IL5" ]]; then
         echo ""
         echo -e "${BLUE}--- Access Transparency ---${NC}"
         echo -e "${YELLOW}Access Transparency is highly recommended/required for this compliance regime.${NC}"
@@ -1699,6 +1704,13 @@ configure_stage_0() {
         [[ "$ADMIN_GROUP" != *":"* ]] && ADMIN_GROUP="group:${ADMIN_GROUP}"
         [[ "$USER_GROUP" != *":"* ]] && USER_GROUP="group:${USER_GROUP}"
 
+        # Ensure Cloud Identity API enabled
+        echo "Enabling Cloud Identity API enabled..."
+        if ! gcloud services enable cloudidentity.googleapis.com --project "${PROJECT_ID}"; then
+            echo -e "${RED}Error: Failed to enable required APIs. Check your permissions.${NC}"
+            return 1
+        fi
+
         # Validate Groups
         echo "Validating group existence and directory access..."
         ADMIN_EMAIL="${ADMIN_GROUP#group:}"
@@ -1783,10 +1795,10 @@ configure_stage_0() {
             echo ""
             echo -e "${BLUE}Manual Steps Required:${NC}"
             echo -e "1. Ensure the user running this script has the \"Access Context Manager Admin\" IAM role at the organization-level.${NC}"
-            echo -e "1. Navigate to \"Access Context Manager\" at the organization-level: ${BLUE}https://console.cloud.google.com/security/access-level?organizationId=${ORG_ID}${NC}"
-            echo -e "2. Click \"Create access level\" and create a sample Access Level (this will be deleted)."
-            echo -e "3. Capture the [ACCESS_POLICY_NUMBER] from the Access Level full name (e.g. accessPolicies/[ACCESS_POLICY_NUMBER]/accessLevels/[ACCESS_LEVEL_NAME])"
-            echo -e "4. Delete the created Access Level (if not needed)"
+            echo -e "2. Navigate to \"Access Context Manager\" at the organization-level: ${BLUE}https://console.cloud.google.com/security/access-level?organizationId=${ORG_ID}${NC}"
+            echo -e "3. Click \"Create access level\" and create a sample Access Level (this will be deleted)."
+            echo -e "4. Capture the [ACCESS_POLICY_NUMBER] from the Access Level full name (e.g. accessPolicies/[ACCESS_POLICY_NUMBER]/accessLevels/[ACCESS_LEVEL_NAME])"
+            echo -e "5. Delete the created Access Level (if not needed)"
             echo ""
             
             read -p "Enter Access Policy Number: " ACCESS_POLICY_NUMBER
@@ -1797,10 +1809,10 @@ configure_stage_0() {
                 echo ""
                 echo -e "${BLUE}Manual Steps Required:${NC}"
                 echo -e "1. Ensure the user running this script has the \"Access Context Manager Admin\" IAM role at the organization-level.${NC}"
-                echo -e "1. Navigate to \"Access Context Manager\" at the organization-level: ${BLUE}https://console.cloud.google.com/security/access-level?organizationId=${ORG_ID}${NC}"
-                echo -e "2. Click \"Create access level\" and create a sample Access Level (this will be deleted)."
-                echo -e "3. Capture the [ACCESS_POLICY_NUMBER] from the Access Level full name (e.g. accessPolicies/[ACCESS_POLICY_NUMBER]/accessLevels/[ACCESS_LEVEL_NAME])"
-                echo -e "4. Delete the created Access Level (if not needed)"
+                echo -e "2. Navigate to \"Access Context Manager\" at the organization-level: ${BLUE}https://console.cloud.google.com/security/access-level?organizationId=${ORG_ID}${NC}"
+                echo -e "3. Click \"Create access level\" and create a sample Access Level (this will be deleted)."
+                echo -e "4. Capture the [ACCESS_POLICY_NUMBER] from the Access Level full name (e.g. accessPolicies/[ACCESS_POLICY_NUMBER]/accessLevels/[ACCESS_LEVEL_NAME])"
+                echo -e "5. Delete the created Access Level (if not needed)"
                 echo ""            
                 read -p "Enter Access Policy Number: " ACCESS_POLICY_NUMBER
             else
@@ -2692,13 +2704,16 @@ update_app_compliance() {
 
     echo "Select Compliance Regime:"
     echo "1. FedRAMP High"
-    echo "2. IL4"
+    echo "2. FedRAMP Moderate"
+    echo "3. IL4"
     read -p "Select an option [1-2]: " COMPLIANCE_SEL
 
     COMPLIANCE_REGIME=""
     if [[ "$COMPLIANCE_SEL" == "1" ]]; then
         COMPLIANCE_REGIME="FEDRAMP_HIGH"
     elif [[ "$COMPLIANCE_SEL" == "2" ]]; then
+        COMPLIANCE_REGIME="FEDRAMP_MODERATE"
+    elif [[ "$COMPLIANCE_SEL" == "3" ]]; then
         COMPLIANCE_REGIME="IL4"
     else
         echo -e "${RED}Invalid selection.${NC}"

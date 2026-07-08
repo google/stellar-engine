@@ -42,7 +42,7 @@ locals {
 
   enabled_services = concat(
     local.base_services,
-    var.compliance_regime == "FEDRAMP_HIGH" || var.compliance_regime == "NONE" ? local.restricted_services : []
+    var.compliance_regime == "FEDRAMP_HIGH" || var.compliance_regime == "FEDRAMP_MODERATE" || var.compliance_regime == "NONE" ? local.restricted_services : []
   )
 }
 
