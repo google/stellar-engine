@@ -522,7 +522,16 @@ different locations are also provisioned. (KMS Key ring locations must match the
 service locations, for example, a multi-regional keyring cannot be used in a
 single region storage bucket, or vice versa).
 
-TBA: The audit project contains a logging bucket for audit logs.
+The audit project (`audit-logs-0`) is created to centralize organization-level logs. By default, audit logs are routed to CMEK-encrypted Cloud Logging buckets within this project (`type = "logging"`).
+
+#### Audit Log Retention
+- **Cloud Logging Buckets (Default):** The default retention for Cloud Logging buckets created in this stage is **365 days** (1 year) to comply with regulatory standards (e.g. NIST 800-53 AU-9 requirements).
+- **Adjusting Retention:** If you require a different retention period, configure the `logging_bucket_retention` variable in Stage 0. If you require long-term archival or external analytical processing, you can change the routing type to `storage` (for GCS buckets) or `bigquery` (for BigQuery dataset).
+
+#### Transitioning to Pub/Sub Routing (SIEM Integration)
+To stream logs to an external SIEM or analytical platform, you can configure your log sinks to route to Pub/Sub (`type = "pubsub"`).
+- **Important Retention Risk:** If you change the log sink type to `pubsub` without a connector or subscriber pipeline actively consuming and storing the messages, **logs will be lost** once they pass their short Pub/Sub retention period (default 7 days).
+- **Configuration:** Ensure a consumer is configured and active for the Pub/Sub topics before switching the sink type to `pubsub`.
 
 Security administrators are responsible for the security project, and auditors
 are responsible for the audit project.
