@@ -170,6 +170,7 @@ def onboard():
 
     click.echo(click.style("Checking if the Gemini Enterprise CMEK configuration has been setup already...", fg='yellow'))
     cmek_state = check_cmek(credentials, project_id)
+    cmek_action = None
     if cmek_state == "STATE_UNSPECIFIED":
         click.echo('You do not have a CMEK key set for the Gemini Enterprise "us" multi-region.')
         project_number = get_project_number(credentials, project_id)
