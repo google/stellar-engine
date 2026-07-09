@@ -209,12 +209,13 @@ variable "locations" {
 # for additional logging filter examples
 
 variable "log_sinks" {
-  description = "Org-level log sinks, in name => {type, filter} format."
+  description = "Org-level log sinks, in name => {type, filter} format. Valid types: 'logging' (routes to Cloud Logging bucket with 30-day default retention), 'pubsub' (routes to Pub/Sub topic with 7-day default retention; requires an active consumer to avoid log loss), 'storage' (routes to GCS bucket), 'bigquery' (routes to BigQuery dataset)."
   type = map(object({
     filter = string
     type   = string
   }))
   default = {
+
     audit-logs = {
       filter = "logName:\"/logs/cloudaudit.googleapis.com%2Factivity\" OR logName:\"/logs/cloudaudit.googleapis.com%2Fsystem_event\" OR protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.TransparencyLog\""
       type   = "logging"
