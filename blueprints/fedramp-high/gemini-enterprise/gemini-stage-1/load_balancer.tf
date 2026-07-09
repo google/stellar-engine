@@ -75,7 +75,7 @@ resource "google_compute_region_url_map" "gemini_enterprise_load_balancer" {
   }
 
   dynamic "path_matcher" {
-    for_each = data.terraform_remote_state.stage_0.outputs.acl_idp_type == "GSUITE" ? ["gsuite"] : []
+    for_each = contains(["GSUITE", "GOOGLE_CLOUD_IDENTITY"], data.terraform_remote_state.stage_0.outputs.acl_idp_type) ? ["gsuite"] : []
     content {
       name            = "path-matcher-1"
       default_service = data.google_compute_region_backend_service.gemini_enterprise_backend[0].id
@@ -134,8 +134,8 @@ resource "google_compute_region_target_https_proxy" "gemini_enterprise_https_pro
   region           = data.terraform_remote_state.stage_0.outputs.region
   url_map          = google_compute_region_url_map.gemini_enterprise_load_balancer[0].id
   
-  ssl_certificates = var.cert_management_choice == "self_managed" ? [data.google_compute_region_ssl_certificate.gemini_enterprise_cert[0].self_link] : []
-  certificate_manager_certificates = var.cert_management_choice == "google_managed" ? [google_certificate_manager_certificate.gemini_enterprise_managed_cert[0].id] : []
+  ssl_certificates = var.cert_management_choice == "self_managed" ? [data.google_compute_region_ssl_certificate.gemini_enterprise_cert[0].self_link] : null
+  certificate_manager_certificates = var.cert_management_choice == "google_managed" ? [google_certificate_manager_certificate.gemini_enterprise_managed_cert[0].id] : null
 }
 
 # This resource creates the forwarding rule for the load balancer.

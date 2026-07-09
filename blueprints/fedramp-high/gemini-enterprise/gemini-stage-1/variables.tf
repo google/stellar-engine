@@ -55,3 +55,10 @@ variable "host_project_id" {
   type        = string
   default     = ""
 }
+
+# Unused in this stage but silences Terraform warning
+variable "custom_domain" {
+  description = "The fully qualified domain name (FQDN) to use for the Google-managed certificate."
+  type        = string
+  default     = ""
+}

@@ -1705,10 +1705,9 @@ configure_stage_0() {
         [[ "$USER_GROUP" != *":"* ]] && USER_GROUP="group:${USER_GROUP}"
 
         # Ensure Cloud Identity API enabled
-        echo "Enabling Cloud Identity API enabled..."
+        echo "Enabling Cloud Identity API..."
         if ! gcloud services enable cloudidentity.googleapis.com --project "${PROJECT_ID}"; then
-            echo -e "${RED}Error: Failed to enable required APIs. Check your permissions.${NC}"
-            return 1
+            echo -e "${YELLOW}WARNING: Failed to enable Cloud Identity API. May be unable to verify necessary groups.${NC}"
         fi
 
         # Validate Groups

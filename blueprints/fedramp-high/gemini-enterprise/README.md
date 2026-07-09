@@ -1122,7 +1122,7 @@ gem4gov app update-compliance --project-id <PROJECT_ID> --engine-id <ENGINE_ID> 
 **Options:**
 *   `--project-id`: (Required) GCP Project ID.
 *   `--engine-id`: (Required) The ID of the Gemini Enterprise Engine.
-*   `--compliance-regime`: (Required) `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, `IL4`, or `NONE`.
+*   `--compliance-regime`: (Required) `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, or `IL4`.
 
 **Actions:**
 *   Disables unauthorized features (e.g., Private Knowledge Graph, Location Context).

@@ -44,7 +44,7 @@ from auth import (
 )
 
 # Global Varibles used in prompts
-supported_aw_boundaries = "FedRAMP High, IL4, IL5"
+supported_aw_boundaries = "FedRAMP High, FedRAMP Moderate, IL4, IL5"
 required_apis = "Vertex AI, Discovery Engine, Cloud Resource Manager, Cloud Key Management Service (KMS), Identity and Access Management (IAM), Service Usage, Cloud Storage, BigQuery"
 supported_data_stores = "Cloud Storage, BigQuery"
 
@@ -95,9 +95,10 @@ def onboard():
     click.echo(click.style(f"We will start off with the most important topic, compliance. Google's Assured Workloads simplifies management and configuration of regulated workloads by applying predefined control packages to folders. Gemini for Government currently supports the following regulatory data boundaries: {supported_aw_boundaries}", fg='yellow'))
     click.echo("What compliance regime will Gemini for Government be deployed in?")
     click.echo("1) FedRAMP High")
-    click.echo("2) IL4")
-    click.echo("3) IL5")
-    click.echo("4) None")
+    click.echo("2) FedRAMP Moderate")
+    click.echo("3) IL4")
+    click.echo("4) IL5")
+    click.echo("5) None")
     compliance_regime_id = click.prompt('Please enter the number for your response', type=click.Choice(['1', '2', '3', '4']), default = '1', show_default = False)
     
     click.echo(nl=True)
@@ -453,7 +454,6 @@ def onboard():
         click.echo(click.style("- Knowledge Graph / People Connectors", fg="yellow"))
         click.echo(click.style("- Location Context", fg="yellow"))
         click.echo(click.style("- Memory and Customization", fg="yellow"))
-        click.echo(click.style("- Model Armor", fg="yellow"))
         click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
         click.echo(click.style("- Prompt Gallery", fg="yellow"))
         click.echo(click.style("- Session Sharing", fg="yellow"))
@@ -461,6 +461,21 @@ def onboard():
         click.echo(click.style("- User Feedback", fg="yellow"))
         configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine_id)
     elif compliance_regime_id == '2':
+        click.echo(click.style("Gemini Enterprise contains default features that are not yet authorized for FedRAMP Moderate and must be disabled. These features are currently:", fg="yellow"))
+        click.echo(click.style("- Grounding with OneDrive / Google Drive File Uploads", fg="yellow"))
+        click.echo(click.style("- Grounding with Google Search", fg="yellow"))
+        click.echo(click.style("- Image / Video Generation", fg="yellow"))
+        click.echo(click.style("- Implicit Model Data Caching", fg="yellow"))
+        click.echo(click.style("- Knowledge Graph / People Connectors", fg="yellow"))
+        click.echo(click.style("- Location Context", fg="yellow"))
+        click.echo(click.style("- Memory and Customization", fg="yellow"))
+        click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
+        click.echo(click.style("- Prompt Gallery", fg="yellow"))
+        click.echo(click.style("- Session Sharing", fg="yellow"))
+        click.echo(click.style("- User Event Collection", fg="yellow"))
+        click.echo(click.style("- User Feedback", fg="yellow"))
+        configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, engine_id)
+    elif compliance_regime_id == '3':
         click.echo(click.style("Gemini Enterprise contains default features that are not yet authorized for IL4 and must be disabled. These features are currently:", fg="yellow"))
         click.echo(click.style("- Grounding with OneDrive / Google Drive File Uploads", fg="yellow"))
         click.echo(click.style("- Grounding with Google Search", fg="yellow"))
@@ -476,7 +491,7 @@ def onboard():
         click.echo(click.style("- User Event Collection", fg="yellow"))
         click.echo(click.style("- User Feedback", fg="yellow"))
         configure_gemini_enterprise_for_il4(credentials, project_id, engine_id)
-    elif compliance_regime_id == '3':
+    elif compliance_regime_id == '4':
         click.echo(click.style("Gemini Enterprise contains default features that are not yet authorized for IL5 and must be disabled. These features are currently:", fg="yellow"))
         click.echo(click.style("- Grounding with OneDrive / Google Drive File Uploads", fg="yellow"))
         click.echo(click.style("- Grounding with Google Search", fg="yellow"))
@@ -540,7 +555,7 @@ def app():
 @click.option('--data-stores', default="", help='Comma-separated list of Data Store IDs')
 @click.option('--workforce-pool-id', default=None, help='Workforce Identity Pool ID')
 @click.option('--workforce-provider-id', default=None, help='Workforce Identity Provider ID')
-@click.option('--compliance-regime', type=click.Choice(['FEDRAMP_HIGH', 'IL4', 'IL5', 'NONE']), default=None, help='Compliance Regime')
+@click.option('--compliance-regime', type=click.Choice(['FEDRAMP_HIGH', 'FEDRAMP_MODERATE', 'IL4', 'IL5', 'NONE']), default=None, help='Compliance Regime')
 @click.option('--enable-audit-logs', is_flag=True, default=False, help='Enable Gemini Enterprise Usage Audit logs')
 def create_application(project_id, engine_id, display_name, company_name, data_stores, workforce_pool_id, workforce_provider_id, compliance_regime, enable_audit_logs):
     """Creates a Gemini Enterprise application."""
@@ -552,12 +567,14 @@ def create_application(project_id, engine_id, display_name, company_name, data_s
     compliance_regime_id = None
     if compliance_regime == 'FEDRAMP_HIGH':
         compliance_regime_id = '1'
-    elif compliance_regime == 'IL4':
+    elif compliance_regime == 'FEDRAMP_MODERATE':
         compliance_regime_id = '2'
-    elif compliance_regime == 'IL5':
+    elif compliance_regime == 'IL4':
         compliance_regime_id = '3'
-    elif compliance_regime == 'NONE':
+    elif compliance_regime == 'IL5':
         compliance_regime_id = '4'
+    elif compliance_regime == 'NONE':
+        compliance_regime_id = '5'
 
     create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime_id, engine_id, display_name, company_name, enable_audit_logs)
 
@@ -565,7 +582,7 @@ def create_application(project_id, engine_id, display_name, company_name, data_s
 @app.command("update-compliance")
 @click.option('--project-id', required=True, help='GCP Project ID')
 @click.option('--engine-id', required=True, help='Gemini Enterprise Engine ID')
-@click.option('--compliance-regime', required=True, type=click.Choice(['FEDRAMP_HIGH', 'IL4', 'IL5']), help='Compliance Regime')
+@click.option('--compliance-regime', required=True, type=click.Choice(['FEDRAMP_HIGH', 'FEDRAMP_MODERATE', 'IL4', 'IL5']), help='Compliance Regime')
 def update_compliance(project_id, engine_id, compliance_regime):
     """Configures a Gemini Enterprise application for a specific compliance regime."""
     credentials = get_credentials()
@@ -579,13 +596,27 @@ def update_compliance(project_id, engine_id, compliance_regime):
         click.echo(click.style("- Knowledge Graph / People Connectors", fg="yellow"))
         click.echo(click.style("- Location Context", fg="yellow"))
         click.echo(click.style("- Memory and Customization", fg="yellow"))
-        click.echo(click.style("- Model Armor", fg="yellow"))
         click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
         click.echo(click.style("- Prompt Gallery", fg="yellow"))
         click.echo(click.style("- Session Sharing", fg="yellow"))
         click.echo(click.style("- User Event Collection", fg="yellow"))
         click.echo(click.style("- User Feedback", fg="yellow"))
         configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine_id)
+    elif compliance_regime == 'FEDRAMP_MODERATE':
+        click.echo(click.style("Gemini Enterprise contains default features that are not yet authorized for FedRAMP Moderate and must be disabled. These features are currently:", fg="yellow"))
+        click.echo(click.style("- Grounding with OneDrive / Google Drive File Uploads", fg="yellow"))
+        click.echo(click.style("- Grounding with Google Search", fg="yellow"))
+        click.echo(click.style("- Image / Video Generation", fg="yellow"))
+        click.echo(click.style("- Implicit Model Data Caching", fg="yellow"))
+        click.echo(click.style("- Knowledge Graph / People Connectors", fg="yellow"))
+        click.echo(click.style("- Location Context", fg="yellow"))
+        click.echo(click.style("- Memory and Customization", fg="yellow"))
+        click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
+        click.echo(click.style("- Prompt Gallery", fg="yellow"))
+        click.echo(click.style("- Session Sharing", fg="yellow"))
+        click.echo(click.style("- User Event Collection", fg="yellow"))
+        click.echo(click.style("- User Feedback", fg="yellow"))
+        configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, engine_id)
     elif compliance_regime == 'IL4':
         click.echo(click.style("Gemini Enterprise contains default features that are not yet authorized for IL4 and must be disabled. These features are currently:", fg="yellow"))
         click.echo(click.style("- Grounding with OneDrive / Google Drive File Uploads", fg="yellow"))
@@ -967,21 +998,25 @@ def create_application_logic(credentials, project_id, data_store_list, workforce
         click.echo(nl=True)
         click.echo("What compliance regime will this application be deployed in?")
         click.echo("1) FedRAMP High")
-        click.echo("2) IL4")
-        click.echo("3) IL5")
-        click.echo("4) None")
+        click.echo("2) FedRAMP Moderate")
+        click.echo("3) IL4")
+        click.echo("4) IL5")
+        click.echo("5) None")
         compliance_regime = click.prompt('Please enter the number for your response', type=click.Choice(['1', '2', '3', '4']), default = '1', show_default = False)
 
     if compliance_regime in ['1', 'FEDRAMP_HIGH']:
         click.echo(click.style("Configuring for FedRAMP High...", fg="yellow"))
         configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine_id)
-    elif compliance_regime in ['2', 'IL4']:
+    elif compliance_regime in ['2', 'FEDRAMP_MODERATE']:
+        click.echo(click.style("Configuring for FedRAMP Moderate...", fg="yellow"))
+        configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, engine_id)
+    elif compliance_regime in ['3', 'IL4']:
         click.echo(click.style("Configuring for IL4...", fg="yellow"))
         configure_gemini_enterprise_for_il4(credentials, project_id, engine_id)
-    elif compliance_regime in ['3', 'IL5']:
+    elif compliance_regime in ['4', 'IL5']:
         click.echo(click.style("Configuring for IL5...", fg="yellow"))
         configure_gemini_enterprise_for_il5(credentials, project_id, engine_id)
-    elif compliance_regime in ['4', 'NONE']:
+    elif compliance_regime in ['5', 'NONE']:
         click.echo(click.style("Skipping compliance-specific app configuration...", fg="yellow"))
 
     click.echo(nl=True)
@@ -1637,6 +1672,120 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         click.echo(f"An error occurred while disabling Implicit Model Caching: {e}")
         # Do not exit, as this may not be a critical failure.
 
+def configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, engine_id):
+    """Configures the Gemini Enterprise engine and default assistant for FedRAMP Moderate."""
+    client_options = ClientOptions(api_endpoint="https://us-discoveryengine.googleapis.com")
+    service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
+
+    # Get the absolute path to the directory containing the script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Construct the absolute path to the YAML file
+    yaml_path = os.path.join(script_dir, 'engine_features.yaml')
+
+    # Load features from the YAML file
+    with open(yaml_path, 'r') as f:
+        engine_features = yaml.safe_load(f)
+    
+    # Engine: Update FRH authorized features and disable Private Knowledge Graph (People Connectors are not yet authorized for FRH)
+    engine_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}"
+    engine_patch_body = {
+        "features": engine_features.get('features'),
+        "disableAnalytics": True
+    }
+    engine_update_mask = "features"
+
+    engine_request = service.projects().locations().collections().engines().patch(
+        name=engine_name,
+        body=engine_patch_body,
+        updateMask=engine_update_mask
+    )
+
+    try:
+        engine_response = engine_request.execute()
+        click.echo(f"Engine {engine_id} configured for FedRAMP Moderate.")
+    except Exception as e:
+        click.echo(f"An error occurred while configuring the engine for FedRAMP Moderate: {e}")
+        # Do not exit, as this may not be a critical failure.
+
+    # Default Search Widget: Disable User Event Collection
+    disable_user_event_collection(credentials, project_id, engine_id)
+
+    # Assistant: Disable Grounding with Google Search / Location Context
+    assistant_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}/assistants/default_assistant"
+    
+    # Get access token
+    try:
+        token_process = subprocess.run(['gcloud', 'auth', 'print-access-token'], check=True, capture_output=True, text=True)
+        access_token = token_process.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        click.echo(f"Error getting access token not critical, but noted: {e}")
+        pass
+        access_token = ""
+
+    if access_token:
+        url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=customerPolicy,agentConfigs,generationConfig,disableLocationContext,webGroundingType,defaultWebGroundingToggleOff"
+
+        assistant_patch_body = {
+          "displayName":"Default Assistant",
+          "googleSearchGroundingEnabled": False,
+          "webGroundingType":"WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
+          "customerPolicy":{
+            "bannedPhrases":[]
+          },
+          "generationConfig":{
+            "systemInstruction":{
+              "additionalSystemInstruction":""
+            }
+          },
+          "defaultWebGroundingToggleOff": False,
+          "disableLocationContext": True
+        }
+
+        # Use subprocess to run the curl command
+        curl_command = [
+            'curl', '-X', 'PATCH',
+            '-H', f"Authorization: Bearer {access_token}",
+            '-H', f"x-goog-user-project: {project_id}",
+            '-H', "Content-Type: application/json",
+            '-d', json.dumps(assistant_patch_body),
+            url
+        ]
+
+        try:
+            result = subprocess.run(curl_command, capture_output=True, text=True)
+            
+            if result.returncode == 0 and "error" not in result.stdout.lower():
+                 click.echo(f"Default assistant for engine {engine_id} configured for FedRAMP Moderate.")
+            else:
+                 click.echo(f"An error occurred while configuring the default assistant for FedRAMP Moderate:")
+                 click.echo(result.stderr)
+                 click.echo(result.stdout)
+                 # Do not exit
+
+        except Exception as e:
+            click.echo(f"An error occurred while configuring the default assistant for FedRAMP Moderate: {e}")
+            # Do not exit
+
+    # Project: Disable Implicit Model Caching
+    try:
+        aiplatform_client_options = ClientOptions(api_endpoint="https://us-central1-aiplatform.googleapis.com")
+        aiplatform_service = build('aiplatform', 'v1', credentials=credentials, client_options=aiplatform_client_options)
+        
+        cache_config_name = f"projects/{project_id}/cacheConfig"
+        cache_config_body = {
+            "name": cache_config_name,
+            "disableCache": True
+        }
+
+        request = aiplatform_service.projects().updateCacheConfig(
+            name=cache_config_name,
+            body=cache_config_body
+        )
+        request.execute()
+        click.echo("Successfully disabled Implicit Model Caching for the project.")
+    except Exception as e:
+        click.echo(f"An error occurred while disabling Implicit Model Caching: {e}")
+        # Do not exit, as this may not be a critical failure.
 
 def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
     """Configures the Gemini Enterprise engine and default assistant for IL4."""

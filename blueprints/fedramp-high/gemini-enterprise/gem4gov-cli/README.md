@@ -96,7 +96,7 @@ gem4gov onboard
 
 **Step-by-Step Guide:**
 
-1.  **Compliance Regime Selection**: Choose the regulatory boundary (`FedRAMP High`, `IL4`, or `None`).
+1.  **Compliance Regime Selection**: Choose the regulatory boundary (`FedRAMP High`, `FedRAMP Moderate`, `IL4`, `IL5`, or `None`).
 2.  **Project Confirmation**: Confirm the GCP Project ID and ensure it resides in the appropriate Assured Workloads folder.
 3.  **IAM Role Check**: Verifies required IAM roles.
 4.  **API Check**: Verifies and enables required APIs.
@@ -133,7 +133,7 @@ gem4gov app create --project-id <PROJECT_ID> [OPTIONS]
 *   `--data-stores`: Comma-separated list of existing Data Store IDs.
 *   `--workforce-pool-id`: Workforce Identity Pool ID (if using 3rd party IdP).
 *   `--workforce-provider-id`: Workforce Identity Provider ID (if using 3rd party IdP).
-*   `--compliance-regime`: `FEDRAMP_HIGH`, `IL4`, or `NONE`.
+*   `--compliance-regime`: `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, `IL4`, `IL5`, or `NONE`. 
 
 ### `gem4gov app update-compliance`
 
@@ -146,7 +146,7 @@ gem4gov app update-compliance --project-id <PROJECT_ID> --engine-id <ENGINE_ID> 
 **Options:**
 *   `--project-id`: (Required) GCP Project ID.
 *   `--engine-id`: (Required) The ID of the Gemini Enterprise Engine.
-*   `--compliance-regime`: (Required) `FEDRAMP_HIGH` or `IL4`.
+*   `--compliance-regime`: (Required) `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, `IL4`, `IL5`, or `NONE`.
 
 **Actions:**
 *   Disables unauthorized features (e.g., Private Knowledge Graph, Location Context).
