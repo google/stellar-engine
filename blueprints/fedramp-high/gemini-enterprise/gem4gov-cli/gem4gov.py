@@ -1705,7 +1705,7 @@ def configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, en
     )
 
     try:
-        engine_response = engine_request.execute()
+        engine_request.execute()
         click.echo(f"Engine {engine_id} configured for FedRAMP Moderate.")
     except Exception as e:
         click.echo(f"An error occurred while configuring the engine for FedRAMP Moderate: {e}")
@@ -1723,7 +1723,6 @@ def configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, en
         access_token = token_process.stdout.strip()
     except subprocess.CalledProcessError as e:
         click.echo(f"Error getting access token not critical, but noted: {e}")
-        pass
         access_token = ""
 
     if access_token:
