@@ -13,13 +13,11 @@ It adopts the common “hub and spoke” reference design, which is well suited 
 
 Connectivity between the hub and the spokes is established via [VPC network peerings](https://cloud.google.com/vpc/docs/vpc-peering), which offer uncapped bandwidth, lower latencies, at no additional costs and with a very low management overhead. Different ways of implementing connectivity, and related some pros and cons, are discussed below.
 
-The diagram shows the high-level design and it should be used as a reference throughout the following sections.
+The sections below describe the high-level design and should be used as a reference throughout configuration.
 
 The final number of subnets, and their IP addressing will depend on the user-specific requirements. It can be easily changed via variables or external data files, without any need to edit the code.
 
-<p align="center">
-  <img src="diagram.svg" alt="Networking diagram">
-</p>
+> **Note:** A stage-specific network design diagram (`diagram.svg`) is not yet published for this IL5 NGFW stage. Until one is added, use the written design overview (hub/spoke VPCs, NVA MIGs, and peering) in this README as the authoritative reference. See also the sibling bootstrap/resman stages for the general diagram style used elsewhere in `fast/stages-aw/`.
 
 # Table of Contents
 
