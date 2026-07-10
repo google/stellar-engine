@@ -1219,7 +1219,7 @@ This Terraform module (gemini-stage-1) provisions the network frontend component
         - If you create a certificate directly through the Certificate Manager API (non-classic), you would need to adjust the data source in `load_balancer.tf` to `google_certificate_manager_certificates`.
 
 4.  **Update `terraform.tfvars` for gemini-stage-1:**
-    - **Recommended:** Run `./deploy.sh` and select **Option 2**. The script will:
+    - **Recommended:** Run `./deploy.sh` and select **Option 3**. The script will:
       - Detect your Stage 0 configuration.
       - Automatically retrieve `project_id`, `region`, and `domain` from the Stage 0 remote state.
       - Prompt you only for the `gemini_config_id` and `ssl_certificate_name`.
