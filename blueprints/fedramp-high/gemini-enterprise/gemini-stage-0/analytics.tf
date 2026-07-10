@@ -13,6 +13,7 @@
 # limitations under the License.
 
 resource "google_project_service" "services" {
+  count   = var.enable_analytics ? 1 : 0
   project  = var.main_project_id
   service  = "artifactregistry.googleapis.com"
   timeouts {
