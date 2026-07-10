@@ -39,6 +39,19 @@ The following diagram illustrates the high-level design of created resources and
 - [Outputs](#outputs)
 <!-- END TOC -->
 
+
+## KMS keyrings and keys (opt-in)
+
+By default this stage **does not** create Cloud KMS keyrings or crypto keys. Encryption resources are **opt-in** via the stage variables / sample `terraform.tfvars` entries that enable KMS-related modules.
+
+If you need CMEK for stage-managed resources:
+
+1. Set the relevant KMS variables in your `terraform.tfvars` (see `terraform.tfvars.sample` when present).
+2. Apply the stage so keyrings/keys are created only when those opt-in flags are enabled.
+3. Do not expect empty/default tfvars to provision KMS resources.
+
+This keeps the default path minimal for environments that bring their own keys or do not yet require CMEK.
+
 ## Design overview and choices
 
 Google Cloud Project level security resources are grouped into two separate Google Cloud Projects, one per environment. This setup matches requirements we frequently observe in real life and provides enough separation without needlessly complicating operations.
