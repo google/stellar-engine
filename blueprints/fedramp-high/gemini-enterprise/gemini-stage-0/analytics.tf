@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource "google_project_service" "services" {
+resource "google_project_service" "artifact_registry" {
   count   = var.enable_analytics ? 1 : 0
   project  = var.main_project_id
   service  = "artifactregistry.googleapis.com"
