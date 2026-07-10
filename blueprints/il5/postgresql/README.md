@@ -13,23 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 ## Requirements
-1. An existing VPC
+1. An existing VPC **with Private Service Access (PSA) peering already configured** for the target network (`network_name` / `network_project_id`). This blueprint consumes an existing PSA connection via the shared `cloudsql-instance` module; it does **not** create `google_compute_global_address` or `google_service_networking_connection` resources.
 1. Copy terraform.tfvars.sample to terraform.tfvars
 1. Updated terraform.tfvars
 
 ## Notes
-1. There seems to be a provider bug that will not allow a full terraform delete to complete due to the following error:
-
-```
-Unable to remove Service Networking Connection, err: Error waiting for Delete Service Networking Connection: Error code 9, message: Failed to delete connection; Producer services (e.g. CloudSQL, Cloud Memstore, etc.) are still using this connection.
-```
-
-To ensure proper deletion, please manually delete the peered network that is created, release the allocated ip address, and remove the following three services from the terraform state (terraform state rm <service-name>)
-```
-data.google_compute_network.network
-google_compute_global_address.postgres
-google_service_networking_connection.postgres
-```
+1. This blueprint does **not** manage the PSA address reservation or Service Networking connection. Teardown of those shared networking resources (if needed) must be done outside this blueprint; do not run `terraform state rm` for `google_compute_global_address.postgres` or `google_service_networking_connection.postgres` — those resources are not in this module's state.
 <!-- BEGIN TFDOC -->
 ## Variables
 
