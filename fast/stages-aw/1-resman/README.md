@@ -23,7 +23,7 @@ The design of this stage ensures that all parts of a Stellar Engine deployment r
 
 ## How to Run This Stage
 
-For detailed information on prerequisites and steps to deploy this stage, please see the latest [Detailed Deployment Guide (DDG)](https://drive.google.com/drive/u/0/folders/1OLgdf_VnY8zdkcmxHPwhEVoidGAqY6PX) If you do not have access, you will have to request it.
+For detailed information on prerequisites and steps to deploy this stage, please see the latest [Detailed Deployment Guide (DDG)](/docs/ddg.md) If you do not have access, you will have to request it.
 
 ### Impersonating the Automation Service Account
 
