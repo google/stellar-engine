@@ -1690,7 +1690,7 @@ def configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, en
     with open(yaml_path, 'r') as f:
         engine_features = yaml.safe_load(f)
     
-    # Engine: Update FRH authorized features and disable Private Knowledge Graph (People Connectors are not yet authorized for FRH)
+    # Engine: Update FRM authorized features and disable Private Knowledge Graph (People Connectors are not yet authorized for FRH)
     engine_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}"
     engine_patch_body = {
         "features": engine_features.get('features'),
