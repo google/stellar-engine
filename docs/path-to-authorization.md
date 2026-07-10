@@ -80,7 +80,7 @@ based on the impact analysis
 - [Categorize](https://csrc.nist.gov/pubs/sp/800/60/v1/r1/final) each system
   based on the impact to the organization if the confidentiality,
   availability, or integrity were to become compromised.
-  - [FIPS 199](/docs/fips199/categorization-references)
+  - [Categorization References](/docs/artifacts/categorization-references/)
   - [System Security Plan
     Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
 
