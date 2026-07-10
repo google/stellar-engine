@@ -66,9 +66,9 @@ privacy risks
   - Authorization boundaries establish the scope of systems to be protected,
     managed, and authorized for operation or use.
   - [Impact Level 5 Authorization
-    Boundary](https://drive.google.com/drive/folders/1BLtoC59BMUueC9uwtWjBymJuQg2ku2m3)
+    Boundary](https://forms.gle/zdv7Gip4opmdhBqk7)
   - [FedRAMP High Authorization
-    Boundary](https://drive.google.com/drive/folders/16zsUdmzq_fK1BRFCrjgxsFRM23YVhjBa)
+    Boundary](https://forms.gle/zdv7Gip4opmdhBqk7)
 - Regularly assess the security and privacy risks at the organization level
   and system level. Update risk assessment results on an on-going basis.
 
@@ -80,9 +80,9 @@ based on the impact analysis
 - [Categorize](https://csrc.nist.gov/pubs/sp/800/60/v1/r1/final) each system
   based on the impact to the organization if the confidentiality,
   availability, or integrity were to become compromised.
-  - [FIPS 199](https://drive.google.com/drive/u/0/folders/1CMLkSzmdJTtld5-R7Ttks2uSGvv79Ikr)
+  - [FIPS 199](/docs/fips199/categorization-references)
   - [System Security Plan
-    Templates](https://drive.google.com/drive/u/0/folders/1qV0Pu9EDnCEJpk0iKDodU_69BN96hEVr)
+    Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
 
 [**Step 2;
 Select**](https://csrc.nist.gov/Projects/risk-management/about-rmf/select-step):
@@ -110,10 +110,10 @@ risk assessment(s)
   - How effective are the controls we have implemented? What is the
     frequency in which the controls are monitored?
   - [Security Control Traceability Matrix (SCTM)
-    Templates](https://drive.google.com/drive/u/0/folders/13SahM7cIrE_jeA2G103yhGfpeXlBaZIq)
+    Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
     (IL5 H-H-X and FedRAMP High Baselines)
   - [Policies and Procedures
-    Templates](https://drive.google.com/drive/u/0/folders/1qnZ0N2BrRd8fF5u4h06H2Bbd4TxvLJvl)
+    Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
     (IL5 HHX and FedRAMP High Baselines)
 
 [**Step 3;
@@ -181,17 +181,17 @@ Continuously **monitor** control implementation and risks to the system
 **Additional Artifacts for an ATO:**
 
 - [Privacy Impact Assessment
-  (PIA)](https://drive.google.com/drive/u/0/folders/18N1nBCZOaV2peJI4cEDJ0KSNyTo3s32o)
+  (PIA)](/docs/artifacts/PIA-PCIL-SORN/)
 - [PII Confidentiality Impact Level
-  (PCIL)](https://drive.google.com/drive/u/0/folders/18N1nBCZOaV2peJI4cEDJ0KSNyTo3s32o)
+  (PCIL)](/docs/artifacts/PIA-PCIL-SORN/)
 - [System of Records Notice
-  (SORN)](https://drive.google.com/drive/u/0/folders/18N1nBCZOaV2peJI4cEDJ0KSNyTo3s32o)
+  (SORN)](/docs/artifacts/PIA-PCIL-SORN/)
 - [Hardware
-  List](https://drive.google.com/drive/u/0/folders/1fH-PDmfeJxf7b8BNkJVW39EHtUhYImUm)
+  List](/docs/artifacts/hw-sw-list/)
 - [Software
-  List](https://drive.google.com/drive/u/0/folders/1fH-PDmfeJxf7b8BNkJVW39EHtUhYImUm)
+  List](/docs/artifacts/hw-sw-list/)
 - [Ports, Protocols, and Services Management
-  (PPSM)](https://drive.google.com/drive/u/0/folders/1cvnyqHlwMINoxU2sZ61OQRWOKetSauuF)
+  (PPSM)](/docs/artifacts/ppsms/)
 
 **Things to Consider:**
 

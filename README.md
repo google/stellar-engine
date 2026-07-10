@@ -61,7 +61,7 @@ For more information, please look at each blueprint's README file.
 
 ## Cybersecurity Documentation
 
-In addition to the IaC, Stellar Engine provides supporting documentation that maps NIST 800-53r5 controls for users leveraging the IaC. This documentation is designed to streamline achieving ATO by providing generalized templates. All documentation is provided [here](https://drive.google.com/drive/folders/1NeWZcOuxysi7kUNRCFDd8CeHnxF14ywp). For how to utilize these documents, please see the following [Path to Authorization](docs/path-to-authorization.md) guide.
+In addition to the IaC, Stellar Engine provides supporting documentation that maps NIST 800-53r5 controls for users leveraging the IaC. This documentation is designed to streamline achieving ATO by providing generalized templates. All documentation can be requested [here](https://forms.gle/zdv7Gip4opmdhBqk7). For how to utilize these documents, please see the following [Path to Authorization](docs/path-to-authorization.md) guide.
 
 ## Detailed Deployment Guide
 
