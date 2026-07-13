@@ -2555,6 +2555,27 @@ configure_gem4gov() {
             sed -i '' 's/agent-sharing-without-admin-approval:.*/agent-sharing-without-admin-approval: "FEATURE_STATE_OFF"/' gem4gov-cli/engine_features.yaml 2>/dev/null || sed -i 's/agent-sharing-without-admin-approval:.*/agent-sharing-without-admin-approval: "FEATURE_STATE_OFF"/' gem4gov-cli/engine_features.yaml
         fi
         
+        if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_HIGH" || "$COMPLIANCE_REGIME" == "FEDRAMP_MODERATE" || "$COMPLIANCE_REGIME" == "NONE" ]]; then
+            echo ""
+            echo -e "${YELLOW}Model Armor Feature:${NC}"
+            echo -e "${YELLOW}When enabled, Model Armor enhances the security and safety of your AI applications by proactively screening the prompts and responses given by the Gemini Enterprise assistant.${NC}"
+            read -p "Would you like to enable 'Model Armor'? [y/N]: " ENABLE_MODEL_ARMOR
+            if [[ "$ENABLE_MODEL_ARMOR" =~ ^[Yy]$ ]]; then
+                ENABLE_MODEL_ARMOR="true"
+                echo -e "${BLUE}Enabling Model Armor API...${NC}"
+                gcloud services enable modelarmor.googleapis.com
+                echo ""
+                echo -e "${BLUE}--- Model Armor ---${NC}"
+                echo -e "${YELLOW}Model Armor enhances the security and safety of your AI applications by proactively screening the prompts and responses given by the Gemini Enterprise assistant.${NC}"
+                echo ""
+                echo -e "Please review the configuration in: ${BLUE}blueprints/fedramp-high/gemini-enterprise/gem4gov-cli/model_armor.yaml${NC}"
+                echo -e "For more information on configuring Model Armor templatees, visit: ${BLUE}https://docs.cloud.google.com/model-armor/manage-templates#create-ma-template${NC}"
+                echo ""
+                read -p "Press Enter to acknowledge and continue..."
+            else
+                ENABLE_MODEL_ARMOR="false"
+            fi
+        fi
         echo ""
         # Determine App Key
         APP_SUFFIX=$(python3 -c "import random, string; print(''.join(random.choices(string.ascii_lowercase + string.digits, k=4)))")
@@ -2591,7 +2612,8 @@ configure_gem4gov() {
             --arg company "$APP_COMPANY" \
             --arg ds "$SELECTED_IDS" \
             --arg audit_logs "$ENABLE_AUDIT_LOGS_FLAG" \
-            '{engine_id: $id, display_name: $display, company_name: $company, data_stores: $ds, enable_audit_logs: $audit_logs}')
+            --arg model_armor "$ENABLE_MODEL_ARMOR" \
+            '{engine_id: $id, display_name: $display, company_name: $company, data_stores: $ds, enable_audit_logs: $audit_logs, enable_model_armor: $model_armor}')
         APP_LIST+=("$APP_JSON")
         
         echo ""
@@ -2648,6 +2670,12 @@ configure_gem4gov() {
         if [[ "$ENABLE_AUDIT_LOGS" == "true" ]]; then
             CMD="$CMD --enable-audit-logs"
         fi
+
+        ENABLE_MODEL_ARMOR=$(echo "$APP_JSON" | jq -r '.enable_model_armor // "false"')
+        if [[ "$ENABLE_MODEL_ARMOR" == "true" ]]; then
+            CMD="$CMD --enable-model-armor"
+        fi
+
         
         if [[ -n "$COMPLIANCE_REGIME" && "$COMPLIANCE_REGIME" != "NONE" ]]; then
             CMD="$CMD --compliance-regime \"${COMPLIANCE_REGIME}\""

@@ -15,6 +15,7 @@
 import sys
 import click
 import google.auth
+from google.cloud import modelarmor_v1
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.api_core.client_options import ClientOptions
@@ -454,7 +455,6 @@ def onboard():
         click.echo(click.style("- Knowledge Graph / People Connectors", fg="yellow"))
         click.echo(click.style("- Location Context", fg="yellow"))
         click.echo(click.style("- Memory and Customization", fg="yellow"))
-        click.echo(click.style("- Model Armor", fg="yellow"))
         click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
         click.echo(click.style("- Prompt Gallery", fg="yellow"))
         click.echo(click.style("- Session Sharing", fg="yellow"))
@@ -470,7 +470,6 @@ def onboard():
         click.echo(click.style("- Knowledge Graph / People Connectors", fg="yellow"))
         click.echo(click.style("- Location Context", fg="yellow"))
         click.echo(click.style("- Memory and Customization", fg="yellow"))
-        click.echo(click.style("- Model Armor", fg="yellow"))
         click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
         click.echo(click.style("- Prompt Gallery", fg="yellow"))
         click.echo(click.style("- Session Sharing", fg="yellow"))
@@ -559,7 +558,8 @@ def app():
 @click.option('--workforce-provider-id', default=None, help='Workforce Identity Provider ID')
 @click.option('--compliance-regime', type=click.Choice(['FEDRAMP_HIGH', 'FEDRAMP_MODERATE', 'IL4', 'IL5', 'NONE']), default=None, help='Compliance Regime')
 @click.option('--enable-audit-logs', is_flag=True, default=False, help='Enable Gemini Enterprise Usage Audit logs')
-def create_application(project_id, engine_id, display_name, company_name, data_stores, workforce_pool_id, workforce_provider_id, compliance_regime, enable_audit_logs):
+@click.option('--enable-model-armor', is_flag=True, default=False, help='Enable Model Armor for Gemini Enterprise application')
+def create_application(project_id, engine_id, display_name, company_name, data_stores, workforce_pool_id, workforce_provider_id, compliance_regime, enable_audit_logs, enable_model_armor):
     """Creates a Gemini Enterprise application."""
     credentials = get_credentials()
     # split comma separated string into list
@@ -578,7 +578,7 @@ def create_application(project_id, engine_id, display_name, company_name, data_s
     elif compliance_regime == 'NONE':
         compliance_regime_id = '5'
 
-    create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime_id, engine_id, display_name, company_name, enable_audit_logs)
+    create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime_id, engine_id, display_name, company_name, enable_audit_logs, enable_model_armor)
 
 
 @app.command("update-compliance")
@@ -620,7 +620,7 @@ def update_compliance(project_id, engine_id, compliance_regime):
         click.echo(click.style("- Session Sharing", fg="yellow"))
         click.echo(click.style("- User Event Collection", fg="yellow"))
         click.echo(click.style("- User Feedback", fg="yellow"))
-        configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, engine_id)
+        configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, engine_id, enable_model_armor)
     elif compliance_regime == 'IL4':
         click.echo(click.style("Gemini Enterprise contains default features that are not yet authorized for IL4 and must be disabled. These features are currently:", fg="yellow"))
         click.echo(click.style("- Grounding with OneDrive / Google Drive File Uploads", fg="yellow"))
@@ -979,7 +979,7 @@ def import_documents_helper(credentials, project_id, source_type, data_store_id=
         click.echo("Please use the 'onboard' command for BigQuery data store creation and initial import.")
 
 
-def create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime=None, engine_id=None, engine_display_name=None, company_name=None, enable_audit_logs=False):
+def create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime=None, engine_id=None, engine_display_name=None, company_name=None, enable_audit_logs=False, enable_model_armor=False):
     """Shared logic for creating a Gemini Enterprise application."""
     if not engine_display_name:
         engine_display_name = click.prompt('Please enter a Display Name for the Gemini Enterprise application').strip()
@@ -1010,10 +1010,10 @@ def create_application_logic(credentials, project_id, data_store_list, workforce
 
     if compliance_regime in ['1', 'FEDRAMP_HIGH']:
         click.echo(click.style("Configuring for FedRAMP High...", fg="yellow"))
-        configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine_id)
+        configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine_id, enable_model_armor)
     elif compliance_regime in ['2', 'FEDRAMP_MODERATE']:
         click.echo(click.style("Configuring for FedRAMP Moderate...", fg="yellow"))
-        configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, engine_id)
+        configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, engine_id, enable_model_armor)
     elif compliance_regime in ['3', 'IL4']:
         click.echo(click.style("Configuring for IL4...", fg="yellow"))
         configure_gemini_enterprise_for_il4(credentials, project_id, engine_id)
@@ -1331,6 +1331,46 @@ def configure_cmek(credentials, project_id, kms_key_name):
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
         sys.exit(1)
 
+def create_model_armor_template(project_id: str, template_id: str):
+    client = modelarmor_v1.ModelArmorClient(
+        client_options=ClientOptions(
+            api_endpoint="modelarmor.us.rep.googleapis.com"
+        ),
+    )
+
+    # Get the absolute path to the directory containing the script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Construct the absolute path to the YAML file
+    yaml_path = os.path.join(script_dir, "model_armor.yaml")
+
+    # Load features from the YAML file
+    with open(yaml_path, 'r') as f:
+        template_config = yaml.safe_load(f)
+
+    if not template_config:
+        raise ValueError("model_armor.yaml is empty or could not be read.")
+
+    # Build the Model Armor template from the YAML configuration.
+    # For more details on filters, please refer to the following doc:
+    # https://cloud.google.com/security-command-center/docs/key-concepts-model-armor#ma-filters
+    template = modelarmor_v1.Template(template_config)
+
+    # Prepare the request for creating the template.
+    request = modelarmor_v1.CreateTemplateRequest(
+        parent=f"projects/{project_id}/locations/us",
+        template_id=template_id,
+        template=template,
+    )
+
+    # Create the template.
+    try:
+        response = client.create_template(request=request)
+        click.echo(f"Model Armor template created successfully: {response.name}")
+        return response.name
+    except Exception as e:
+        click.echo(click.style(f"An error occurred while creating the Model Armor template: {parse_http_error(e)}", fg=(255,165,0)))
+        exit()
+
 
 def create_engine(credentials, project_id, engine_id, display_name, company_name, data_store_list, enable_audit_logs=False):
     """Creates a new engine."""
@@ -1561,7 +1601,7 @@ def disable_user_event_collection(credentials, project_id, engine_id):
         click.echo(f"An unexpected error occurred: {e}")
 
 
-def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine_id):
+def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine_id, enable_model_armor=False):
     """Configures the Gemini Enterprise engine and default assistant for FedRAMP High."""
     client_options = ClientOptions(api_endpoint="https://us-discoveryengine.googleapis.com")
     service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
@@ -1601,6 +1641,16 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
 
     # Assistant: Disable Grounding with Google Search / Location Context
     assistant_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}/assistants/default_assistant"
+
+    model_armor_config = None
+    if enable_model_armor:
+        model_armor_template = create_model_armor_template(project_id, "model_armor_template")
+        click.echo(f"Created model armor template {model_armor_template} for engine {engine_id}.")
+        model_armor_config = {
+            "userPromptTemplate": model_armor_template,
+            "responseTemplate": model_armor_template,
+            "failureMode": "FAIL_OPEN"
+        }
     
     # Get access token
     try:
@@ -1619,7 +1669,8 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
           "googleSearchGroundingEnabled": False,
           "webGroundingType":"WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
           "customerPolicy":{
-            "bannedPhrases":[]
+            "bannedPhrases":[],
+            "modelArmorConfig": model_armor_config
           },
           "generationConfig":{
             "systemInstruction":{
@@ -1676,7 +1727,7 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         click.echo(f"An error occurred while disabling Implicit Model Caching: {e}")
         # Do not exit, as this may not be a critical failure.
 
-def configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, engine_id):
+def configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, engine_id, enable_model_armor=False):
     """Configures the Gemini Enterprise engine and default assistant for FedRAMP Moderate."""
     client_options = ClientOptions(api_endpoint="https://us-discoveryengine.googleapis.com")
     service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
@@ -1716,6 +1767,15 @@ def configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, en
 
     # Assistant: Disable Grounding with Google Search / Location Context
     assistant_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}/assistants/default_assistant"
+
+    model_armor_config = None
+    if enable_model_armor:
+        model_armor_template = create_model_armor_template(project_id, "model_armor_template")
+        model_armor_config = {
+            "userPromptTemplate": model_armor_template,
+            "responseTemplate": model_armor_template,
+            "failureMode": "FAIL_OPEN"
+        }
     
     # Get access token
     try:
@@ -1733,7 +1793,8 @@ def configure_gemini_enterprise_for_fedramp_moderate(credentials, project_id, en
           "googleSearchGroundingEnabled": False,
           "webGroundingType":"WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
           "customerPolicy":{
-            "bannedPhrases":[]
+            "bannedPhrases":[],
+            "modelArmorConfig": model_armor_config
           },
           "generationConfig":{
             "systemInstruction":{
