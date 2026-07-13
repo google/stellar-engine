@@ -37,8 +37,7 @@ locals {
 
   restricted_services = [
     "beyondcorp.googleapis.com",
-    "certificatemanager.googleapis.com",
-    "modelarmor.googleapis.com"
+    "certificatemanager.googleapis.com"
   ]
 
   enabled_services = concat(
