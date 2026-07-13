@@ -917,7 +917,8 @@ The blueprint sets up the following key components:
     -   **Context:** Script detects Project/Tenant/Environment.
     -   **Access Policies:** Configure Time, Location, and Device trust levels.
     -   **Data Stores:** Interactively add GCS Buckets or BigQuery Datasets.
-    -   **Compliance:** Select FedRAMP High (Default) or IL4.
+    -   **Compliance:** Select FedRAMP High (Default), FedRAMP Moderate, IL4, or IL5.
+    -   **Model Armor:** (FedRAMP High and Moderate only) Interactively choose to enable Model Armor to screen prompts and responses.
 3.  **Apply**: The script runs `terraform init` and `apply` automatically.
 
 ### Post-Deployment (Data Ingestion)
@@ -968,7 +969,7 @@ After the foundational infrastructure is provisioned by the `gemini-stage-0` and
     - **CMEK Setup:** Registers a Customer-Managed Encryption Key (KMS key in the 'us' multi-region) with Discovery Engine to protect data at rest.
     - **Data Store Creation/Selection:** Allows the user to connect existing Discovery Engine data stores or create new ones from GCS or BigQuery, including schema transformation for BigQuery.
     - **Engine Creation:** Provisions the Gemini Enterprise search engine, linking the selected data stores.
-    - **Compliance Configuration:** Adjusts engine and assistant settings to disable features not yet authorized for the selected regulatory boundary (e.g., FedRAMP High), such as disabling certain grounding sources, analytics, and knowledge graph features.
+    - **Compliance & Security Configuration:** Adjusts engine and assistant settings to disable features not yet authorized for the selected regulatory boundary (e.g., FedRAMP High), such as disabling certain grounding sources, analytics, and knowledge graph features. For FedRAMP High and Moderate, optionally enables Model Armor for prompt/response filtering.
 4.  **Output:** Provides the user with essential IDs (Project, Data Store, Engine, Widget Config) and URLs to access the configured Gemini Enterprise instance.
 
 ### Key `gem4gov` Functions:
@@ -980,6 +981,7 @@ After the foundational infrastructure is provisioned by the `gemini-stage-0` and
 - **Data Store Management:** Lists, validates, and creates Discovery Engine data stores (for GCS and BigQuery), including schema handling and data import initiation.
 - **Engine Management:** Creates and configures the Discovery Engine (Search Engine).
 - **FedRAMP/IL\* Configuration:** Patches Discovery Engine and Assistant resources to disable non-compliant features.
+- **Model Armor Integration:** Provisions security policies by creating a Model Armor template and binding it to the Gemini Enterprise assistant for prompt and response screening (FedRAMP High and Moderate only).
 
 ### Prerequisites
 
@@ -1071,7 +1073,7 @@ gem4gov onboard
 
 **Step-by-Step Guide:**
 
-1.  **Compliance Regime Selection**: Choose the regulatory boundary (`FedRAMP High`, `IL4`, or `None`).
+1.  **Compliance Regime Selection**: Choose the regulatory boundary (`FedRAMP High`, `FedRAMP Moderate`, `IL4`, `IL5`, or `None`).
 2.  **Project Confirmation**: Confirm the GCP Project ID and ensure it resides in the appropriate Assured Workloads folder.
 3.  **IAM Role Check**: Verifies required IAM roles.
 4.  **API Check**: Verifies and enables required APIs.
@@ -1106,10 +1108,15 @@ gem4gov app create --project-id <PROJECT_ID> [OPTIONS]
 
 **Options:**
 *   `--project-id`: (Required) GCP Project ID.
+*   `--engine-id`: (Optional) Custom engine ID for the Gemini Enterprise application. If omitted, a random ID starting with `g4g-gem-ent-app-` will be generated.
+*   `--display-name`: (Optional) Display name for the Gemini Enterprise application.
+*   `--company-name`: (Optional) Agency / Department Name (no abbreviations).
 *   `--data-stores`: Comma-separated list of existing Data Store IDs.
 *   `--workforce-pool-id`: Workforce Identity Pool ID (if using 3rd party IdP).
 *   `--workforce-provider-id`: Workforce Identity Provider ID (if using 3rd party IdP).
-*   `--compliance-regime`: `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, `IL4`, or `NONE`.
+*   `--compliance-regime`: `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, `IL4`, `IL5`, or `NONE`.
+*   `--enable-audit-logs`: (Flag) Enable Gemini Enterprise Usage Audit logs.
+*   `--enable-model-armor`: (Flag) Enable Model Armor security policies. Note: Model Armor is currently supported under `FEDRAMP_HIGH` and `FEDRAMP_MODERATE` compliance regimes.
 
 #### `gem4gov app update-compliance`
 
@@ -1122,7 +1129,7 @@ gem4gov app update-compliance --project-id <PROJECT_ID> --engine-id <ENGINE_ID> 
 **Options:**
 *   `--project-id`: (Required) GCP Project ID.
 *   `--engine-id`: (Required) The ID of the Gemini Enterprise Engine.
-*   `--compliance-regime`: (Required) `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, or `IL4`.
+*   `--compliance-regime`: (Required) `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, `IL4`, or `IL5`.
 
 **Actions:**
 *   Disables unauthorized features (e.g., Private Knowledge Graph, Location Context).

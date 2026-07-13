@@ -130,10 +130,15 @@ gem4gov app create --project-id <PROJECT_ID> [OPTIONS]
 
 **Options:**
 *   `--project-id`: (Required) GCP Project ID.
+*   `--engine-id`: (Optional) Custom engine ID for the Gemini Enterprise application. If omitted, a random ID starting with `g4g-gem-ent-app-` will be generated.
+*   `--display-name`: (Optional) Display name for the Gemini Enterprise application.
+*   `--company-name`: (Optional) Agency / Department Name (no abbreviations).
 *   `--data-stores`: Comma-separated list of existing Data Store IDs.
 *   `--workforce-pool-id`: Workforce Identity Pool ID (if using 3rd party IdP).
 *   `--workforce-provider-id`: Workforce Identity Provider ID (if using 3rd party IdP).
-*   `--compliance-regime`: `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, `IL4`, `IL5`, or `NONE`. 
+*   `--compliance-regime`: `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, `IL4`, `IL5`, or `NONE`.
+*   `--enable-audit-logs`: (Flag) Enable Gemini Enterprise Usage Audit logs.
+*   `--enable-model-armor`: (Flag) Enable Model Armor security policies. Note: Model Armor is currently supported under `FEDRAMP_HIGH` and `FEDRAMP_MODERATE` compliance regimes.
 
 ### `gem4gov app update-compliance`
 
@@ -146,7 +151,7 @@ gem4gov app update-compliance --project-id <PROJECT_ID> --engine-id <ENGINE_ID> 
 **Options:**
 *   `--project-id`: (Required) GCP Project ID.
 *   `--engine-id`: (Required) The ID of the Gemini Enterprise Engine.
-*   `--compliance-regime`: (Required) `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, `IL4`, `IL5`, or `NONE`.
+*   `--compliance-regime`: (Required) `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, `IL4`, or `IL5`.
 
 **Actions:**
 *   Disables unauthorized features (e.g., Private Knowledge Graph, Location Context).
