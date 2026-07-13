@@ -2,8 +2,6 @@
 
 This document outlines the versioning scheme, release classification, and release automation process for the `stellar-engine` repository.
 
----
-
 ## Release Classification and Versioning Scheme
 
 `stellar-engine` follows Semantic Versioning (`vMAJOR.MINOR.PATCH`). Releases are categorized based on their impact on underlying Terraform state and deployed infrastructure resources.
@@ -24,7 +22,7 @@ Major releases (e.g., `vX.0.0`) cover breaking changes or updates that require s
 Minor releases (e.g., `vX.Y.0`) cover backwards-compatible feature additions, updates, and enhancements.
 
 * Definition: Feature additions, enhancements, or updates that do not require Terraform state manipulation, state moves, or redeployment of existing resources (e.g., backwards-compatible infrastructure additions, non-destructive parameter updates).
-* Process: Generated monthly automatically from the `main` branch.
+* Process: Generated monthly on the last Friday of the month automatically from the `main` branch.
 
 ### Patch Releases
 
@@ -33,7 +31,6 @@ Patch releases (e.g., `vX.Y.Z`) cover critical bug fixes, security patches, and 
 * Definition: Critical bug fixes, security patches, or urgent non-breaking adjustments.
 * Process: Executed on an ad-hoc basis, where the release is updated and tagged manually.
 
----
 
 ## Release Cadence and Automation Summary
 
@@ -43,7 +40,6 @@ Patch releases (e.g., `vX.Y.Z`) cover critical bug fixes, security patches, and 
 | Minor (`vX.Y.0`) | Monthly | Automated (from `main`) | No |
 | Patch (`vX.Y.Z`) | Ad-hoc / As needed | Manual | No |
 
----
 
 ## Contributor Guidelines and Release Workflow
 
