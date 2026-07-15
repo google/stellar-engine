@@ -145,3 +145,13 @@ output "analytics_repo_name" {
   value       = var.enable_analytics ? google_artifact_registry_repository.analytics_repo[0].name : null
   description = "The name of the Artifact Registry repository for Gemini Analytics."
 }
+
+output "gemini_apps_widget_ids" {
+  value       = { for k, v in google_discovery_engine_widget_config.gemini_widget_config : k => v.config_id }
+  description = "A map of Widget Config IDs for each Gemini Enterprise app."
+}
+
+output "gemini_apps_audit_logs" {
+  value       = { for k, v in var.gemini_apps : google_discovery_engine_search_engine.gemini_enterprise_search_engine[k].engine_id => coalesce(v.enable_audit_logs, false) }
+  description = "A map of Engine IDs to their enable_audit_logs configuration."
+}

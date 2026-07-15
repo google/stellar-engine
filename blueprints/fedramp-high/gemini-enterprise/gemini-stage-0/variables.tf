@@ -25,12 +25,12 @@ variable "tenant" {
 }
 
 variable "compliance_regime" {
-  description = "Compliance regime this environment is deployed in (e.g. FEDRAMP_HIGH, IL4, IL5, NONE)."
+  description = "Compliance regime this environment is deployed in (e.g. FEDRAMP_HIGH, FEDRAMP_MODERATE, IL4, IL5, NONE)."
   type        = string
   default     = "NONE"
   validation {
-    condition     = contains(["FEDRAMP_HIGH", "IL4", "IL5", "NONE"], var.compliance_regime)
-    error_message = "Allowed values for compliance_regime are FEDRAMP_HIGH, IL4, IL5, and NONE."
+    condition     = contains(["FEDRAMP_HIGH", "FEDRAMP_MODERATE", "IL4", "IL5", "NONE"], var.compliance_regime)
+    error_message = "Allowed values for compliance_regime are FEDRAMP_HIGH, FEDRAMP_MODERATE, IL4, IL5, and NONE."
   }
 }
 
@@ -86,11 +86,19 @@ variable "geolocation" {
   description = "Location for Discovery Engine resources (us, eu, or global)."
   type        = string
   default     = "us"
+  validation {
+    condition     = var.compliance_regime != "FEDRAMP_HIGH" || var.geolocation == "us"
+    error_message = "FEDRAMP_HIGH is restricted to US-only regions."
+  }
 }
 
 variable "region" {
   description = "GCP Region to deploy into."
   type        = string
+  validation {
+    condition     = can(regex("^us-", var.region))
+    error_message = "For FEDRAMP_HIGH compliance, the region must be a US region (e.g., us-central1, us-east4)."
+  }
 }
 
 variable "allowed_ip_ranges" {
@@ -330,4 +338,19 @@ variable "enable_analytics" {
   description = "Enable analytics for Gemini Enterprise via Discovery Engine Audit Logs."
   type        = bool
   default     = false
+}
+
+variable "gemini_apps" {
+  description = "A map of Gemini Enterprise Search Application configurations."
+  type = map(object({
+    display_name                          = string
+    company_name                          = string
+    gcs_data_store_keys                   = optional(list(string), [])
+    bq_data_store_keys                    = optional(list(string), [])
+    external_data_store_ids               = optional(list(string), [])
+    enable_agent_sharing                  = optional(bool, false)
+    enable_agent_sharing_without_approval = optional(bool, true)
+    enable_audit_logs                     = optional(bool, false)
+  }))
+  default = {}
 }

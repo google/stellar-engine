@@ -24,6 +24,9 @@ locals {
 
   # Document Processing (digital_parsing_config or ocr_parsing_config)
   discovery_engine_parsing_mode = "digital_parsing_config"
+
+  # Load features directly from the local YAML config
+  engine_features = yamldecode(file("${path.module}/engine_features.yaml"))["features"]
 }
 
 # ---------------------------------------------------------------------------- #
@@ -219,4 +222,76 @@ resource "time_sleep" "wait_for_bq_datastore" {
   for_each        = var.create_data_stores ? var.bq_data_store_configs : {}
   create_duration = "30s"
   depends_on      = [google_discovery_engine_data_store.gemini_enterprise_bq_data_store]
+}
+
+# ---------------------------------------------------------------------------- #
+#  Gemini Enterprise - Engine & Application Configuration                      #
+# ---------------------------------------------------------------------------- #
+
+# Random suffix for each engine ID
+resource "random_string" "engine_suffix" {
+  for_each = var.gemini_apps
+  length   = 6
+  special  = false
+  upper    = false
+}
+
+# Search Engine Application
+resource "google_discovery_engine_search_engine" "gemini_enterprise_search_engine" {
+  for_each          = var.gemini_apps
+  engine_id         = "g4g-gem-ent-app-${random_string.engine_suffix[each.key].result}"
+  collection_id     = "default_collection"
+  location          = var.geolocation
+  display_name      = each.value.display_name
+  industry_vertical = "GENERIC"
+  app_type          = "APP_TYPE_INTRANET"
+  disable_analytics = var.compliance_regime != "NONE" ? true : false
+
+  # Link GCS and BQ data stores
+  data_store_ids = concat(
+    [for key in each.value.gcs_data_store_keys : google_discovery_engine_data_store.gemini_enterprise_gcs_data_store[key].data_store_id],
+    [for key in each.value.bq_data_store_keys : google_discovery_engine_data_store.gemini_enterprise_bq_data_store[key].data_store_id],
+    each.value.external_data_store_ids
+  )
+
+  common_config {
+    company_name = each.value.company_name
+  }
+
+  search_engine_config {
+    search_tier                = "SEARCH_TIER_ENTERPRISE"
+    required_subscription_tier = "SUBSCRIPTION_TIER_SEARCH_AND_ASSISTANT"
+    search_add_ons             = ["SEARCH_ADD_ON_LLM"]
+  }
+
+  # Merge base features with app-specific overrides
+  features = merge(
+    local.engine_features,
+    {
+      "disable-agent-sharing"                = each.value.enable_agent_sharing ? "FEATURE_STATE_OFF" : "FEATURE_STATE_ON"
+      "agent-sharing-without-admin-approval" = each.value.enable_agent_sharing_without_approval ? "FEATURE_STATE_ON" : "FEATURE_STATE_OFF"
+    }
+  )
+  provider = google-beta
+
+  depends_on = [
+    time_sleep.wait_for_bq_datastore
+  ]
+}
+
+# Default Search Widget Configuration
+resource "google_discovery_engine_widget_config" "gemini_widget_config" {
+  for_each         = var.gemini_apps
+  location         = var.geolocation
+  engine_id        = google_discovery_engine_search_engine.gemini_enterprise_search_engine[each.key].engine_id
+  widget_config_id = "default_search_widget_config"
+  provider         = google-beta
+
+  access_settings {
+    enable_web_app = false
+    # Configure workforce pool if using third party IDP
+    workforce_identity_pool_provider = var.acl_idp_type == "THIRD_PARTY" ? "${var.acl_workforce_pool_name}/providers/${var.acl_workforce_provider_id}" : null
+  }
+
+  # If compliance requires disabling user events collection, configure it post-deployment or via API script.
 }

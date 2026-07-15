@@ -39,11 +39,6 @@ variable "cert_management_choice" {
   }
 }
 
-variable "gemini_config_id" {
-  description = "ID for your Gemini Enterprise instance after running Gem4Gov CLI"
-  type        = string
-}
-
 variable "network_name" {
   description = "The name of the VPC network."
   type        = string
