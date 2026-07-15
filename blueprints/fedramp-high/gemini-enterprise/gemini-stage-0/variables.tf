@@ -86,19 +86,11 @@ variable "geolocation" {
   description = "Location for Discovery Engine resources (us, eu, or global)."
   type        = string
   default     = "us"
-  validation {
-    condition     = var.compliance_regime != "FEDRAMP_HIGH" || var.geolocation == "us"
-    error_message = "FEDRAMP_HIGH is restricted to US-only regions."
-  }
 }
 
 variable "region" {
   description = "GCP Region to deploy into."
   type        = string
-  validation {
-    condition     = can(regex("^us-", var.region))
-    error_message = "For FEDRAMP_HIGH compliance, the region must be a US region (e.g., us-central1, us-east4)."
-  }
 }
 
 variable "allowed_ip_ranges" {
@@ -351,6 +343,7 @@ variable "gemini_apps" {
     enable_agent_sharing                  = optional(bool, false)
     enable_agent_sharing_without_approval = optional(bool, true)
     enable_audit_logs                     = optional(bool, false)
+    enable_model_armor                    = optional(bool, false)
   }))
   default = {}
 }
