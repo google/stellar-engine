@@ -1350,6 +1350,28 @@ prompt_gemini_apps() {
             ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="false"
         fi
 
+        if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_HIGH" || "$COMPLIANCE_REGIME" == "NONE" ]]; then
+            echo ""
+            echo -e "${YELLOW}Model Armor Feature:${NC}"
+            echo -e "${YELLOW}When enabled, Model Armor enhances the security and safety of your AI applications by proactively screening the prompts and responses given by the Gemini Enterprise assistant.${NC}"
+            read -p "Would you like to enable 'Model Armor'? [y/N]: " ENABLE_MODEL_ARMOR
+            if [[ "$ENABLE_MODEL_ARMOR" =~ ^[Yy]$ ]]; then
+                ENABLE_MODEL_ARMOR_FLAG="true"
+                echo -e "${BLUE}Enabling Model Armor API...${NC}"
+                gcloud services enable modelarmor.googleapis.com
+                echo ""
+                echo -e "${BLUE}--- Model Armor ---${NC}"
+                echo -e "${YELLOW}Model Armor enhances the security and safety of your AI applications by proactively screening the prompts and responses given by the Gemini Enterprise assistant.${NC}"
+                echo ""
+                echo -e "Please review the configuration in: ${BLUE}blueprints/fedramp-high/gemini-enterprise/gemini-stage-0/model_armor.yaml${NC}"
+                echo -e "For more information on configuring Model Armor templatees, visit: ${BLUE}https://docs.cloud.google.com/model-armor/manage-templates#create-ma-template${NC}"
+                echo ""
+                read -p "Press Enter to acknowledge and continue..."
+            else
+                ENABLE_MODEL_ARMOR_FLAG="false"
+            fi
+        fi
+
         GCS_KEYS_STR="[$(IFS=,; echo "${SELECTED_GCS_KEYS[*]}")]"
         BQ_KEYS_STR="[$(IFS=,; echo "${SELECTED_BQ_KEYS[*]}")]"
 
@@ -1361,7 +1383,8 @@ prompt_gemini_apps() {
             --argjson agent_sharing "$ENABLE_AGENT_SHARING_FLAG" \
             --argjson agent_sharing_no_approval "$ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG" \
             --argjson audit_logs "$ENABLE_AUDIT_LOGS_FLAG" \
-            '{display_name: $display, company_name: $company, gcs_data_store_keys: $gcs_keys, bq_data_store_keys: $bq_keys, enable_agent_sharing: $agent_sharing, enable_agent_sharing_without_approval: $agent_sharing_no_approval, enable_audit_logs: $audit_logs}')
+            --argjson model_armor "$ENABLE_MODEL_ARMOR_FLAG" \
+            '{display_name: $display, company_name: $company, gcs_data_store_keys: $gcs_keys, bq_data_store_keys: $bq_keys, enable_agent_sharing: $agent_sharing, enable_agent_sharing_without_approval: $agent_sharing_no_approval, enable_audit_logs: $audit_logs, enable_model_armor: $model_armor}')
         
         # Add to the apps map
         APPS_OBJ=$(echo "$APPS_OBJ" | jq --arg key "$ENG_ID" --argjson val "$APP_JSON" '. + {($key): $val}')
@@ -2496,10 +2519,12 @@ deploy_stage_0() {
     echo ""
     echo "Configuring logging and assistant compliance settings for Gemini applications..."
     AUDIT_LOGS_MAP=$(terraform output -json gemini_apps_audit_logs 2>/dev/null || echo "{}")
+    MODEL_ARMOR_MAP=$(terraform output -json gemini_apps_model_armor 2>/dev/null || echo "{}")
+    MODEL_ARMOR_TEMPLATE_NAME=$(terraform output -raw model_armor_template_name 2>/dev/null || echo "")
 
     if [[ -n "$AUDIT_LOGS_MAP" && "$AUDIT_LOGS_MAP" != "{}" ]]; then
         ACCESS_TOKEN=$(gcloud auth print-access-token)
-        while IFS=$'\t' read -r ENG_ID ENABLE_AUDIT ; do
+        while IFS=$'\t' read -r ENG_ID ENABLE_AUDIT ENABLE_MA ; do
             if [[ -n "$ENG_ID" ]]; then
                 # A. Configure Observability Config (Audit Logs)
                 if [[ "$ENABLE_AUDIT" == "true" ]]; then
@@ -2541,6 +2566,14 @@ deploy_stage_0() {
   "disableLocationContext": false
 }'
                      MASK="displayName,webGroundingType,defaultWebGroundingToggleOff,disableLocationContext"
+                fi
+
+                if [[ "$ENABLE_MA" == "true" && -n "$MODEL_ARMOR_TEMPLATE_NAME" && "$MODEL_ARMOR_TEMPLATE_NAME" != "null" ]]; then
+                     echo "Enabling Model Armor template for Engine: ${ENG_ID}..."
+                     ASSISTANT_BODY=$(echo "$BASE_JSON" | jq --arg template "$MODEL_ARMOR_TEMPLATE_NAME" '. + {customerPolicy: {modelArmorConfig: {userPromptTemplate: $template, responseTemplate: $template, failureMode: "FAIL_OPEN"}}}')
+                     MASK="${MASK},customerPolicy"
+                else
+                     ASSISTANT_BODY="$BASE_JSON"
                 fi
 
                 curl -s -o /dev/null -X PATCH \

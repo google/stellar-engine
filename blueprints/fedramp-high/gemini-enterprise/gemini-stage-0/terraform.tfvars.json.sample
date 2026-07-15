@@ -24,7 +24,8 @@
       ],
       "enable_agent_sharing": false,
       "enable_agent_sharing_without_approval": false,
-      "enable_audit_logs": false
+      "enable_audit_logs": false,
+      "enable_model_armor": false
     }
   }
 }
