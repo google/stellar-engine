@@ -25,12 +25,12 @@ variable "tenant" {
 }
 
 variable "compliance_regime" {
-  description = "Compliance regime this environment is deployed in (e.g. FEDRAMP_HIGH, FEDRAMP_MODERATE, IL4, IL5, NONE)."
+  description = "Compliance regime this environment is deployed in (e.g. FEDRAMP_HIGH, IL4, IL5, NONE)."
   type        = string
   default     = "NONE"
   validation {
-    condition     = contains(["FEDRAMP_HIGH", "FEDRAMP_MODERATE", "IL4", "IL5", "NONE"], var.compliance_regime)
-    error_message = "Allowed values for compliance_regime are FEDRAMP_HIGH, FEDRAMP_MODERATE, IL4, IL5, and NONE."
+    condition     = contains(["FEDRAMP_HIGH", "IL4", "IL5", "NONE"], var.compliance_regime)
+    error_message = "Allowed values for compliance_regime are FEDRAMP_HIGH, IL4, IL5, and NONE."
   }
 }
 

@@ -228,18 +228,10 @@ resource "time_sleep" "wait_for_bq_datastore" {
 #  Gemini Enterprise - Engine & Application Configuration                      #
 # ---------------------------------------------------------------------------- #
 
-# Random suffix for each engine ID
-resource "random_string" "engine_suffix" {
-  for_each = var.gemini_apps
-  length   = 6
-  special  = false
-  upper    = false
-}
-
 # Search Engine Application
 resource "google_discovery_engine_search_engine" "gemini_enterprise_search_engine" {
   for_each          = var.gemini_apps
-  engine_id         = "g4g-gem-ent-app-${random_string.engine_suffix[each.key].result}"
+  engine_id         = each.key
   collection_id     = "default_collection"
   location          = var.geolocation
   display_name      = each.value.display_name
@@ -288,7 +280,7 @@ resource "google_discovery_engine_widget_config" "gemini_widget_config" {
   provider         = google-beta
 
   access_settings {
-    enable_web_app = false
+    enable_web_app = true
     # Configure workforce pool if using third party IDP
     workforce_identity_pool_provider = var.acl_idp_type == "THIRD_PARTY" ? "${var.acl_workforce_pool_name}/providers/${var.acl_workforce_provider_id}" : null
   }
