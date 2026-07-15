@@ -15,7 +15,7 @@
 locals {
   # Create Model Armor if any app has it enabled,
   # and the compliance regime supports it.
-  create_model_armor = anytrue([for k, v in var.gemini_apps : coalesce(v.enable_model_armor, false)]) && (var.compliance_regime == "FEDRAMP_HIGH" || var.compliance_regime == "FEDRAMP_MODERATE" || var.compliance_regime == "NONE")
+  create_model_armor = anytrue([for k, v in var.gemini_apps : coalesce(v.enable_model_armor, false)]) && (var.compliance_regime == "FEDRAMP_HIGH" || var.compliance_regime == "NONE")
 
   # Load Model Armor safety configurations from the local YAML config
   model_armor_config = yamldecode(file("${path.module}/model_armor.yaml"))
