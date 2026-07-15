@@ -1253,6 +1253,127 @@ configure_access_policies() {
     echo -e "${GREEN}Access Policy Configuration Complete.${NC}"
 }
 
+prompt_gemini_apps() {
+    # Expects global arrays GCS_KEYS and BQ_KEYS to be populated with available keys.
+    # Outputs the generated JSON in APPS_OBJ.
+    
+    echo ""
+    echo -e "${BLUE}--- Gemini Enterprise Applications ---${NC}"
+    echo -e "${YELLOW}Configure the Gemini Enterprise applications to deploy.${NC}"
+    
+    APPS_OBJ="{}"
+    while true; do
+        APP_DISPLAY=""
+        while [[ -z "$APP_DISPLAY" ]]; do
+            read -p "Please enter a Display Name for the Application: " APP_DISPLAY
+        done
+        
+        APP_COMPANY=""
+        while [[ -z "$APP_COMPANY" ]]; do
+            read -p "Please enter the Agency / Department Name (no abbreviations): " APP_COMPANY
+        done
+
+        # Random App Key suffix
+        APP_SUFFIX=$(python3 -c "import random, string; print(''.join(random.choices(string.ascii_lowercase + string.digits, k=4)))")
+        ENG_ID="g4g-gem-ent-app-${APP_SUFFIX}"
+        
+        SELECTED_GCS_KEYS=()
+        SELECTED_BQ_KEYS=()
+        
+        # Select GCS Data Stores
+        if [[ ${#GCS_KEYS[@]} -gt 0 ]]; then
+             echo "Available Google Cloud Storage Data Stores to link:"
+             i=1
+             for key in "${GCS_KEYS[@]}"; do
+                 echo "$i) $key"
+                 ((i++))
+             done
+             read -p "Select GCS Data Stores to link (comma-separated numbers, e.g. 1,3) [Enter to skip]: " GCS_SEL
+             if [[ -n "$GCS_SEL" ]]; then
+                 IFS=',' read -ra SEL_INDICES <<< "$GCS_SEL"
+                 for index in "${SEL_INDICES[@]}"; do
+                     index=$(echo "$index" | xargs)
+                     if [[ "$index" =~ ^[0-9]+$ ]] && (( index >= 1 && index <= ${#GCS_KEYS[@]} )); then
+                         SELECTED_GCS_KEYS+=("\"${GCS_KEYS[$((index-1))]}\"")
+                     fi
+                 done
+             fi
+        fi
+
+        # Select BQ Data Stores
+        if [[ ${#BQ_KEYS[@]} -gt 0 ]]; then
+             echo "Available BigQuery Data Stores to link:"
+             i=1
+             for key in "${BQ_KEYS[@]}"; do
+                 echo "$i) $key"
+                 ((i++))
+             done
+             read -p "Select BQ Data Stores to link (comma-separated numbers, e.g. 1,3) [Enter to skip]: " BQ_SEL
+             if [[ -n "$BQ_SEL" ]]; then
+                 IFS=',' read -ra SEL_INDICES <<< "$BQ_SEL"
+                 for index in "${SEL_INDICES[@]}"; do
+                     index=$(echo "$index" | xargs)
+                     if [[ "$index" =~ ^[0-9]+$ ]] && (( index >= 1 && index <= ${#BQ_KEYS[@]} )); then
+                         SELECTED_BQ_KEYS+=("\"${BQ_KEYS[$((index-1))]}\"")
+                     fi
+                 done
+             fi
+        fi
+
+        echo ""
+        echo -e "${RED}WARNING: Enabling Gemini Enterprise Usage Audit logs will write user queries, model thinking, and model responses to Cloud Logging.${NC}"
+        echo -e "${RED}You must ensure that logging permissions are set to allow only necessary principals to access.${NC}"
+        read -p "Would you like to enable Gemini Enterprise Usage Audit logs (conversation logging) for this application? [y/N]: " ENABLE_AUDIT_LOGS
+        if [[ "$ENABLE_AUDIT_LOGS" =~ ^[Yy]$ ]]; then
+            ENABLE_AUDIT_LOGS_FLAG="true"
+        else
+            ENABLE_AUDIT_LOGS_FLAG="false"
+        fi
+
+        echo ""
+        echo -e "${YELLOW}Agent Sharing Feature:${NC}"
+        echo -e "${YELLOW}When enabled, users can share agents with other users using the Gemini Enterprise app.${NC}"
+        read -p "Would you like to enable the 'Agent Sharing' feature? [y/N]: " ENABLE_AGENT_SHARING
+        if [[ "$ENABLE_AGENT_SHARING" =~ ^[Yy]$ ]]; then
+            ENABLE_AGENT_SHARING_FLAG="true"
+        else
+            ENABLE_AGENT_SHARING_FLAG="false"
+        fi
+
+        echo ""
+        echo -e "${YELLOW}Agent Sharing without Admin Approval Feature:${NC}"
+        echo -e "${YELLOW}When enabled, users on your team can share and use agents without admin approval when using the Gemini Enterprise app.${NC}"
+        read -p "Would you like to enable 'Agent Sharing without Admin Approval'? [y/N]: " ENABLE_AGENT_SHARING_NO_APPROVAL
+        if [[ "$ENABLE_AGENT_SHARING_NO_APPROVAL" =~ ^[Yy]$ ]]; then
+            ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="true"
+        else
+            ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="false"
+        fi
+
+        GCS_KEYS_STR="[$(IFS=,; echo "${SELECTED_GCS_KEYS[*]}")]"
+        BQ_KEYS_STR="[$(IFS=,; echo "${SELECTED_BQ_KEYS[*]}")]"
+
+        APP_JSON=$(jq -n \
+            --arg display "$APP_DISPLAY" \
+            --arg company "$APP_COMPANY" \
+            --argjson gcs_keys "$GCS_KEYS_STR" \
+            --argjson bq_keys "$BQ_KEYS_STR" \
+            --argjson agent_sharing "$ENABLE_AGENT_SHARING_FLAG" \
+            --argjson agent_sharing_no_approval "$ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG" \
+            --argjson audit_logs "$ENABLE_AUDIT_LOGS_FLAG" \
+            '{display_name: $display, company_name: $company, gcs_data_store_keys: $gcs_keys, bq_data_store_keys: $bq_keys, enable_agent_sharing: $agent_sharing, enable_agent_sharing_without_approval: $agent_sharing_no_approval, enable_audit_logs: $audit_logs}')
+        
+        # Add to the apps map
+        APPS_OBJ=$(echo "$APPS_OBJ" | jq --arg key "$ENG_ID" --argjson val "$APP_JSON" '. + {($key): $val}')
+
+        echo ""
+        read -p "Do you want to configure another Gemini Enterprise Application? [y/N]: " CREATE_APP
+        if [[ ! "$CREATE_APP" =~ ^[Yy]$ ]]; then
+            break
+        fi
+    done
+}
+
 configure_stage_0() {
     echo ""
     echo -e "${BLUE}--- Configure Stage 0 (Infrastructure) ---${NC}"
@@ -2109,124 +2230,7 @@ configure_stage_0() {
     fi
 
     # Prompts for Gemini Applications configuration
-    echo ""
-    echo -e "${BLUE}--- Gemini Enterprise Applications ---${NC}"
-    echo -e "${YELLOW}Configure the Gemini Enterprise applications to deploy.${NC}"
-    
-    APPS_OBJ="{}"
-    while true; do
-        APP_DISPLAY=""
-        while [[ -z "$APP_DISPLAY" ]]; do
-            read -p "Please enter a Display Name for the Application: " APP_DISPLAY
-        done
-        
-        APP_COMPANY=""
-        while [[ -z "$APP_COMPANY" ]]; do
-            read -p "Please enter the Agency / Department Name (no abbreviations): " APP_COMPANY
-        done
-
-        # Random App Key suffix
-        APP_SUFFIX=$(python3 -c "import random, string; print(''.join(random.choices(string.ascii_lowercase + string.digits, k=4)))")
-        ENG_ID="g4g-gem-ent-app-${APP_SUFFIX}"
-        
-        SELECTED_GCS_KEYS=()
-        SELECTED_BQ_KEYS=()
-        
-        # Select GCS Data Stores
-        if [[ ${#GCS_KEYS[@]} -gt 0 ]]; then
-             echo "Available Google Cloud Storage Data Stores to link:"
-             i=1
-             for key in "${GCS_KEYS[@]}"; do
-                 echo "$i) $key"
-                 ((i++))
-             done
-             read -p "Select GCS Data Stores to link (comma-separated numbers, e.g. 1,3) [Enter to skip]: " GCS_SEL
-             if [[ -n "$GCS_SEL" ]]; then
-                 IFS=',' read -ra SEL_INDICES <<< "$GCS_SEL"
-                 for index in "${SEL_INDICES[@]}"; do
-                     index=$(echo "$index" | xargs)
-                     if [[ "$index" =~ ^[0-9]+$ ]] && (( index >= 1 && index <= ${#GCS_KEYS[@]} )); then
-                         SELECTED_GCS_KEYS+=("\"${GCS_KEYS[$((index-1))]}\"")
-                     fi
-                 done
-             fi
-        fi
-
-        # Select BQ Data Stores
-        if [[ ${#BQ_KEYS[@]} -gt 0 ]]; then
-             echo "Available BigQuery Data Stores to link:"
-             i=1
-             for key in "${BQ_KEYS[@]}"; do
-                 echo "$i) $key"
-                 ((i++))
-             done
-             read -p "Select BQ Data Stores to link (comma-separated numbers, e.g. 1,3) [Enter to skip]: " BQ_SEL
-             if [[ -n "$BQ_SEL" ]]; then
-                 IFS=',' read -ra SEL_INDICES <<< "$BQ_SEL"
-                 for index in "${SEL_INDICES[@]}"; do
-                     index=$(echo "$index" | xargs)
-                     if [[ "$index" =~ ^[0-9]+$ ]] && (( index >= 1 && index <= ${#BQ_KEYS[@]} )); then
-                         SELECTED_BQ_KEYS+=("\"${BQ_KEYS[$((index-1))]}\"")
-                     fi
-                 done
-             fi
-        fi
-        
-        # Construct arrays as JSON strings
-        GCS_KEYS_JSON="[$(IFS=,; echo "${SELECTED_GCS_KEYS[*]}")]"
-        BQ_KEYS_JSON="[$(IFS=,; echo "${SELECTED_BQ_KEYS[*]}")]"
-
-        # Agent sharing prompts (app-specific)
-        echo ""
-        echo -e "${YELLOW}Agent Sharing Feature (App-Specific):${NC}"
-        echo -e "${YELLOW}When enabled, users can share agents with other users using this Gemini Enterprise app.${NC}"
-        read -p "Would you like to enable the 'Agent Sharing' feature for this application? [y/N]: " ENABLE_AGENT_SHARING
-        if [[ "$ENABLE_AGENT_SHARING" =~ ^[Yy]$ ]]; then
-            ENABLE_AGENT_SHARING_FLAG="true"
-        else
-            ENABLE_AGENT_SHARING_FLAG="false"
-        fi
-
-        echo ""
-        echo -e "${YELLOW}Agent Sharing without Admin Approval Feature:${NC}"
-        echo -e "${YELLOW}When enabled, users on your team can share and use agents without admin approval when using this Gemini Enterprise app.${NC}"
-        read -p "Would you like to enable 'Agent Sharing without Admin Approval' for this application? [y/N]: " ENABLE_AGENT_SHARING_NO_APPROVAL
-        if [[ "$ENABLE_AGENT_SHARING_NO_APPROVAL" =~ ^[Yy]$ ]]; then
-            ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="true"
-        else
-            ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="false"
-        fi
-
-        # Audit logs prompt (app-specific conversation logging)
-        echo ""
-        echo -e "${RED}WARNING: Enabling Gemini Enterprise Usage Audit logs will write user queries, model thinking, and model responses to Cloud Logging.${NC}"
-        echo -e "${RED}You must ensure that logging permissions are set to allow only necessary principals to access.${NC}"
-        read -p "Would you like to enable Gemini Enterprise Usage Audit logs (conversation logging) for this application? [y/N]: " ENABLE_AUDIT_LOGS
-        if [[ "$ENABLE_AUDIT_LOGS" =~ ^[Yy]$ ]]; then
-            ENABLE_AUDIT_LOGS_FLAG="true"
-        else
-            ENABLE_AUDIT_LOGS_FLAG="false"
-        fi
-
-        APP_JSON=$(jq -n \
-            --arg display "$APP_DISPLAY" \
-            --arg company "$APP_COMPANY" \
-            --argjson gcs_keys "$GCS_KEYS_JSON" \
-            --argjson bq_keys "$BQ_KEYS_JSON" \
-            --argjson agent_sharing "$ENABLE_AGENT_SHARING_FLAG" \
-            --argjson agent_sharing_no_approval "$ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG" \
-            --argjson audit_logs "$ENABLE_AUDIT_LOGS_FLAG" \
-            '{display_name: $display, company_name: $company, gcs_data_store_keys: $gcs_keys, bq_data_store_keys: $bq_keys, enable_agent_sharing: $agent_sharing, enable_agent_sharing_without_approval: $agent_sharing_no_approval, enable_audit_logs: $audit_logs}')
-        
-        # Add to the apps map
-        APPS_OBJ=$(echo "$APPS_OBJ" | jq --arg key "$ENG_ID" --argjson val "$APP_JSON" '. + {($key): $val}')
-
-        echo ""
-        read -p "Do you want to configure another Gemini Enterprise Application? [y/N]: " CREATE_APP
-        if [[ ! "$CREATE_APP" =~ ^[Yy]$ ]]; then
-            break
-        fi
-    done
+    prompt_gemini_apps
 
     # 10. Analytics (Discovery Engine Audit Logs)
     echo ""
@@ -2492,9 +2496,10 @@ deploy_stage_0() {
     echo ""
     echo "Configuring logging and assistant compliance settings for Gemini applications..."
     AUDIT_LOGS_MAP=$(terraform output -json gemini_apps_audit_logs 2>/dev/null || echo "{}")
+
     if [[ -n "$AUDIT_LOGS_MAP" && "$AUDIT_LOGS_MAP" != "{}" ]]; then
         ACCESS_TOKEN=$(gcloud auth print-access-token)
-        while IFS=$'\t' read -r ENG_ID ENABLE_AUDIT; do
+        while IFS=$'\t' read -r ENG_ID ENABLE_AUDIT ; do
             if [[ -n "$ENG_ID" ]]; then
                 # A. Configure Observability Config (Audit Logs)
                 if [[ "$ENABLE_AUDIT" == "true" ]]; then
@@ -2518,8 +2523,7 @@ deploy_stage_0() {
                 # B. Configure Default Assistant Compliance
                 echo "Applying compliance settings to default assistant for Engine: ${ENG_ID}..."
                 if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_HIGH" || "$COMPLIANCE_REGIME" == "IL4" || "$COMPLIANCE_REGIME" == "IL5" ]]; then
-                     ASSISTANT_BODY=$(cat <<EOF
-{
+                     BASE_JSON='{
   "displayName": "Default Assistant",
   "webGroundingType": "WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
   "defaultWebGroundingToggleOff": false,
@@ -2527,20 +2531,15 @@ deploy_stage_0() {
   "generationConfig": {
     "defaultLanguage": "en"
   }
-}
-EOF
-)
+}'
                      MASK="displayName,webGroundingType,defaultWebGroundingToggleOff,disableLocationContext,generationConfig.defaultLanguage"
                 else
-                     ASSISTANT_BODY=$(cat <<EOF
-{
+                     BASE_JSON='{
   "displayName": "Default Assistant",
   "webGroundingType": "WEB_GROUNDING_TYPE_GOOGLE_SEARCH",
   "defaultWebGroundingToggleOff": false,
   "disableLocationContext": false
-}
-EOF
-)
+}'
                      MASK="displayName,webGroundingType,defaultWebGroundingToggleOff,disableLocationContext"
                 fi
 
@@ -2551,7 +2550,7 @@ EOF
                     "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}/assistants/default_assistant?updateMask=${MASK}" \
                     -d "${ASSISTANT_BODY}"
             fi
-        done < <(echo "$AUDIT_LOGS_MAP" | jq -r 'to_entries[] | "\(.key)\t\(.value)"')
+        done < <(echo "$AUDIT_LOGS_MAP" | jq -r --argjson ma "$MODEL_ARMOR_MAP" 'to_entries[] | "\(.key)\t\(.value)\t\(($ma[.key]) // false)"')
     fi
 
     GEMINI_IP=$(terraform output -raw gemini_enterprise_ip 2>/dev/null || echo "N/A")
@@ -2685,147 +2684,15 @@ configure_gemini_apps() {
     # Parse Load Balancer IP for display
     GEMINI_IP=$(echo "$STATE_CONTENT" | jq -r '.outputs.gemini_enterprise_ip.value // "N/A"')
     
-    # Parse Data Stores
-    GCS_JSON_RAW=$(echo "$STATE_CONTENT" | jq -c '.outputs.gcs_data_stores.value // {} | to_entries | map(select(.value.data_store_id != null)) | map(.value)' 2>/dev/null)
-    BQ_JSON_RAW=$(echo "$STATE_CONTENT" | jq -c '.outputs.bq_data_stores.value // {} | to_entries | map(select(.value.data_store_id != null)) | map(.value)' 2>/dev/null)
+    # Extract GCS and BQ keys from the state outputs to populate prompt options
+    GCS_KEYS=()
+    while IFS= read -r key; do [[ -n "$key" ]] && GCS_KEYS+=("$key"); done < <(echo "$STATE_CONTENT" | jq -r '.outputs.gcs_data_stores.value // {} | keys[]')
     
-    if [[ "$GCS_JSON_RAW" == "[]" || -z "$GCS_JSON_RAW" ]]; then GCS_JSON_RAW=""; fi
-    if [[ "$BQ_JSON_RAW" == "[]" || -z "$BQ_JSON_RAW" ]]; then BQ_JSON_RAW=""; fi
+    BQ_KEYS=()
+    while IFS= read -r key; do [[ -n "$key" ]] && BQ_KEYS+=("$key"); done < <(echo "$STATE_CONTENT" | jq -r '.outputs.bq_data_stores.value // {} | keys[]')
 
-    # Extract mappings of TF key to data_store_id from state outputs for reverse lookup
-    GCS_MAP=$(echo "$STATE_CONTENT" | jq -c '.outputs.gcs_data_stores.value // {} | map_values(.data_store_id)')
-    BQ_MAP=$(echo "$STATE_CONTENT" | jq -c '.outputs.bq_data_stores.value // {} | map_values(.data_store_id)')
-
-    DS_ID_ARRAY=()
-    DS_DISPLAY_ARRAY=()
-    
-    if [[ -n "$GCS_JSON_RAW" ]]; then
-        while IFS= read -r id; do [[ -n "$id" ]] && DS_ID_ARRAY+=("$id"); done < <(echo "$GCS_JSON_RAW" | jq -r '.[].data_store_id')
-        while IFS= read -r disp; do [[ -n "$disp" ]] && DS_DISPLAY_ARRAY+=("$disp"); done < <(echo "$GCS_JSON_RAW" | jq -r '.[].display_name')
-    fi
-    if [[ -n "$BQ_JSON_RAW" ]]; then
-        while IFS= read -r id; do [[ -n "$id" ]] && DS_ID_ARRAY+=("$id"); done < <(echo "$BQ_JSON_RAW" | jq -r '.[].data_store_id')
-        while IFS= read -r disp; do [[ -n "$disp" ]] && DS_DISPLAY_ARRAY+=("$disp"); done < <(echo "$BQ_JSON_RAW" | jq -r '.[].display_name')
-    fi
-
-    echo ""
-    echo -e "${BLUE}--- Application Details ---${NC}"
-    echo -e "${YELLOW}Please provide details for the Gemini Enterprise Application.${NC}"
-    APP_LIST=()
-    APPS_OBJ="{}"
-    
-    while true; do
-        APP_DISPLAY=""
-        while [[ -z "$APP_DISPLAY" ]]; do
-            read -p "Please enter a Display Name for the Application: " APP_DISPLAY
-        done
-        
-        APP_COMPANY=""
-        while [[ -z "$APP_COMPANY" ]]; do
-            read -p "Please enter the Agency / Department Name (no abbreviations): " APP_COMPANY
-        done
-        
-        echo ""
-        echo -e "${RED}WARNING: Enabling Gemini Enterprise Usage Audit logs will write user queries, model thinking, and model responses to Cloud Logging.${NC}"
-        echo -e "${RED}You must ensure that logging permissions are set to allow only necessary principals to access.${NC}"
-        read -p "Would you like to enable Gemini Enterprise Usage Audit logs (conversation logging) for this application? [y/N]: " ENABLE_AUDIT_LOGS
-        if [[ "$ENABLE_AUDIT_LOGS" =~ ^[Yy]$ ]]; then
-            ENABLE_AUDIT_LOGS_FLAG="true"
-        else
-            ENABLE_AUDIT_LOGS_FLAG="false"
-        fi
-
-        echo ""
-        echo -e "${YELLOW}Agent Sharing Feature:${NC}"
-        echo -e "${YELLOW}When enabled, users can share agents with other users using the Gemini Enterprise app.${NC}"
-        read -p "Would you like to enable the 'Agent Sharing' feature? [y/N]: " ENABLE_AGENT_SHARING
-        if [[ "$ENABLE_AGENT_SHARING" =~ ^[Yy]$ ]]; then
-            ENABLE_AGENT_SHARING_FLAG="true"
-            sed -i '' 's/disable-agent-sharing:.*/disable-agent-sharing: "FEATURE_STATE_OFF"/' gem4gov-cli/engine_features.yaml 2>/dev/null || sed -i 's/disable-agent-sharing:.*/disable-agent-sharing: "FEATURE_STATE_OFF"/' gem4gov-cli/engine_features.yaml
-        else
-            ENABLE_AGENT_SHARING_FLAG="false"
-            sed -i '' 's/disable-agent-sharing:.*/disable-agent-sharing: "FEATURE_STATE_ON"/' gem4gov-cli/engine_features.yaml 2>/dev/null || sed -i 's/disable-agent-sharing:.*/disable-agent-sharing: "FEATURE_STATE_ON"/' gem4gov-cli/engine_features.yaml
-        fi
-
-        echo ""
-        echo -e "${YELLOW}Agent Sharing without Admin Approval Feature:${NC}"
-        echo -e "${YELLOW}When enabled, users on your team can share and use agents without admin approval when using the Gemini Enterprise app.${NC}"
-        read -p "Would you like to enable 'Agent Sharing without Admin Approval'? [y/N]: " ENABLE_AGENT_SHARING_NO_APPROVAL
-        if [[ "$ENABLE_AGENT_SHARING_NO_APPROVAL" =~ ^[Yy]$ ]]; then
-            ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="true"
-            sed -i '' 's/agent-sharing-without-admin-approval:.*/agent-sharing-without-admin-approval: "FEATURE_STATE_ON"/' gem4gov-cli/engine_features.yaml 2>/dev/null || sed -i 's/agent-sharing-without-admin-approval:.*/agent-sharing-without-admin-approval: "FEATURE_STATE_ON"/' gem4gov-cli/engine_features.yaml
-        else
-            ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="false"
-            sed -i '' 's/agent-sharing-without-admin-approval:.*/agent-sharing-without-admin-approval: "FEATURE_STATE_OFF"/' gem4gov-cli/engine_features.yaml 2>/dev/null || sed -i 's/agent-sharing-without-admin-approval:.*/agent-sharing-without-admin-approval: "FEATURE_STATE_OFF"/' gem4gov-cli/engine_features.yaml
-        fi
-        
-        echo ""
-        # Determine App Key
-        APP_SUFFIX=$(python3 -c "import random, string; print(''.join(random.choices(string.ascii_lowercase + string.digits, k=4)))")
-        ENG_ID="g4g-gem-ent-app-${APP_SUFFIX}"
-        
-        SELECTED_IDS=""
-        if [[ ${#DS_ID_ARRAY[@]} -gt 0 ]]; then
-            echo -e "${YELLOW}Available Data Stores for association:${NC}"
-            i=1
-            for idx in "${!DS_ID_ARRAY[@]}"; do
-                echo "$i. ${DS_DISPLAY_ARRAY[$idx]} (${DS_ID_ARRAY[$idx]})"
-                ((i++))
-            done
-            read -p "Select Data Stores to associate (comma-separated numbers, e.g. 1,3) [Enter to skip]: " APP_DS_SEL
-            
-            if [[ -n "$APP_DS_SEL" ]]; then
-                IFS=',' read -ra SELECTED_INDICES <<< "$APP_DS_SEL"
-                SELECTED_DS_LIST=()
-                for index in "${SELECTED_INDICES[@]}"; do
-                    index=$(echo "$index" | xargs)
-                    if [[ "$index" =~ ^[0-9]+$ ]] && (( index >= 1 && index <= ${#DS_ID_ARRAY[@]} )); then
-                        SELECTED_DS_LIST+=("${DS_ID_ARRAY[$((index-1))]}")
-                    fi
-                done
-                if [[ ${#SELECTED_DS_LIST[@]} -gt 0 ]]; then
-                    SELECTED_IDS=$(IFS=,; echo "${SELECTED_DS_LIST[*]}")
-                fi
-            fi
-        fi
-        
-        # Map selected DS IDs to keys
-        GCS_KEYS_JSON="[]"
-        BQ_KEYS_JSON="[]"
-        if [[ -n "$SELECTED_IDS" ]]; then
-             IFS=',' read -ra SELECTED_IDS_ARR <<< "$SELECTED_IDS"
-             for DS_ID in "${SELECTED_IDS_ARR[@]}"; do
-                 # Look up key in GCS map:
-                 GCS_KEY=$(echo "$GCS_MAP" | jq -r --arg val "$DS_ID" 'to_entries[] | select(.value == $val) | .key')
-                 if [[ -n "$GCS_KEY" && "$GCS_KEY" != "null" ]]; then
-                     GCS_KEYS_JSON=$(echo "$GCS_KEYS_JSON" | jq --arg key "$GCS_KEY" '. + [$key]')
-                 else
-                     # Look up key in BQ map:
-                     BQ_KEY=$(echo "$BQ_MAP" | jq -r --arg val "$DS_ID" 'to_entries[] | select(.value == $val) | .key')
-                     if [[ -n "$BQ_KEY" && "$BQ_KEY" != "null" ]]; then
-                         BQ_KEYS_JSON=$(echo "$BQ_KEYS_JSON" | jq --arg key "$BQ_KEY" '. + [$key]')
-                     fi
-                 fi
-             done
-        fi
-
-        APP_JSON=$(jq -n \
-            --arg display "$APP_DISPLAY" \
-            --arg company "$APP_COMPANY" \
-            --argjson gcs_keys "$GCS_KEYS_JSON" \
-            --argjson bq_keys "$BQ_KEYS_JSON" \
-            '{display_name: $display, company_name: $company, gcs_data_store_keys: $gcs_keys, bq_data_store_keys: $bq_keys}')
-        
-        # Add to the apps map
-        # Key is the ENG_ID
-        APPS_OBJ=$(echo "$APPS_OBJ" | jq --arg key "$ENG_ID" --argjson val "$APP_JSON" '. + {($key): $val}')
-
-        echo ""
-        read -p "[PREVIEW] Do you want to create another Gemini Enterprise Application? [y/N]: " CREATE_APP
-        if [[ ! "$CREATE_APP" =~ ^[Yy]$ ]]; then
-            break
-        fi
-    done
+    # Prompts for Gemini Applications configuration
+    prompt_gemini_apps
     
     if [[ "$APPS_OBJ" == "{}" ]]; then
          echo "No applications generated."
