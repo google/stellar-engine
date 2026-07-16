@@ -26,7 +26,7 @@ locals {
   discovery_engine_parsing_mode = "digital_parsing_config"
 
   # Load features directly from the local YAML config
-  engine_features = yamldecode(file("${path.module}/engine_features.yaml"))["features"]
+  engine_features = yamldecode(file("data/engine_features.yaml"))["features"]
 }
 
 # ---------------------------------------------------------------------------- #
