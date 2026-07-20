@@ -525,8 +525,8 @@ single region storage bucket, or vice versa).
 The audit project (`audit-logs-0`) is created to centralize organization-level logs. By default, audit logs are routed to CMEK-encrypted Cloud Logging buckets within this project (`type = "logging"`).
 
 #### Audit Log Retention
-- **Cloud Logging Buckets (Default):** The default retention for Cloud Logging buckets created in this stage is **30 days**. While 30 days is longer than the few days provided by Pub/Sub, it is still a limited window if your Security Information and Event Management (SIEM) integration or long-term archiving solutions are not fully established.
-- **Adjusting Retention:** If you require longer log retention for compliance or auditing before SIEM integration, you can change the routing type to `storage` (for GCS buckets) or configure custom retention settings.
+- **Cloud Logging Buckets (Default):** The default retention for Cloud Logging buckets created in this stage is **365 days** (1 year) to comply with regulatory standards (e.g. NIST 800-53 AU-9 requirements).
+- **Adjusting Retention:** If you require a different retention period, configure the `logging_bucket_retention` variable in Stage 0. If you require long-term archival or external analytical processing, you can change the routing type to `storage` (for GCS buckets) or `bigquery` (for BigQuery dataset).
 
 #### Transitioning to Pub/Sub Routing (SIEM Integration)
 To stream logs to an external SIEM or analytical platform, you can configure your log sinks to route to Pub/Sub (`type = "pubsub"`).
