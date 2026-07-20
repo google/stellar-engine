@@ -1,6 +1,6 @@
 ## Introduction
 
-Stellar Engine is a fork of the Google Cloud Foundation Fabric (CFF) repository, aimed at providing Infrastructure as Code (IaC) for Google Cloud Platform (GCP) customers who need to create a landing zone environment with the Assured Workload overlays. In addition to the IaC, there is documentation available for both the DISA FedRAMP High (FRH), DoD Impact Level 4 (IL4) and DoD Impact Level (IL5) compliance regimes that provide a mapping of National Institute of Standards and Technology (NIST) 800-53r5 controls to enable projects that leverage the Stellar Engine codebase to accelerate the speed at which an Authorization to Operate (ATO) can be attained.
+Stellar Engine is a fork of the Google Cloud Foundation Fabric (CFF) repository, aimed at providing Infrastructure as Code (IaC) for Google Cloud Platform (GCP) customers who need to create a landing zone environment with the Assured Workload overlays. In addition to the IaC, there is [documentation available](docs/path-to-authorization.md) for both the DISA FedRAMP High (FRH), DoD Impact Level 4 (IL4) and DoD Impact Level (IL5) compliance regimes that provide a mapping of National Institute of Standards and Technology (NIST) 800-53r5 controls to enable projects that leverage the Stellar Engine codebase to accelerate the speed at which an Authorization to Operate (ATO) can be attained.
 
 ## Getting Started
 
@@ -14,22 +14,22 @@ This repository provides **end-to-end blueprints** and a **suite of Terraform mo
 
 The target audience for Stellar Engine is organizations and teams that operate in regulated industries or require robust compliance and security frameworks. Below are a few examples of these such users:
 
-<mark>Government Agencies:</mark> Agencies and contractors, such as those that work with FRH, IL4, and IL5 environments.  <br />
-<mark>Regulated Industries:</mark> Regulated industries often face overlapping compliance and security requirements; Stellar Engine can simplify that.  <br />
-<mark>Educational and Research Institutions:</mark> Universities and research organizations working on government-funded projects that require secure and compliant cloud environments.  <br />
+- **Government Agencies:** Agencies and contractors, such as those that work with FRH, IL4, and IL5 environments.  <br />
+- **Regulated Industries:** Regulated industries often face overlapping compliance and security requirements; Stellar Engine can simplify that.  <br />
+- **Educational and Research Institutions:** Universities and research organizations working on government-funded projects that require secure and compliant cloud environments.  <br />
 
 ## Benefits of Stellar Engine
 
 Stellar Engine offers several significant benefits, particularly for organizations operating in regulated environments or requiring high levels of compliance and security. Here are the key advantages based on the summary:
 
-<mark>Pre-Built Compliance Mappings:</mark> The inclusion of documentation mapping NIST 800-53r5 controls for FRH, IL4, and IL5 simplifies the process of achieving compliance. This allows organizations to fast-track their ATO processes by leveraging pre-validated configurations.  <br />
-<mark>IaC for Compliance:</mark> By embedding compliance requirements into IaC, Stellar Engine ensures that key controls are implemented consistently and automatically.   <br />
-<mark>Consistency and Scalability:</mark> Utilizing IaC enables repeatable and reliable deployment of landing zones, ensuring that infrastructure adheres to best practices and compliance standards.  <br />
-<mark>Flexibility:</mark> While tailored for Assured Workload overlays, Stellar Engine serves as a foundation for other compliance regimes, making it adaptable to various regulatory requirements.  <br />
-<mark>Efficiency:</mark> Automating infrastructure deployment reduces setup time and operational overhead, freeing up resources for other critical tasks and reducing manual effort and the risk of human error. <br />
-<mark>Assured Workload Overlays:</mark> By integrating with Google Cloud’s Assured Workloads, Stellar Engine provides a robust framework for secure and compliant cloud environments, particularly for sensitive workloads in government and defense sectors.  <br />
-<mark>Control Implementation:</mark> Many NIST controls are directly addressed via IaC, ensuring that security measures are embedded into the infrastructure from the start.  <br />
-<mark>Comprehensive Documentation:</mark> The availability of detailed guidance helps teams navigate the complexities of compliance and understand the implementation of controls.  <br />
+- **Pre-Built Compliance Mappings:** The inclusion of documentation mapping NIST 800-53r5 controls for FRH, IL4, and IL5 simplifies the process of achieving compliance. This allows organizations to fast-track their ATO processes by leveraging pre-validated configurations.  <br />
+IaC for Compliance: By embedding compliance requirements into IaC, Stellar Engine ensures that key controls are implemented consistently and automatically.   <br />
+- **Consistency and Scalability:** Utilizing IaC enables repeatable and reliable deployment of landing zones, ensuring that infrastructure adheres to best practices and compliance standards.  <br />
+- **Flexibility:** While tailored for Assured Workload overlays, Stellar Engine serves as a foundation for other compliance regimes, making it adaptable to various regulatory requirements.  <br />
+- **Efficiency:** Automating infrastructure deployment reduces setup time and operational overhead, freeing up resources for other critical tasks and reducing manual effort and the risk of human error. <br />
+- **Assured Workload Overlays:** By integrating with Google Cloud’s Assured Workloads, Stellar Engine provides a robust framework for secure and compliant cloud environments, particularly for sensitive workloads in government and defense sectors.  <br />
+- **Control Implementation:** Many NIST controls are directly addressed via IaC, ensuring that security measures are embedded into the infrastructure from the start.  <br />
+- **Comprehensive Documentation:** The availability of detailed guidance helps teams navigate the complexities of compliance and understand the implementation of controls.  <br />
 
 ## Assured Workloads
 
