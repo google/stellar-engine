@@ -1,0 +1,60 @@
+domain                              = "[YOUR DOMAIN]"
+gatekeeper_sa                       = "gk-int-sa"
+gke_cluster_enable_private_endpoint = true
+gke_cluster_master_global_access    = true
+gke_cluster_name                    = "gke-cluster"
+gke_initial_node_per_zone           = 1
+gke_nodepool_name                   = "gke-nodepool"
+gke_vpc_master_ipv4_cidr_block      = "192.168.0.0/28"
+
+kms_keyring_name = {
+  location = "[YOUR REGION]"
+  name     = "gkekeyring1"
+}
+
+kms_key_names = {
+  "default" = {
+    rotation_period            = "7776000s" # CIS Compliance Benchmark 1.10
+    destroy_scheduled_duration = "2592000s"
+    labels = {
+      "team" = "gke-team"
+    }
+    version_template = {
+      algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
+      protection_level = "HSM"
+    }
+    lifecycle = {
+      prevent_destroy = true
+    }
+  }
+}
+
+local_admin_external_ip = ["[YOUR LOCAL EXTERNAL IP]"]
+
+main_project_id                    = "[MAIN PROJECT]"
+master_authorized_ranges_ip_ranges = "10.0.0.0/8"
+
+nat_gateway_name  = "gke-nat-gateway"
+nat_router_name   = "gke-nr"
+network_name      = "gke-vpc-int"
+node_config_tags  = ["node-config-gke", "intial-nodeconfig-gke"]
+node_disk_size_gb = 20
+nodepool_node_count = {
+  initial = 1
+}
+
+policy_controller_exemptable_namespaces = [
+  "gke-gmp-system", "gke-managed-filestorecsi", "kube-system"
+]
+
+region                   = "[Your Region]"
+remove_default_node_pool = true
+
+source_branch = "[Your Repo Branch]"
+source_dir    = "[Root Folder In Branch With Manifest Files]"
+source_repo   = "[Your Repo Url]"
+
+subnetwork_name                          = "[Your Subnet]"
+subnetwork_ip_cidr_range_1               = "10.0.4.0/22"
+subnetwork_secondary_ip_range_pods_1     = "10.4.0.0/14"
+subnetwork_secondary_ip_range_services_1 = "10.0.32.0/20"

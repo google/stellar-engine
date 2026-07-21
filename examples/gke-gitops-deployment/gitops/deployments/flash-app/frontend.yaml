@@ -1,0 +1,8 @@
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: flash-frontend-config
+  namespace: flash
+spec:
+  redirectToHttps:
+    enabled: true

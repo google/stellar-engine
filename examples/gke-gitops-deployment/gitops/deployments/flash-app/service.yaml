@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: flash-service
+  namespace: flash5
+spec:
+  selector:
+    app: flash
+  ports:
+  - protocol: TCP
+    name: http
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
