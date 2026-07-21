@@ -1,0 +1,27 @@
+project_id         = "xxxx-xxxx-xxxx-main-0"
+kms_project_id     = "xxxx-xxxx-xxxx-iac-core-0"
+network_project_id = "xxxx-xxxx-net-host"
+
+region = "us-east4"
+zone   = "us-east4-a"
+
+network_name    = "xxxx-spoke-0"      # Must already exist
+subnetwork_name = "default-us-east4"  # Must already exist
+
+kms_keyring_name = "xxxx-xxxx-keyring"
+kms_key_name     = "default"          # Must already exist
+
+# Artifact Registry
+artifact_registry_repo_id = "acas-rpms"
+
+# Base image from GCP Marketplace
+base_image = "projects/cis-public/global/images/family/cis-rhel8-stig"
+
+# Set to the exact RPM filename you placed in the rpms/ directory
+# e.g.: scanner_rpm_filename = "Nessus-10.12.0-el8.x86_64.rpm"
+scanner_rpm_filename = "Nessus-x.x.x-el8.x86_64.rpm"
+sc_rpm_filename      = "SecurityCenter-x.x.x-el8.x86_64.rpm"
+
+# Controls which image build triggers to create
+build_scanner_image = false
+build_sc_image      = false

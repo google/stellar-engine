@@ -6,4 +6,6 @@ edition       = "ENTERPRISE"
 database_name = "database-name-01"
 database_user = "group:<GROUP-EMAIL-ADDRESS>"
 
+database_drop_protection = false
+
 region = "us-east4"

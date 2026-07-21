@@ -40,7 +40,7 @@ variable "disksize" {
 variable "instance_name" {
   description = "Provide the name of the Shielded Compute VM."
   type        = string
-  default     = "shieled-vm-inst"
+  default     = "shielded-vm-inst"
 }
 
 variable "instance_type" {
@@ -82,7 +82,7 @@ variable "region" {
 }
 
 variable "source_ranges_allowed" {
-  description = "The List of the source IP CIDR range allowed to connect to the Shieled Compute VM."
+  description = "The List of the source IP CIDR range allowed to connect to the Shielded Compute VM."
   type        = list(any)
   # #Example   default     = ["10.0.1.0/24"]
 }

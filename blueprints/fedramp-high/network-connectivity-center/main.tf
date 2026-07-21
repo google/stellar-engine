@@ -1,17 +1,3 @@
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 locals {
   spoke_projects = distinct(
     concat(
@@ -19,23 +5,6 @@ locals {
       [var.main_project_id]
     )
   )
-
-  # Determination of spoke groups based on the chosen topology
-  # This uses a single for_each expression with an inline conditional
-  # for group ID
-  spoke_groups = {
-    for spoke_name, spoke_self_link in var.spokes : spoke_name => (
-      var.topology == "MESH" ? (
-        # If MESH, always assign to the default group
-        google_network_connectivity_group.default[0].id
-        ) : (
-        # If STAR, determine if it's center or edge based on project ID
-        regex("projects/([^/]+)/", spoke_self_link)[0] == var.main_project_id ?
-        google_network_connectivity_group.center[0].id :
-        google_network_connectivity_group.edge[0].id
-      )
-    )
-  }
 }
 
 # Enable the API service
@@ -49,7 +18,7 @@ resource "google_project_service" "ncc" {
 }
 
 resource "google_network_connectivity_hub" "hub" {
-  name            = var.ncc_hub_name
+  name            = var.name
   project         = var.main_project_id
   preset_topology = var.topology
   export_psc      = var.psc_prop
@@ -92,11 +61,12 @@ resource "google_network_connectivity_spoke" "spokes" {
   # Grab the project id from the vpc self-link
   project = regex("projects/([^/]+)/", each.value)[0]
 
-  # Determine which group each spoke should be added to - now uses local.spoke_groups
-  group = local.spoke_groups[each.key]
+  # Determine which group each spoke should be added to
+  group = (var.topology == "MESH" ? google_network_connectivity_group.default[0].id :
+    (regex("projects/([^/]+)/", each.value)[0] == var.main_project_id ? google_network_connectivity_group.center[0].id :
+  google_network_connectivity_group.edge[0].id))
 
   linked_vpc_network {
     uri = each.value
   }
 }
-

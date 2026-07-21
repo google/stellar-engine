@@ -1,0 +1,39 @@
+# Example Values for Full Stack (GCP & Azure Managed) Deployment
+
+project_id            = "my-production-project-123"
+region                = "us-east4"
+azure_subscription_id = "12345678-1234-1234-1234-123456789012"
+name_prefix           = "prod-full-vpn"
+
+gcp_network_name = "prod-vpc-network"
+gcp_router_name  = "prod-vpc-router-use4"
+
+# Azure specific identifiers for existing Virtual Network Gateway
+azure_resource_group_name = "rg-networking-core-prod"
+azure_vpn_gateway_name    = "vng-core-prod-useast"
+gcp_bgp_asn      = 65514
+azure_bgp_asn             = 65515
+
+# GCP Regional Secret Manager reference names
+secret_name_tunnel0 = "azure-vpn-psk-tun0"
+secret_name_tunnel1 = "azure-vpn-psk-tun1"
+
+# Advanced configuration (optional, defaults shown)
+stack_type         = "IPV4_ONLY"
+gateway_ip_version = "IPV4"
+
+# CNSA-compliant defaults are built into the module, but can be overridden here
+# tunnel_cipher_suite = {
+#   phase1 = {
+#     encryption = ["AES-GCM-16-256"]
+#     integrity  = []
+#     prf        = ["PRF-HMAC-SHA2-384"]
+#     dh         = ["Group-20"]
+#   }
+#   phase2 = {
+#     encryption = ["AES-GCM-16-256"]
+#     integrity  = []
+#     pfs        = ["Group-20"]
+#   }
+# }
+

@@ -1,0 +1,9 @@
+project_id  = "xxx-xxx-xxx-main-0"
+bucket_name = "main-application-bucket"
+
+locations = {
+  gcs = "us-east4"
+}
+
+state_bucket = "cloud-build-state"
+prefix       = "blu1"

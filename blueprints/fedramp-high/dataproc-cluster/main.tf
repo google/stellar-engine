@@ -18,14 +18,6 @@ data "google_project" "current" {
   project_id = var.main_project_id
 }
 
-data "google_project" "landing_project" {
-  project_id = var.network_project_id
-}
-
-data "google_project" "core_project" {
-  project_id = var.core_project_id
-}
-
 data "google_compute_network" "network" {
   name    = var.network_name
   project = var.network_project_id
@@ -74,10 +66,7 @@ resource "google_compute_firewall" "dataproc" {
   allow {
     protocol = "icmp"
   }
-  log_config {
-    metadata = "INCLUDE_ALL_METADATA"
-  }
-  source_ranges = ["10.128.0.0/9"]
+  source_tags = ["dataproc"]
 }
 
 module "gcs" {
@@ -133,6 +122,7 @@ module "dataproc_cluster" {
     }
   }
   depends_on = [
-    google_kms_crypto_key_iam_binding.dataproc_kms
+    google_kms_crypto_key_iam_binding.dataproc_kms,
+    google_compute_firewall.dataproc
   ]
 }

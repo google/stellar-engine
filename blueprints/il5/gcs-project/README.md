@@ -64,7 +64,7 @@ terraform destroy
 ```
 
 ## Verification of a successful deployment
-The apply will take about 10 seconds to deploy. The Google Cloud Stroage Bucket will be deployed in the main project. 
+The apply will take about 10 seconds to deploy. The Google Cloud Storage Bucket will be deployed in the main project. 
 To see the bucket, browse to [Cloud Storage Bucket](https://console.cloud.google.com/storage/browser) and open the bucket that matches your ```prefix-bucket_name```.
 <!-- BEGIN TFDOC -->
 ## Variables
@@ -79,8 +79,8 @@ To see the bucket, browse to [Cloud Storage Bucket](https://console.cloud.google
 | [retention_policy](variables.tf#L75) | Retention policy. | <code title="object&#40;&#123;&#10;  is_locked        &#61; bool&#10;  retention_period &#61; number&#10;&#125;&#41;&#10;&#10;&#10;default &#61; &#123;&#10;  is_locked        &#61; false &#35; Change to true if storing logs here for CIS Compliance Benchmark 2.3&#10;  retention_period &#61; 7776000&#10;&#125;">object&#40;&#123;&#8230;&#125;</code> | ✓ |  |
 | [autoclass](variables.tf#L18) | Enable autoclass to automatically transition objects to appropriate storage classes based on their access pattern. If set to true, storage_class must be set to STANDARD. When set to true, All objects added to the bucket begin in Standard storage, even if a different storage class is specified in the request. | <code>bool</code> |  | <code>true</code> |
 | [prefix](variables.tf#L49) | Optional prefix used to generate the bucket name. | <code>string</code> |  | <code>&#34;string&#34;</code> |
-| [public_access_prevention](variables.tf#L59) | This provides the ability to toggle Public Access Prevention for the GCS Storage bucket. By settng this variable to enforced, the CIS Compliance Benchmark 5.1 control is satsified. | <code>string</code> |  | <code>&#34;enforced&#34;</code> |
+| [public_access_prevention](variables.tf#L59) | This provides the ability to toggle Public Access Prevention for the GCS Storage bucket. By setting this variable to enforced, the CIS Compliance Benchmark 5.1 control is satisfied. | <code>string</code> |  | <code>&#34;enforced&#34;</code> |
 | [region](variables.tf#L69) | Bucket region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
 | [storage_class](variables.tf#L88) | Bucket storage class. | <code>string</code> |  | <code>&#34;STANDARD&#34;</code> |
-| [uniform_bucket_level_access](variables.tf#L98) | This provides the ability to toggle Uniform Bucket Level Acess for the GCS Storage bucket. By settng this variable to true, the CIS Compliance Benchmark 5.2 control is satsified. | <code>bool</code> |  | <code>true</code> |
+| [uniform_bucket_level_access](variables.tf#L98) | This provides the ability to toggle Uniform Bucket Level Access for the GCS Storage bucket. By setting this variable to true, the CIS Compliance Benchmark 5.2 control is satisfied. | <code>bool</code> |  | <code>true</code> |
 <!-- END TFDOC -->

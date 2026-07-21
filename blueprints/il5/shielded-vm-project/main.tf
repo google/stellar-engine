@@ -82,32 +82,16 @@ module "shielded-vm" {
   service_account = {
     email = google_service_account.compute.email
   }
-  snapshot_schedules = {
-    daily-backup = {
-      schedule = {
-        daily = {
-          days_in_cycle = 1
-          start_time    = "04:00"
-        }
-      }
-      retention_policy = {
-        max_retention_days = 14
-      }
-    }
-  }
-
   attached_disks = [
     {
       auto_delete       = true
       size              = var.disksize
       name              = "data-disk"
-      snapshot_schedule = ["daily-backup"]
       kms_key_self_link = data.google_kms_crypto_key.default.id
     }
   ]
 
   boot_disk = {
-    snapshot_schedule = ["daily-backup"]
     initialize_params = {
       image = "cos-cloud/cos-stable" #Required for Confidential Compute
     }
@@ -123,9 +107,6 @@ resource "google_compute_firewall" "default" {
   allow {
     protocol = "tcp"
     ports    = var.allowed_firewall_ports
-  }
-  log_config {
-    metadata = "INCLUDE_ALL_METADATA"
   }
   source_ranges = var.source_ranges_allowed
 }

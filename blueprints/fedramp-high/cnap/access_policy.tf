@@ -1,17 +1,3 @@
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 resource "google_access_context_manager_access_levels" "access-levels" {
   parent = "accessPolicies/${var.access_policy_number}"
 
@@ -40,18 +26,18 @@ resource "google_access_context_manager_access_levels" "access-levels" {
     }
   }
 
-  # Access level for expiring access at midnight of 2024-12-31.
+  # Access level for expiring access at midnight of 2030-01-01.
   access_levels {
     name  = "accessPolicies/${var.access_policy_number}/accessLevels/expire"
-    title = "Expire Access 2024"
+    title = "Expire Access 2030"
     custom {
       expr {
-        expression = ("request.time < timestamp(\"2025-01-01T00:00:00Z\")")
+        expression = ("request.time < timestamp(\"2030-01-01T00:00:00Z\")")
       }
     }
   }
 
-  # Access level for "easy" service, including US Region devices.
+  # Access level for "lenient" service, including US Region devices.
   access_levels {
     name  = "accessPolicies/${var.access_policy_number}/accessLevels/lenient_device"
     title = "Lenient Device Policy"
@@ -62,7 +48,7 @@ resource "google_access_context_manager_access_levels" "access-levels" {
     }
   }
 
-  # Access level for "moderate" service, including US Region, Time (7AM-9PM Monday-Friday) & Expiring Access by end of 2024.
+  # Access level for "moderate" service, including US Region, Time (7AM-9PM Monday-Friday) & Expiring Access at the start of 2030.
   access_levels {
     name  = "accessPolicies/${var.access_policy_number}/accessLevels/moderate_device"
     title = "Moderate Device Policy"
@@ -73,7 +59,7 @@ resource "google_access_context_manager_access_levels" "access-levels" {
     }
   }
 
-  # Access level for "strict" service, including Mac/Windows OS, Encryption enabled, Corp owned device, Expiring Access by end of 2024, Time (7AM-9PM Monday-Friday), & US Region.
+  # Access level for "strict" service, including Mac/Windows OS, Encryption enabled, Corp owned device, Expiring Access at the start of 2030, Time (7AM-9PM Monday-Friday), & US Region.
   access_levels {
     name  = "accessPolicies/${var.access_policy_number}/accessLevels/strict_device"
     title = "Strict Device Policy"

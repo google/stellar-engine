@@ -1,11 +1,11 @@
 /**
- * Copyright 2024 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,298 +14,172 @@
  * limitations under the License.
  */
 
-locals {
-  # --- General Configuration ---
-  # A 30-second delay to ensure IAM permissions fully propagate before dependent
-  # resources are created, preventing common race condition errors.
-  iam_propagation_wait_duration = "30s"
+data "google_project" "current" {}
 
-  # --- API Enablement ---
-  # Collect all unique project IDs where resources are provisioned or consumed.
-  all_gke_project_ids_for_api_enablement = toset(distinct(
-    [
-      var.main_project_id,
-      var.landing_project_id,
-      var.core_project_id
-    ]
-  ))
-
-  # Common set of APIs required for GKE clusters and related resources.
-  gke_required_apis = toset([
-    "container.googleapis.com",
-    "containerregistry.googleapis.com",
-    "gkehub.googleapis.com",
-    "iam.googleapis.com",
-    "cloudresourcemanager.googleapis.com",
-    "compute.googleapis.com",
-    "logging.googleapis.com",
-    "monitoring.googleapis.com",
-    "cloudkms.googleapis.com"
-  ])
-
-  # Create a flattened map of all project-service pairs for the for_each loop.
-  api_services_to_enable = { for pair in flatten([
-    for p_id in local.all_gke_project_ids_for_api_enablement : [
-      for s_name in local.gke_required_apis : {
-        project = p_id
-        service = s_name
-      }
-    ]
-    ]) : "${pair.project}_${pair.service}" => pair
-  }
-}
-
-# --- CIS Compliance Project Metadata ---
-# Only uncomment if no organization policies enforce the below.
-# resource "google_compute_project_metadata" "cis_compliance" {
-#   project = var.main_project_id
+# Only uncomment if no organization policies enforce the below
+# resource "google_compute_project_metadata" "default" {
 #   metadata = {
-#     enable-oslogin  = "TRUE" # CIS Compliance Benchmark 4.4
-#     enable-osconfig = "TRUE" # CIS Compliance Benchmark 4.12
+# enable-oslogin = "TRUE" # CIS Compliance Benchmark 4.4 - applies to all VMs in project
+# enable-osconfig = "TRUE" # CIS Compliance Benchmark 4.12 - applies to all VMs in project
 #   }
 # }
 
-# --- API Enablement ---
-resource "google_project_service" "gke_core_api_enablement" {
-  for_each           = local.api_services_to_enable
-  project            = each.value.project
-  service            = each.value.service
-  disable_on_destroy = false
-}
-
-# --- Service Accounts and Identities ---
-resource "google_service_account" "gke_cluster_sa" {
-  project      = var.main_project_id
-  account_id   = "gke-sa-${var.gke_cluster_name}"
-  display_name = "GKE Cluster Service Account for ${var.gke_cluster_name}"
-}
-
-resource "google_project_service_identity" "container_engine_robot" {
-  provider   = google-beta
+resource "google_service_account" "gke" {
+  account_id = "gke-${var.main_project_id}"
   project    = var.main_project_id
-  service    = "container.googleapis.com"
-  depends_on = [google_project_service.gke_core_api_enablement]
 }
 
-data "google_project" "main" {
+resource "google_service_account" "gke_developer_sa" {
+  project      = data.google_project.current.project_id
+  account_id   = "gke-developer-sa"
+  display_name = "Service Account for GKE Developer tasks"
+}
+
+resource "google_project_iam_member" "gke_cluster_admin" {
+  project = data.google_project.current.project_id
+  role    = "roles/container.developer"
+  member  = "serviceAccount:${google_service_account.gke_developer_sa.email}"
+}
+
+resource "google_project_service" "storagetransfer_api" {
+  project = var.main_project_id
+  service = "storagetransfer.googleapis.com"
+}
+
+module "kms" {
+  source     = "../../../modules/kms"
   project_id = var.main_project_id
-}
-
-# --- Data Sources for Existing Infrastructure ---
-data "google_compute_network" "existing_network" {
-  project    = var.landing_project_id
-  name       = var.existing_network_name
-  depends_on = [google_project_service.gke_core_api_enablement]
-}
-
-data "google_compute_subnetwork" "existing_subnetwork" {
-  project    = var.landing_project_id
-  name       = var.existing_subnetwork_name
-  region     = var.gcp_region
-  depends_on = [google_project_service.gke_core_api_enablement]
-}
-
-data "google_kms_key_ring" "existing_kms_keyring" {
-  project    = var.core_project_id
-  name       = var.existing_kms_keyring_name
-  location   = var.gcp_region
-  depends_on = [google_project_service.gke_core_api_enablement]
-}
-
-data "google_kms_crypto_key" "existing_kms_key" {
-  name       = var.existing_kms_key_name
-  key_ring   = data.google_kms_key_ring.existing_kms_keyring.id
-  depends_on = [google_project_service.gke_core_api_enablement]
-}
-
-# --- IAM Bindings ---
-resource "google_kms_crypto_key_iam_member" "gke_kms_access" {
-  for_each = {
-    custom_sa = "serviceAccount:${google_service_account.gke_cluster_sa.email}",
-    gke_agent = "serviceAccount:${google_project_service_identity.container_engine_robot.email}"
-  }
-  crypto_key_id = data.google_kms_crypto_key.existing_kms_key.id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = each.value
-}
-
-resource "google_kms_crypto_key_iam_member" "compute_agent_kms_access" {
-  crypto_key_id = data.google_kms_crypto_key.existing_kms_key.id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:service-${data.google_project.main.number}@compute-system.iam.gserviceaccount.com"
-}
-
-resource "google_project_iam_member" "gke_host_service_agent_user" {
-  project = var.landing_project_id
-  role    = "roles/container.hostServiceAgentUser"
-  member  = "serviceAccount:${google_project_service_identity.container_engine_robot.email}"
-}
-
-resource "google_project_iam_member" "gke_compute_network_user" {
-  project = var.landing_project_id
-  role    = "roles/compute.networkUser"
-  member  = "serviceAccount:${google_project_service_identity.container_engine_robot.email}"
-}
-
-resource "google_project_iam_member" "apis_service_agent_network_user" {
-  project = var.landing_project_id
-  role    = "roles/compute.networkUser"
-  member  = "serviceAccount:${data.google_project.main.number}@cloudservices.gserviceaccount.com"
-}
-
-# --- Shared VPC Firewall Rule ---
-resource "google_compute_firewall" "allow_gke_nodes_to_master" {
-  project       = var.landing_project_id
-  name          = "${var.gke_cluster_name}-nodes-to-master"
-  network       = data.google_compute_network.existing_network.self_link
-  direction     = "INGRESS"
-  description   = "Allow GKE nodes to communicate with the GKE master control plane."
-  source_ranges = [data.google_compute_subnetwork.existing_subnetwork.ip_cidr_range]
-  allow {
-    protocol = "tcp"
-    ports    = ["10250", "443"]
-  }
-  allow {
-    protocol = "udp"
-    ports    = ["10250", "443"]
-  }
-  log_config {
-    metadata = "INCLUDE_ALL_METADATA"
+  keys       = var.kms_key_names
+  keyring    = var.kms_keyring_name
+  iam = {
+    "roles/cloudkms.cryptoKeyEncrypterDecrypter" = [
+      google_service_account.gke.member,
+      "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com",
+      "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com"
+    ]
   }
 }
 
-# --- IAM Propagation Delay ---
-resource "time_sleep" "iam_propagation_delay" {
-  create_duration = local.iam_propagation_wait_duration
-  depends_on = [
-    google_kms_crypto_key_iam_member.gke_kms_access,
-    google_kms_crypto_key_iam_member.compute_agent_kms_access,
-    google_project_iam_member.gke_host_service_agent_user,
-    google_project_iam_member.gke_compute_network_user,
-    google_project_iam_member.apis_service_agent_network_user,
+module "vpc" {
+  source                  = "../../../modules/net-vpc"
+  project_id              = var.main_project_id
+  name                    = var.network_name
+  auto_create_subnetworks = false
+  subnets = [
+    {
+      ip_cidr_range = var.subnetwork_ip_cidr_range_1
+      name          = var.subnetwork_name
+      region        = var.region
+      secondary_ip_ranges = {
+        pods     = var.subnetwork_secondary_ip_range_pods_1
+        services = var.subnetwork_secondary_ip_range_services_1
+      }
+      # CIS Compliance Benchmark 3.8
+      flow_logs_config = {
+        aggregation_interval = "INTERVAL_5_SEC"
+        flow_sampling        = 1.0
+        metadata             = "INCLUDE_ALL_METADATA"
+        filter_expression    = "true"
+      }
+    }
   ]
+  dns_policy = {
+    logging = true # CIS Compliance Benchmark 2.12
+  }
 }
 
-# --- GKE Cluster and Nodepool Creation ---
 module "cluster" {
   source              = "../../../modules/gke-cluster-standard"
   project_id          = var.main_project_id
   name                = var.gke_cluster_name
-  location            = var.gcp_region
-  deletion_protection = var.enable_deletion_protection
-
+  location            = var.region
+  deletion_protection = false
   vpc_config = {
-    network    = data.google_compute_network.existing_network.self_link
-    subnetwork = data.google_compute_subnetwork.existing_subnetwork.self_link
-    secondary_range_names = {
-      pods     = var.existing_subnetwork_secondary_range_pods_name
-      services = var.existing_subnetwork_secondary_range_services_name
+    master_ipv4_cidr_block = var.gke_vpc_master_ipv4_cidr_block
+    network                = module.vpc.self_link
+    subnetwork             = module.vpc.subnet_self_links["${var.region}/${var.subnetwork_name}"]
+    master_authorized_ranges = {
+      internal-vms = var.master_authorized_ranges_ip_ranges
     }
   }
-
-  access_config = {
-    private_nodes = var.gke_cluster_enable_private_endpoint
-    ip_access = {
-      disable_public_endpoint = var.gke_cluster_enable_private_endpoint
-      authorized_ranges       = { for k, v in var.master_authorized_ranges : k => v }
-      private_endpoint_config = {
-        global_access = var.gke_cluster_master_global_access
-      }
-    }
-  }
-
   default_nodepool = {
-    remove_pool        = var.remove_default_node_pool
-    initial_node_count = var.gke_initial_node_per_zone
+    initial_node_count       = var.gke_initial_node_per_zone
+    remove_pool              = false
+    remove_default_node_pool = false
   }
-
   node_config = {
-    boot_disk_kms_key = data.google_kms_crypto_key.existing_kms_key.id
-    service_account   = google_service_account.gke_cluster_sa.email
-    tags              = var.node_config_tags
+    # CIS Compliance Benchmark 4.3
     metadata = {
-      "block-project-ssh-keys" = "true" # CIS Compliance Benchmark 4.3 - Block project-wide SSH keys.
+      block-project-ssh-keys = true
+    }
+    boot_disk_kms_key = module.kms.keys.default.id
+
+    # CIS Compliance Benchmark 4.1
+    # CIS Compliance Benchmark 4.2
+    service_account = google_service_account.gke.email
+
+    tags = var.node_config_tags
+
+    machine_type = "n2d-standard-2"
+    confidential_nodes = {
+      enabled = true # CIS Compliance Benchmark 4.11 - Must also choose compatible instance type
     }
   }
-
   enable_features = {
-    shielded_nodes       = true
-    dataplane_v2         = true
-    binary_authorization = true
-    database_encryption = {
-      state    = "ENCRYPTED"
-      key_name = data.google_kms_crypto_key.existing_kms_key.id
-    }
+    enable_shielded_nodes = true
+    dataplane_v2          = true
+    binary_authorization  = true
   }
-
-  depends_on = [
-    time_sleep.iam_propagation_delay,
-    google_compute_firewall.allow_gke_nodes_to_master,
-  ]
+  depends_on = [module.vpc, module.kms]
 }
 
 module "cluster_nodepool" {
   source       = "../../../modules/gke-nodepool"
   project_id   = var.main_project_id
-  cluster_name = module.cluster.name
-  location     = var.gcp_region
+  cluster_name = var.gke_cluster_name
+  location     = var.region
   name         = var.gke_nodepool_name
   node_count   = var.nodepool_node_count
 
+  # CIS Compliance Benchmark 4.1
+  # CIS Compliance Benchmark 4.2
   service_account = {
-    email = google_service_account.gke_cluster_sa.email
+    email = google_service_account.gke.email
   }
-
   node_config = {
-    boot_disk_kms_key = data.google_kms_crypto_key.existing_kms_key.id
+    boot_disk_kms_key = module.kms.keys.default.id
     disk_size_gb      = var.node_disk_size_gb
     machine_type      = var.node_machine_type
     shielded_instance_config = {
       enable_secure_boot          = true
       enable_integrity_monitoring = true
     }
-    metadata = {
-      "block-project-ssh-keys" = "true"
-    }
   }
+  depends_on = [module.cluster]
 }
 
-# --- Bastion Host ---
-module "bastion_vm" {
+module "compute-vm" {
   source        = "../../../modules/compute-vm"
+  name          = "bastion-vm"
   project_id    = var.main_project_id
-  name          = var.bastion_vm_name
-  zone          = var.bastion_vm_zone
-  instance_type = var.bastion_vm_machine_type
+  zone          = "us-east4-a"
+  instance_type = "e2-medium"
   service_account = {
     scopes = ["cloud-platform"]
   }
-  snapshot_schedules = {
-    daily-backup = {
-      schedule = {
-        daily = {
-          days_in_cycle = 1
-          start_time    = "04:00"
-        }
-      }
-      retention_policy = {
-        max_retention_days = 14
-      }
-    }
-  }
-
   boot_disk = {
-    snapshot_schedule = ["daily-backup"]
     initialize_params = {
-      image = var.bastion_vm_image
+      image = "projects/cos-cloud/global/images/cos-105-17412-495-45"
     }
   }
-  network_interfaces = [{
-    network    = data.google_compute_network.existing_network.self_link
-    subnetwork = data.google_compute_subnetwork.existing_subnetwork.self_link
-  }]
+  network_interfaces = [
+    {
+      network    = "projects/${var.main_project_id}/global/networks/${var.network_name}"
+      subnetwork = "projects/${var.main_project_id}/regions/${var.region}/subnetworks/${var.subnetwork_name}"
+    }
+  ]
   encryption = {
-    kms_key_self_link = data.google_kms_crypto_key.existing_kms_key.id
+    kms_key_self_link = module.kms.keys.default.id
   }
+  depends_on = [module.cluster_nodepool]
 }
-

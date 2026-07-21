@@ -1,0 +1,9 @@
+domain = "keycloak.example.com"
+kms_key = "projects/<PREFIX-REGIME-ENV-TENANT-iac-core>/locations/<REGION>/keyRings/Int-dw-keyring/cryptoKeys/default"
+network = "projects/<PREFIX-REGIME-ENV-net-host>/global/networks/<ENV-spoke-0>"
+subnetwork = "projects/<PREFIX-REGIME-ENV-net-host>/regions/<REGION>/subnetworks/<ENV-TENANT-REGION-range-0>"
+project_id = "<PREFIX-REGIME-ENV-TENANT-main>"
+network_project_id = "<PREFIX-REGIME-ENV-net-host>"
+pod_range = "<ENV-TENT-REGION-pod-range-0>"
+service_range = "<ENV-TENT-REGION-service-range-0>"
+node_count = 3

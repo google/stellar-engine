@@ -1,26 +1,19 @@
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-variable "gitlab_uri" {
-  description = "The URL hostname that the gitlab instance will be attached to."
+variable "bucket_name" {
+  description = "Name of the bucket that will hold keycloak yaml files."
   type        = string
+  default     = "gitlab-config"
 }
 
-variable "gke_initial_node_per_zone" {
-  description = "Initial node amount per zone."
-  type        = number
-  default     = 1
+variable "existing_cluster" {
+  description = "A cluster already exists that will be used for Gitlab deployment."
+  type        = bool
+  default     = false
+}
+
+variable "gitlab_allow_source_ranges" {
+  description = "A list of IP ranges for the GitLab firewall rule's source."
+  type        = list(string)
+  default     = []
 }
 
 variable "gke_name" {
@@ -29,36 +22,28 @@ variable "gke_name" {
   default     = "gitlab-cluster"
 }
 
-variable "instance_name" {
-  description = "Name of the vm."
-  type        = string
-  default     = "gitlab-instance"
-}
-
 variable "kms_key" {
   description = "KMS key path."
   type        = string
-}
-
-variable "lb_name" {
-  description = "Application load balancer name."
-  type        = string
-  default     = "gitlab-load-balancer"
+  default     = null
 }
 
 variable "net_project" {
-  description = "Project name of the spoke network. This project has the Stellar Engine deployed default VPC and is in the Networking folder."
+  description = "Project name of the spoke network. This project has the Stellar Engine Landing Zone deployed default VPC and is in the Networking folder."
   type        = string
+  default     = null
 }
 
 variable "network" {
   description = "Network path to use for cluster, VM, and load balancer."
   type        = string
+  default     = null
 }
 
 variable "network_name" {
   description = "Network name to use for Firewall rules. E.G. test-net-spoke."
   type        = string
+  default     = null
 }
 
 variable "nodepool_node_count" {
@@ -67,7 +52,9 @@ variable "nodepool_node_count" {
     current = optional(number)
     initial = number
   })
-  nullable = false
+  default = {
+    initial = 0
+  }
 }
 
 variable "project_id" {
@@ -86,31 +73,19 @@ variable "sa" {
   type        = string
 }
 
+variable "subnet_pod_range" {
+  description = "The name of the secondary IP range to be used for GKE Pods."
+  type        = string
+  default     = null
+}
+
+variable "subnet_service_range" {
+  description = "The name of the secondary IP range to be used for GKE Services."
+  type        = string
+}
+
 variable "subnetwork" {
-  description = "Subnet path to use for cluster, VM, and load balancer."
+  description = "Subnet path to use for cluster, and load balancer."
   type        = string
-}
-
-variable "vm_name" {
-  description = "VM name."
-  type        = string
-  default     = "gitlab-vm"
-}
-
-variable "zone" {
-  description = "Zone to deploy to."
-  type        = string
-  default     = "us-east4-a"
-}
-
-variable "compute_image" {
-  description = "The image used to provision the compute instance."
-  type        = string
-  default     = "projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20241219"
-}
-
-variable "gitlab_install_script_sha256" {
-  description = "Expected SHA-256 hash for the GitLab package repository install script."
-  type        = string
-  default     = "47c124527729776870cf09cd6bd46a9b94f55d40c7545ca26640c75de86b560d"
+  default     = null
 }

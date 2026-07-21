@@ -1,143 +1,90 @@
-# GKE Cluster with Shared VPC and KMS Blueprint
+# Google Kubernetes Engine (GKE) Standard Project
+
 <!-- BEGIN TOC -->
-- [Purpose](#purpose)
-- [Prerequisites](#prerequisites)
+- [Google Kubernetes Engine Blueprint](#google-kubernetes-engine-blueprint)
+- [Introduction](#introduction)
+- [Pre-requisite](#pre-requisite)
 - [Disclaimer](#disclaimer)
-- [Usage](#usage)
-- [Inputs](#inputs)
+- [Deployment Steps](#deployment-steps)
+- [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Purpose
+## Google Kubernetes Engine Blueprint
+This blueprint contains all the necessary Terraform modules to build and deploy a Google Kubernetes Engine (GKE), a managed Kubernetes cluster having encryption using the Cloud Key Management Service (KMS).
 
-This blueprint deploys a Google Kubernetes Engine (GKE) Standard cluster designed for enterprise environments that require a separation of duties. It follows security best practices by consuming pre-existing network and encryption resources from separate, dedicated Google Cloud projects.
+## Introduction
+- GKE is a Google-managed implementation of the Kubernetes open source container orchestration platform.  In GKE Standard mode, there are flexible node upgrade strategies to optimize availability and manage disruptions.
+- In GKE Standard mode, you pay for all resources on nodes, regardless of Pod requests. A GKE environment consists of nodes, which are Compute Engine virtual machines (VMs) with Customer-Managed Encryption Keys (CMEK) Cloud KMS that are grouped together to form a cluster.
+- This implementation offers a way to create and manage Google Kubernetes Engine (GKE) [Standard clusters](https://cloud.google.com/kubernetes-engine/docs/concepts/choose-cluster-mode#why-standard).
+- In GKE, the allocation of the nodes is done as per the Zone. For more details refer to the GKE cluster configuration choices  [GKE cluster configuration choices](https://cloud.google.com/kubernetes-engine/docs/concepts/types-of-clusters)
+- For example, If there are 3 Zone gcp-region-name-a, gcp-region-name-b, gcp-region-name-c. The initial node allocation per zone is 1. Then the total number of nodes shall be 3 x 1 = 3 total nodes in the cluster.
+- GKE yaml files are hosted in the policies folder and will be applied to the deployed cluster automatically. Only yaml files in the policies folder. Do not remove the disable-priv-pods.yaml as that is responsible for creating a cron job that will disable privileged pods in the cluster every hour.
 
-The key feature of this blueprint is its **decoupling** from the underlying infrastructure. It does not create its own VPC network or KMS keys. Instead, it securely connects to and utilizes:
-* A **Shared VPC** from a central landing zone project.
-* A **Customer-Managed Encryption Key (CMEK)** from a central core/security project for node boot disk encryption.
-
-This allows platform teams to manage the network and security resources centrally while enabling application teams to deploy GKE clusters in their own service projects.
-
-## Prerequisites
-
-Before running this blueprint, the following resources and permissions must be in place:
-
-1.  **Three distinct Google Cloud projects** with billing enabled:
-    * A **Main Project** to host the GKE cluster.
-    * A **Landing Zone / Host Project** that contains the Shared VPC.
-    * A **Core / Security Project** that contains the Cloud KMS key.
-2.  **Shared VPC Configuration**: The Main Project must be attached to the Host Project's Shared VPC as a service project.
-3.  **Network Resources**: The subnetwork within the Shared VPC must have at least **two secondary IP ranges** available. GKE requires one dedicated range for Pods and a separate range for Services.
-4.  **KMS Resources**: A Cloud KMS Key Ring and CryptoKey must exist in the Core Project.
-5.  **Permissions**: The user or service account running `terraform apply` needs specific permissions in all three projects. The necessary roles are:
-    * **On the Main Project:**
-        * `roles/container.admin`: To create and manage the GKE cluster.
-        * `roles/iam.serviceAccountAdmin`: To create the GKE service account.
-    * **On the Host Project:**
-        * `roles/compute.networkUser`: Must be assigned to the **GKE Service Agent**, **Google APIs Service Agent**, and **Compute Engine Service Agent** of the Main Project.
-        * `roles/container.hostServiceAgentUser`: Must be assigned to the **GKE Service Agent** of the Main Project.
-    * **On the Core Project:**
-        * `roles/cloudkms.cryptoKeyEncrypterDecrypter`: Must be assigned to the **GKE Service Agent** and the **Compute Engine Service Agent** of the Main Project.
+## Pre-requisite
+1. The Principal (user or group) must have Cloud KMS Admin, Able to Deploy a Google VPC, GKE Create, permission at the GCP Level.
+2. Have access to the GCP Project ID
+3.  You will need an existing [project](https://cloud.google.com/resource-manager/docs/creating-managing-projects) with [billing enabled](https://cloud.google.com/billing/docs/how-to/modify-project) and a user with the “Project owner” [IAM](https://cloud.google.com/iam) role on that project. __Note__: to grant a user a role, take a look at the [Granting and Revoking Access](https://cloud.google.com/iam/docs/granting-changing-revoking-access#grant-single-role) documentation.
 
 ## Disclaimer
-The present GCP Terraform Module in this project is set up and intended to be implemented in either a FedRAMP-High or IL5 (Impact Level 5) environment using the Assured Workloads within the Google Cloud Platform (GCP) organization. Assured Workloads in both environments ensures that sensitive data and workloads in GCP adhere to the rigorous security standards mandated by the DoD, making it suitable for government agencies.
+- The present GCP Terraform Module in this project is set up and intended to be implemented in either a FedRAMP-High or IL5 (Impact Level 5) environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
+- Assured Workloads in both environments ensures that sensitive data and workloads in GCP adhere to the rigorous security standards mandated by the DoD, making it suitable for government agencies.
 
-## Usage
+## Deployment Steps
+You should see this README and some terraform files.
+1. Run cp terraform.tfvars.sample terraform.tfvars to copy the sample variables to your own tfvars file.
 
-1.  **Configure Variables**: Create a `terraform.tfvars` file and provide values for all the required input variables. See the auto-generated Inputs section below for details.
+2. Update the variables as necessary in your tfvars file.
+3. The usual terraform commands will do the work. To provision this example, run the following from within this directory:
 
-2.  **Initialize Terraform**:
-    ```bash
-    terraform init
-    ```
-
-3.  **Plan and Apply**:
-    ```bash
-    terraform plan
-    terraform apply
-    ```
-
-### Node Pool Strategy
-
-This blueprint creates two node pools by default: `default-pool` and a separate custom node pool (e.g., `gke-nodepool-name-00`). This is an intentional design choice and a GKE best practice.
-
-* **`default-pool`**: This pool is created automatically by GKE and is suitable for running system components. By default, this blueprint keeps it.
-* **Custom Node Pool**: This pool is created by the `cluster_nodepool` module and is intended for your specific applications.
-
-Using separate node pools allows you to optimize performance, security, and cost by running different types of applications on different kinds of machines. Key benefits include:
-
-* **Specialized Hardware**: Create pools with high-CPU, high-memory, or GPU-enabled machines for specific workloads.
-* **Security & Isolation**: Run sensitive applications on dedicated nodes with unique service accounts or network tags.
-* **Cost Optimization**: Use cheaper machine types or fault-tolerant Spot VMs for batch jobs or CI/CD workloads.
-* **Controlled Upgrades**: Upgrade your cluster one node pool at a time, testing on less critical workloads first.
-
-If you wish to only use a single custom node pool, you can set the `remove_default_node_pool` variable to `true`.
-
-This approach is a documented best practice for production clusters. For more information, you can refer to the official [Google Cloud documentation on Node Pools](https://cloud.google.com/kubernetes-engine/docs/concepts/node-pools).
-
-### Testing the Cluster
-
-A bastion host VM is deployed in the Main Project to provide a secure way to access and test the GKE cluster.
-
-1.  **SSH to the bastion host**:
-    ```bash
-    gcloud compute ssh [BASTION_VM_NAME] --zone [BASTION_VM_ZONE] --project [MAIN_PROJECT_ID]
-    ```
-
-2.  **Configure `kubectl`**: Follow the on-screen instructions inside the bastion host's `toolbox` environment to install the necessary tools and get cluster credentials.
-
-3.  **Test the connection**:
-    ```bash
-    kubectl get nodes
-    ```
+```terraform init ```<br />
+```terraform plan``` to see the infrastructure plan<br />
+```terraform apply``` to apply the infrastructure build<br />
+```terraform destroy``` to destroy the built infrastructure<br />
 
 <!-- BEGIN TFDOC -->
-## Inputs
+## Variables
 
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| **bastion_vm_zone** | The zone for the bastion host VM. | `string` | n/a | yes |
-| **core_project_id** | The Google Cloud Project ID where the existing Cloud KMS key is located. | `string` | n/a | yes |
-| **existing_kms_key_name** | The name of the existing Cloud KMS CryptoKey for boot disk encryption. | `string` | n/a | yes |
-| **existing_kms_keyring_name** | The name of the existing Cloud KMS Key Ring. | `string` | n/a | yes |
-| **existing_network_name** | The name of the existing Shared VPC network to use for the GKE cluster. | `string` | n/a | yes |
-| **existing_subnetwork_name** | The name of the existing subnetwork to use for the GKE cluster. | `string` | n/a | yes |
-| **existing_subnetwork_secondary_range_pods_name** | The name of the existing secondary IP range for GKE Pods. | `string` | n/a | yes |
-| **existing_subnetwork_secondary_range_services_name** | The name of the existing secondary IP range for GKE Services. | `string` | n/a | yes |
-| **gcp_region** | The Google Cloud region where all resources will be deployed. | `string` | n/a | yes |
-| **landing_project_id** | The Google Cloud Project ID where the existing Shared VPC network is located. | `string` | n/a | yes |
-| **main_project_id** | The Google Cloud Project ID where the GKE cluster will be created. | `string` | n/a | yes |
-| **bastion_vm_image** | The boot disk image for the bastion host VM. | `string` | `"projects/cos-cloud/global/images/family/cos-stable"` | no |
-| **bastion_vm_machine_type** | The machine type for the bastion host VM. | `string` | `"e2-medium"` | no |
-| **bastion_vm_name** | The name for the bastion host VM. | `string` | `"gke-bastion-vm"` | no |
-| **enable_deletion_protection** | Whether or not to allow Terraform to destroy the cluster. Recommended to be true for production. | `bool` | `true` | no |
-| **gke_cluster_enable_private_endpoint** | Enable a private endpoint for the GKE cluster master, disabling public access. | `bool` | `true` | no |
-| **gke_cluster_master_global_access** | WARNING: Expands the internal attack surface. Enable global access for the private master endpoint. If false, access is limited to the cluster's region. | `bool` | `false` | no |
-| **gke_cluster_name** | The name of the GKE cluster. | `string` | `"gke-cluster"` | no |
-| **gke_initial_node_per_zone** | The initial number of nodes for the default node pool. | `number` | `1` | no |
-| **gke_nodepool_name** | The name of the additional GKE node pool. | `string` | `"default-nodepool"` | no |
-| **master_authorized_ranges** | A map of authorized networks that can access the GKE master endpoint. The key is a display name and the value is the CIDR range. Should be scoped as tightly as possible. | `map(string)` | `{}` | no |
-| **node_config_tags** | A list of network tags to apply to the GKE nodes. | `list(string)` | `[]` | no |
-| **node_disk_size_gb** | The boot disk size in GB for each GKE node. | `number` | `20` | no |
-| **node_machine_type** | The machine type for the GKE nodes. | `string` | `"n2d-standard-2"` | no |
-| **nodepool_node_count** | The initial number of nodes per zone for the additional node pool. | `object({ initial = number })` | `{ initial = 1 }` | no |
-| **remove_default_node_pool** | Set to true to remove the default node pool created with the cluster. Requires at least one other node pool to be created. | `bool` | `false` | no |
+| name | description | type | required | default |
+|---|---|:---:|:---:|:---:|
+| [gke_cluster_name](variables.tf#L1) | The GKE Kubernetes Cluster Name. | <code>string</code> | ✓ |  |
+| [gke_initial_node_per_zone](variables.tf#L7) | The initial number of Node per each zone. | <code>number</code> | ✓ |  |
+| [gke_nodepool_name](variables.tf#L13) | The GKE Kubernetes Cluster Name. | <code>string</code> | ✓ |  |
+| [gke_vpc_master_ipv4_cidr_block](variables.tf#L19) | The CIDR Range for the GKE Master IP CIDR Ranges for the k8s used for VPC configuration. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L76) | Keyring attributes. | <code title="object&#40;&#123;&#10;  location &#61; string&#10;  name     &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [main_project_id](variables.tf#L84) | The ID of the project in which to create the GKE cluster. | <code>string</code> | ✓ |  |
+| [master_authorized_ranges_ip_ranges](variables.tf#L89) | The CIDR Range for the GKE Nodes Pool when enabled Private End Point with master authorized ranges of CIDR. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L94) | The VPC Name. | <code>string</code> | ✓ |  |
+| [node_config_tags](variables.tf#L100) | The Tags on the Node Configuration. | <code>list&#40;string&#41;</code> | ✓ |  |
+| [node_disk_size_gb](variables.tf#L106) | The disk size in GB to be given to each node. | <code>number</code> | ✓ |  |
+| [nodepool_node_count](variables.tf#L117) | Number of node per zone in the Nodepool. | <code title="object&#40;&#123;&#10;  current &#61; optional&#40;number&#41;&#10;  initial &#61; number&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [region](variables.tf#L126) | The GCP region to use for the resources. | <code>string</code> | ✓ |  |
+| [remove_default_node_pool](variables.tf#L132) | The Default NodePool remove it or not. | <code>bool</code> | ✓ |  |
+| [subnetwork_ip_cidr_range_1](variables.tf#L138) | The CIDR Range for the VPC Subnet. | <code>string</code> | ✓ |  |
+| [subnetwork_name](variables.tf#L144) | The Subnet Name. | <code>string</code> | ✓ |  |
+| [subnetwork_secondary_ip_range_pods_1](variables.tf#L150) | The CIDR Range for the secondary IP CIDR Ranges for the k8s pods. | <code>string</code> | ✓ |  |
+| [subnetwork_secondary_ip_range_services_1](variables.tf#L156) | The CIDR Range for the secondary IP CIDR Ranges for the k8s services. | <code>string</code> | ✓ |  |
+| [kms_key_names](variables.tf#L25) | Key names and base attributes. Set attributes to null if not needed. | <code title="map&#40;object&#40;&#123;&#10;  destroy_scheduled_duration    &#61; optional&#40;string&#41;&#10;  rotation_period               &#61; optional&#40;string, &#34;7776000s&#34;&#41; &#35; CIS Compliance Benchmark 1.10&#10;  labels                        &#61; optional&#40;map&#40;string&#41;&#41;&#10;  purpose                       &#61; optional&#40;string, &#34;ENCRYPT_DECRYPT&#34;&#41;&#10;  skip_initial_version_creation &#61; optional&#40;bool, false&#41;&#10;  version_template &#61; optional&#40;object&#40;&#123;&#10;    algorithm        &#61; string&#10;    protection_level &#61; optional&#40;string, &#34;SOFTWARE&#34;&#41;&#10;  &#125;&#41;&#41;&#10;  iam &#61; optional&#40;map&#40;list&#40;string&#41;&#41;, &#123;&#125;&#41;&#10;  iam_bindings &#61; optional&#40;map&#40;object&#40;&#123;&#10;    members &#61; list&#40;string&#41;&#10;    role    &#61; string&#10;    condition &#61; optional&#40;object&#40;&#123;&#10;      expression  &#61; string&#10;      title       &#61; string&#10;      description &#61; optional&#40;string&#41;&#10;    &#125;&#41;&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;  iam_bindings_additive &#61; optional&#40;map&#40;object&#40;&#123;&#10;    member &#61; string&#10;    role   &#61; string&#10;    condition &#61; optional&#40;object&#40;&#123;&#10;      expression  &#61; string&#10;      title       &#61; string&#10;      description &#61; optional&#40;string&#41;&#10;    &#125;&#41;&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code title="&#123;&#10;  &#34;key-gke&#34; &#61; &#123;&#10;    rotation_period            &#61; &#34;7776000s&#34;&#10;    destroy_scheduled_duration &#61; &#34;2592000s&#34;&#10;    labels &#61; &#123;&#10;      team &#61; &#34;gke-team&#34;&#10;    &#125;&#10;    version_template &#61; &#123;&#10;      algorithm        &#61; &#34;GOOGLE_SYMMETRIC_ENCRYPTION&#34;&#10;      protection_level &#61; &#34;SOFTWARE&#34;&#10;    &#125;&#10;    lifecycle &#61; &#123;&#10;      prevent_destroy &#61; true&#10;    &#125;&#10;  &#125;&#10;&#125;">&#123;&#8230;&#125;</code> |
+| [node_machine_type](variables.tf#L111) | The Node Machine type to be used in the NodePool. | <code>string</code> |  | <code>&#34;n2d-standard-2&#34;</code> |
 
 ## Outputs
 
-| Name | Description |
-|------|-------------|
-| **bastion_vm_name** | The name of the created bastion Compute Engine VM. |
-| **bastion_vm_public_ip** | The public IP address of the bastion Compute Engine VM (if ephemeral public IP is enabled). |
-| **cluster_master_version** | The master version of the GKE cluster. |
-| **consumed_kms_key_id** | The ID of the existing KMS CryptoKey used by the GKE cluster for boot disk encryption. |
-| **consumed_network_self_link** | The self-link of the existing VPC network used by the GKE cluster. |
-| **consumed_subnetwork_self_link** | The self-link of the existing subnetwork used by the GKE cluster. |
-| **gke_cluster_endpoint** | The endpoint of the GKE cluster. |
-| **gke_cluster_name** | The name of the GKE cluster. |
-| **gke_cluster_sa_email** | The email address of the custom service account created for the GKE cluster. |
-| **nodepool_id** | The fully qualified ID of the additional GKE nodepool. |
-| **nodepool_name** | The name of the additional GKE nodepool. |
-| **nodepool_service_account_email** | The service account email used by the additional GKE nodepool. |
+| name | description | sensitive |
+|---|---|:---:|
+| [cluster_master_version](outputs.tf#L1) | Master version. |  |
+| [gke_cluster_endpoint](outputs.tf#L6) | The endpoint of the GKE cluster. |  |
+| [gke_cluster_name](outputs.tf#L11) | The name of the GKE cluster. |  |
+| [keyring_id](outputs.tf#L16) | Fully qualified keyring id. |  |
+| [keyring_location](outputs.tf#L21) | Keyring location. |  |
+| [keyring_name](outputs.tf#L26) | Keyring name. |  |
+| [keyring_resource](outputs.tf#L31) | Keyring resource. |  |
+| [keyrings_keys](outputs.tf#L36) | Key resources. |  |
+| [nodepool_id](outputs.tf#L41) | Fully qualified nodepool id. |  |
+| [nodepool_name](outputs.tf#L46) | Nodepool name. |  |
+| [nodepool_service_account_email](outputs.tf#L51) | Service account email. |  |
+| [subnet_regions](outputs.tf#L56) | Map of subnet regions keyed by name. |  |
+| [subnets](outputs.tf#L61) | Subnet resources. |  |
+| [vpc-network](outputs.tf#L66) | Network resource. |  |
+| [vpc-subnet_ids](outputs.tf#L71) | Map of subnet IDs keyed by name. |  |
+| [vpc-subnet_ips](outputs.tf#L76) | Map of subnet address ranges keyed by name. |  |
 <!-- END TFDOC -->
-

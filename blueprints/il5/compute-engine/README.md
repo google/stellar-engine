@@ -2,7 +2,7 @@
 This blueprint contains all the necessary Terraform modules to build and deploy a Compute Engine VM (virtual machines VMs on Google Cloud) attached to a persistent disk having encryption using the Cloud Key Management Service (KMS).
 
 ## Introduction
-Compute Engine is an Infrastructure-as-a-Service product offering flexible, self-managed virtual machines (VMs) hosted on Google's infrastructure.  Persistent Disk is Google's local durable storage service, fully integrated with Google Cloud products, Compute Engine. Persistent Disk volumes are durable network storage devices that your virtual machine (VM) instances can access like physical disks in a desktop or a server.  Persistent Disk remains encrypted usng the Customer-Managed Encryption Keys (CMEK) Cloud KMS.
+Compute Engine is an Infrastructure-as-a-Service product offering flexible, self-managed virtual machines (VMs) hosted on Google's infrastructure.  Persistent Disk is Google's local durable storage service, fully integrated with Google Cloud products, Compute Engine. Persistent Disk volumes are durable network storage devices that your virtual machine (VM) instances can access like physical disks in a desktop or a server.  Persistent Disk remains encrypted using the Customer-Managed Encryption Keys (CMEK) Cloud KMS.
 
 1. Create and Encrypt a Google Cloud Persistent Disk Using Cloud KMS
 2. Enable the Customer-Managed Encryption Keys (CMEK) Cloud KMS for Google Compute Engine and Disk
@@ -118,5 +118,5 @@ keyrings-keys = {
 ```
 ## Verification of a successful deployment?
 
-- Go to the Compute Engine in the GCP Console. Select the VM. Check the Presistent Disk Encryption
-![GCP Compute Engine Instance Presistent Disk Encryption](./images/vm-disk-1.png?raw=true "GCP Compute Engine Instance Presistent Disk Encryption")
+- Go to the Compute Engine in the GCP Console. Select the VM. Check the Persistent Disk Encryption
+![GCP Compute Engine Instance Persistent Disk Encryption](./images/vm-disk-1.png?raw=true "GCP Compute Engine Instance Persistent Disk Encryption")

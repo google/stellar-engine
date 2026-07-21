@@ -1,0 +1,21 @@
+# Resource prefix - Adds a prefix to the beginning of resource name
+vpn_name   = "xxx-xxx-xxx" 
+
+# Environment (MUST ALREADY EXIST)
+aws_region          = "xxx-xxx"
+aws_vpc_id          = "xxx-xxx"
+gcp_region          = "xxx-xxx"
+gcp_project_id      = "xxx-xxx"
+gcp_network_name    = "xxx-xxx"
+
+# VPN Secrets - Map to names in GCP Secret Manager (MUST ALREADY EXIST)
+tunnel_secret_names = {
+  conn1_tun1 = "xxx-xxx"
+  conn1_tun2 = "xxx-xxx"
+  conn2_tun1 = "xxx-xxx"
+  conn2_tun2 = "xxx-xxx"
+}
+
+# BGP Settings - Choose ASN between 64512-65534
+gcp_bgp_asn     = xxx       
+aws_bgp_asn     = xxx       # MUST BE DIFFERENT FROM THE GCP ASN

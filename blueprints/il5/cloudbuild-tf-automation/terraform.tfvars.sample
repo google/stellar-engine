@@ -1,0 +1,13 @@
+core_project_id = "xxx-xxx-xxx-iac-core-0"
+
+locations = {
+  gcs = "us-east4"
+  kms = "us-east4"
+}
+
+main_project_id = "xxx-xxx-xxx-main-0"
+prefix          = "xxx"
+
+services = [
+  "cloudbuild.googleapis.com"
+]

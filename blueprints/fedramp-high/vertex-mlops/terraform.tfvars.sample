@@ -1,6 +1,4 @@
-project_config = {
-  main_project_id = "xxxx-xxxx-main-0"
-}
+main_project_id = "xxxx-xxxx-main-0"
 
 network_config = {
   network_project_id = "xxxx-xxxx-net-host"
@@ -14,9 +12,7 @@ prefix       = "xxxx"
 region       = "us-central" # us-central1 is recommended
 
 notebooks = {
-  "<NOTEBOOK-NAME-00>" = {
-    type = "USER_MANAGED"
-  }
+  "notebook-name-1" = {}
 }
 
 service_encryption_keys = {

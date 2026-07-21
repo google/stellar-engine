@@ -20,33 +20,12 @@ locals {
 
   prefix = var.prefix == null ? "" : "${var.prefix}-"
 
-  shared_vpc_project = var.network_config.network_project_id
-
-  shared_vpc_bindings = {
-    "roles/compute.networkUser" = [
-      "robot-df", "notebooks"
-    ]
-  }
-
-  shared_vpc_role_members = {
-    robot-df  = module.project.service_agents.dataflow.iam_email
-    notebooks = module.project.service_agents.notebooks.iam_email
-  }
-
-  # reassemble in a format suitable for for_each
-  shared_vpc_bindings_map = {
-    for binding in flatten([
-      for role, members in local.shared_vpc_bindings : [
-        for member in members : { role = role, member = member }
-      ]
-    ]) : "${binding.role}-${binding.member}" => binding
-  }
 }
 
 module "gcs-bucket" {
   count          = var.bucket_name == null ? 0 : 1
   source         = "../../../modules/gcs"
-  project_id     = module.project.project_id
+  project_id     = var.main_project_id
   name           = var.bucket_name
   prefix         = var.prefix
   location       = var.region
@@ -54,151 +33,59 @@ module "gcs-bucket" {
   versioning     = false
   encryption_key = var.service_encryption_keys.storage
   force_destroy  = !var.deletion_protection
+
+  depends_on = [
+    google_kms_crypto_key_iam_member.gcs_kms
+  ]
 }
 
 # Default bucket for Cloud Build to prevent error: "'us' violates constraint ‘gcp.resourceLocations’"
 # https://stackoverflow.com/questions/53206667/cloud-build-fails-with-resource-location-constraint
 module "gcs-bucket-cloudbuild" {
   source         = "../../../modules/gcs"
-  project_id     = module.project.project_id
-  name           = "${module.project.project_id}_cloudbuild"
+  project_id     = var.main_project_id
+  name           = "${var.main_project_id}_cloudbuild"
   location       = var.region
   storage_class  = "REGIONAL"
   versioning     = false
   encryption_key = var.service_encryption_keys.storage
   force_destroy  = !var.deletion_protection
+
+  depends_on = [
+    google_kms_crypto_key_iam_member.gcs_kms
+  ]
 }
 
 module "bq-dataset" {
   count          = var.dataset_name == null ? 0 : 1
   source         = "../../../modules/bigquery-dataset"
-  project_id     = module.project.project_id
+  project_id     = var.main_project_id
   id             = var.dataset_name
   location       = var.region
   encryption_key = var.service_encryption_keys.bq
+
+  depends_on = [
+    google_kms_crypto_key_iam_member.bq_kms
+  ]
 }
 
-module "project" {
-  source          = "../../../modules/project"
-  name            = var.project_config.project_id
-  parent          = var.project_config.parent
-  billing_account = var.project_config.billing_account_id
-  iam_bindings_additive = {
-    # we manage aiplatform.user additively since it is also granted to
-    # the vertex-shtune service agent by the project module
-    aiplatform-user-mlops = {
-      member = module.service-account-mlops.iam_email
-      role   = "roles/aiplatform.user"
-    }
-    aiplatform-user-notebook = {
-      member = module.service-account-notebook.iam_email
-      role   = "roles/aiplatform.user"
-    }
-    storage-viewer-mlops = {
-      member = module.service-account-mlops.iam_email
-      role   = "roles/storage.objectViewer"
-    }
-    storage-viewer-notebook = {
-      member = module.service-account-notebook.iam_email
-      role   = "roles/storage.objectViewer"
-    }
-    storage-creator-mlops = {
-      member = module.service-account-mlops.iam_email
-      role   = "roles/storage.objectCreator"
-    }
-    storage-creator-notebook = {
-      member = module.service-account-notebook.iam_email
-      role   = "roles/storage.objectCreator"
-    }
-    service-account-user-mlops = {
-      member = module.service-account-mlops.iam_email
-      role   = "roles/iam.serviceAccountUser"
-    }
-    service-account-user-notebook = {
-      member = module.service-account-notebook.iam_email
-      role   = "roles/iam.serviceAccountUser"
-    }
-    service-account-user-cloudbuild = {
-      member = module.project.service_agents.cloudbuild.iam_email,
-      role   = "roles/iam.serviceAccountUser"
-    }
-  }
-  iam = {
-    "roles/artifactregistry.reader" = [module.service-account-mlops.iam_email]
-    "roles/bigquery.dataEditor" = [
-      module.service-account-mlops.iam_email,
-      module.service-account-notebook.iam_email
-    ]
-    "roles/bigquery.jobUser" = [
-      module.service-account-mlops.iam_email,
-      module.service-account-notebook.iam_email
-    ]
-    "roles/bigquery.user" = [
-      module.service-account-mlops.iam_email,
-      module.service-account-notebook.iam_email
-    ]
-    "roles/cloudbuild.builds.editor" = [
-      module.service-account-mlops.iam_email,
-    ]
-    "roles/cloudfunctions.invoker"  = [module.service-account-mlops.iam_email]
-    "roles/dataflow.developer"      = [module.service-account-mlops.iam_email]
-    "roles/dataflow.worker"         = [module.service-account-mlops.iam_email]
-    "roles/monitoring.metricWriter" = [module.service-account-mlops.iam_email]
-    "roles/run.invoker"             = [module.service-account-mlops.iam_email]
-    "roles/serviceusage.serviceUsageConsumer" = [
-      module.service-account-mlops.iam_email,
-    ]
-  }
-  labels = var.labels
-
-  service_encryption_key_ids = {
-    "aiplatform.googleapis.com" = compact([var.service_encryption_keys.aiplatform])
-    "bigquery.googleapis.com"   = compact([var.service_encryption_keys.bq])
-    "compute.googleapis.com"    = compact([var.service_encryption_keys.notebooks])
-    //"cloudbuild.googleapis.com"    = compact([var.service_encryption_keys.storage])
-    "notebooks.googleapis.com" = compact([var.service_encryption_keys.notebooks])
-    //"secretmanager.googleapis.com" = compact([var.service_encryption_keys.secretmanager])
-    "storage.googleapis.com" = compact([var.service_encryption_keys.storage])
-  }
-
-  services = [
-    "aiplatform.googleapis.com",
-    "artifactregistry.googleapis.com",
-    "bigquery.googleapis.com",
-    "bigquerystorage.googleapis.com",
-    "cloudbuild.googleapis.com",
-    "compute.googleapis.com",
-    "datacatalog.googleapis.com",
-    "dataflow.googleapis.com",
-    "iam.googleapis.com",
-    "ml.googleapis.com",
-    "monitoring.googleapis.com",
-    "notebooks.googleapis.com",
-    //"secretmanager.googleapis.com",
-    "servicenetworking.googleapis.com",
-    "serviceusage.googleapis.com",
-    "stackdriver.googleapis.com",
-    "storage.googleapis.com",
-    "storage-component.googleapis.com"
-  ]
-  shared_vpc_service_config = local.shared_vpc_project == null ? null : {
-    attach       = true
-    host_project = local.shared_vpc_project
-  }
+data "google_project" "project" {
+  project_id = var.main_project_id
 }
 
 module "service-account-mlops" {
   source     = "../../../modules/iam-service-account"
   name       = "${local.prefix}sa-mlops"
-  project_id = module.project.project_id
+  project_id = var.main_project_id
 }
 
 resource "google_project_iam_member" "shared_vpc" {
   project = var.network_config.network_project_id
   role    = "roles/compute.networkUser"
-  member  = module.project.service_agents.notebooks.iam_email
+  member  = "serviceAccount:${google_project_service_identity.notebooks.email}"
 }
 
+//add iam bindings to compute service account running notebooks
 resource "google_project_iam_member" "service_permissions" {
   for_each = toset([
     "roles/notebooks.runner",
@@ -206,19 +93,83 @@ resource "google_project_iam_member" "service_permissions" {
     "roles/storage.objectViewer",
     "roles/storage.objectCreator",
     "roles/iam.serviceAccountUser",
-    "projects/${module.project.project_id}/roles/storage_iam",
+    "projects/${var.main_project_id}/roles/storage_iam",
   ])
-  project = module.project.project_id
+  project = var.main_project_id
   role    = each.key
-  member  = module.service-account-notebook.iam_email
+  member  = "serviceAccount:${module.service-account-mlops.email}"
+  depends_on = [
+    module.service-account-mlops
+  ]
 }
 
 resource "google_project_iam_custom_role" "storage_role" {
   role_id = "storage_iam"
-  project = module.project.project_id
+  project = var.main_project_id
   title   = "Storage IAM Policy Role"
   permissions = [
     "storage.buckets.getIamPolicy",
     "storage.buckets.setIamPolicy",
   ]
+}
+
+resource "google_kms_crypto_key_iam_member" "bq_kms" {
+  count         = var.service_encryption_keys.bq != null ? 1 : 0
+  crypto_key_id = var.service_encryption_keys.bq
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:bq-${data.google_project.project.number}@bigquery-encryption.iam.gserviceaccount.com"
+}
+
+resource "google_kms_crypto_key_iam_member" "gcs_kms" {
+  count         = var.service_encryption_keys.storage != null ? 1 : 0
+  crypto_key_id = var.service_encryption_keys.storage
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:service-${data.google_project.project.number}@gs-project-accounts.iam.gserviceaccount.com"
+}
+
+resource "google_project_service_identity" "notebooks" {
+  provider = google-beta
+  project  = var.main_project_id
+  service  = "notebooks.googleapis.com"
+}
+
+resource "google_kms_crypto_key_iam_member" "notebooks_kms" {
+  count         = var.service_encryption_keys.notebooks != null ? 1 : 0
+  crypto_key_id = var.service_encryption_keys.notebooks
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:${google_project_service_identity.notebooks.email}"
+}
+
+# 4. AI Platform Service Account (P4SA)
+resource "google_project_service_identity" "aiplatform" {
+  provider = google-beta
+  project  = var.main_project_id
+  service  = "aiplatform.googleapis.com"
+}
+
+resource "google_kms_crypto_key_iam_member" "aiplatform_kms" {
+  count         = var.service_encryption_keys.aiplatform != null ? 1 : 0
+  crypto_key_id = var.service_encryption_keys.aiplatform
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:${google_project_service_identity.aiplatform.email}"
+
+}
+
+resource "google_kms_crypto_key_iam_member" "compute_kms" {
+  count         = var.service_encryption_keys.notebooks != null ? 1 : 0
+  crypto_key_id = var.service_encryption_keys.notebooks
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
+}
+
+resource "google_project_service" "aiplatform_api" {
+  project            = var.main_project_id
+  service            = "aiplatform.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "notebooks_api" {
+  project            = var.main_project_id
+  service            = "notebooks.googleapis.com"
+  disable_on_destroy = false
 }

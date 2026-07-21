@@ -1,0 +1,2 @@
+# Keep this directory in git while ignoring all RPM installation files.
+*.rpm

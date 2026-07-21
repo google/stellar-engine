@@ -11,7 +11,7 @@ instance_type              = "n2d-standard-2"
 disksize                   = 40
 
 network_name           = "xxxx-spoke-0"
-subnetwork_name        = "default-us-east4"
+subnetwork_name        = "xxxx-xxxx-us-east4-range-0"
 source_ranges_allowed  = ["10.0.1.0/24"]
 allowed_firewall_ports = ["80", "22", "443"]
 

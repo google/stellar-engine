@@ -1,41 +1,27 @@
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-easy:
+lenient:
   cloud_run_image: "us-docker.pkg.dev/cloudrun/container/hello"
   members:
-    - group:easy@${DOMAIN}
-  subdomain: easy
+    - group:lenient@${DOMAIN}
+  subdomain: lenient
   condition:
     title: Lenient Device Level
     description: "Group based + US"
     expression: "\"accessPolicies/${ACCESSPOLICY}/accessLevels/lenient_device\" in request.auth.access_levels"
-mod:
+moderate:
   cloud_run_image: "us-docker.pkg.dev/cloudrun/container/hello"
   members:
-    - group:medium@${DOMAIN}
-  subdomain: mod
+    - group:moderate@${DOMAIN}
+  subdomain: moderate
   condition:
     title: Moderate Device Level
-    description: "Group based + Expiring Access by 2025 + 7ET->21ET Monday through Friday + US"
+    description: "Group based + Expiring Access by 2030 + 7ET->21ET Monday through Friday + US"
     expression: "\"accessPolicies/${ACCESSPOLICY}/accessLevels/moderate_device\" in request.auth.access_levels"
-hard:
+strict:
   cloud_run_image: "us-docker.pkg.dev/cloudrun/container/hello"
   members:
-    - group:hard@${DOMAIN}
-  subdomain: hard
+    - group:strict@${DOMAIN}
+  subdomain: strict
   condition:
     title: Strict Device Level
-    description: "Group based + MacOS/Windows + Encryption Enabled + Corp Owned + Expiring Access by 2025 + 7ET->21ET Monday through Friday + US"
+    description: "Group based + MacOS/Windows + Encryption Enabled + Corp Owned + Expiring Access by 2030 + 7ET->21ET Monday through Friday + US"
     expression: "\"accessPolicies/${ACCESSPOLICY}/accessLevels/strict_device\" in request.auth.access_levels"

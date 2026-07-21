@@ -1,27 +1,12 @@
-main_project_id = "xxxx-xxxx-main-0" # The Google Cloud Project ID where the Cloud Scheduler job will be created.
+main_project_id = "xxxx-xxxx-xxxx-main-0"
 
-name            = "cloud-scheduler-job-name-00" # Name of the Cloud Scheduler job.
-description     = "Cloud Scheduler job description."
-schedule        = "*/2 * * * *" # Cron syntax, e.g., "*/2 * * * *" for every two minutes.
-gcp_region      = "us-east4"    # The Google Cloud region where the Cloud Scheduler job will be deployed.
+name           = "cloud-scheduler-job-name-00"
+description    = "cloud-scheduler-job-description"
+new_topic_name = "pubsub-topic-name-00"
+topic_id       = "projects/<MAIN-PROJECT-ID>>/topics/<NEW-TOPIC-NAME>"
+data           = "data"
+schedule       = "*/2 * * * *" # cron syntax
+retry_count    = 1
+region         = "us-east4"
 
-# --- Pub/Sub Target Configuration ---
-# This blueprint consumes an EXISTING Pub/Sub topic.
-topic_id        = "projects/YOUR_PUBSUB_PROJECT_ID/topics/YOUR_PUBSUB_TOPIC_NAME" # Full resource path of the existing Pub/Sub topic.
-# Example: "projects/my-pubsub-project/topics/my-existing-topic"
-
-data            = base64encode("YOUR_MESSAGE_HERE") # Base64-encoded data to be sent as the Pub/Sub message payload.
-# Example: base64encode("{\"key\": \"value\"}") or base64encode("My message")
-
-# --- Cloud KMS for Pub/Sub Topic Encryption (CMEK) ---
-# This blueprint assumes your Pub/Sub topic is already encrypted with CMEK.
-kms_key_name    = "projects/YOUR_KMS_PROJECT_ID/locations/YOUR_KMS_REGION/keyRings/YOUR_KEYRING_NAME/cryptoKeys/YOUR_KEY_NAME"
-# Example: "projects/my-core-project/locations/us-east4/keyRings/my-kms-keyring/cryptoKeys/my-topic-key"
-
-# --- Retry Configuration (Optional) ---
-retry_count        = 1     # Number of attempts if the first attempt fails.
-max_backoff_duration = null  # Max time to wait before retrying (e.g., "5m"). Set to null to use default.
-max_doublings      = null  # Max number of times to double retry delay. Set to null to use default.
-max_retry_duration = null  # Max cumulative time for retries (e.g., "1h"). Set to null to use default.
-min_backoff_duration = null  # Min time to wait before retrying (e.g., "5s"). Set to null to use default.
-
+kms_key_name = "projects/<CORE-PROJECT-ID>/locations/us-east4/keyRings/xxxx-xxxx-keyring/cryptoKeys/default"

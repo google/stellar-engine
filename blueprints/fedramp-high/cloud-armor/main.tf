@@ -1,19 +1,3 @@
-/**
- * Copyright 2025 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 locals {
   file = yamldecode(file(var.rules_file))
 
@@ -30,19 +14,13 @@ locals {
       merge(
         rule,
         {
-          policy = policy_name,
-          region = var.region,
-          # Placeholder for unique priority
+          policy   = policy_name,
+          region   = var.region,
+          priority = i + 1000
         }
       )
     ]
   ])
-
-  # Assign unique priorities across all rules
-  indexed_rules = [
-    for i, rule in local.rules :
-    merge(rule, { priority = 1000 + i })
-  ]
 }
 
 resource "google_compute_region_security_policy" "policy" {
@@ -56,7 +34,7 @@ resource "google_compute_region_security_policy" "policy" {
 
 resource "google_compute_region_security_policy_rule" "policy_rule" {
   provider   = google-beta
-  for_each   = { for rule in local.indexed_rules : rule.priority => rule }
+  for_each   = { for i, rule in local.rules : i => rule }
   depends_on = [google_compute_region_security_policy.policy]
 
   security_policy = each.value.policy
@@ -71,9 +49,10 @@ resource "google_compute_region_security_policy_rule" "policy_rule" {
     dynamic "expr" {
       for_each = try(each.value.expression, null) != null ? [1] : []
       content {
-        expression = try(each.value.is_custom_expr, false) ? each.value.expression : "evaluatePreconfiguredWaf('${each.value.expression}')"
+        expression = "evaluatePreconfiguredWaf('${each.value.expression}')"
       }
     }
+
     //only create a versioned_expr and config block if there isn't an expr block
     versioned_expr = try(each.value.expression, null) != null ? null : "SRC_IPS_V1"
     dynamic "config" {

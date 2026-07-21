@@ -5,7 +5,7 @@
 - [App Engine Blueprint](#app-engine-blueprint)
 - [Disclaimer](#disclaimer)
 - [Deployment Steps](#deployment-steps)
-- [Verification of a succesful deployment](#verification-of-a-succesful-deployment)
+- [Verification of a successful deployment](#verification-of-a-successful-deployment)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
@@ -33,8 +33,8 @@ You should see this README and some terraform files.
 ```terraform apply``` to apply the infrastructure build<br />
 ```terraform destroy``` to destroy the built infrastructure<br />
 
-## Verification of a succesful deployment
-Use the GCP consule to verify if the resources have been created. 
+## Verification of a successful deployment
+Use the GCP console to verify if the resources have been created. 
 
 ```To verify the creation of Instance classes: Go to Instances in your landing project``` <br />
 <!-- BEGIN TFDOC -->

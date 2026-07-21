@@ -1,0 +1,29 @@
+# Example Values for GCP-Only Deployment
+
+project_id       = "my-production-project-123"
+region           = "us-east4"
+name_prefix      = "prod-azure-vpn"
+
+gcp_network_name = "prod-vpc-network"
+gcp_router_name  = "prod-vpc-router-use4"
+
+# Ensure this matches the Azure Gateway configuration
+gcp_bgp_asn      = 65514
+azure_bgp_asn    = 65515
+
+# Manually provide the IPs from Azure since create_azure_resources is false
+azure_gateway_ip_0 = "203.0.113.10"
+azure_gateway_ip_1 = "203.0.113.20"
+
+# GCP Regional Secret Manager reference names
+secret_name_tunnel0 = "azure-vpn-psk-tun0"
+
+# BGP Peering Addresses (APIPA)
+gcp_bgp_apipa_ip_0   = "169.254.22.6"
+azure_bgp_apipa_ip_0 = "169.254.22.5"
+gcp_bgp_apipa_ip_1   = "169.254.22.10"
+azure_bgp_apipa_ip_1 = "169.254.22.9"
+
+# Advanced configuration (optional, defaults shown)
+stack_type         = "IPV4_ONLY"
+gateway_ip_version = "IPV4"

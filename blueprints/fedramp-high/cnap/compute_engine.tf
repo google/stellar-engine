@@ -29,7 +29,7 @@ data "google_compute_subnetwork" "default" {
 }
 
 data "google_compute_subnetwork" "proxy" {
-  name    = "proxy-${var.region}"
+  name    = "${var.env}-${var.region}-proxy-0"
   project = var.net_project
 }
 
@@ -172,9 +172,6 @@ resource "google_compute_firewall" "allow-app" {
   allow {
     protocol = "tcp"
     ports    = ["8080"]
-  }
-  log_config {
-    metadata = "INCLUDE_ALL_METADATA"
   }
 
   target_tags = ["${var.prefix}-ids"]

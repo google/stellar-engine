@@ -1,12 +1,18 @@
-gitlab_uri         = "gitlab.mine.com"
-network            = "projects/<net_project_id>/global/networks/<spoke>"
-subnetwork         = "projects/<net_project_id>/regions/us-east4/subnetworks/<subnet>"
-project_id         = "<project_id>"
-kms_key            = "projects/<core_project_id>/locations/us-east4/keyRings/keyring/cryptoKeys/gcs"
-zone               = "us-east4"
-net_project        = "int-net-host"
-sa                 = "gitlab-sa"
-nodepool_node_count = {
+existing_cluster = false
+project_id           = "<project_id>"
+kms_key              = "projects/<core_project_id>/locations/<region>/keyRings/<keyring_name>/cryptoKeys/default"
+region               = "us-east4"
+sa                   = "gitlab-sa"
+
+#Values below are only required when creating a new cluster
+gitlab_uri           = "gitlab.<example>.com"
+network              = "projects/<net_project_id>/global/networks/<spoke>"
+subnetwork           = "projects/<net_project_id>/regions/us-east4/subnetworks/<subnet>"
+net_project          = "<int-net-host>"
+subnet_pod_range     = "<ENV-TENANT-REGION-pod-range-0>"
+subnet_service_range = "<ENV-TENANT-REGION-service-range-0>"
+gitlab_allow_source_ranges = ["35.191.0.0/16", "130.211.0.0/22", "209.85.204.0/22", "209.85.152.0/22"]
+nodepool_node_count  = {
   initial = 1
 }
-network_name = "test-spoke-0"
+network_name         = "<ENV>-spoke-0"

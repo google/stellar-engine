@@ -57,7 +57,7 @@ variable "prefix" {
 }
 
 variable "public_access_prevention" {
-  description = "This provides the ability to toggle Public Access Prevention for the GCS Storage bucket. By settng this variable to enforced, the CIS Compliance Benchmark 5.1 control is satsified."
+  description = "This provides the ability to toggle Public Access Prevention for the GCS Storage bucket. By setting this variable to enforced, the CIS Compliance Benchmark 5.1 control is satisfied."
   type        = string
   default     = "enforced"
   validation {
@@ -96,7 +96,7 @@ variable "storage_class" {
 }
 
 variable "uniform_bucket_level_access" {
-  description = "This provides the ability to toggle Uniform Bucket Level Acess for the GCS Storage bucket. By settng this variable to true, the CIS Compliance Benchmark 5.2 control is satsified."
+  description = "This provides the ability to toggle Uniform Bucket Level Access for the GCS Storage bucket. By setting this variable to true, the CIS Compliance Benchmark 5.2 control is satisfied."
   type        = bool
   default     = true
 }

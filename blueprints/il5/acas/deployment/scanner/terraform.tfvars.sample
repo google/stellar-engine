@@ -1,0 +1,32 @@
+project_id         = "xxxx-xxxx-xxxx-main-0"
+kms_project_id     = "xxxx-xxxx-xxxx-iac-core-0"
+network_project_id = "xxxx-xxxx-net-host"
+
+region = "us-east4"
+zone   = "us-east4-a"
+
+network_name    = "xxxx-spoke-0"      # Must already exist
+subnetwork_name = "default-us-east4"  # Must already exist
+
+kms_keyring_name = "xxxx-xxxx-keyring"
+kms_key_name     = "default"          # Must already exist
+
+service_account_id = "acas-scanner-sa"
+
+enable_confidential_compute = false
+
+# Map of scanners to deploy. The image value should come from the
+# scanner_golden_image_family output of acas/image-factory.
+scanner_configs = {
+  "scanner-1" = {
+    instance_name  = "acas-nessus-scanner-01"
+    machine_type   = "n2d-standard-2"
+    boot_disk_size = 100
+    image          = "projects/xxxx-xxxx-xxxx-main-0/global/images/family/acas-scanner-golden"
+  }
+}
+
+# Firewall network access
+iap_source_ranges              = ["35.235.240.0/20"]
+securitycenter_source_ranges   = ["10.0.0.0/8"]
+scan_target_destination_ranges = ["10.0.0.0/8"]

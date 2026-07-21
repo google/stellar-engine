@@ -1,0 +1,43 @@
+project_id       = "my-production-project-123"
+region           = "us-east4"
+name_prefix      = "prod-aws-vpn"
+
+gcp_network_name = "prod-vpc-network"
+gcp_router_name  = "prod-vpc-router-use4"
+
+gcp_bgp_asn      = 65514
+aws_bgp_asn      = 64512
+
+aws_tunnel_details = {
+  tun1 = { external_ip = "203.0.113.1", gcp_bgp_ip = "169.254.21.2/30", aws_bgp_ip = "169.254.21.1" }
+  tun2 = { external_ip = "203.0.113.2", gcp_bgp_ip = "169.254.22.2/30", aws_bgp_ip = "169.254.22.1" }
+  tun3 = { external_ip = "203.0.113.3", gcp_bgp_ip = "169.254.23.2/30", aws_bgp_ip = "169.254.23.1" }
+  tun4 = { external_ip = "203.0.113.4", gcp_bgp_ip = "169.254.24.2/30", aws_bgp_ip = "169.254.24.1" }
+}
+
+secret_name_conn1_tun1 = "aws-vpn-psk-c1t1"
+secret_name_conn1_tun2 = "aws-vpn-psk-c1t2"
+secret_name_conn2_tun1 = "aws-vpn-psk-conn1-tun1"
+secret_name_conn2_tun2 = "aws-vpn-psk-conn1-tun2"
+
+# Advanced configuration (optional, defaults shown)
+stack_type         = "IPV4_ONLY"
+gateway_ip_version = "IPV4"
+
+# CNSA-compliant defaults are built into the module, but can be overridden here.
+# If you see "NO PROPOSAL CHOSEN", ensure this matches the AWS side exactly.
+# Example of a highly compatible suite:
+# tunnel_cipher_suite = {
+#   phase1 = {
+#     encryption = ["AES-256"]
+#     integrity  = ["SHA2-256"]
+#     prf        = ["PRF-HMAC-SHA2-256"]
+#     dh         = ["Group-14"]
+#   }
+#   phase2 = {
+#     encryption = ["AES-256"]
+#     integrity  = ["SHA2-256"]
+#     pfs        = ["Group-14"]
+#   }
+# }
+

@@ -1,0 +1,12 @@
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1beta1
+metadata:
+  name: external-http
+  annotations:
+    networking.gke.io/certmap: keycloak-cert-map
+spec:
+  gatewayClassName: gke-l7-gxlb
+  listeners:
+  - name: https
+    protocol: HTTPS
+    port: 443

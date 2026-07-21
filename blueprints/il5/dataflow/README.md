@@ -105,7 +105,7 @@ The Apache Beam SDK for Java has a warning about a bug in the latest version as 
 | [main_project_id](variables.tf#L58) | The ID of the project in which to provision resources. | <code>string</code> | ✓ |  |
 | [network_name](variables.tf#L63) | The network name. | <code>string</code> | ✓ |  |
 | [network_project_id](variables.tf#L68) | Project that the Compute Engine VPC is located. | <code>string</code> | ✓ |  |
-| [parameters](variables.tf#L73) | Dataflow Paramaters. | <code>map&#40;string&#41;</code> | ✓ |  |
+| [parameters](variables.tf#L73) | Dataflow Parameters. | <code>map&#40;string&#41;</code> | ✓ |  |
 | [prefix](variables.tf#L78) | This is the prefix for all resources. | <code>string</code> | ✓ |  |
 | [storage_class](variables.tf#L89) | This is the storage class of the storage bucket. | <code>string</code> | ✓ |  |
 | [subnetwork_name](variables.tf#L94) | The subnet name. | <code>string</code> | ✓ |  |
