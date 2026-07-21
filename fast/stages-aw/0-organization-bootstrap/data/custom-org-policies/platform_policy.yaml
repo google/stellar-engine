@@ -1,0 +1,88 @@
+---
+# This list constraint defines the set of external Organizations from which resources
+# can be imported, and denies all moves from all other Organizations. By default,
+# resources cannot be moved between Organizations. If this constraint is applied to
+# a resource, imported resources directly under this resource must be explicitly
+# allowed by this constraint. Moves within an Organization are not governed by this
+# constraint. The move operation will still require the same IAM permissions as normal
+# resource moves. Values specified in allow/deny lists must be in the form:
+#   under:organizations/ORGANIZATION_ID.
+# SHOULD HAVE
+resourcemanager.allowedImportSources:
+  rules:
+  - allow:
+      values:
+        - under:organizations/${organization_id}
+
+# This list constraint defines the set of external Organizations to which resources
+# can be moved, and denies all moves to all other Organizations. By default,
+# resources cannot be moved between Organizations. If this constraint is applied
+# to a resource, the resource can be moved only to Organizations that are explicitly
+# allowed by this constraint. Moves within an Organization are not governed by this
+# constraint. The move operation will still require the same IAM permissions as normal
+# resource moves. Values specified in allow/deny lists must be in the form:
+#   under:organizations/ORGANIZATION_ID.
+# SHOULD HAVE
+resourcemanager.allowedExportDestinations:
+  rules:
+  - allow:
+      values:
+        - under:organizations/${organization_id}
+
+# This list constraint defines the set of domains that email addresses added to
+# Essential Contacts can have. By default, email addresses with any domain can
+# be added to Essential Contacts. The allowed/denied list must specify one or
+# more domains of the form @dino-runner.darkwolfsolutions.com. If this constraint is active and
+# configured with allowed values, only email addresses with a suffix matching
+# one of the entries from the list of allowed domains can be added in Essential
+# Contacts.This constraint has no effect on updating or removing existing contacts.
+# MUST HAVE
+essentialcontacts.allowedContactDomains:
+  rules:
+  - allow:
+      values:
+        - "@${domain_name}"
+
+
+# This list constraint defines one or more Cloud Identity or Google Workspace
+# customer IDs whose principals can be added to IAM policies. By default, all
+# user identities are allowed to be added to IAM policies. Only allowed values
+# can be defined in this constraint, denied values are not supported. If this
+# constraint is active, only principals that belong to the allowed customer IDs
+# can be added to IAM policies.
+# MUST HAVE
+# Recommendation:
+#   This policy is strongly advised. Enforce at the organisation level but be
+# cautious of potential issues. When this policy is enforced, even if the user
+# has setIamPolicy on the APIs of Google Cloud services, they won't be allowed
+# to add users of non-authorized domains. This also blocks the exposure of
+# data; for example, a user won't be able to set permission to allUsers or
+# authentificatedUsers in Cloud Storage to make the buckets public.
+#  use `gcloud organizations list` to query the domain id and/or directory
+# customer id.
+iam.allowedPolicyMemberDomains:
+  rules:
+    - allow:
+        values:
+          - ${customer_id}
+%{ for customer_id in allowed_policy_member_domains ~}
+          - ${customer_id}
+%{ endfor ~}
+
+
+# This list constraint defines the set of Google Cloud resources that are returned
+# in list and search methods for users in the domain of the organization where
+# this constraint is enforced. This can be used to limit what resources are
+# visible in various parts of the Cloud Console, such as the Resource Picker,
+# Search, and Manage Resources page. Note that this constraint is only ever
+# evaluated at the Organization level. Values specified in allow/deny lists
+# must be in the form: under:organizations/ORGANIZATION_ID.
+# MUST HAVE
+resourcemanager.accessBoundaries:
+  rules:
+  - allow:
+      values:
+      - under:organizations/${organization_id}
+%{ for org_id in allowed_access_boundaries ~}
+      - under:organizations/${org_id}
+%{ endfor ~}

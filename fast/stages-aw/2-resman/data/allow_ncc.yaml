@@ -1,0 +1,13 @@
+# This constraint defines the set of Google Cloud resource services that can be
+# used within an organization, folder, or project, such as compute.googleapis.com
+# and storage.googleapis.com. By default, all Google Cloud resource services are
+# allowed. For more information, see
+# https://cloud.google.com/resource-manager/help/organization-policy/restricting-resources.
+# COULD HAVE
+
+gcp.restrictServiceUsage:
+  inherit_from_parent: true
+  rules:
+    - allow:
+        values:
+          - networkconnectivity.googleapis.com

@@ -1,0 +1,26 @@
+# skip boilerplate check
+---
+# Terraform will be unable to decode this file if it does not contain valid YAML
+# You can retain `---` (start of the document) to indicate an empty document.
+
+ingress:
+#  allow-hc-nva-ssh-dmz:
+#      description: "Allow traffic from Google healthchecks to NVA appliances"
+#      targets: ["nva"]
+#      source_ranges:
+#        - healthchecks
+#      rules:
+#        - protocol: tcp
+#          ports:
+#            - 443
+#            - 80
+  allow-elb-to-nva-dmz:
+      description: "Allow traffic from internet via ELB to NVA appliances"
+      targets: ["nva"]
+      source_ranges:
+        - 0.0.0.0/0
+      rules:
+        - protocol: tcp
+          ports:
+            - 80
+            - 443

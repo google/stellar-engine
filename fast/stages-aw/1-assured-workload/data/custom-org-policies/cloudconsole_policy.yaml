@@ -1,0 +1,15 @@
+---
+# This list constraint, when enforced on an organization resource, defines
+# the set of Google Cloud resources that are returned in list and search
+# methods for users in the domain of the organization where this constraint
+# is enforced. This can be used to limit what resources are visible in various
+# parts of the Cloud Console, such as the Resource Picker, Search, and Manage
+# Resources page. Note that this Constraint is only ever evaluated at the
+# Organization level. Values specified in allow/deny lists must be in the
+# form: under:organizations/ORGANIZATION_ID.
+# COULD HAVE
+resourcemanager.accessBoundaries:
+  rules:
+  - allow:
+      values:
+        - under:organizations/${organization_id}

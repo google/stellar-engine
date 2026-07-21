@@ -1,0 +1,6 @@
+region: us-east4
+
+disa_relay_hosts:
+  - "214.24.31.240"
+
+create_cloud_nat: false

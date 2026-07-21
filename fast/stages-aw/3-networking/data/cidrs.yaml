@@ -1,0 +1,58 @@
+# skip boilerplate check
+---
+# Terraform will be unable to decode this file if it does not contain valid YAML
+# You can retain `---` (start of the document) to indicate an empty document.
+
+healthchecks:
+  - 35.191.0.0/16
+  - 130.211.0.0/22
+  - 209.85.152.0/22
+  - 209.85.204.0/22
+  - 169.254.169.254/32
+
+rfc1918:
+  - 10.0.0.0/8
+  - 172.16.0.0/12
+  - 192.168.0.0/16
+
+iap:
+  - 35.235.240.0/20
+
+internal:
+  - 10.84.0.0/14
+  - 10.88.0.0/14
+  - 10.92.0.0/14
+  - 10.96.0.0/14
+
+core:
+  - 10.84.0.0/14
+
+dev:
+  - 10.88.0.0/14
+
+test:
+  - 10.92.0.0/14
+
+prod:
+  - 10.96.0.0/14
+
+#bcap:
+#  - 10.84.253.0/24
+
+#interconnect:
+#  - 10.84.252.0/24
+
+test_landing:
+  - 10.84.3.0/25
+
+prod_landing:
+  - 10.84.4.0/25
+
+bcap_landing:
+  - 10.84.5.0/25
+
+interconnect_landing:
+  - 10.84.6.0/25
+
+csp_landing:
+  - 10.84.7.0/25

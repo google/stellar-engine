@@ -1,0 +1,105 @@
+/**
+ * Copyright 2024 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+# tfdoc:file:description Organization-level IAM bindings locals.
+
+locals {
+  iam_bindings_additive = merge(
+    # network and security
+    {
+      sa_net_fw_policy_admin = {
+        member = module.branch-network-sa.iam_email
+        role   = "roles/compute.orgFirewallPolicyAdmin"
+      }
+      sa_net_xpn_admin = {
+        member = module.branch-network-sa.iam_email
+        role   = "roles/compute.xpnAdmin"
+      }
+      sa_sec_asset_viewer = {
+        member = module.branch-security-sa.iam_email
+        role   = "roles/cloudasset.viewer"
+      }
+      sa_sec_vpcsc_admin = {
+        member = module.branch-security-sa.iam_email
+        role   = "roles/accesscontextmanager.policyAdmin"
+      }
+      sa_net_compute_net_admin = {
+        member = module.branch-network-sa.iam_email
+        role   = "roles/compute.networkAdmin"
+      }
+      net_sa_org_policy_admin = {
+        member = module.branch-network-sa.iam_email
+        role   = "roles/orgpolicy.policyAdmin"
+      }
+      ten_sa_org_policy_admin = {
+        member = "serviceAccount:${var.automation.service_accounts.tenant}"
+        role   = "roles/orgpolicy.policyAdmin"
+      }
+    },
+    # optional billing roles for network and security
+    local.billing_mode != "org" ? {} : {
+      sa_net_billing = {
+        member = module.branch-network-sa.iam_email
+        role   = "roles/billing.user"
+      }
+      sa_sec_billing = {
+        member = module.branch-security-sa.iam_email
+        role   = "roles/billing.user"
+      }
+    },
+    # optional billing roles for data platform
+    local.billing_mode != "org" || !var.fast_features.data_platform ? {} : {
+      sa_dp_dev_billing = {
+        member = module.branch-dp-dev-sa[0].iam_email
+        role   = "roles/billing.user"
+      }
+      sa_dp_prod_billing = {
+        member = module.branch-dp-prod-sa[0].iam_email
+        role   = "roles/billing.user"
+      }
+    },
+    # optional billing roles for GKE
+    local.billing_mode != "org" || !var.fast_features.gke ? {} : {
+      sa_gke_dev_billing = {
+        member = module.branch-gke-dev-sa[0].iam_email
+        role   = "roles/billing.user"
+      }
+      sa_gke_prod_billing = {
+        member = module.branch-gke-prod-sa[0].iam_email
+        role   = "roles/billing.user"
+      }
+    },
+    # optional billing roles for project factory
+    local.billing_mode != "org" || !var.fast_features.project_factory ? {} : {
+      sa_pf_dev_billing = {
+        member = module.branch-pf-dev-sa[0].iam_email
+        role   = "roles/billing.user"
+      }
+      sa_pf_dev_costs_manager = {
+        member = module.branch-pf-dev-sa[0].iam_email
+        role   = "roles/billing.costsManager"
+      }
+      sa_pf_prod_billing = {
+        member = module.branch-pf-prod-sa[0].iam_email
+        role   = "roles/billing.user"
+      }
+      sa_pf_prod_costs_manager = {
+        member = module.branch-pf-prod-sa[0].iam_email
+        role   = "roles/billing.costsManager"
+      }
+    },
+  )
+}

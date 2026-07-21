@@ -1,0 +1,40 @@
+---
+# This list constraint defines the allowed Cloud Build integrations
+# for performing Builds through receiving webhooks from services outside
+# Google Cloud. When this constraint is enforced, only webhooks for
+# services whose host matches one of the allowed values will be processed.
+# By default, Cloud Build processes all webhooks for projects that have at
+# least one LIVE trigger.
+# COULD HAVE
+# Recommendation:
+# - allow all if there's no restrictions, otherwise add domain names
+# according to the event, for example:
+#   - RepoSync event: source.developers.google.com
+#   - GitHub app event: github.com
+#   - GitHub Enterprise event: ghe-staging-test.com
+#   - Pub/Sub event: derived from the source specified in the trigger.
+#   - Webhook event: derived from the source specified in the trigger.
+#
+cloudbuild.allowedIntegrations:
+  rules:
+  - allow:
+      values:
+        - github.com
+
+# This list constraint defines the set of allowed Cloud Build Worker Pools
+# for performing Builds using Cloud Build. When this constraint is enforced,
+# builds will be required to build in a Worker Pool that matches one of the
+# allowed values. By default, Cloud Build can use any Worker Pool. The allowed
+# list of Worker Pools must be of the form:
+# [ under:organizations/ORGANIZATION_ID,
+#   under:folders/FOLDER_ID ,
+#   under:projects/PROJECT_ID ,
+#   projects/PROJECT_ID/locations/REGION/workerPools/WORKER_POOL_ID
+# ].
+# COULD HAVE
+#
+# cloudbuild.allowedWorkerPools:
+#   rules:
+#   - allow:
+#       values:
+#         - <cloudbuild.workpools>

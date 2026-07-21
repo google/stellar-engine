@@ -1,0 +1,14 @@
+type=dhcp-client
+panorama-server=140.20.252.10
+vm-auth-key=2:vHlDEPkyRvqgUJ4td20I5Qam_2h6NEvdkUWwdFrafrSzm9eOXV2n3NM3RPbEtLYFNgb8XkqQ16s8D7W93sKLcQ
+op-command-modes=${op-command-modes}
+dhcp-send-hostname=yes
+dhcp-send-client-id=yes
+dhcp-accept-server-hostname=yes
+dhcp-accept-server-domain=yes
+fips-cc-mode=yes
+plugin-op-commands=set-sess-res:True
+auth-code=${auth_code}
+redis-endpoint=${redis_endpoint}
+redis-auth=${redis_auth}
+redis-certificate=

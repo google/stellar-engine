@@ -1,0 +1,90 @@
+# This list constraint defines the allowed ingress settings for deployment of a
+# Cloud Function. When this constraint is enforced, functions will be required
+# to have ingress settings that match one of the allowed values. By default,
+# Cloud Functions can use any ingress settings. Ingress settings must be
+# specified in the allowed list using the values of the IngressSettings enum.
+# SHOULD HAVE
+#   If unspecified, ALLOW_ALL will be used.
+# - allowed values:
+#     - INGRESS_SETTINGS_UNSPECIFIED,
+#     - ALLOW_ALL, (default)
+#     - ALLOW_INTERNAL_ONLY,
+#     - ALLOW_INTERNAL_AND_GCLB
+cloudfunctions.allowedIngressSettings:
+  rules:
+  - allow:
+      values:
+        - ALLOW_INTERNAL_AND_GCLB
+
+# This list constraint defines the allowed VPC Connector egress settings for
+# deployment of a Cloud Function. When this constraint is enforced, functions
+# will be required to have VPC Connector egress settings that match one of the
+# allowed values. By default, Cloud Functions can use any VPC Connector egress
+# settings. VPC Connector egress settings must be specified in the allowed list
+# using the values of the VpcConnectorEgressSettings enum.
+# SHOULD HAVE
+# - allowed values:
+#     - VPC_CONNECTOR_EGRESS_SETTINGS_UNSPECIFIED,
+#     - PRIVATE_RANGES_ONLY,  (default)
+#     - ALL_TRAFFIC
+cloudfunctions.allowedVpcConnectorEgressSettings:
+  rules:
+  - allow:
+      values:
+        - ALL_TRAFFIC
+
+# This boolean constraint enforces setting a VPC Connector when deploying a
+# Cloud Function. When this constraint is enforced, functions will be required
+# to specify a VPC Connector. By default, specifying a VPC Connector is not
+# required to deploy a Cloud Function.
+# SHOULD HAVE
+cloudfunctions.requireVPCConnector:
+  rules:
+  - enforce: false
+
+# This list constraint defines the set of Binary Authorization policy names
+# that are allowed to be specified on a Cloud Run resource. To allow/disallow a
+# default policy, use the value \`default\`. To allow/disallow one or more custom
+# platform policies, the resource ID of each such policy must be added separately.
+# COULD HAVE
+run.allowedBinaryAuthorizationPolicies:
+  rules:
+  - allow:
+      values:
+        - default
+
+# This list constraint defines the allowed ingress settings for Cloud Run
+# services. When this constraint is enforced, services will be required to have
+# ingress settings that match one of the allowed values. Existing Cloud Run
+# services with ingress settings that violate this constraint can continue to
+# be updated until the service's ingress settings are changed to comply with
+# this constraint. Once a service complies with this constraint the service can
+# only use ingress settings allowed by this constraint. By default, Cloud Run
+# services can use any ingress settings. The allowed list must contain supported
+# ingress settings values, which are
+# all, internal, and internal-and-cloud-load-balancing.
+# SHOULD HAVE
+run.allowedIngress:
+  rules:
+  - allow:
+      values:
+          - is:internal-and-cloud-load-balancing
+
+# This list constraint defines the allowed VPC egress settings for revisions of
+# a Cloud Run service. When this constraint is enforced, a service's revisions
+# are required to use a Serverless VPC Access connector and the revisions' VPC
+# egress settings are required to match one of the allowed values. For existing
+# services, all newly deployed revisions must comply with this constraint.
+# Existing services with revisions serving traffic that violate this constraint
+# can continue to migrate traffic to revisions that violate this constraint.
+# Once all traffic for a service is served by revisions compliant with this
+# constraint, all subsequent traffic migrations must only migrate traffic to
+# revisions that comply with this constraint. By default, Cloud Run revisions
+# can set VPC egress settings to any supported value. The allowed list must
+# contain supported VPC egress settings values, which are private-ranges-only
+# and all-traffic.
+# SHOULD HAVE
+run.allowedVPCEgress:
+  rules:
+  - allow:
+      all: true

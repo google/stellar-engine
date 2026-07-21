@@ -1,0 +1,27 @@
+fast_features = {
+  envs = true
+}
+
+tenant_environments = {
+  dev = {
+    admin = "gcp-organization-admins@domain.com"
+  },
+  prod = {
+    admin = "gcp-organization-admins@domain.com"
+  }
+}
+
+cicd_repositories = {
+  networking = {
+    name              = "google-cloud/project"
+    type              = "gitlab"
+    identity_provider = "gitlab-fed"
+    branch            = "main"
+  }
+  security = {
+    name              = "google-cloud/project"
+    type              = "gitlab"
+    identity_provider = "gitlab-fed"
+    branch            = "main"
+  }
+}

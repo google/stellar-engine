@@ -1,0 +1,66 @@
+---
+# This boolean constraint, when enforced, disables creating Cloud Armor security
+# policies. By default, you can create Cloud Armor security policies in any
+# organization, folder, or project.
+# COULD HAVE
+compute.disableGlobalCloudArmorPolicy:
+  rules:
+  - enforce: true
+
+# This boolean constraint disables creation of global load balancing products.
+# When enforced, only regional load balancing products without global dependencies
+# can be created. By default, creation of global load balancing is allowed.
+# COULD HAVE
+compute.disableGlobalLoadBalancing:
+  rules:
+  - enforce: true
+
+# This boolean constraint, when enforced, disables creation of global
+# self-managed SSL Certificates. Creation of google-managed or regional
+# self-managed certificates is not disabled by this constraint. By default,
+# you can create global self-managed SSL Certificates in any organization,
+# folder, or project.
+# COULD HAVE
+compute.disableGlobalSelfManagedSslCertificate:
+  rules:
+  - enforce: true
+
+# This list constraint defines the set of load balancer types which can be
+# created for an organization, folder, or project. Every load balancer type
+# to be allowed or denied must be listed explicitly. By default, creation of
+# all types of load balancers is allowed. The list of allowed or denied values
+# must be identified as the string name of a load balancer, and can only
+# include values from the list below:
+#   [ INTERNAL_TCP_UDP, INTERNAL_HTTP_HTTPS, EXTERNAL_NETWORK_TCP_UDP,
+#     EXTERNAL_TCP_PROXY, EXTERNAL_SSL_PROXY, EXTERNAL_HTTP_HTTPS,
+#     EXTERNAL_MANAGED_HTTP_HTTPS, REGIONAL_INTERNAL_MANAGED_TCP_PROXY,
+#     REGIONAL_EXTERNAL_MANAGED_TCP_PROXY,
+#     GLOBAL_EXTERNAL_MANAGED_HTTP_HTTPS].
+# To include all internal or all external load balancer types, use the
+# in: prefix followed by INTERNAL or EXTERNAL. For example, allowing
+# in:INTERNAL will allow all load balancer types from the above list that
+# include INTERNAL.
+# COULD HAVE
+compute.restrictLoadBalancerCreationForTypes:
+  rules:
+  - allow:
+      values:
+        - in:INTERNAL
+
+# This boolean constraint, when enforced, disables turning on Identity-Aware
+# Proxy on global resources. Enabling IAP on regional resources is not
+# restricted by this constraint. By default, enabling IAP on global resources
+# is allowed.
+# COULD HAVE
+iap.requireGlobalIapWebDisabled:
+  rules:
+  - enforce: false
+
+# This boolean constraint, when enforced, disables turning on Identity-Aware
+# Proxy on regional resources. Enabling IAP on global resources is not
+# restricted by this constraint. By default, enabling IAP on regional resources
+# is allowed.
+# COULD HAVE
+iap.requireRegionalIapWebDisabled:
+  rules:
+  - enforce: false

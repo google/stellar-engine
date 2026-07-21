@@ -1,0 +1,26 @@
+# Must be the VDSS host project (VPC owner) — Cloud Router, NAT, and
+# firewall rules cannot cross-project reference networks.
+hub_project_id = "xxxx-vdss-host"
+prefix         = "da1"
+
+automation = {
+  outputs_bucket = "xxxx-prod-iac-core-outputs"
+}
+
+region     = "us-east4"
+network    = "projects/xxxx-vdss-host/global/networks/shared-services"
+subnetwork = "projects/xxxx-vdss-host/regions/us-east4/subnetworks/shared-services-default"
+
+# IPs only — hostnames break firewall destination_ranges.
+# tick.usno.navy.mil, tock.usno.navy.mil, ntp2.usno.navy.mil
+ntp_servers = ["192.5.41.40", "192.5.41.41", "192.5.41.209"]
+
+# Set to false if shared-services VPC already has a Cloud NAT, or when using BCAP routing.
+create_cloud_nat = true
+
+allowed_client_ranges = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+
+# Required for IL5 — constraints/gcp.restrictNonCmekServices enforced.
+# Use the dedicated NTP key from stage 3-networking (not the shared "default" key):
+#   gcloud storage cat gs://<outputs-bucket>/tfvars/3-networking.auto.tfvars.json | jq -r '.kms_keys["us-east4"].ntp'
+encryption_key = "projects/xxxx-vdss-host/locations/us-east4/keyRings/vdss-keyring-us-east4/cryptoKeys/ntp"

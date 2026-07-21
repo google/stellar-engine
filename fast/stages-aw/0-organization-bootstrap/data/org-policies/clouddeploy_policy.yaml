@@ -1,0 +1,10 @@
+---
+# This boolean constraint, when enforced, prevents Cloud Deploy from adding
+# Cloud Deploy identifier labels to deployed objects.By default, labels
+# identifying Cloud Deploy resources are added to deployed objects during
+# release creation.
+# COULD HAVE
+
+clouddeploy.disableServiceLabelGeneration:
+  rules:
+  - enforce: false

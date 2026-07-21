@@ -1,0 +1,70 @@
+{
+    "bindings": [
+    {
+        "members": [
+            "user:{USER}"
+        ],
+        "role": "roles/logging.admin"
+    },
+    {
+        "members": [
+            "user:{USER}"
+        ],
+        "role": "roles/iam.organizationRoleAdmin"
+    },
+    {
+        "members": [
+            "user:{USER}"
+        ],
+        "role": "roles/resourcemanager.organizationAdmin"
+    },
+    {
+        "members": [
+            "user:{USER}"
+        ],
+        "role": "roles/resourcemanager.projectCreator"
+    },
+    {
+        "members": [
+            "user:{USER}"
+        ],
+        "role": "roles/resourcemanager.tagAdmin"
+    },
+    {
+        "members": [
+            "user:{USER}"
+        ],
+        "role": "roles/owner"
+    },
+    {
+        "members": [
+            "user:{USER}"
+        ],
+        "role": "roles/assuredworkloads.admin"
+    },
+    {
+        "members": [
+            "user:{USER}"
+        ],
+        "role": "roles/axt.admin"
+    },
+    {
+        "members": [
+            "user:{USER}"
+        ],
+        "role": "roles/orgpolicy.policyAdmin"
+    },
+    {
+        "members": [
+            "user:{USER}"
+        ],
+        "role": "roles/iam.serviceAccountAdmin"
+    },
+    {
+        "members": [
+            "user:{USER}"
+        ],
+        "role": "roles/billing.admin"
+    }
+]
+}

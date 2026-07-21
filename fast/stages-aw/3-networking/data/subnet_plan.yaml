@@ -1,0 +1,5 @@
+---
+tenant_environments_subnets:
+  dev: "10.88.0.0/14"
+  test: "10.92.0.0/14"
+  prod: "10.96.0.0/14"

@@ -1,0 +1,379 @@
+# Copyright 2023 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: tagEditor
+title: "Custom Tag Editor Role"
+description: "View all common resources and ONLY manage Tag Bindings."
+includedPermissions:
+  # --- Core Resource Manager Permissions ---
+  - resourcemanager.projects.get
+  - resourcemanager.projects.list
+  - resourcemanager.tagKeys.get
+  - resourcemanager.tagKeys.list
+  - resourcemanager.tagValues.get
+  - resourcemanager.tagValues.list
+  - resourcemanager.tagValueBindings.create
+  - resourcemanager.tagValueBindings.delete
+  - resourcemanager.tagValueBindings.list
+  - resourcemanager.tagHolds.list
+  - resourcemanager.resourceTagBindings.list
+
+  # --- Compute Engine (VMs, Disks, etc.) ---
+  - compute.instances.get
+  - compute.instances.list
+  - compute.instances.createTagBinding
+  - compute.instances.deleteTagBinding
+  - compute.instances.listEffectiveTags
+  - compute.instances.listTagBindings
+  - compute.zones.list
+  - compute.projects.get
+  - compute.instanceGroupManagers.get
+  - compute.instanceGroupManagers.list
+  - compute.instanceGroupManagers.createTagBinding
+  - compute.instanceGroupManagers.deleteTagBinding
+  - compute.instanceGroupManagers.listEffectiveTags
+  - compute.instanceGroupManagers.listTagBindings
+  - compute.instanceGroups.get
+  - compute.instanceGroups.list
+  - compute.instanceGroups.createTagBinding
+  - compute.instanceGroups.deleteTagBinding
+  - compute.instanceGroups.listEffectiveTags
+  - compute.instanceGroups.listTagBindings
+  - compute.disks.get
+  - compute.disks.list
+  - compute.disks.createTagBinding
+  - compute.disks.deleteTagBinding
+  - compute.disks.listEffectiveTags
+  - compute.disks.listTagBindings
+  - compute.machineImages.get
+  - compute.machineImages.list
+  - compute.machineImages.createTagBinding
+  - compute.machineImages.deleteTagBinding
+  - compute.machineImages.listEffectiveTags
+  - compute.machineImages.listTagBindings
+  - compute.images.get
+  - compute.images.list
+  - compute.images.createTagBinding
+  - compute.images.deleteTagBinding
+  - compute.images.listEffectiveTags
+  - compute.images.listTagBindings
+
+  # --- Containers ---
+  - artifactregistry.repositories.get
+  - artifactregistry.repositories.list
+  - artifactregistry.repositories.createTagBinding
+  - artifactregistry.repositories.deleteTagBinding
+  - artifactregistry.repositories.listEffectiveTags
+  - artifactregistry.repositories.listTagBindings
+  - container.clusters.get
+  - container.clusters.list
+  - container.clusters.createTagBinding
+  - container.clusters.deleteTagBinding
+  - container.clusters.listEffectiveTags
+  - container.clusters.listTagBindings
+
+  # --- Cloud Storage (Buckets) ---
+  - storage.buckets.get
+  - storage.buckets.list
+  - storage.buckets.createTagBinding
+  - storage.buckets.deleteTagBinding
+  - storage.buckets.listTagBindings
+  - storage.buckets.listEffectiveTags
+
+  # --- BigQuery (Datasets & Tables) ---
+  - bigquery.datasets.get
+  - bigquery.datasets.createTagBinding
+  - bigquery.datasets.deleteTagBinding
+  - bigquery.datasets.listEffectiveTags
+  - bigquery.datasets.listTagBindings
+  - bigquery.tables.get
+  - bigquery.tables.list
+  - bigquery.tables.createTagBinding
+  - bigquery.tables.deleteTagBinding
+  - bigquery.tables.listEffectiveTags
+  - bigquery.tables.listTagBindings
+  
+  # --- Cloud SQL ---
+  - cloudsql.instances.get
+  - cloudsql.instances.list
+  - cloudsql.instances.createTagBinding
+  - cloudsql.instances.deleteTagBinding
+  - cloudsql.instances.listEffectiveTags
+  - cloudsql.instances.listTagBindings
+
+# --- VPC Networking ---
+  - compute.networks.get
+  - compute.networks.list
+  - compute.networks.createTagBinding
+  - compute.networks.deleteTagBinding
+  - compute.networks.listEffectiveTags
+  - compute.networks.listTagBindings
+  - compute.subnetworks.get
+  - compute.subnetworks.list
+  - compute.subnetworks.createTagBinding
+  - compute.subnetworks.deleteTagBinding
+  - compute.subnetworks.listEffectiveTags
+  - compute.subnetworks.listTagBindings
+
+  # --- NCC ---
+  - networkconnectivity.hubs.get
+  - networkconnectivity.hubs.list
+  - networkconnectivity.hubs.createTagBinding
+  - networkconnectivity.hubs.deleteTagBinding
+  - networkconnectivity.hubs.listEffectiveTags
+  - networkconnectivity.hubs.listTagBindings
+  - networkconnectivity.spokes.get
+  - networkconnectivity.spokes.list
+  - networkconnectivity.spokes.createTagBinding
+  - networkconnectivity.spokes.deleteTagBinding
+  - networkconnectivity.spokes.listEffectiveTags
+  - networkconnectivity.spokes.listTagBindings
+
+  # --- Firewall Policies & Rules ---
+  - compute.firewallPolicies.get
+  - compute.firewallPolicies.list
+  - compute.firewallPolicies.createTagBinding
+  - compute.firewallPolicies.deleteTagBinding
+  - compute.firewallPolicies.listEffectiveTags
+  - compute.firewallPolicies.listTagBindings
+  - compute.firewalls.get
+  - compute.firewalls.list
+  - compute.firewalls.createTagBinding
+  - compute.firewalls.deleteTagBinding
+  - compute.firewalls.listEffectiveTags
+  - compute.firewalls.listTagBindings
+
+  # --- Load Balancing ---
+  - compute.forwardingRules.get
+  - compute.forwardingRules.list
+  - compute.forwardingRules.createTagBinding
+  - compute.forwardingRules.deleteTagBinding
+  - compute.forwardingRules.listEffectiveTags
+  - compute.forwardingRules.listTagBindings
+  - compute.backendServices.get
+  - compute.backendServices.list
+  - compute.backendServices.createTagBinding
+  - compute.backendServices.deleteTagBinding
+  - compute.backendServices.listEffectiveTags
+  - compute.backendServices.listTagBindings
+  - compute.backendBuckets.get
+  - compute.backendBuckets.list
+  - compute.backendBuckets.createTagBinding
+  - compute.backendBuckets.deleteTagBinding
+  - compute.backendBuckets.listEffectiveTags
+  - compute.backendBuckets.listTagBindings
+  - compute.healthChecks.get
+  - compute.healthChecks.list
+  - compute.healthChecks.createTagBinding
+  - compute.healthChecks.deleteTagBinding
+  - compute.healthChecks.listEffectiveTags
+  - compute.healthChecks.listTagBindings
+  - compute.httpHealthChecks.get
+  - compute.httpHealthChecks.list
+  - compute.httpHealthChecks.createTagBinding
+  - compute.httpHealthChecks.deleteTagBinding
+  - compute.httpHealthChecks.listEffectiveTags
+  - compute.httpHealthChecks.listTagBindings
+  - compute.httpsHealthChecks.get
+  - compute.httpsHealthChecks.list
+  - compute.httpsHealthChecks.createTagBinding
+  - compute.httpsHealthChecks.deleteTagBinding
+  - compute.httpsHealthChecks.listEffectiveTags
+  - compute.httpsHealthChecks.listTagBindings
+
+  # --- DNS ---
+  - dns.managedZones.get
+  - dns.managedZones.list
+  - dns.policies.get
+  - dns.policies.list
+  - dns.policies.createTagBinding
+  - dns.policies.deleteTagBinding
+  - dns.policies.listEffectiveTags
+  - dns.policies.listTagBindings
+
+  # --- Redis ---
+  - redis.instances.get
+  - redis.instances.list
+  - redis.instances.createTagBinding
+  - redis.instances.deleteTagBinding
+  - redis.instances.listEffectiveTags
+  - redis.instances.listTagBindings
+
+  # --- VPN & Interconnects ---
+  - compute.vpnGateways.get
+  - compute.vpnGateways.list
+  - compute.vpnGateways.createTagBinding
+  - compute.vpnGateways.deleteTagBinding
+  - compute.vpnGateways.listEffectiveTags
+  - compute.vpnGateways.listTagBindings
+  - compute.vpnTunnels.get
+  - compute.vpnTunnels.list
+  - compute.vpnTunnels.createTagBinding
+  - compute.vpnTunnels.deleteTagBinding
+  - compute.vpnTunnels.listEffectiveTags
+  - compute.vpnTunnels.listTagBindings
+  - compute.externalVpnGateways.get
+  - compute.externalVpnGateways.list
+  - compute.externalVpnGateways.createTagBinding
+  - compute.externalVpnGateways.deleteTagBinding
+  - compute.externalVpnGateways.listEffectiveTags
+  - compute.externalVpnGateways.listTagBindings
+  - compute.interconnects.get
+  - compute.interconnects.list
+  - compute.interconnects.createTagBinding
+  - compute.interconnects.deleteTagBinding
+  - compute.interconnects.listEffectiveTags
+  - compute.interconnects.listTagBindings
+  - compute.interconnectAttachments.get
+  - compute.interconnectAttachments.list
+  - compute.interconnectAttachments.createTagBinding
+  - compute.interconnectAttachments.deleteTagBinding
+  - compute.interconnectAttachments.listEffectiveTags
+  - compute.interconnectAttachments.listTagBindings
+
+  # --- Cloud Routers ---
+  - compute.routers.get
+  - compute.routers.list
+  - compute.routers.createTagBinding
+  - compute.routers.deleteTagBinding
+  - compute.routers.listEffectiveTags
+  - compute.routers.listTagBindings
+  - compute.routes.get
+  - compute.routes.list
+  - compute.routes.createTagBinding
+  - compute.routes.deleteTagBinding
+  - compute.routes.listEffectiveTags
+  - compute.routes.listTagBindings
+
+  # --- IP Addresses ---
+  - compute.addresses.get
+  - compute.addresses.list
+  - compute.addresses.createTagBinding
+  - compute.addresses.deleteTagBinding
+  - compute.addresses.listEffectiveTags
+  - compute.addresses.listTagBindings
+  - compute.globalAddresses.get
+  - compute.globalAddresses.list
+  - compute.globalAddresses.createTagBinding
+  - compute.globalAddresses.deleteTagBinding
+  - compute.globalAddresses.listEffectiveTags
+  - compute.globalAddresses.listTagBindings
+
+  # --- Compute Security
+  - compute.securityPolicies.get
+  - compute.securityPolicies.list
+  - compute.securityPolicies.createTagBinding
+  - compute.securityPolicies.deleteTagBinding
+  - compute.securityPolicies.listEffectiveTags
+  - compute.securityPolicies.listTagBindings
+  - compute.sslPolicies.get
+  - compute.sslPolicies.list
+  - compute.sslPolicies.createTagBinding
+  - compute.sslPolicies.deleteTagBinding
+  - compute.sslPolicies.listEffectiveTags
+  - compute.sslPolicies.listTagBindings
+
+  # --- Network Services ---
+  - networkservices.gateways.get
+  - networkservices.gateways.list
+  - networkservices.gateways.createTagBinding
+  - networkservices.gateways.deleteTagBinding
+  - networkservices.gateways.listEffectiveTags
+  - networkservices.gateways.listTagBindings
+  - networkservices.meshes.get
+  - networkservices.meshes.list
+  - networkservices.meshes.createTagBinding
+  - networkservices.meshes.deleteTagBinding
+  - networkservices.meshes.listEffectiveTags
+  - networkservices.meshes.listTagBindings
+  - networkservices.endpointConfigSelectors.get
+  - networkservices.endpointConfigSelectors.list
+  - networkservices.endpointConfigSelectors.createTagBinding
+  - networkservices.endpointConfigSelectors.deleteTagBinding
+  - networkservices.endpointConfigSelectors.listEffectiveTags
+  - networkservices.endpointConfigSelectors.listTagBindings
+
+  # --- Network Management ---
+  - networkmanagement.connectivitytests.get
+  - networkmanagement.connectivitytests.list
+  - networkmanagement.connectivitytests.createTagBinding
+  - networkmanagement.connectivitytests.deleteTagBinding
+  - networkmanagement.connectivitytests.listEffectiveTags
+  - networkmanagement.connectivitytests.listTagBindings
+
+  # --- Cloud KMS ---
+  - cloudkms.keyRings.get
+  - cloudkms.keyRings.list
+  - cloudkms.keyRings.createTagBinding
+  - cloudkms.keyRings.deleteTagBinding
+  - cloudkms.keyRings.listEffectiveTags
+  - cloudkms.keyRings.listTagBindings
+
+  # --- Logging & Monitoring ---
+  - logging.buckets.get
+  - logging.buckets.list
+  - logging.buckets.createTagBinding
+  - logging.buckets.deleteTagBinding
+  - logging.buckets.listEffectiveTags
+  - logging.buckets.listTagBindings
+  - pubsub.subscriptions.get
+  - pubsub.subscriptions.list
+  - pubsub.subscriptions.createTagBinding
+  - pubsub.subscriptions.deleteTagBinding
+  - pubsub.subscriptions.listEffectiveTags
+  - pubsub.subscriptions.listTagBindings
+  - pubsub.topics.get
+  - pubsub.topics.list
+  - pubsub.topics.createTagBinding
+  - pubsub.topics.deleteTagBinding
+  - pubsub.topics.listEffectiveTags
+  - pubsub.topics.listTagBindings
+  - monitoring.alertPolicies.get
+  - monitoring.alertPolicies.list
+  - monitoring.alertPolicies.createTagBinding
+  - monitoring.alertPolicies.deleteTagBinding
+  - monitoring.alertPolicies.listEffectiveTags
+  - monitoring.alertPolicies.listTagBindings
+  - monitoring.dashboards.get
+  - monitoring.dashboards.list
+  - monitoring.dashboards.createTagBinding
+  - monitoring.dashboards.deleteTagBinding
+  - monitoring.dashboards.listEffectiveTags
+  - monitoring.dashboards.listTagBindings
+
+# --- Identity (Service Accounts & WIF) ---
+  - iam.serviceAccounts.get
+  - iam.serviceAccounts.list
+  - iam.serviceAccounts.createTagBinding
+  - iam.serviceAccounts.deleteTagBinding
+  - iam.serviceAccounts.listEffectiveTags
+  - iam.serviceAccounts.listTagBindings
+  - secretmanager.secrets.get
+  - secretmanager.secrets.list
+  - secretmanager.secrets.createTagBinding
+  - secretmanager.secrets.deleteTagBinding
+  - secretmanager.secrets.listEffectiveTags
+  - secretmanager.secrets.listTagBindings
+  - iam.roles.get
+  - iam.roles.list
+  - iam.roles.createTagBinding
+  - iam.roles.deleteTagBinding
+  - iam.roles.listEffectiveTags
+  - iam.roles.listTagBindings
+
+  # --- VPC-SC Discovery ---
+  - accesscontextmanager.policies.get
+  - accesscontextmanager.policies.list
+  - accesscontextmanager.servicePerimeters.get
+  - accesscontextmanager.servicePerimeters.list

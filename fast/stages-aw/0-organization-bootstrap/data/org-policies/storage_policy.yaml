@@ -1,0 +1,59 @@
+---
+# Secure your Cloud Storage data from public exposure by enforcing public access
+# prevention. This governance policy prevents existing and future resources from
+# being accessed via the public internet by disabling and blocking ACLs and IAM
+# permissions that grant access to allUsers and allAuthenticatedUsers. Enforce
+# this policy on the entire organization (recommended), specific projects, or
+# specific folders to ensure no data is publicly exposed.This policy overrides
+# existing public permissions. Public access will be revoked for existing buckets
+# and objects after this policy is enabled.
+# MUST HAVE
+storage.publicAccessPrevention:
+  rules:
+  - enforce: true
+
+# The constraint defines the set of authentication types that would be restricted
+# from accessing any storage resources under the organization in Cloud Storage.
+# Supported values are USER_ACCOUNT_HMAC_SIGNED_REQUESTS and
+# SERVICE_ACCOUNT_HMAC_SIGNED_REQUESTS. Use in:ALL_HMAC_SIGNED_REQUESTS
+# to include both.
+# COULD HAVE
+# storage.restrictAuthTypes:
+#   rules:
+#   - allow:
+#       values:
+#         - in:ALL_HMAC_SIGNED_REQUESTS
+
+# This list constraint defines the set of durations for retention policies that
+# can be set on Cloud Storage buckets. By default, if no organization policy is
+# specified, a Cloud Storage bucket can have a retention policy of any duration.
+# The list of allowed durations must be specified as a positive integer value
+# greater than zero, representing the retention policy in seconds. Any insert,
+# update, or patch operation on a bucket in the organization resource must have
+# a retention policy duration that matches the constraint. Enforcement of this
+# constraint is not retroactive. When a new organization policy is applied, the
+# retention policy of existing buckets remains unchanged and valid.
+# COULD HAVE
+# storage.retentionPolicySeconds:
+#   rules:
+#   - allow:
+#      all: true
+
+# This boolean constraint requires buckets to use uniform bucket-level access
+# where this constraint is set to True. Any new bucket in the Organization
+# resource must have uniform bucket-level access enabled, and no existing
+# buckets in the organization resource can disable uniform bucket-level access.
+# Enforcement of this constraint is not retroactive: existing buckets with
+# uniform bucket-level access disabled continue to have it disabled. The default
+# value for this constraint is False. Uniform bucket-level access disables the
+# evaluation of ACLs assigned to Cloud Storage objects in the bucket.
+# Consequently, only IAM policies grant access to objects in these buckets.
+# MUST HAVE
+storage.uniformBucketLevelAccess:
+  rules:
+  - enforce: true
+
+
+storage.secureHttpTransport:
+  rules:
+    - enforce: true

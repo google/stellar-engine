@@ -1,0 +1,27 @@
+tenant = {
+  name            = "ten_name"
+  admin_principal = "group:gcp-devops@group:gcp-devops@sub.domain.org"
+  size            = "SIZE"
+
+  locations = {
+    gcs = "us-east4"
+    kms = "us-east4"
+  }
+
+  tenant_specific_envs   = ["dev", "test", "prod"]
+
+  spoke_subnets = {
+    dev  = "0.0.0.0/32"
+    test = "0.0.0.0/32"
+    prod = "0.0.0.0/32"
+  }
+  tenant_groups = {
+    "tenant-admin" = {
+      "roles" = {
+        "editor",
+        "storage.admin",
+        "compute.instanceAdminv1"
+      }
+    }
+  }
+}

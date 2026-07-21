@@ -1,0 +1,19 @@
+---
+# This boolean constraint, when set to \`True\`, requires that all new GKE
+# clusters have Workload Identity disabled at creation time. Existing GKE
+# clusters with Workload Identity already enabled will continue to work as
+# usual. By default, Workload Identity can be enabled for any GKE cluster.
+# COULD HAVE
+# iam.disableWorkloadIdentityClusterCreation:
+#   rules:
+#   - enforce: false
+
+# This constraint determines what VPC Service Controls modes can be set when
+# provisioning a new Anthos Service Mesh Managed Control Plane. Valid values
+# are "NONE" and "COMPATIBLE".
+# COULD HAVE
+# meshconfig.allowedVpcscModes:
+#   rules:
+#       values:
+#   - allow:
+#         - COMPATIBLE
