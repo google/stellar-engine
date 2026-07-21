@@ -38,9 +38,9 @@ When compared to traditional, on-premises products and competing cloud services,
 * Simple and familiar — You don't need to learn new tools or APIs to use Dataproc, making it easy to move existing projects into Dataproc without redevelopment. Spark, Hadoop, Pig, and Hive are frequently updated, so you can be productive faster.
 
 ## Blueprint
-This blueprint deploys a dataproc cluster and meets all compliane with Assured Workloads FedRAMP High environments.
+This blueprint deploys a dataproc cluster and meets all compliance with Assured Workloads FedRAMP High environments.
 
-## Prequisites for Dataproc
+## Prerequisites for Dataproc
 1. Have access to the GCP Project ID.
 2. You will need an existing [project](https://cloud.google.com/resource-manager/docs/creating-managing-projects) with [billing enabled](https://cloud.google.com/billing/docs/how-to/modify-project) and a user with the “Project owner” [IAM](https://cloud.google.com/iam) role on that project.
 3.  __Note__: to grant a user a role, take a look at the [Granting and Revoking Access](https://cloud.google.com/iam/docs/granting-changing-revoking-access#grant-single-role) documentation.
@@ -86,7 +86,7 @@ Go to the [Cloud Storage Bucket](https://console.cloud.google.com/storage/browse
 ```bash
 gsutil retention temp release gs://tmp-dataproc-bucket-00/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx/spark-job-history/
 ```
-Once ran, re-running a ```terraform destroy``` will succesfully destroy the Google Cloud bucket.
+Once ran, re-running a ```terraform destroy``` will successfully destroy the Google Cloud bucket.
 <!-- BEGIN TFDOC -->
 ## Variables
 

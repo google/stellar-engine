@@ -1,19 +1,15 @@
-main_project_id = "xxxx-xxxx-main-0" # Replace with your main project ID
-
-gcp_region      = "us-east4"        # Renamed from 'region'
-
-# core_project_id is needed for KMS keys; replace with your core project ID
-core_project_id = "xxxx-xxxx-iac-core-0"
+main_project_id = "xxxx-xxxx-xxxx-main-0"
+region          = "us-east4"
+zone            = "us-east4-a"
 
 secrets = {
   "secret-id-one" = {
     location = "us-east4"
-    # key must be a full KMS key self-link, e.g., projects/<CORE-PROJECT-ID>/locations/us-east4/keyRings/<KMS-KEYRING-NAME>/cryptoKeys/<KMS-KEY-NAME>
-    key      = "projects/xxxx-xxxx-iac-core-0/locations/us-east4/keyRings/my-secret-keyring/cryptoKeys/my-secret-key-1"
+    key      = "projects/<CORE-PROJECT-ID>/locations/us-east4/keyRings/<KMS-KEYRING-NAME>/cryptoKeys/<KMS-KEY-NAME>"
   }
   "secret-id-two" = {
     location = "us-east4"
-    key      = "projects/xxxx-xxxx-iac-core-0/locations/us-east4/keyRings/my-secret-keyring/cryptoKeys/my-secret-key-2"
+    key      = "projects/<CORE-PROJECT-ID>/locations/us-east4/keyRings/<KMS-KEYRING-NAME>/cryptoKeys/<KMS-KEY-NAME>"
   }
 }
 
@@ -35,6 +31,3 @@ iam = {
     ]
   }
 }
-
-# 'zone' variable removed as Secret Manager secrets are regional, not zonal.
-# See https://cloud.google.com/secret-manager/docs/locations for more information

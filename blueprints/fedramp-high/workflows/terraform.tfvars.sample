@@ -1,10 +1,9 @@
-main_project_id     = "xxxx-xxxx-main-0"
-core_project_id     = "xxxx-xxxx-iac-core-0" # project where KMS keys reside
+main_project_id = "xxxx-xxxx-main-0"
 
-name                = "workflow-name-00"
-description         = "workflow-description-01" # Optional
-file                = "code/example.yaml"
-logging_level       = "LOG_ERRORS_ONLY" # Defaults to LOG_ERRORS_ONLY, other options are CALL_LOG_LEVEL_UNSPECIFIED, LOG_ALL_CALLS, and LOG_NONE
+name          = "workflow-name-00"
+description   = "workflow-description-01" # Optional
+file          = "code/example.yaml"
+logging_level = "LOG_ERRORS_ONLY" # Defaults to LOG_ERRORS_ONLY, other options are CALL_LOG_LEVEL_UNSPECIFIED, LOG_ALL_CALLS, and LOG_NONE
 
 env_vars = { # Optional
   url = "https://timeapi.io/api/time/current/zone?timeZone=America%2FDetroit", #url used by the example.yaml file
@@ -14,10 +13,3 @@ env_vars = { # Optional
 region = "us-east4"
 
 deletion_protection = false
-
-kms_keyring_name    = "my-existing-keyring" # Replace with your existing keyring name
-kms_key_name        = "my-existing-workflow-key" # Replace with your existing key name
-kms_key_location    = "us-east4" # Optional: Specify if different from 'region', otherwise defaults to 'region'
-
-# Optional: Custom service account ID
-# workflow_service_account_id = "custom-workflows-sa"

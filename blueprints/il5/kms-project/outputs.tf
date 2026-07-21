@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,29 +14,32 @@
  * limitations under the License.
  */
 
-output "managed_keyring_id" {
-  description = "The fully qualified ID of the existing KMS KeyRing being managed by this blueprint."
-  value       = data.google_kms_key_ring.existing_keyring.id
+output "keyring-id" {
+  description = "Fully qualified keyring id."
+  value       = module.kms.id
 }
 
-output "managed_keyring_name" {
-  description = "The name of the existing KMS KeyRing being managed by this blueprint."
-  value       = data.google_kms_key_ring.existing_keyring.name
+output "keyring-location" {
+  description = "Keyring location."
+  value       = module.kms.location
 }
 
-output "managed_key_self_links" {
-  description = "A map of names to self-links for the existing CryptoKeys being managed by this blueprint."
-  value = {
-    for key_name, key_data in data.google_kms_crypto_key.existing_keys :
-    key_name => key_data.id
-  }
+output "keyring-name" {
+  description = "Keyring name."
+  value       = module.kms.name
 }
 
-output "managed_key_ids" {
-  description = "A map of names to fully qualified IDs for the existing CryptoKeys being managed by this blueprint."
-  value = {
-    for key_name, key_data in data.google_kms_crypto_key.existing_keys :
-    key_name => key_data.id
-  }
+output "keyring-resource" {
+  description = "Keyring resource."
+  value       = module.kms.keyring
 }
 
+output "keyrings-keys" {
+  description = "Key resources."
+  value       = module.kms.keys
+}
+
+output "qualified_key_ids" {
+  description = "Fully qualified key ids."
+  value       = module.kms.key_ids
+}

@@ -1,0 +1,17 @@
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: gke-gateway-healthcheck
+  namespace: default
+spec:
+  default:
+    config:
+      type: TCP
+      httpHealthCheck:
+        port: 9000
+        requestPath: /
+        proxyHeader: NONE
+  targetRef:
+    group: ""
+    kind: Service
+    name: keycloak

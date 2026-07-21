@@ -247,7 +247,7 @@ if required and when the prompt appears, click on “confirm”.
 Otherwise, in your console of choice:
 
 ```bash
-git clone https://github.com/gcp-stellar-engine/stellar-engine.git
+git clone <YOUR_SOURCE_REPO>
 ```
 
 Before you deploy the architecture, you will need at least the following
@@ -317,6 +317,7 @@ gitlab-rake “gitlab:password:reset”
 | [gitlab.tf](./gitlab.tf) | None | <code>compute-vm</code> · <code>iam-service-account</code> · <code>net-lb-int</code> |  |
 | [main.tf](./main.tf) | Module-level locals and resources. | <code>project</code> |  |
 | [outputs.tf](./outputs.tf) | Module outputs. |  |  |
+| [providers.tf](./providers.tf) | Provider configurations. |  |  |
 | [services.tf](./services.tf) | None | <code>cloudsql-instance</code> · <code>gcs</code> | <code>google_redis_instance</code> |
 | [ssl.tf](./ssl.tf) | None |  | <code>tls_cert_request</code> · <code>tls_locally_signed_cert</code> · <code>tls_private_key</code> · <code>tls_self_signed_cert</code> |
 | [variables.tf](./variables.tf) | Module variables. |  |  |

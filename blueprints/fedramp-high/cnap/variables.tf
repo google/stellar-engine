@@ -29,6 +29,11 @@ variable "domain" {
   type        = string
 }
 
+variable "env" {
+  description = "The environment you are deploying the CNAP to (int, test, prod)."
+  type        = string
+}
+
 variable "ids_name" {
   description = "Name of IDS."
   type        = string
@@ -106,5 +111,4 @@ variable "subnetwork_list" {
 variable "subnetwork_name" {
   description = "Subnet for deploying the instances."
   type        = string
-  default     = "default-us-east4"
 }

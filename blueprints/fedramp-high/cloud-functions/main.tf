@@ -1,26 +1,5 @@
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 data "google_project" "current" {
   project_id = var.main_project_id
-}
-
-module "service-account-runner" {
-  source       = "../../../modules/iam-service-account"
-  name         = "cf-runner-sa"
-  project_id   = var.main_project_id
-  display_name = "Cloud Functions Runner Service Account"
 }
 
 resource "google_project_service" "cloud_functions_apis" {
@@ -39,16 +18,50 @@ resource "google_project_service" "cloud_functions_apis" {
   disable_on_destroy = false
 }
 
+resource "google_project_service_identity" "artifact_registry_agent" {
+  provider = google-beta
+  project  = var.main_project_id
+  service  = "artifactregistry.googleapis.com"
+
+  depends_on = [
+    google_project_service.cloud_functions_apis
+  ]
+}
+
+resource "google_service_account" "cloud_function_sa" {
+  project      = data.google_project.current.project_id
+  account_id   = "cloud-function-sa"
+  display_name = "Service account for cloud function tasks"
+}
+
+resource "google_service_account" "custom_build_sa" {
+  project      = data.google_project.current.project_id
+  account_id   = "cf-custom-builder-sa"
+  display_name = "Custom SA for Cloud Function builds"
+}
+
 resource "google_project_iam_member" "cloud_build" {
   project = var.main_project_id
   role    = "roles/cloudbuild.builds.builder"
-  member  = module.service-account-runner.iam_email
+  member  = "serviceAccount:${google_service_account.cloud_function_sa.email}"
 }
 
 resource "google_project_iam_member" "cloud_invoker" {
   project = var.main_project_id
   role    = "roles/run.invoker"
-  member  = module.service-account-runner.iam_email
+  member  = "serviceAccount:${google_service_account.cloud_function_sa.email}"
+}
+
+resource "google_project_iam_member" "build_sa_run_admin" {
+  project = data.google_project.current.project_id
+  role    = "roles/run.admin"
+  member  = "serviceAccount:${google_service_account.custom_build_sa.email}"
+}
+
+resource "google_service_account_iam_member" "build_sa_impersonator" {
+  service_account_id = google_service_account.cloud_function_sa.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.custom_build_sa.email}"
 }
 
 resource "google_kms_crypto_key_iam_binding" "cloud_storage" {
@@ -58,31 +71,40 @@ resource "google_kms_crypto_key_iam_binding" "cloud_storage" {
     "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com",
     "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com",
     "serviceAccount:service-${data.google_project.current.number}@gcf-admin-robot.iam.gserviceaccount.com",
-    "serviceAccount:service-${data.google_project.current.number}@gcp-sa-artifactregistry.iam.gserviceaccount.com",
-    "serviceAccount:service-${data.google_project.current.number}@serverless-robot-prod.iam.gserviceaccount.com"
+    "serviceAccount:service-${data.google_project.current.number}@serverless-robot-prod.iam.gserviceaccount.com",
+    "serviceAccount:${google_project_service_identity.artifact_registry_agent.email}",
+    google_service_account.custom_build_sa.member
   ]
 }
 
 resource "google_project_iam_member" "artifactregistry_createOnPushWriter" {
   project = var.main_project_id
   role    = "roles/artifactregistry.createOnPushWriter"
-  member  = module.service-account-runner.iam_email
+  member  = "serviceAccount:${google_service_account.custom_build_sa.email}"
 }
 
 resource "google_project_iam_member" "logging_logWriter" {
   project = var.main_project_id
   role    = "roles/logging.logWriter"
-  member  = module.service-account-runner.iam_email
+  member  = "serviceAccount:${google_service_account.custom_build_sa.email}"
 }
 
 resource "google_project_iam_member" "storage_objectUser" {
   project = var.main_project_id
   role    = "roles/storage.objectUser"
-  member  = module.service-account-runner.iam_email
+  member  = "serviceAccount:${google_service_account.custom_build_sa.email}"
 }
 
 resource "null_resource" "cloud_function_deploy" {
-  depends_on = [module.bucket, module.registry-docker]
+  depends_on = [
+    module.bucket,
+    module.registry-docker,
+    google_project_iam_member.build_sa_run_admin,
+    google_service_account_iam_member.build_sa_impersonator,
+    google_kms_crypto_key_iam_binding.cloud_storage,
+    google_project_iam_member.artifactregistry_createOnPushWriter,
+    google_project_iam_member.storage_objectUser
+  ]
   triggers = {
     project_id       = var.main_project_id
     region           = var.region
@@ -107,8 +129,11 @@ resource "null_resource" "cloud_function_deploy" {
         --ingress-settings="internal-and-gclb" \
         --binary-authorization default \
         --docker-repository="${module.registry-docker.id}" \
-        --kms-key="${var.kms_key_name}" \
-        --service-account="${module.service-account-runner.email}"
+        --kms-key="${var.kms_key_name}"\
+        --no-allow-unauthenticated \
+        --service-account="${google_service_account.cloud_function_sa.email}" \
+        --build-service-account="${google_service_account.custom_build_sa.name}" \
+        --gen2
     EOT
   }
 }
@@ -122,11 +147,14 @@ module "bucket" {
   encryption_key = var.kms_key_name
   iam = {
     "roles/storage.objectUser" = [
-      module.service-account-runner.iam_email,
+      "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com",
       "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com",
       "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com"
     ]
   }
+  depends_on = [
+    google_kms_crypto_key_iam_binding.cloud_storage
+  ]
 }
 
 module "registry-docker" {

@@ -13,11 +13,11 @@ This blueprint simplifies the deployment and configuration of BeyondCorp resourc
 <mark>Identity-Aware Proxy (IAP) backend:</mark> Configures a Compute Backend Service with IAP enabled (with OAuth2 credentials for authentication).<br />
 <mark>Identity-Aware Proxy (IAP) user:</mark> Grants the specified user access to IAP-secured resources. <span style="color: grey">Roles/iap.httpsResourceAccessor:</span> Allows users to access HTTPS resources protected by IAP.<br/>
 
-For more information, please look at this Google Cloud Communiity [Article](https://www.googlecloudcommunity.com/gc/Community-Blogs/Improve-the-security-of-your-Google-Workspace-Environment/ba-p/714629).
+For more information, please look at this Google Cloud Community [Article](https://www.googlecloudcommunity.com/gc/Community-Blogs/Improve-the-security-of-your-Google-Workspace-Environment/ba-p/714629).
 
 
 ## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workdloads within the Google Cloud Platform (GCP) organization.
+- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
 
 ### Oauth2 Consent Screen
 
@@ -31,12 +31,12 @@ Once it's created, create credentials by going to the API&Services -> Credential
 
 ### Access Policy ID number
 
-To get Access Policy ID number, run the following commmand:
+To get Access Policy ID number, run the following command:
 
 gcloud access-context-manager policies list
 
 The name is the ID.
-## Sucessful Deployment
+## Successful Deployment
 
 Use GCP Console to verify if resources were created
 

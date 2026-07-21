@@ -2,8 +2,7 @@
 
 This Terraform blueprint provisions the necessary Google Cloud infrastructure to establish a highly available connection to a Boundary Cloud Access Point (BCAP) provider, such as DISA, using Google Cloud Partner Interconnect.
 
-The BCAP architecture follows the **99.99% Availability for Partner Interconnect** topology as recommended in the [GCP Documentation](https://cloud.google.com/network-connectivity/docs/interconnect/tutorials/partner-creating-9999-availability) and referenced in the [BCAP Customer Guide for GCP](https://docs.google.com/document/d/1wE_vWB0Jp8jyLxg1WMFzZraaDveAXDdLqLLpuvUuDAM/edit?usp=sharing&resourcekey=0-Do1WgE5cb9JWewGgT0984A).
-
+The BCAP architecture follows the **99.99% Availability for Partner Interconnect** topology as recommended in the [GCP Documentation](https://cloud.google.com/network-connectivity/docs/interconnect/tutorials/partner-creating-9999-availability). 
 Google BCAP Contact: <trusted-networks@gss.google>
 
 <!-- BEGIN TOC -->
@@ -36,7 +35,7 @@ This blueprint creates the following resources:
 
 ## Prerequisites
 
-* Review the [BCAP Customer Guide for GCP](https://docs.google.com/document/d/1wE_vWB0Jp8jyLxg1WMFzZraaDveAXDdLqLLpuvUuDAM/edit?usp=sharing&resourcekey=0-Do1WgE5cb9JWewGgT0984A).
+* Review the [GCP Documentation](https://cloud.google.com/network-connectivity/docs/interconnect/tutorials/partner-creating-9999-availability). 
 * The **base /24 CIDR block** assigned by the Department of Defense Network Information Center (DoD NIC) (`dod_base_cidr_block`).
 * Completion of BCAP onboarding steps (Phase 1 & 2 from the guide), including obtaining necessary approvals (e.g., Cloud Permission to Connect (CPTC)) and the official IP space from DoD NIC.
 * MD5 Authentication Keys (provided by customer/mission owner) to be configured on the Cloud Router BGP sessions *after* the attachments are provisioned and activated by the partner.

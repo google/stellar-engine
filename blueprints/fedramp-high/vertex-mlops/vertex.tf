@@ -16,59 +16,23 @@
 
 module "service-account-notebook" {
   source     = "../../../modules/iam-service-account"
-  project_id = module.project.project_id
+  project_id = var.main_project_id
   name       = "notebook-sa"
 }
 
-resource "google_notebooks_runtime" "runtime" {
-  for_each = { for k, v in var.notebooks : k => v if v.type == "MANAGED" }
-  name     = "${local.prefix}${each.key}"
-  project  = module.project.project_id
-  location = var.region
-  access_config {
-    access_type   = "SINGLE_USER"
-    runtime_owner = try(var.notebooks[each.key].owner, null)
-  }
-  software_config {
-    enable_health_monitoring = true
-  }
-  virtual_machine {
-    virtual_machine_config {
-      machine_type     = var.notebooks[each.key].machine_type
-      network          = local.vpc
-      subnet           = local.subnet
-      internal_ip_only = var.notebooks[each.key].internal_ip_only
-      dynamic "encryption_config" {
-        for_each = var.service_encryption_keys.notebooks == null ? [] : [1]
-        content {
-          kms_key = var.service_encryption_keys.notebooks
-        }
-      }
-      metadata = {
-        notebook-disable-nbconvert = "false"
-        notebook-disable-downloads = "true"
-        notebook-disable-terminal  = "false"
-        notebook-disable-root      = "true"
-      }
-      data_disk {
-        initialize_params {
-          disk_size_gb = "100"
-          disk_type    = "PD_STANDARD"
-        }
-      }
-    }
-  }
-}
-
 resource "google_workbench_instance" "playground" {
-  for_each = { for k, v in var.notebooks : k => v if v.type == "USER_MANAGED" }
+  for_each = var.notebooks
   name     = "${local.prefix}${each.key}"
   location = "${var.region}-b"
-  project  = module.project.project_id
+  project  = var.main_project_id
 
   gce_setup {
     machine_type      = var.notebooks[each.key].machine_type
     disable_public_ip = var.notebooks[each.key].internal_ip_only
+
+    service_accounts {
+      email = module.service-account-notebook.email
+    }
 
     container_image {
       repository = "gcr.io/deeplearning-platform-release/base-cpu"
@@ -86,17 +50,36 @@ resource "google_workbench_instance" "playground" {
       network = local.vpc
       subnet  = local.subnet
     }
-
-    service_accounts {
-      email = module.service-account-notebook.email
-    }
   }
 
   disable_proxy_access = false
 
   instance_owners = try(tolist(var.notebooks[each.key].owner), null)
 
+  labels = var.labels
+
   depends_on = [
     google_project_iam_member.shared_vpc,
+    google_kms_crypto_key_iam_member.notebooks_kms,
+    google_kms_crypto_key_iam_member.compute_kms,
   ]
+}
+
+resource "google_project_iam_member" "notebook_permissions" {
+  for_each = toset([
+    "roles/notebooks.runner",
+    "roles/aiplatform.user",
+    "roles/storage.objectViewer",
+    "roles/logging.logWriter",
+    "roles/monitoring.metricWriter",
+  ])
+  project = var.main_project_id
+  role    = each.key
+  member  = "serviceAccount:${module.service-account-notebook.email}"
+}
+
+resource "google_service_account_iam_member" "notebook_acts_as_mlops" {
+  service_account_id = module.service-account-mlops.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${module.service-account-notebook.email}"
 }

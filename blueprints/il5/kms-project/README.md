@@ -1,125 +1,130 @@
-# Cloud KMS Project Blueprint
-This blueprint demonstrates how to manage existing Google Cloud Key Management Service (Cloud KMS) KeyRings and CryptoKeys, applying IAM policies and potentially other configurations (like rotation policies) to them within a multi-project GCP environment. It assumes KMS infrastructure is created by a foundational layer.
+# Google Cloud Key Management Service (Cloud KMS) Project
+This blueprint contains all the necessary Terraform modules to build and deploy a Cloud Key Management: Manage encryption keys on Google Cloud.
 
-<!-- BEGIN TFDOC -->
-- [Cloud KMS Project Blueprint](#cloud-kms-project-blueprint)
-- [Introduction](#introduction)
-- [Disclaimer](#disclaimer)
-- [Prerequisites](#prerequisites)
-- [Deployment Steps](#deployment-steps)
-- [Verification](#verification)
-- [Important Notes](#important-notes)
-- [Variables](#variables)
-- [Outputs](#outputs)
-<!-- END TFDOC -->
 
-## Introduction
-Google Cloud Key Management Service (Cloud KMS) lets you create and manage encryption keys for use in compatible Google Cloud services and in your own applications. This blueprint facilitates central management by applying additional policies or configurations to KMS KeyRings and CryptoKeys that are already provisioned by your organization's foundational infrastructure.
+## Introduction Google Cloud Key Management Service (Cloud KMS)
+Google Cloud Key Management Service (Cloud KMS) lets you create and manage encryption keys for use in compatible Google Cloud services and in your own applications. Using Cloud KMS, you can Generate software or hardware keys, import existing keys into Cloud KMS, or link external keys in your compatible external key management (EKM) system. Allows managing a keyring, zero or more keys in the keyring, and IAM role bindings on individual keys.
 
-It allows you to:
-- Grant specific IAM roles to users or groups on existing CryptoKeys.
-- Manage properties like key rotation periods on existing keys.
-- Centralize management of access to critical encryption keys across different projects.
+1. The Rotation Period ``` rotation_period ``` is set to 90 days,
+2. The Destroy Scheduled Duration is ``` destroy_scheduled_duration ``` is set to 30 days
+3. The IAM Permissions and Roles ```roles/cloudkms.cryptoKeyEncrypterDecrypter``` is assigned
+
+## Pre-requisite for Google Cloud Key Management Service (Cloud KMS)
+1. The Principal (user or group) must have Google Cloud Key Management Service (Cloud KMS) Admin permission at the GCP Level.
+2. Have access to the GCP Project ID
+3.  You will need an existing [project](https://cloud.google.com/resource-manager/docs/creating-managing-projects) with [billing enabled](https://cloud.google.com/billing/docs/how-to/modify-project) and a user with the “Project owner” [IAM](https://cloud.google.com/iam) role on that project.
+4.  __Note__: to grant a user a role, take a look at the [Granting and Revoking Access](https://cloud.google.com/iam/docs/granting-changing-revoking-access#grant-single-role) documentation.
+
 
 ## Disclaimer
 - The present GCP Terraform Module in this project is set up and intended to be implemented in either a FedRAMP-High or IL5 (Impact Level 5) environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
 - Assured Workloads in both environments ensures that sensitive data and workloads in GCP adhere to the rigorous security standards mandated by the DoD, making it suitable for government agencies.
-
-## Prerequisites
-Before deploying this blueprint, ensure the following are in place:
-
-1.  **Google Cloud Projects:**
-    * A **main project** (`var.main_project_id`) which will host the IAM bindings managed by this blueprint (this should typically be the project where the existing KMS keys reside).
-    * A **core project** (`var.core_project_id`) if your existing KMS KeyRings and CryptoKeys are provisioned in a different dedicated core project than your `main_project_id`.
-2.  **Existing Cloud KMS Infrastructure:**
-    * You must have an existing Cloud KMS KeyRing (`var.existing_kms_keyring_name`) and one or more existing CryptoKeys (`var.existing_kms_keys`) already provisioned in your `core_project_id` (or `main_project_id`).
-    * This blueprint **consumes existing KMS infrastructure; it does not create new KeyRings or CryptoKeys.**
-3.  **Permissions:** The service account or user deploying this blueprint must have:
-    * `roles/owner` or sufficient granular permissions (e.g., `cloudkms.admin`, `serviceusage.serviceUsageAdmin`, `resourcemanager.projectIamAdmin`) in the `main_project_id` (and `core_project_id` if different).
-    * Specific IAM roles to manage IAM on KMS keys (e.g., `roles/cloudkms.admin`, `roles/cloudkms.viewer`, `roles/resourcemanager.organizationViewer` if policies are org-level) on the project where the keys reside.
-    * The `Cloud KMS API` (`cloudkms.googleapis.com`) enabled in the `main_project_id`. This blueprint attempts to enable it automatically.
-
-## Deployment Steps
-1.  **Configure Variables:**
-    * Copy the sample variables file:
-        ```bash
-        cp terraform.tfvars.sample terraform.tfvars
-        ```
-    * Open `terraform.tfvars` and update the placeholder values (`xxxx-xxxx-main-0`, `my-existing-keyring`, `user@yourdomain.com`, etc.) with your actual project IDs, existing KMS KeyRing/CryptoKey names, and any IAM members you wish to manage.
-
-2.  **Initialize Terraform:**
-    ```bash
-    terraform init
-    ```
-
-3.  **Review Plan:**
-    ```bash
-    terraform plan
-    ```
-    Carefully review the proposed changes (e.g., new IAM bindings, updated key properties) before applying.
-
-4.  **Apply Changes:**
-    ```bash
-    terraform apply
-    ```
-    Type `yes` when prompted to confirm the deployment.
-
-5.  **Destroy Infrastructure (Optional):**
-    If you wish to remove the policies or configurations managed by this blueprint:
-    ```bash
-    terraform destroy
-    ```
-    Type `yes` when prompted to confirm.
-    *Note: This will NOT destroy your underlying KMS KeyRings or CryptoKeys, only the policies and configurations managed by this blueprint.*
-
-## Verification
-To verify a successful deployment:
-
-1.  **Google Cloud Console:**
-    * Navigate to **Security** > **Key Management** in your `main_project_id` (or `core_project_id` where the keys reside).
-    * Verify the existence of the KeyRing (`var.existing_kms_keyring_name`).
-    * Click on the KeyRing, then click on a specific CryptoKey (`var.existing_kms_keys`).
-    * On the CryptoKey's details page, check the **Permissions** tab to confirm that the specified IAM roles (e.g., `roles/cloudkms.cryptoKeyEncrypterDecrypter`) have been granted to the correct users/groups/service accounts.
-    * If rotation policies were managed, confirm those settings as well.
-
-2.  **`gcloud` CLI:**
-    * **Describe the KeyRing:**
-        ```bash
-        gcloud kms key-rings describe <KEYRING_NAME> --location=<REGION> --project=<CORE_PROJECT_ID>
-        ```
-    * **Describe a CryptoKey:**
-        ```bash
-        gcloud kms keys describe <KEY_NAME> --keyring=<KEYRING_NAME> --location=<REGION> --project=<CORE_PROJECT_ID>
-        ```
-    * **Get IAM Policy for a CryptoKey:**
-        ```bash
-        gcloud secrets keys get-iam-policy <KEY_NAME> --keyring=<KEYRING_NAME> --location=<REGION> --project=<CORE_PROJECT_ID>
-        ```
-
-## Important Notes
--   This blueprint strictly **manages existing KMS KeyRings and CryptoKeys**; it does not create them. Your KMS infrastructure is assumed to be provisioned by a foundational Terraform layer or other means.
--   KMS KeyRings and CryptoKeys are **regional resources** (or global for multi-region KeyRings). Ensure `var.gcp_region` matches the location of your existing KeyRing.
--   The `roles/cloudkms.cryptoKeyEncrypterDecrypter` role is a common permission for services to use KMS keys for encryption/decryption. This blueprint allows you to grant this (and other) roles to specific principals on your existing keys.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [main_project_id](variables.tf#L1) | The Google Cloud Project ID where KMS-related IAM policies will be managed (i.e., the project where the existing KMS keys reside). | <code>string</code> | ✓ |  |
-| [gcp_region](variables.tf#L6) | The Google Cloud region where the existing KMS KeyRing is located. This will also be used as the default region for the provider. | <code>string</code> | ✓ |  |
-| [core_project_id](variables.tf#L11) | The Google Cloud Project ID where the existing KMS KeyRing and CryptoKeys are actually provisioned (this could be the same as `main_project_id`). | <code>string</code> | ✓ |  |
-| [existing_kms_keyring_name](variables.tf#L16) | The name of the existing Cloud KMS KeyRing to manage or apply policies to. | <code>string</code> | ✓ |  |
-| [existing_kms_keys](variables.tf#L20) | A map where keys are the names of existing CryptoKeys within the specified KeyRing, and values are objects defining additional properties (e.g., IAM members to add). | <code title="map&#40;object&#40;&#123;&#10;  iam_members &#61; optional&#40;map&#40;list&#40;string&#41;, &#123;&#125;&#41;&#10;  rotation_period_s &#61; optional&#40;number&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [email](variables.tf#L29) | Email address of a user to grant permissions on KMS keys (if used in `existing_kms_keys.iam_members`). | <code>string</code> |  | <code>null</code> |
-| [group_email](variables.tf#L35) | An email address that represents a Google group to grant permissions on KMS keys (if used in `existing_kms_keys.iam_members`). | <code>string</code> |  | <code>null</code> |
+| [email](variables.tf#L17) | Email address of the user. | <code>string</code> | ✓ |  |
+| [group_email](variables.tf#L23) | An email address that represents a Google group. For example, admins@example.com. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L85) | Keyring attributes. | <code title="object&#40;&#123;&#10;  location &#61; string&#10;  name     &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [main_project_id](variables.tf#L93) | Project ID. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L99) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
+| [kms_key_names](variables.tf#L29) | Key names and base attributes. Set attributes to null if not needed. | <code title="map&#40;object&#40;&#123;&#10;  destroy_scheduled_duration    &#61; optional&#40;string&#41;&#10;  rotation_period               &#61; optional&#40;string, &#34;7776000s&#34;&#41; &#35; CIS Compliance Benchmark 1.10&#10;  labels                        &#61; optional&#40;map&#40;string&#41;&#41;&#10;  purpose                       &#61; optional&#40;string, &#34;ENCRYPT_DECRYPT&#34;&#41;&#10;  skip_initial_version_creation &#61; optional&#40;bool, false&#41;&#10;  version_template &#61; optional&#40;object&#40;&#123;&#10;    algorithm        &#61; string&#10;    protection_level &#61; optional&#40;string, &#34;HSM&#34;&#41;&#10;  &#125;&#41;&#41;&#10;&#10;&#10;  iam &#61; optional&#40;map&#40;list&#40;string&#41;&#41;, &#123;&#125;&#41;&#10;  iam_bindings &#61; optional&#40;map&#40;object&#40;&#123;&#10;    members &#61; list&#40;string&#41;&#10;    role    &#61; string&#10;    condition &#61; optional&#40;object&#40;&#123;&#10;      expression  &#61; string&#10;      title       &#61; string&#10;      description &#61; optional&#40;string&#41;&#10;    &#125;&#41;&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;  iam_bindings_additive &#61; optional&#40;map&#40;object&#40;&#123;&#10;    member &#61; string&#10;    role   &#61; string&#10;    condition &#61; optional&#40;object&#40;&#123;&#10;      expression  &#61; string&#10;      title       &#61; string&#10;      description &#61; optional&#40;string&#41;&#10;    &#125;&#41;&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code title="&#123;&#10;  &#34;update-the-keys-name&#34; &#61; &#123;&#10;    rotation_period            &#61; &#34;7776000s&#34;&#10;    destroy_scheduled_duration &#61; &#34;2592000s&#34;&#10;    labels &#61; &#123;&#10;      &#34;team&#34; &#61; &#34;update-the-team-label-here&#34;&#10;    &#125;&#10;    version_template &#61; &#123;&#10;      algorithm        &#61; &#34;GOOGLE_SYMMETRIC_ENCRYPTION&#34;&#10;      protection_level &#61; &#34;HSM&#34;&#10;    &#125;&#10;    iam &#61; &#123;&#10;      &#34;roles&#47;cloudkms.cryptoKeyEncrypterDecrypter&#34; &#61; &#91;&#34;user:update-the-email-address-here&#34;, &#34;group:update-group-email-address-here&#34;&#93;&#10;    &#125;&#10;    lifecycle &#61; &#123;&#10;      prevent_destroy &#61; true&#10;    &#125;&#10;  &#125;&#10;&#10;&#10;&#125;">&#123;&#8230;&#125;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [managed_keyring_id](outputs.tf#L16) | The fully qualified ID of the existing KMS KeyRing being managed by this blueprint. |  |
-| [managed_keyring_name](outputs.tf#L21) | The name of the existing KMS KeyRing being managed by this blueprint. |  |
-| [managed_key_self_links](outputs.tf#L26) | A map of names to self-links for the existing CryptoKeys being managed by this blueprint. |  |
-| [managed_key_ids](outputs.tf#L33) | A map of names to fully qualified IDs for the existing CryptoKeys being managed by this blueprint. |  |
+| [keyring-id](outputs.tf#L17) | Fully qualified keyring id. |  |
+| [keyring-location](outputs.tf#L22) | Keyring location. |  |
+| [keyring-name](outputs.tf#L27) | Keyring name. |  |
+| [keyring-resource](outputs.tf#L32) | Keyring resource. |  |
+| [keyrings-keys](outputs.tf#L37) | Key resources. |  |
+| [qualified_key_ids](outputs.tf#L42) | Fully qualified key ids. |  |
 <!-- END TFDOC -->
+## How to deploy the Terraform Code. The Deployment Steps
+You should see this README and some terraform files.
+1. Update the Variables in the variables.tf and also the properties within the keys variables. For reference update the following variables and associated properties
+
+- ```project_id```  with your GCP Project ID<br />
+-  ```email```  with your email address<br />
+- ```location```  with the GCP Location<br />
+- ```keyring``` with the location of the keyring and the name of the
+keyring, for example <br />
+```bash
+  default = {
+    location = "us-east4"
+    name     = "may6v3-keyring"
+  }
+```
+- ```keys```  with the right properties, update the ```updated-the-runner-key-name``` , ```labels = { "team" = ``` ,
+```iam = { roles/cloudkms.cryptoKeyEncrypterDecrypter = ["user:YOUR-EMAIL-ADDRESS]```
+
+2. There is a sample ```terraform.tfvars.sample``` available as well.
+3. Although each use case is somehow built around the previous one they are self-contained so you can deploy any of them at your will. The usual terraform commands will do the work. To provision this example, run the following from within this directory:
+
+```terraform init ``` to get the plugins<br />
+```terraform plan``` to see the infrastructure plan<br />
+```terraform apply``` to apply the infrastructure build<br />
+```terraform destroy``` to destroy the built infrastructure<br />
+
+It will take a few minutes. When complete, you should see an output stating the command completed successfully, a list of the created resources.
+
+The Output will look like following
+```
+
+Apply complete! Resources: 4 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+keyring-id = "projects/project-id-123/locations/us-east4/keyRings/name-of-the-keyring"
+keyring-location = "us-east4"
+keyring-name = "name-of-the-keyring"
+keyring-resource = {
+  "id" = "projects/project-id-123/locations/us-east4/keyRings/name-of-the-keyring"
+  "location" = "us-east4"
+  "name" = "name-of-the-keyring"
+  "project" = "project-id-123"
+  "timeouts" = null /* object */
+}
+keyrings-keys = {
+  "keyrings-key" = {
+    "crypto_key_backend" = ""
+    "destroy_scheduled_duration" = "2592000s"
+    "effective_labels" = tomap({
+      "team" = "dino-runner"
+    })
+    "id" = "projects/project-id-123/locations/us-east4/keyRings/name-of-the-keyring/cryptoKeys/keyrings-runner-key"
+    "import_only" = false
+    "key_ring" = "projects/project-id-123/locations/us-east4/keyRings/name-of-the-keyring"
+    "labels" = tomap({
+      "team" = "dino-runner"
+    })
+    "name" = "keyrings-runner-key"
+    "primary" = tolist([
+      {
+        "name" = "projects/project-id-123/locations/us-east4/keyRings/name-of-the-keyring/cryptoKeys/keyrings-runner-key/cryptoKeyVersions/1"
+        "state" = "ENABLED"
+      },
+    ])
+    "purpose" = "ENCRYPT_DECRYPT"
+    "rotation_period" = "7776000s"
+    "skip_initial_version_creation" = false
+    "terraform_labels" = tomap({
+      "team" = "dino-runner"
+    })
+    "timeouts" = null /* object */
+    "version_template" = tolist([
+      {
+        "algorithm" = "GOOGLE_SYMMETRIC_ENCRYPTION"
+        "protection_level" = "HSM"
+      },
+    ])
+  }
+}
+qualified_key_ids = {
+  "keyrings-runner-key" = "projects/project-id-123/locations/us-east4/keyRings/name-of-the-keyring/cryptoKeys/keyrings-runner-key"
+}
+
+
+```

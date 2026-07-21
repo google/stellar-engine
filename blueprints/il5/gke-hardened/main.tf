@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-data "google_project" "current" {}
+data "google_project" "current" {
+  project_id = var.main_project_id
+}
 
 # Only uncomment if no organization policies enforce the below
 # resource "google_compute_project_metadata" "default" {
@@ -25,7 +27,7 @@ data "google_project" "current" {}
 # }
 
 resource "google_service_account" "gke" {
-  account_id = "gke-${var.main_project_id}"
+  account_id = "gke-${var.gke_cluster_name}"
   project    = var.main_project_id
 }
 
@@ -35,10 +37,16 @@ resource "google_service_account" "gatekeeper_sa" {
   display_name = "GSA for GKE Policy Controller/Gatekeeper"
 }
 
+resource "google_service_account" "gke_developer_sa" {
+  project      = data.google_project.current.project_id
+  account_id   = "gke-developer-sa"
+  display_name = "Service Account for GKE Developer tasks"
+}
+
 resource "google_project_iam_member" "gke_cluster_admin" {
   project = data.google_project.current.project_id
   role    = "roles/container.developer"
-  member  = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+  member  = "serviceAccount:${google_service_account.gke_developer_sa.email}"
 }
 
 resource "google_project_iam_member" "gatekeeper_monitoring_writer" {
@@ -51,7 +59,10 @@ resource "google_service_account_iam_member" "gatekeeper_wi_binding" {
   service_account_id = google_service_account.gatekeeper_sa.name
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.main_project_id}.svc.id.goog[gatekeeper-system/gatekeeper-admin]"
-  depends_on         = [google_service_account.gatekeeper_sa]
+  depends_on = [
+    google_service_account.gatekeeper_sa,
+    module.cluster
+  ]
 }
 
 resource "google_project_service" "storagetransfer_api" {
@@ -102,7 +113,6 @@ module "kms" {
   iam = {
     "roles/cloudkms.cryptoKeyEncrypterDecrypter" = [
       google_service_account.gke.member,
-      "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com",
       "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com",
       "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com"
     ]
@@ -177,10 +187,6 @@ module "cluster" {
     enable_shielded_nodes = true
     dataplane_v2          = true
     binary_authorization  = true
-    database_encryption = {
-      state    = "ENCRYPTED"
-      key_name = module.kms.keys.default.id
-    }
   }
   private_cluster_config = {
     enable_private_endpoint = var.gke_cluster_enable_private_endpoint
@@ -209,6 +215,7 @@ module "cluster_nodepool" {
       enable_secure_boot          = true
       enable_integrity_monitoring = true
     }
+    tags = ["gke-nodepool-tag"]
   }
   depends_on = [module.cluster]
 }
@@ -222,22 +229,7 @@ module "compute-vm" {
   service_account = {
     scopes = ["cloud-platform"]
   }
-  snapshot_schedules = {
-    daily-backup = {
-      schedule = {
-        daily = {
-          days_in_cycle = 1
-          start_time    = "04:00"
-        }
-      }
-      retention_policy = {
-        max_retention_days = var.snapshot_max_retention_days
-      }
-    }
-  }
-
   boot_disk = {
-    snapshot_schedule = ["daily-backup"]
     initialize_params = {
       image = "projects/cos-cloud/global/images/cos-105-17412-495-45"
     }
@@ -265,9 +257,6 @@ resource "google_compute_firewall" "allow-iap" {
     protocol = "TCP"
     ports    = ["22"]
   }
-  log_config {
-    metadata = "INCLUDE_ALL_METADATA"
-  }
   target_tags = ["allow-iap"]
   depends_on  = [module.vpc]
 }
@@ -282,9 +271,6 @@ resource "google_compute_firewall" "allow-local-connect" {
   allow {
     protocol = "TCP"
     ports    = ["22"]
-  }
-  log_config {
-    metadata = "INCLUDE_ALL_METADATA"
   }
   target_tags = ["allow-local-connect"]
   depends_on  = [module.vpc]
@@ -308,6 +294,35 @@ resource "google_compute_router_nat" "nat" {
   log_config {
     enable = true
     filter = "ERRORS_ONLY"
+  }
+  depends_on = [module.vpc]
+}
+
+resource "google_compute_firewall" "allow-gke-egress-to-internet" {
+  name        = "allow-gke-egress-to-internet"
+  network     = var.network_name
+  project     = var.main_project_id
+  description = "Allows outbound traffic for GKE nodes to reach the internet for DNS and Git repos."
+
+  direction = "EGRESS"
+  priority  = 1000
+
+  target_tags = ["gke-nodepool-tag"]
+
+  destination_ranges = ["0.0.0.0/0"]
+
+  allow {
+    protocol = "tcp"
+    ports    = ["443"]
+  }
+
+  allow {
+    protocol = "udp"
+    ports    = ["53"]
+  }
+
+  log_config {
+    metadata = "INCLUDE_ALL_METADATA"
   }
   depends_on = [module.vpc]
 }

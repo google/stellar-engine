@@ -19,7 +19,7 @@ Keeping your data in sync across client apps through realtime listeners and offe
 
 ## Firestore Blueprint
 
-This blueprint deploys a standard Firestore Native if the variables are untouched, leveraging its robust and scalable infrastructure. There you will benefit from automatic scaling, high availability, and powerful querying capabilities. Included at default is a weekly database backup to ensure the safety and reoceverability of your data.
+This blueprint deploys a standard Firestore Native if the variables are untouched, leveraging its robust and scalable infrastructure. There you will benefit from automatic scaling, high availability, and powerful querying capabilities. Included at default is a weekly database backup to ensure the safety and recoverability of your data.
 
 ## Disclaimer
 
@@ -40,7 +40,7 @@ terraform plan
 terraform apply
 ```
 
-It will take a few minutes. When complete, you shoud see an output stating the command completed successfully. 
+It will take a few minutes. When complete, you should see an output stating the command completed successfully. 
 
 ## Verification of a successful deployment
 
@@ -56,10 +56,9 @@ Go to Firestore in the GCP Console. Select Firestore Studio to "Start Collection
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
 | [firestore_database_name](variables.tf#L11) | The name of the Firestore database instance. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L22) | The main project ID of the Google Cloud project. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L27) | The location ID where the Firestore database will be created. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L16) | The main project ID of the Google Cloud project. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L21) | The location ID where the Firestore database will be created. | <code>string</code> | ✓ |  |
 | [backup_schedule](variables.tf#L1) | The Backup schedule - select daily or weekly in your tfvars. | <code title="object&#40;&#123;&#10;  retention         &#61; string&#10;  daily_recurrence  &#61; optional&#40;bool, false&#41;&#10;  weekly_recurrence &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [kms_key_name](variables.tf#L16) | The KMS key name used to encrypt the Firestore database. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs
 

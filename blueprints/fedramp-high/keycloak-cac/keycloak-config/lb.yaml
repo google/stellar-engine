@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-https
+  namespace: keycloak
+  labels:
+    app: keycloak
+  annotations:
+    cloud.google.com/l4-rbs: "enabled"
+    cloud.google.com/load-balancer-health-check-protocol: "SSL"
+    cloud.google.com/load-balancer-health-check-port: "8443"
+    cloud.google.com/load-balancer-health-check-request-path: "/realms/master/.well-known/openid-configuration"
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+  selector:
+    app: keycloak
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8443
+      protocol: TCP

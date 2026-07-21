@@ -1,22 +1,13 @@
-main_project_id = "xxxx-xxxx-main-0" # The Google Cloud Project ID where the Pub/Sub topic and associated service accounts will be created.
-core_project_id = "xxxx-xxxx-iac-core-0" # The Google Cloud Project ID where the existing KMS KeyRing and CryptoKeys are provisioned.
+main_project_id = "xxxx-xxxx-xxxx-main-0"
+core_project_id = "xxxx-xxxx-xxxx-iac-core-0"
 
-pubsub_topic            = "topic-name-00" # The name of the Pub/Sub topic to be created by this blueprint.
-gcp_region              = "us-east4"      # The Google Cloud region to be used for Pub/Sub topic deployment and as the default for the provider.
-allowed_persistence_regions = ["us-east4"] # A list of Google Cloud regions where messages are allowed to be stored.
+pubsub_topic                = "topic-name-00"
+publisher_name              = "publisher-sa"
+publisher_account_id        = "publisher-account-id"
+subscriber_account_id       = "subscriber-account-id"
+subscriber_name             = "subscriber-sa"
+region                      = "us-east4"
+allowed_persistence_regions = ["us-east4"]
 
-# --- KMS Configuration (for Pub/Sub Topic CMEK) ---
-# This blueprint consumes an EXISTING KMS key.
-kms_keyring_name = "my-existing-keyring" # The name of the existing Cloud KMS Key Ring for Pub/Sub encryption.
-kms_key_name     = "my-topic-key"      # The name of the existing Cloud KMS CryptoKey for Pub/Sub encryption.
-# Full KMS key self-link will be derived from core_project_id, gcp_region, keyring name, and key name.
-# Example: "projects/xxxx-xxxx-iac-core-0/locations/us-east4/keyRings/my-existing-keyring/cryptoKeys/my-topic-key"
-
-# --- Custom Service Account Configuration ---
-# If you leave publisher_account_id/subscriber_account_id blank, default values will be used.
-publisher_account_id = "publisher-account-id" # The ID for the custom service account created for the Pub/Sub publisher. (e.g., 'my-publisher-sa')
-publisher_name       = "Pub/Sub Publisher Service Account" # The display name for the custom Pub/Sub publisher service account.
-subscriber_account_id = "subscriber-account-id" # The ID for the custom service account created for the Pub/Sub subscriber. (e.g., 'my-subscriber-sa')
-subscriber_name      = "Pub/Sub Subscriber Service Account" # The display name for the custom Pub/Sub subscriber service account.
-
-# You can manage IAM bindings on the topic/subscriptions via 'iam' variable in variables.tf
+kms_keyring_name = "xxxx-xxxx-keyring"
+kms_key_name     = "default"

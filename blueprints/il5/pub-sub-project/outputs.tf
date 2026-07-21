@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,16 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-output "pubsub_topic_name" {
-  description = "The name of the created Pub/Sub topic."
-  value       = module.pubsub.name
-}
-
-output "pubsub_topic_self_link" {
-  description = "The full resource path (self-link) of the created Pub/Sub topic."
-  value       = module.pubsub.id
-}
 
 output "publisher_service_account_email" {
   value       = google_service_account.publisher.email
@@ -33,4 +23,3 @@ output "subscriber_service_account_email" {
   value       = google_service_account.subscriber.email
   description = "The email of the subscriber service account."
 }
-

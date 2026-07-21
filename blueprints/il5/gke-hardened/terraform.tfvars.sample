@@ -51,7 +51,7 @@ remove_default_node_pool = true
 
 source_branch = "gitops-constraints"
 source_dir    = "policies"
-source_repo   = "https://github.com/DarkWolf-Labs/stellar-engine-gke-policies"
+source_repo   = "<YOUR_SOURCE_REPO>"
 
 subnetwork_name                          = "il5ssaa-int-dwsssa-subnet"
 subnetwork_ip_cidr_range_1               = "10.0.4.0/22"

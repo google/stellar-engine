@@ -82,10 +82,10 @@ The apply will take about 1 minute to complete. The Shielded VM be deployed in t
 | [main_project_id](variables.tf#L63) | Project ID. | <code>string</code> | ✓ |  |
 | [network_name](variables.tf#L68) | The name of the VPC. | <code>string</code> | ✓ |  |
 | [network_project_id](variables.tf#L73) | Project that the Compute Engine VPC is located. | <code>string</code> | ✓ |  |
-| [source_ranges_allowed](variables.tf#L84) | The List of the source IP CIDR range allowed to connect to the Shieled Compute VM. | <code>list&#40;any&#41;</code> | ✓ |  |
+| [source_ranges_allowed](variables.tf#L84) | The List of the source IP CIDR range allowed to connect to the Shielded Compute VM. | <code>list&#40;any&#41;</code> | ✓ |  |
 | [subnetwork_name](variables.tf#L90) | The name of the subnet. | <code>string</code> | ✓ |  |
 | [disksize](variables.tf#L34) | Provide the Size of the size in GB. | <code>number</code> |  | <code>40</code> |
-| [instance_name](variables.tf#L40) | Provide the name of the Shielded Compute VM. | <code>string</code> |  | <code>&#34;shieled-vm-inst&#34;</code> |
+| [instance_name](variables.tf#L40) | Provide the name of the Shielded Compute VM. | <code>string</code> |  | <code>&#34;shielded-vm-inst&#34;</code> |
 | [instance_type](variables.tf#L46) | The Machine Type for the Shielded Compute VM. | <code>string</code> |  | <code>&#34;e2-micro&#34;</code> |
 | [region](variables.tf#L78) | Region of the Shielded Compute VM. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
 | [zone](variables.tf#L95) | Zone of the Shielded Compute VM us-east4-c , us-east4-a, us-east4-b. | <code>string</code> |  | <code>&#34;us-east4-c&#34;</code> |

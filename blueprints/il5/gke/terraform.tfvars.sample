@@ -1,70 +1,47 @@
-# -----------------------------------------------------------------------------
-# PROJECT CONFIGURATION
-# -----------------------------------------------------------------------------
-# The Main Project is where the GKE cluster will be created.
-main_project_id    = "xxxx-xxxx-gke-main-0"
+main_project_id = "xxxx-xxxx-xxxx-main-0"
 
-# The Landing Zone Project contains the Shared VPC network.
-landing_project_id = "xxxx-xxxx-net-host-0"
-
-# The Core Project contains the Cloud KMS key for encryption.
-core_project_id    = "xxxx-xxxx-iac-core-0"
-
-# -----------------------------------------------------------------------------
-# GCP REGION
-# -----------------------------------------------------------------------------
-gcp_region = "us-east4"
-
-# -----------------------------------------------------------------------------
-# EXISTING INFRASTRUCTURE DETAILS
-# -----------------------------------------------------------------------------
-existing_network_name                       = "xxxxxxxxxx-spoke-0"
-existing_subnetwork_name                    = "default-us-east4"
-existing_subnetwork_secondary_range_pods_name     = "xxxxxxxxxx"
-existing_subnetwork_secondary_range_services_name = "xxxxxxxxxx"
-existing_kms_keyring_name                   = "xxxxxxxxxx-keyring"
-existing_kms_key_name                       = "xxxxxxxxxx"
-
-# -----------------------------------------------------------------------------
-# GKE CLUSTER SPECIFIC CONFIGURATION
-# -----------------------------------------------------------------------------
-gke_cluster_name                  = "gke-cluster-name-00"
-
-# Set to false only when you intend to run 'terraform destroy'.
-enable_deletion_protection        = true
-
-# Disable the public IP and force internal communication
+gke_cluster_name                     = "gke-cluster-name-00"
 gke_cluster_enable_private_endpoint  = true
+gke_cluster_master_global_access     = true
+gke_initial_node_per_zone            = 1
 
-# WARNING: Enabling global access expands the internal attack surface.
-# For high-security environments, this should only be enabled if there is a
-# documented operational requirement for cross-region private management.
-gke_cluster_master_global_access  = false
+gke_nodepool_name        = "gke-nodepool-name-00"
+node_config_tags         = ["node-config-gke", "intial-nodeconfig-gke"]
+node_disk_size_gb        = 20
+nodepool_node_count      = {
+  initial = 1
+}
+remove_default_node_pool = true
 
-# This range should be the CIDR of the subnetwork where your bastion host or
-# other management resources reside. It is a map of authorized networks
-# that can access the GKE master endpoint. This should be scoped as tightly
-# as possible.
-master_authorized_ranges = {
-  "management-subnet" = "xxx.xxx.xxx.xxx/xx"
+region      = "us-east4"
+
+network_name                             = "xxxx-spoke-0"      # Must already exist
+subnetwork_name                          = "default-us-east4"  # Must already exist
+subnetwork_ip_cidr_range_1               = "10.0.4.0/22"
+subnetwork_secondary_ip_range_pods_1     = "10.4.0.0/14"
+subnetwork_secondary_ip_range_services_1 = "10.0.32.0/20"
+gke_vpc_master_ipv4_cidr_block           = "192.168.0.0/28"
+master_authorized_ranges_ip_ranges       = "10.0.0.0/8"
+
+
+kms_keyring_name = {
+  location = "us-east4"
+  name     = "xxxx-xxxx-keyring"
 }
 
-
-# -----------------------------------------------------------------------------
-# GKE NODEPOOL CONFIGURATION
-# -----------------------------------------------------------------------------
-gke_initial_node_per_zone = 1
-gke_nodepool_name           = "gke-nodepool-name-00"
-nodepool_node_count         = { initial = 1 }
-node_machine_type           = "n2d-standard-2"
-node_disk_size_gb           = 20
-node_config_tags            = ["gke-nodes", "compliant-gke"]
-remove_default_node_pool    = false
-
-# -----------------------------------------------------------------------------
-# BASTION HOST CONFIGURATION
-# -----------------------------------------------------------------------------
-bastion_vm_name           = "gke-bastion-vm-01"
-bastion_vm_zone           = "us-east4-a"
-bastion_vm_machine_type   = "e2-medium"
-bastion_vm_image          = "projects/cos-cloud/global/images/family/cos-stable"
+kms_key_names = {
+  "default" = {
+    rotation_period            = "7776000s"    # CIS Compliance Benchmark 1.10
+    destroy_scheduled_duration = "2592000s"
+    labels = {
+      "team" = "gke-team"
+    }
+    version_template = {
+      algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
+      protection_level = "HSM"
+    }
+    lifecycle = {
+      prevent_destroy = true
+    }
+  }
+}

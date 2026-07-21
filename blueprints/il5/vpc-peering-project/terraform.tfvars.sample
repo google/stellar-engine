@@ -1,0 +1,14 @@
+main_project_id    = "xxxx-xxxx-xxxx-main-0"
+network_project_id = "xxxx-xxxx-net-host"
+peer_project_id    = "xxxx-xxxx-xxxx-xxxx"
+
+network_name                  = "xxxx-spoke-0"       # Must already exist
+peer_network_name             = "xxx-xxx-xxx"
+subnetwork_cidr_a             = "10.200.12.0/25"
+subnetwork_cidr_b             = "10.200.12.128/25"
+subnetwork_cidr_c             = "10.200.13.0/25"
+secondary_ip_ranges_cidr_a    = "192.168.0.0/24"
+secondary_ip_ranges_cidr_b    = "192.168.1.0/24"
+subnetwork_prefix_name        = "xxxx"
+
+region = "us-east4"

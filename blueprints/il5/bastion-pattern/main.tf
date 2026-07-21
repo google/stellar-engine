@@ -51,9 +51,6 @@ resource "google_compute_firewall" "default" {
     protocol = "tcp"
     ports    = var.allowed_firewall_ports
   }
-  log_config {
-    metadata = "INCLUDE_ALL_METADATA"
-  }
   source_ranges = var.allowed_source_ranges
 }
 
@@ -88,26 +85,11 @@ module "bastion-vm" {
   encryption = {
     kms_key_self_link = data.google_kms_crypto_key.default.id
   }
-  snapshot_schedules = {
-    daily-backup = {
-      schedule = {
-        daily = {
-          days_in_cycle = 1
-          start_time    = "04:00"
-        }
-      }
-      retention_policy = {
-        max_retention_days = 14
-      }
-    }
-  }
-
   attached_disks = [
     {
       auto_delete = true
       size        = 10
       name        = var.disk_name
-      snapshot_schedule = ["daily-backup"]
       initialize_params = {
         image = var.image
       }
@@ -116,7 +98,6 @@ module "bastion-vm" {
   ]
 
   boot_disk = {
-    snapshot_schedule = ["daily-backup"]
     initialize_params = {
       image = var.image
     }

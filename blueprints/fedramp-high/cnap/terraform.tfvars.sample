@@ -1,11 +1,11 @@
 domain = "xxxx.example.com"
 
-main_project_id    = "xxxx-xxxx-xxxx-main-0"
-network_project_id = "xxxx-xxxx-net-host"
+main_project_id    = "xxxx-xxxx-xxxx-xxxx-main"
+network_project_id = "xxxx-xxxx-xxxx-net-host"
 
 prefix               = "xxxx"
 region               = "us-east4"
-default_backend      = "easy"
+default_backend      = "lenient"
 oauth_brand_number   = xxxxxxxxxxxx
 access_policy_number = xxxxxxxxxxxx
 

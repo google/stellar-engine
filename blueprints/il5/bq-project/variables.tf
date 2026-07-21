@@ -15,7 +15,7 @@
  */
 
 variable "dataset_description" {
-  description = "Provides a discription of the deployed BigQuery Dataset."
+  description = "Provides a description of the deployed BigQuery Dataset."
   type        = string
 }
 

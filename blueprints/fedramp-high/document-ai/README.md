@@ -19,7 +19,7 @@ This blueprint demonstrates how to create Processors in Document AI on Google Cl
 Refer to the [Document AI documentation](https://cloud.google.com/document-ai/docs/send-request#documentai_batch_process_document-python) to learn how to use your processor through various client libraries. If you would like to continue using workflows, then you can view the [documentation](https://cloud.google.com/workflows/docs/create-workflow-terraform) here.
 
 ## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workdloads within the Google Cloud Platform (GCP) organization.
+- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
 - KMS/CMEK is not currently working for Document AI in Terraform as a cyclical dependency is created; the processor instance creates the Document AI Service Account, but the Service Account must have proper KMS permissions prior to the instance creation. If you would still like to use CMEKs with Document AI, you can manually create a processor first so that the Document AI Service Account will exist.
 
 ## Deployment Steps
@@ -39,7 +39,6 @@ Refer to the [Document AI documentation](https://cloud.google.com/document-ai/do
 
 ## Verification of a successful deployment
 Use GCP console to verify if the resources have been created. Go to [Document AI](https://console.cloud.google.com/ai/document-ai), then click on "My processors" in the side bar. From here, you will be able to view your newly created processor.
-https://console.cloud.google.com/ai/document-ai
 
 ## Demo
 This demo is meant to work with the default "OCR_PROCESSOR".
@@ -56,7 +55,6 @@ This demo is meant to work with the default "OCR_PROCESSOR".
 - Click "execute" at the bottom of the screen to start the workflow.
 - After the workflow executes, view your buckets again.
 - Click on "(your-project)-docai-output-bucket" to view the json output.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
@@ -65,7 +63,7 @@ This demo is meant to work with the default "OCR_PROCESSOR".
 | [main_project_id](variables.tf#L13) | The Google Project ID. | <code>string</code> | ✓ |  |
 | [name](variables.tf#L18) | Name of the Document AI processor. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L23) | The Google Cloud region. | <code>string</code> | ✓ |  |
-| [deletion_protection](variables.tf#L1) | Deletion proteciton. | <code>bool</code> |  | <code>true</code> |
+| [deletion_protection](variables.tf#L1) | Deletion protection. | <code>bool</code> |  | <code>true</code> |
 | [file](variables.tf#L7) | File path of the yaml instructions for the workflow. | <code>string</code> |  | <code>&#34;code&#47;example.yaml&#34;</code> |
 | [type](variables.tf#L28) | Type of Document AI model. | <code>string</code> |  | <code>&#34;OCR_PROCESSOR&#34;</code> |
 

@@ -1,0 +1,28 @@
+project_id         = "xxxx-xxxx-xxxx-main-0"
+kms_project_id     = "xxxx-xxxx-xxxx-iac-core-0"
+network_project_id = "xxxx-xxxx-net-host"
+
+region = "us-east4"
+zone   = "us-east4-a"
+
+network_name    = "xxxx-spoke-0"      # Must already exist
+subnetwork_name = "default-us-east4"  # Must already exist
+
+kms_keyring_name = "xxxx-xxxx-keyring"
+kms_key_name     = "default"          # Must already exist
+
+service_account_id = "acas-sc-sa"
+
+instance_name               = "acas-securitycenter"
+machine_type                = "n2d-standard-8"
+enable_confidential_compute = false
+boot_disk_size              = 100
+data_disk_size              = 500
+
+# The image value should come from the sc_golden_image_family output
+# of the acas/image-factory blueprint.
+image = "projects/xxxx-xxxx-xxxx-main-0/global/images/family/acas-sc-golden"
+
+# Firewall network access
+iap_source_ranges     = ["35.235.240.0/20"]
+sc_mgmt_source_ranges = ["10.0.0.0/8"]

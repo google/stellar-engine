@@ -1,15 +1,10 @@
-main_project_id     = "xxxx-xxxx-main-0" # Replace with your main project ID
+main_project_id    = "xxxx-xxxx-main-0"
 
-ncc_hub_name        = "ncc-hub-name-00" # The name of your NCC hub
-topology            = "MESH"            # Can be "MESH" or "STAR"
-psc_prop            = true              # Whether PSC propagation is enabled
-gcp_region          = "us-east4"        # The GCP region for regional resources and provider default
+name     = "ncc-hub-name-00"
+topology = "MESH"
+psc_prop = true
+region   = "us-east4"
 
 spokes = {
-  "my-spoke-1" = "projects/my-network-project-id-1/global/networks/my-vpc-network-1" # Replace with actual spoke name and VPC self-link
-  "my-spoke-2" = "projects/my-network-project-id-2/global/networks/my-vpc-network-2" # Add more spokes as needed - they must already exist!
+  "<NCC-SPOKE-NAME-00>" = "projects/<NETWORK-PROJECT-ID>/global/networks/xxxx-spoke-0"
 }
-
-# Example of how to add a custom service account ID if needed
-# workflow_service_account_id = "custom-workflows-sa"
-

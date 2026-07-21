@@ -31,6 +31,7 @@ Cloud Workstations provides preconfigured, customizable, and secure managed deve
 ```terraform apply``` to apply the infrastructure build<br />
 
 3. Deploying the cluster will take ~20 minutes. To verify a successful deployment, check that the cluster, configuration, and all of your workstations were created. Then start a workstation and launch it to use the Web IDE.
+
 <!-- BEGIN TFDOC -->
 ## Variables
 

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 variable "bucket_name" {
   description = "GCS bucket name to store the Vertex AI artifacts."
   type        = string
@@ -38,6 +37,11 @@ variable "labels" {
   description = "Labels to be assigned at project level."
   type        = map(string)
   default     = {}
+}
+
+variable "main_project_id" {
+  description = "Project ID for the main project."
+  type        = string
 }
 
 variable "network_config" {
@@ -79,20 +83,6 @@ variable "prefix" {
   description = "Prefix used for various resource creation."
   type        = string
   default     = null
-}
-
-variable "project_config" {
-  description = "Provide 'billing_account_id' value if project creation is needed, uses existing 'project_id' if null. Parent is in 'folders/nnn' or 'organizations/nnn' format."
-  type = object({
-    billing_account_id = optional(string)
-    parent             = optional(string)
-    project_id         = string
-  })
-  validation {
-    condition     = var.project_config.project_id != null
-    error_message = "Project id must be set."
-  }
-  nullable = false
 }
 
 variable "region" {

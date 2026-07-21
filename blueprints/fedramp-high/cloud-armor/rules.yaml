@@ -1,79 +1,22 @@
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 gitlab-waf-policy: #Policy name
-  description: WAF Policy tested for protecting GitLab for FEDRAMP High compliance
+  description: WAF Policy tested for protecting GitLab #Optional
   rules: #List of rules in order of priority
     #possible actions: allow, deny(STATUS), rate_based_ban, throttle
     #possible STATUS: 403, 404, 502
-    - expression: xss-v33-stable #Optional - if expression isn't selected, defaults to affect all incoming traffic
-      is_custom_expr: false
-      #possible expressions: xss-v33-stable, lfi-v33-stable, rfi-v33-stable, rce-v33-stable, methodenforcement-v33-stable
-      #scannerdetection-v33-stable, protocolattack-v33-stable, php-v33-stable, sessionfixation-v33-stable, java-v33-stable
-      #nodejs-v33-stable
-      action: deny(403)
-      description: Deny Cross-Site Scripting (XSS) attempts.
-    - expression: scannerdetection-v33-stable
-      is_custom_expr: false
-      action: deny(403)
-      description: Deny known security scanner and reconnaissance tools.
-    - expression: cve-canary
-      is_custom_expr: false
-      action: deny(403)
-      description: Deny traffic matching signatures for known CVEs (e.g., Log4j).
-
-    # Geo-blocking Traffic from High-Risk Countries (Custom CEL Rule) - Part 1
-    # IMPORTANT: Adjust country codes as per your specific FEDRAMP scope and authorized regions.
-    - expression: origin.region_code == "CN" || origin.region_code == "RU" || origin.region_code == "KP"
-      is_custom_expr: true
-      action: deny(403)
-      description: Block traffic from high-risk geopolitical regions (Part 1) (NIST SP 800-53 AC-4, SC-7).
-
-    # Geo-blocking Traffic from High-Risk Countries (Custom CEL Rule) - Part 2
-    - expression: origin.region_code == "IR" || origin.region_code == "UA" || origin.region_code == "BY"
-      is_custom_expr: true
-      action: deny(403)
-      description: Block traffic from high-risk geopolitical regions (Part 2) (NIST SP 800-53 AC-4, SC-7).
-
-    # Stricter Rate Limiting for Sensitive Endpoints (e.g., Admin Login)
-    - expression: request.path.startsWith("/users/sign_in") || request.path.startsWith("/api/v4/session") || request.path.startsWith("/-/user_settings/profile")
-      is_custom_expr: true
-      action: throttle
-      rate_limit_options:
-        rate_limit_threshold:
-          count: 10
-          interval_sec: 60
-      description: Throttle login attempts to prevent brute-force and credential stuffing attacks (NIST SP 800-53 AC-7, SC-5).
-    
-    # Blocking Unusually Large Requests (Custom CEL Rule)
-    - expression: request.headers["Content-Length"] != "" && int(request.headers["Content-Length"]) > 5242880 # Example: 5MB limit
-      is_custom_expr: true
-      action: deny(403) # Changed from 413 to a supported code
-      description: Block requests with excessively large body sizes (e.g., >5MB) to prevent resource exhaustion and payload attacks (NIST SP 800-53 SC-5, SC-7).
-
-    - action: throttle
-      rate_limit_options: #Only set this if action is throttle or rate_based_ban
-        rate_limit_threshold: #Must set this if you make a rate_limit_options block
-          count: 500
-          interval_sec: 60 #Possible values: 10, 30, 60, 120, 180, 240, 300, 600, 900, 1200, 1800, 2700, or 3600
-      description: General application-layer throttling for all incoming traffic
-
-    # Default Deny Rule (CRITICAL for FEDRAMP High: SC-7(5) Deny-by-Default)
-    - action: deny(403)
-      description: Default deny rule for all unmatched traffic, enforcing a deny-by-default posture (NIST SP 800-53 SC-7(5), AC-4).
-      is_custom_expr: false # This will use the default SRC_IPS_V1 match
-
+  - expression: xss-v33-stable #Optional - if expression isn't selected, defaults to affect all incoming traffic
+    #possible expressions: xss-v33-stable, lfi-v33-stable, rfi-v33-stable, rce-v33-stable, methodenforcement-v33-stable
+    #scannerdetection-v33-stable, protocolattack-v33-stable, php-v33-stable, sessionfixation-v33-stable, java-v33-stable
+    #nodejs-v33-stable
+    action: deny(403)
+  - expression: scannerdetection-v33-stable
+    action: deny(403)
+  - expression: cve-canary
+    action: deny(403)
+  - action: throttle
+    rate_limit_options: #Only set this if action is throttle or rate_based_ban
+      rate_limit_threshold: #Must set this if you make a rate_limit_options block
+        count: 500
+        interval_sec: 60 #Possible values: 10, 30, 60, 120, 180, 240, 300, 600, 900, 1200, 1800, 2700, or 3600
 policy-two:
   rules:
   - action: throttle
@@ -83,7 +26,6 @@ policy-two:
         interval_sec: 10 #Possible values: 10, 30, 60, 120, 180, 240, 300, 600, 900, 1200, 1800, 2700, or 3600
   - action: rate_based_ban
     expression: nodejs-v33-stable
-    is_custom_expr: false
     rate_limit_options:
       rate_limit_threshold: #Must set this if you make a rate_limit_options block
         #rate_limit_threshold determines initial rate limiting actions
@@ -94,7 +36,3 @@ policy-two:
         count: 100
         interval_sec: 60 #Possible values: 60, 120, 180, 240, 300, 600, 900, 1200, 1800, 2700, or 3600
       ban_duration_sec: 60 #Possible values: 60, 120, 180, 240, 300, 600, 900, 1200, 1800, 2700, or 3600
-  # Default Deny Rule for policy-two
-  - action: deny(403)
-    description: Default deny rule for all unmatched traffic in policy-two.
-    is_custom_expr: false

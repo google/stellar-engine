@@ -1,0 +1,32 @@
+substitutions:
+  _ENVIRONMENTS: 'blueprints/il5/cloudbuild-tf-automation/environments'
+  _ENV_FOLDER: 'dev'
+  _TFVARS_FILENAME: 'terraform.tfvars'
+  _CB_LOG_BUCKET: 'log_bucket'
+  _CB_STATE_BUCKET: 'state_bucket'
+steps:
+- id: 'Terraform Format Check'
+  name: 'hashicorp/terraform'
+  dir: $_ENVIRONMENTS/$_ENV_FOLDER
+  entrypoint: 'terraform'
+  args: ['fmt','-recursive','-check']
+- id: 'Terraform Init'
+  name: 'hashicorp/terraform'
+  dir: $_ENVIRONMENTS/$_ENV_FOLDER
+  entrypoint: 'terraform'
+  args:
+    - 'init'
+    - '-backend-config=bucket=$_CB_STATE_BUCKET'
+    - '-backend-config=prefix=$_ENVIRONMENTS/$_ENV_FOLDER'
+- id: 'Terraform Validate'
+  name: 'hashicorp/terraform'
+  dir: $_ENVIRONMENTS/$_ENV_FOLDER
+  entrypoint: 'terraform'
+  args: ['validate']
+- id: 'Terraform Plan'
+  name: 'hashicorp/terraform'
+  dir: $_ENVIRONMENTS/$_ENV_FOLDER
+  entrypoint: 'terraform'
+  args: ['plan','-var-file=$_TFVARS_FILENAME', '-out=tfplan.out']
+logsBucket: gs://$_CB_LOG_BUCKET
+timeout: 600s # 10 minutes

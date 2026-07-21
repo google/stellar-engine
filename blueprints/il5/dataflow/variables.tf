@@ -71,7 +71,7 @@ variable "network_project_id" {
 }
 
 variable "parameters" {
-  description = "Dataflow Paramaters."
+  description = "Dataflow Parameters."
   type        = map(string)
 }
 

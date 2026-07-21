@@ -1,0 +1,36 @@
+project_id       = "my-production-project-123"
+region           = "us-east4"
+aws_region       = "us-east-1"
+name_prefix      = "prod-full-vpn"
+
+gcp_network_name = "prod-vpc-network"
+gcp_router_name  = "prod-vpc-router-use4"
+
+gcp_bgp_asn      = 65514
+aws_bgp_asn      = 64512
+aws_vpc_id       = "vpc-0123456789abcdef0"
+
+secret_name_conn1_tun1 = "aws-vpn-psk-c1t1"
+secret_name_conn1_tun2 = "aws-vpn-psk-c1t2"
+secret_name_conn2_tun1 = "aws-vpn-psk-conn1-tun1"
+secret_name_conn2_tun2 = "aws-vpn-psk-conn1-tun2"
+
+# Advanced configuration (optional, defaults shown)
+stack_type         = "IPV4_ONLY"
+gateway_ip_version = "IPV4"
+
+# CNSA-compliant defaults are built into the module, but can be overridden here
+# tunnel_cipher_suite = {
+#   phase1 = {
+#     encryption = ["AES-GCM-16-256"]
+#     integrity  = []
+#     prf        = ["PRF-HMAC-SHA2-384"]
+#     dh         = ["Group-20"]
+#   }
+#   phase2 = {
+#     encryption = ["AES-GCM-16-256"]
+#     integrity  = []
+#     pfs        = ["Group-20"]
+#   }
+# }
+

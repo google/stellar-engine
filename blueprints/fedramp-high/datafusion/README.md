@@ -38,7 +38,7 @@ You should see this README and some terraform files.
 
 ### Troubleshooting
 
-If you receive any errors during the `terraform apply`, run the apply two or three more times until a successfull deployment is achieved.
+If you receive any errors during the `terraform apply`, run the apply two or three more times until a successful deployment is achieved.
 
 ## Verification of a successful deployment
 Navigate to [Data Fusion](https://console.cloud.google.com/data-fusion) within the GCP console to verify whether the resources have been created.

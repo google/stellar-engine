@@ -12,7 +12,7 @@
 <!--- END TOC -->
 
 ## Introduction Bastion Pattern (Bastion Pattern Project)
-Bastions simplify secuirty administration. The internal network can be configured to block all the internet-bound traffic. It only allows SSH communications with the bastion host. The bastion pattern grants authorized users access access to a priate network from an external network such as internet. By following these steps, you will securely access multiple web services via the bastion host using port forwarding. This README section explains how to set up port forwarding for multiple ports and access the corresponding web services.
+Bastions simplify security administration. The internal network can be configured to block all the internet-bound traffic. It only allows SSH communications with the bastion host. The bastion pattern grants authorized users access access to a private network from an external network such as internet. By following these steps, you will securely access multiple web services via the bastion host using port forwarding. This README section explains how to set up port forwarding for multiple ports and access the corresponding web services.
 1. The IAM Permissions and Roles ```roles/cloudkms.cryptoKeyEncrypterDecrypter``` is assigned
 Obtains access credentials for your user account via a web-based authorization flow. When this command completes successfully, it sets the active account in the current configuration to the account specified.
 
@@ -20,7 +20,7 @@ Obtains access credentials for your user account via a web-based authorization f
 This blueprint contains all the necessary Terraform modules to build and deploy a bastion VM on Google Cloud.
 
 ## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in either a FedRAMP-High or IL5 (Imapct Level 5) environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
+- The present GCP Terraform Module in this project is set up and intended to be implemented in either a FedRAMP-High or IL5 (Impact Level 5) environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
 - An Assured Workloads in both environments ensures that sensitive data and workloads in GCP adhere to the rigorous security standards mandated by the DoD, making it suitable for government agencies.
 
 ## Pre-requisite for Bastion Pattern Project (Bastion Pattern Project)

@@ -1,0 +1,241 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: keycloak
+  labels:
+    app: keycloak
+  annotations:
+    cloud.google.com/app-protocols: '{"https":"HTTPS"}'
+spec:
+  ports:
+    - protocol: TCP
+      port: 8443
+      targetPort: 8443
+      name: https
+  selector:
+    app: keycloak
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    namespace: keycloak
+    app: keycloak
+  name: keycloak-discovery
+spec:
+  selector:
+    app: keycloak
+  clusterIP: None
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: keycloak
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  serviceName: keycloak-discovery
+  replicas: 2
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.3.3
+          args: ["start"]
+          env:
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: "admin"
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              value: "admin"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_PROXY
+              value: 'passthrough'
+            - name: KC_HOSTNAME
+              value: "__KC_HOSTNAME__"
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_HOSTNAME_STRICT
+              value: "true"
+            - name: KC_HOSTNAME_STRICT_HTTPS
+              value: "true"
+            - name: 'KC_CACHE'
+              value: 'ispn'
+            - name: 'KC_DB_URL_DATABASE'
+              value: 'keycloak'
+            - name: 'KC_DB_URL_HOST'
+              value: 'postgres'
+            - name: 'KC_DB'
+              value: 'postgres'
+            - name: 'KC_DB_PASSWORD'
+              value: 'keycloak'
+            - name: 'KC_DB_USERNAME'
+              value: 'keycloak'
+            # CAC / HTTPS Specific Env Vars
+            - name: 'KC_TRUSTSTORE_PATHS'
+              value: '/opt/truststores'
+            - name: 'KC_HTTPS_CLIENT_AUTH'
+              value: 'request'
+            - name: 'KC_HTTPS_PORT'
+              value: '8443'
+            - name: 'KC_MANAGEMENT_PORT'
+              value: '9000'
+            - name: 'KC_HTTPS_CERTIFICATE_FILE'
+              value: '/etc/x509/https/tls.crt'
+            - name: 'KC_HTTPS_CERTIFICATE_KEY_FILE'
+              value: '/etc/x509/https/tls.key'
+            - name: 'KC_HTTPS_MANAGEMENT_CERTIFICATE_KEY_FILE'
+              value: '/etc/x509/https/tls.key'
+            - name: 'KC_HTTPS_MANAGEMENT_CERTIFICATE_FILE'
+              value: '/etc/x509/https/tls.crt'
+          ports:
+            - name: https
+              containerPort: 8443
+            - name: management
+              containerPort: 9000
+          startupProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /health/started
+              port: 9000
+            periodSeconds: 1
+            failureThreshold: 600              
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /health/ready
+              port: 9000
+            periodSeconds: 10
+            failureThreshold: 3              
+          livenessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /health/live
+              port: 9000
+            periodSeconds: 10
+            failureThreshold: 3              
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 2000Mi
+            requests:
+              cpu: 500m
+              memory: 1700Mi
+          volumeMounts:
+            - name: truststores
+              mountPath: /opt/truststores
+              readOnly: true
+            - name: tls
+              mountPath: /etc/x509/https
+              readOnly: true
+      volumes:
+        - name: truststores
+          secret:
+            secretName: keycloak-truststores
+        - name: tls
+          secret:
+            secretName: keycloak-tls
+---
+# NEW: PersistentVolumeClaim for Google Cloud Storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: keycloak
+  labels:
+    app: postgres
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Postgres Deployment with Persistence
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: keycloak
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: mirror.gcr.io/postgres:17
+          env:
+            - name: POSTGRES_USER
+              value: "keycloak"
+            - name: POSTGRES_PASSWORD
+              value: "keycloak"
+            - name: POSTGRES_DB
+              value: "keycloak"
+            - name: POSTGRES_LOG_STATEMENT
+              value: "all"
+          ports:
+            - name: postgres
+              containerPort: 5432
+          volumeMounts:
+            # Points to subPath to avoid permission issues on GKE disks
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+              subPath: postgres
+      volumes:
+        # VOLUME: Uses the PVC 
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    namespace: keycloak
+    app: postgres
+  name: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP
+
+# creating headless service for Keycloak clustering using DNS Ping
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-headless
+  namespace: keycloak
+  labels:
+    app: keycloak
+spec:
+  ports:
+    - name: jgroups
+      port: 7800             # Standard port for Keycloak clustering
+      protocol: TCP
+      targetPort: 7800
+  selector:
+    app: keycloak            # Must match your StatefulSet pod selector
+  clusterIP: None            # This is what makes it "Headless"

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-data "google_project" "current" {}
-
 data "google_compute_network" "network" {
   name    = var.network_name
   project = var.network_project_id
@@ -40,9 +38,6 @@ resource "google_compute_firewall" "postgres" {
   allow {
     protocol = "tcp"
     ports    = var.allowed_firewall_ports
-  }
-  log_config {
-    metadata = "INCLUDE_ALL_METADATA"
   }
   source_ranges = var.firewall_source_range
 }

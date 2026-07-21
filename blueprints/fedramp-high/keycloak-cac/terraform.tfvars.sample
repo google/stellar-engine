@@ -1,0 +1,9 @@
+domain = "sso-test.stellarengine.dev"
+kms_key = "projects/dfrha-frh-int-dw-iac-core/locations/us-east4/keyRings/Int-dw-keyring/cryptoKeys/default"
+network = "projects/dfrha-int-frh-net-host/global/networks/int-spoke-0"
+subnetwork = "projects/dfrha-int-frh-net-host/regions/us-east4/subnetworks/int-dw-us-east4-range-0"
+project_id = "dfrha-frh-int-dw-main"
+network_project_id = "dfrha-int-frh-net-host"
+pod_range = "int-dw-us-east4-pod-range-0"
+service_range = "int-dw-us-east4-service-range-0"
+node_count = 3

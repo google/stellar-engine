@@ -1,17 +1,3 @@
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 variable "gatekeeper_sa" {
   description = "The service account Gatekeeper uses to push metrics to GCP."
   type        = string
@@ -36,7 +22,7 @@ variable "gke_cluster_name" {
 }
 
 variable "gke_initial_node_per_zone" {
-  description = "The intial number of Node per each zone."
+  description = "The initial number of Node per each zone."
   type        = number
   #default     = 1
 }
@@ -123,17 +109,17 @@ variable "main_project_id" {
 }
 
 variable "master_authorized_ranges_ip_ranges" {
-  description = "The CIDR Range for the GKE Nodes Pool when enabled Private End Point with master aurhotized ranges of CIDR."
+  description = "The CIDR Range for the GKE Nodes Pool when enabled Private End Point with master authorized ranges of CIDR."
   type        = string
 }
 
 variable "nat_gateway_name" {
-  description = "The nat gateway for outboud routing from the cluster."
+  description = "The nat gateway for outbound routing from the cluster."
   type        = string
 }
 
 variable "nat_router_name" {
-  description = "The nat router for outboud routing from the cluster."
+  description = "The nat router for outbound routing from the cluster."
   type        = string
 }
 
@@ -170,7 +156,7 @@ variable "nodepool_node_count" {
 }
 
 variable "policy_controller_exemptable_namespaces" {
-  description = "The exemted namespaces for policy controller."
+  description = "The exempted namespaces for policy controller."
   type        = list(any)
   default     = []
 }
@@ -178,14 +164,6 @@ variable "policy_controller_exemptable_namespaces" {
 variable "region" {
   description = "The GCP region to use for the resources."
   type        = string
-}
-
-# tflint-ignore: terraform_unused_declarations
-
-variable "remove_default_node_pool" {
-  description = "The Default NodePool remove it or not."
-  type        = bool
-  # default     = false
 }
 
 variable "source_branch" {
@@ -227,10 +205,3 @@ variable "subnetwork_secondary_ip_range_services_1" {
   type        = string
   # default     = "10.0.32.0/20"
 }
-
-variable "snapshot_max_retention_days" {
-  description = "The maximum number of days to retain snapshots."
-  type        = number
-  default     = 14
-}
-
