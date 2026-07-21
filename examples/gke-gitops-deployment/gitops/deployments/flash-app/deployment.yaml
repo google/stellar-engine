@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flash-deployment
+  namespace: flash
+spec:
+  replicas: 2
+  minReadySeconds: 30
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: flash
+  template:
+    metadata:
+      labels:
+        app: flash
+    spec:
+      containers:
+      - name: app-container
+        image: us-east4-docker.pkg.dev/a38-int-aa-main-0/applications/flash-app:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
