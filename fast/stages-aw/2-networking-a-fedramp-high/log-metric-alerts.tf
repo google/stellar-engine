@@ -1,1 +1,0 @@
-../2-networking-b-il5-ngfw/log-metric-alerts.tf

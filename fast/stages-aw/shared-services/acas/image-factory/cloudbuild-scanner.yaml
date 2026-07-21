@@ -1,0 +1,170 @@
+# cloudbuild-scanner.yaml
+# Dummy placeholders for required substitutions: ${_REGION} ${_NETWORK_PROJECT}
+# Builds the ACAS Nessus Scanner Golden Image.
+#
+# Workflow:
+#   1. Writes install.sh to the shared /workspace volume.
+#   2. Creates a temporary RHEL 8 builder VM.
+#   3. Waits for SSH readiness over IAP.
+#   4. Copies the install script via SCP and executes it.
+#   5. Stops the builder VM.
+#   6. Captures the Golden Image from the stopped VM.
+#   7. Cleans up the temporary builder VM.
+
+steps:
+  # Step 1: Write the install script to the shared /workspace volume.
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "write-install-script"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        cat > /workspace/install.sh << 'EOF'
+        #!/bin/bash
+        set -euo pipefail
+        echo "=== ACAS install-script begin ==="
+
+        # Force Artifact Registry to resolve to the Private Google Access VIP
+        # This bypasses the VPC's default ILB firewall route.
+        echo "199.36.153.8 us-east4-yum.pkg.dev" >> /etc/hosts
+
+        # Fetch an OAuth2 token for Artifact Registry YUM authentication
+        token_json=$(curl -sf -H "Metadata-Flavor: Google" \
+          "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token")
+        access_token=$(echo "$token_json" | sed -n 's/.*"access_token"[ ]*:[ ]*"\([^"]*\)".*/\1/p')
+
+        printf '[acas-rpms]\nname=ACAS RPMs\nbaseurl=https://PLACEHOLDER_ARTIFACT_REGISTRY\nenabled=1\ngpgcheck=0\nusername=oauth2accesstoken\npassword=%s\n' "$access_token" \
+          > /etc/yum.repos.d/acas.repo
+
+        echo "Installing Nessus..."
+        dnf install -y --disablerepo="*" --enablerepo="acas-rpms" Nessus
+        systemctl enable nessusd || true
+        dnf clean all
+
+        echo "Configuring firewalld for internal access..."
+        # Ensure the Nessus port is explicitly open
+        firewall-cmd --permanent --add-port=8834/tcp
+        firewall-cmd --reload
+        echo "firewalld rules applied."
+
+        echo "=== Installation complete ==="
+        EOF
+
+        sed -i "s|PLACEHOLDER_ARTIFACT_REGISTRY|${_ARTIFACT_REGISTRY}|g" /workspace/install.sh
+        chmod +x /workspace/install.sh
+        echo "--- install.sh written ---"
+        cat /workspace/install.sh
+
+  # Step 2: Create the temporary builder VM.
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "create-builder-vm"
+    entrypoint: "gcloud"
+    args:
+      - "compute"
+      - "instances"
+      - "create"
+      - "acas-scanner-builder-${BUILD_ID}"
+      - "--project=${_PROJECT_ID}"
+      - "--zone=${_ZONE}"
+      - "--machine-type=n2-standard-2"
+      - "--image=${_BASE_IMAGE}"
+      - "--boot-disk-size=100GB"
+      - "--boot-disk-type=pd-ssd"
+      - "--boot-disk-kms-key=${_KMS_KEY}"
+      - "--subnet=${_SUBNETWORK}"
+      - "--no-address"
+      - "--scopes=cloud-platform"
+      - "--shielded-secure-boot"
+      - "--shielded-vtpm"
+      - "--shielded-integrity-monitoring"
+      - "--maintenance-policy=TERMINATE"
+      - "--tags=image-builder"
+    waitFor: ["write-install-script"]
+
+  # Step 3: Wait for SSH readiness.
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "wait-for-ssh"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        echo "Waiting for VM to boot and SSH to become ready..."
+        for i in $(seq 1 30); do
+          if gcloud compute ssh acas-scanner-builder-${BUILD_ID} \
+              --project=${_PROJECT_ID} --zone=${_ZONE} \
+              --tunnel-through-iap --command="echo 'SSH Ready!'"; then
+            echo "SSH connection established."
+            exit 0
+          fi
+          echo "Poll $i/30: Retrying SSH..."
+          sleep 10
+        done
+        echo "ERROR: Timed out waiting for SSH."
+        exit 1
+    waitFor: ["create-builder-vm"]
+
+  # Step 4: Execute installation via IAP.
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "execute-installation"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        echo "Transferring install script..."
+        gcloud compute scp /workspace/install.sh acas-scanner-builder-${BUILD_ID}:/tmp/install.sh \
+          --project=${_PROJECT_ID} --zone=${_ZONE} --tunnel-through-iap
+        
+        echo "Executing install script synchronously..."
+        gcloud compute ssh acas-scanner-builder-${BUILD_ID} \
+          --project=${_PROJECT_ID} --zone=${_ZONE} --tunnel-through-iap \
+          --command="sudo bash /tmp/install.sh" -- -t
+    waitFor: ["wait-for-ssh"]
+
+  # Step 5: Stop the builder VM before disk image capture.
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "stop-builder-vm"
+    entrypoint: "gcloud"
+    args:
+      - "compute"
+      - "instances"
+      - "stop"
+      - "acas-scanner-builder-${BUILD_ID}"
+      - "--project=${_PROJECT_ID}"
+      - "--zone=${_ZONE}"
+    waitFor: ["execute-installation"]
+
+  # Step 6: Capture the Golden Image from the stopped VM's boot disk.
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "capture-golden-image"
+    entrypoint: "gcloud"
+    args:
+      - "compute"
+      - "images"
+      - "create"
+      - "acas-scanner-golden-${BUILD_ID}"
+      - "--project=${_PROJECT_ID}"
+      - "--source-disk=acas-scanner-builder-${BUILD_ID}"
+      - "--source-disk-zone=${_ZONE}"
+      - "--family=${_IMAGE_FAMILY}"
+      - "--kms-key=${_KMS_KEY}"
+      - "--guest-os-features=UEFI_COMPATIBLE,GVNIC,VIRTIO_SCSI_MULTIQUEUE,SEV_CAPABLE"
+      - "--description=ACAS Nessus Scanner Golden Image. Built by Cloud Build ${BUILD_ID} on official RHEL 8 base."
+    waitFor: ["stop-builder-vm"]
+
+  # Step 7: Delete the temporary builder VM.
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "cleanup-builder-vm"
+    entrypoint: "gcloud"
+    args:
+      - "compute"
+      - "instances"
+      - "delete"
+      - "acas-scanner-builder-${BUILD_ID}"
+      - "--project=${_PROJECT_ID}"
+      - "--zone=${_ZONE}"
+      - "--quiet"
+    waitFor: ["capture-golden-image"]
+
+timeout: "3600s"
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -1,0 +1,76 @@
+# Global Configuration
+project_id       = "my-production-project-123"
+region           = "us-east4"
+name_prefix      = "prod-multi-vpn"
+gcp_network_name = "prod-vpc-network"
+gcp_router_name  = "prod-vpc-router-use4"
+gcp_bgp_asn      = 65514
+ike_version      = 2
+vpn_bgp_mask     = 30
+
+# AWS Specific Configuration
+create_gcp_vpn_tunnels_aws = true
+aws_bgp_asn = 64512
+
+# CNSA-compliant defaults are built into the module, but can be overridden here.
+# If you see "NO PROPOSAL CHOSEN", ensure this matches the AWS side exactly.
+# Example of a highly compatible suite:
+# aws_tunnel_cipher_suite = {
+#   phase1 = {
+#     encryption = ["AES-256"]
+#     integrity  = ["SHA2-256"]
+#     prf        = ["PRF-HMAC-SHA2-256"]
+#     dh         = ["Group-14"]
+#   }
+#   phase2 = {
+#     encryption = ["AES-256"]
+#     integrity  = ["SHA2-256"]
+#     pfs        = ["Group-14"]
+#   }
+# }
+
+aws_tunnel_details = {
+  tun1 = { external_ip = "203.0.113.1", gcp_bgp_ip = "169.254.21.2/30", aws_bgp_ip = "169.254.21.1" }
+  tun2 = { external_ip = "203.0.113.2", gcp_bgp_ip = "169.254.22.2/30", aws_bgp_ip = "169.254.22.1" }
+  tun3 = { external_ip = "203.0.113.3", gcp_bgp_ip = "169.254.23.2/30", aws_bgp_ip = "169.254.23.1" }
+  tun4 = { external_ip = "203.0.113.4", gcp_bgp_ip = "169.254.24.2/30", aws_bgp_ip = "169.254.24.1" }
+}
+secret_name_aws_conn1_tun1 = "aws-vpn-psk-c1t1"
+secret_name_aws_conn1_tun2 = "aws-vpn-psk-c1t2"
+secret_name_aws_conn2_tun1 = "aws-vpn-psk-tenant1"
+secret_name_aws_conn2_tun2 = "aws-vpn-psk-tenant2"
+aws_secret_version       = "latest"
+aws_redundancy_type      = "FOUR_IPS_REDUNDANCY"
+
+# Azure Specific Configuration
+enable_azure_vpn   = true
+mgmt_bgp_asn = 65200
+azure_bgp_asn      = 65515
+azure_gateway_ip_0 = "203.0.113.10"
+azure_gateway_ip_1 = "203.0.113.20"
+secret_name_azure_tunnel0 = "azure-vpn-psk-tun0"
+secret_name_azure_tunnel1 = "azure-vpn-psk-tun1"
+azure_gcp_bgp_apipa_ip_0   = "169.254.22.6"
+azure_peer_bgp_apipa_ip_0 = "169.254.22.5"
+azure_gcp_bgp_apipa_ip_1   = "169.254.22.10"
+azure_peer_bgp_apipa_ip_1 = "169.254.22.9"
+azure_redundancy_type     = "TWO_IPS_REDUNDANCY"
+
+# Panorama Specific Configuration
+enable_panorama_vpn   = true
+panorama_project_id   = "my-panorama-project-456"
+panorama_vpc_name     = "my-panorama-vpc"
+panorama_bgp_asn      = 65516
+panorama_gateway_ip_0 = "203.0.113.30"
+panorama_gateway_ip_1 = "203.0.113.40"
+secret_name_panorama_tunnel0 = "panorama-vpn-psk-tun0"
+secret_name_panorama_tunnel1 = "panorama-vpn-psk-tun1"
+panorama_gcp_bgp_apipa_ip_0   = "169.254.23.6"
+panorama_peer_bgp_apipa_ip_0 = "169.254.23.5"
+panorama_gcp_bgp_apipa_ip_1   = "169.254.23.10"
+panorama_peer_bgp_apipa_ip_1 = "169.254.23.9"
+panorama_redundancy_type = "TWO_IPS_REDUNDANCY"
+
+# Advanced configuration (optional)
+stack_type         = "IPV4_ONLY"
+gateway_ip_version = "IPV4"

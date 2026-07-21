@@ -1,0 +1,8 @@
+---
+# This boolean constraint disables the SSH-in-browser tool in the
+# Cloud Console. When enforced, the SSH-in-browser button is disabled.
+# By default, using the SSH-in-browser tool is allowed.
+# COULD HAVE
+compute.disableSshInBrowser:
+  rules:
+  - enforce: false  

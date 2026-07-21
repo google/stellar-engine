@@ -1,0 +1,49 @@
+---
+# data/hierarchical-ingress-rules.yaml
+# Consolidates administrative, health check, and internal routing access for NVAs at the Folder level.
+
+allow-iap-to-nva:
+  description: "Allow traffic from Google IAP (SSH/HTTPS) to NVA appliances"
+  priority: 1000
+  action: "allow"
+  direction: "INGRESS"
+  target_service_accounts:
+    - "ngfw-compute@${vdss-project-id}.iam.gserviceaccount.com"
+  match:
+    source_ranges:
+      - iap
+    layer4_configs:
+      - protocol: tcp
+        ports:
+          - "22"
+          - "443"
+
+allow-hc-to-nva:
+  description: "Allow traffic from Google health checks to NVA appliances"
+  priority: 1010
+  action: "allow"
+  direction: "INGRESS"
+  target_service_accounts:
+    - "ngfw-compute@${vdss-project-id}.iam.gserviceaccount.com"
+  match:
+    source_ranges:
+      - healthchecks
+    layer4_configs:
+      - protocol: tcp
+        ports:
+          - "80"
+          - "443"
+
+allow-internal-to-nva:
+  description: "Allow internal East-West traffic (RFC1918) to reach the NVAs for inspection"
+  priority: 1020
+  action: "allow"
+  direction: "INGRESS"
+  target_service_accounts:
+    - "ngfw-compute@${vdss-project-id}.iam.gserviceaccount.com"
+  match:
+    source_ranges:
+      - "10.0.0.0/8"
+    layer4_configs:
+      - protocol: tcp
+      - protocol: icmp

@@ -1,0 +1,21 @@
+---
+# This list constraint defines the set of Private Service Connect endpoint types
+# for which users cannot create forwarding rules. When this constraint is
+# enforced, users will be blocked from creating forwarding rules for the Private
+# Service Connect endpoint type. This constraint is not retroactively enforced.
+# By default, forwarding rules can be created for any Private Service Connect
+# endpoint type. The allowed/denied list of Private Service Connect endpoints
+# must come from the list below:
+#  [GOOGLE_APIS, SERVICE_PRODUCERS].
+# Using GOOGLE_APIS in the allowed/denied list will restrict the creation of
+# Private Service Connect forwarding rules for accessing Google APIs. Using
+# SERVICE_PRODUCERS in the allowed/denied list will restrict the creation of
+# Private Service Connect forwarding rules for accessing services in another
+# VPC network.
+# COULD HAVE
+# compute.disablePrivateServiceConnectCreationForConsumers:
+#   rules:
+#   - allow:
+#       values:
+#         - GOOGLE_APIS
+#         - SERVICE_PRODUCERS

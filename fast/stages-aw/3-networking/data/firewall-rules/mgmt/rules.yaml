@@ -1,0 +1,46 @@
+# skip boilerplate check
+---
+# Terraform will be unable to decode this file if it does not contain valid YAML
+# You can retain `---` (start of the document) to indicate an empty document.
+
+ingress:
+  allow-iap-ssh-mgmt:
+    description: "Allow traffic from Google IAP over SSH"
+    source_ranges:
+      - iap
+    rules:
+      - protocol: tcp
+        ports:
+          - 22
+  #allow-hc-nva-ssh-mgmt:
+   # description: "Allow traffic from Google healthchecks to NVA appliances"
+    #targets: ["nva"]
+    #source_ranges:
+     # - healthchecks
+     # - iap
+   # rules:
+    #  - protocol: tcp
+     #   ports:
+      #    - 22
+       #   - 443
+  allow-ssh-bastion-nva-mgmt:
+    description: "We expect the bastion host to be able to SSH into the NGFWs"
+    sources:
+      - bastion
+    source_ranges:
+      - internal
+    targets:
+      - nva
+    rules:
+      - protocol: tcp
+        ports:
+          - 22
+          - 443
+  allow-iap-https-mgmt:
+    description: "Allow traffic from Google IAP over HTTPS"
+    source_ranges:
+      - iap
+    rules:
+      - protocol: tcp
+        ports:
+          - 443

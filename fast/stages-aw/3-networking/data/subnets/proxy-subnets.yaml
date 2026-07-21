@@ -1,0 +1,2 @@
+tenant_environments_proxy_subnets:
+  sharedsvcs: "10.84.8.0/23"

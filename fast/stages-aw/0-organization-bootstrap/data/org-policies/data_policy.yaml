@@ -1,0 +1,40 @@
+---
+# This boolean constraint restricts adding Authorized Networks for unproxied
+# database access to Cloud SQL instances where this constraint is set to True.
+# This constraint is not retroactive, Cloud SQL instances with existing
+# Authorized Networks will still work even after this constraint is enforced.
+# By default, Authorized Networks can be added to Cloud SQL instances.
+# MUST HAVE
+sql.restrictAuthorizedNetworks:
+  rules:
+  - enforce: true
+
+# This boolean constraint restricts configuring Public IP on Cloud SQL
+# instances where this constraint is set to True. This constraint is not
+# retroactive, Cloud SQL instances with existing Public IP access will still
+# work even after this constraint is enforced. By default, Public IP access
+# is allowed to Cloud SQL instances.
+# MUST HAVE
+sql.restrictPublicIp:
+  rules:
+  - enforce: true
+
+# By default, Datastream connection profiles can be created with public or
+# private connectivity methods. If the boolean constraint for this organization
+# policy is enforced, then only private connectivity methods (for example, VPC
+# peering) can be used to create connection profiles.
+# SHOULD HAVE
+datastream.disablePublicConnectivity:
+  rules:
+  - enforce: true
+
+# This boolean constraint, when enforced, requires Firestore imports and
+# exports to use the Firestore Service Agent. By default, Firestore imports
+# and exports may use the App Engine service account. Firestore will stop
+# using the App Engine service account for imports and exports in the future
+# and all accounts will need to migrate to the Firestore Service Agent, after
+# which time this constraint will no longer be necessary.
+# SHOULD HAVE
+firestore.requireP4SAforImportExport:
+  rules:
+  - enforce: false

@@ -1,0 +1,76 @@
+# use `gcloud beta billing accounts list`
+# if you have too many accounts, check the Cloud Console :)
+billing_account = {
+  id = "012345-67890A-BCDEF0"
+}
+
+# locations for GCS, BigQuery, KMS, and logging buckets created here
+locations = {
+  bq      = "us-east4"
+  gcs     = "us-east4"
+  logging = "us-east4"
+  pubsub  = ["us-east4"]
+  kms     = "us-east4"
+}
+
+# use `gcloud organizations list`
+organization = {
+  domain      = "example.org"
+  id          = 1234567890
+  customer_id = "C000001"
+}
+
+outputs_location = "~/fast-config"
+
+# use something unique and no longer than 9 characters
+prefix = "abcd"
+# CIS Compliance Benchmark 2.2
+log_sinks = {
+  “prefix-compliance-regime-audit-log” = {
+    filter = ""
+    type   = "logging"
+  }
+}
+
+fast_features = {
+  envs = true
+}
+
+assured_workloads = {
+  regime = "compliance-regime" #"IL4, IL5, FEDRAMP_HIGH, etc... if you wish to not use assured_workloads, set this value to COMPLIANCE_REGIME_UNSPECIFIED"
+  location = "us-east4"
+}
+
+bootstrap_project = "bootstrap-project-name"
+
+alert_email = "user@domain.com"
+
+top_level_folder = {
+  name = "Top_level_folder_name" #replace with given folder name 
+  id = "123456788" #replace with given folder id
+}
+
+workload_identity_providers = {
+  gitlab-fed = {
+    issuer = "gitlab"
+    custom_settings = {
+      issuer_uri = "https://github.com"
+      audiences = ["https://github.com"]
+    }
+  }
+}
+
+cicd_repositories = {
+  bootstrap = {
+    name              = "google-cloud/project"
+    type              = "gitlab"
+    identity_provider = "gitlab-fed"
+    branch            = "main"
+  }
+  resman = {
+    name              = "google-cloud/project"
+    type              = "gitlab"
+    identity_provider = "gitlab-fed"
+    branch            = "main"
+  }
+}

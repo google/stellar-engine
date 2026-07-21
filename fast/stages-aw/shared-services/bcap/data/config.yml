@@ -1,0 +1,35 @@
+attachment_configs: 
+  router1-attachment1: 
+    name: "bcap-router1-attachment1-domain1"
+    description: "BCAP Attachment 1 to Router 1 (Region 1 / Domain 1)"
+    router_key: "router1"
+    edge_availability_domain: "AVAILABILITY_DOMAIN_1"
+    mtu: 1440
+  router1-attachment2: 
+    name: "bcap-router1-attachment2-domain2"
+    description: "BCAP Attachment 2 to Router 1 (Region 1 / Domain 2)"
+    router_key: "router1"
+    edge_availability_domain: "AVAILABILITY_DOMAIN_2"
+    mtu: 1440
+  router2-attachment1: 
+    name: "bcap-router2-attachment1-domain1"
+    description: "BCAP Attachment 1 to Router 2 (Region 2 / Domain 1)"
+    router_key: "router2"
+    edge_availability_domain: "AVAILABILITY_DOMAIN_1"
+    mtu: 1440
+  router2-attachment2: 
+    name: "bcap-router2-attachment2-domain2"
+    description: "BCAP Attachment 2 to Router 2 (Region 2 / Domain 2)"
+    router_key: "router2"
+    edge_availability_domain: "AVAILABILITY_DOMAIN_2"
+    mtu: 1440
+network_name: "bcap"
+region1: "us-east4"
+region2: "us-central1"
+router_configs:
+  router1:
+    name: "bcap-cloud-router-primary"
+    description: "Primary BCAP router"
+  router2:
+    name: "bcap-cloud-router-secondary"
+    description: "Secondary BCAP router"

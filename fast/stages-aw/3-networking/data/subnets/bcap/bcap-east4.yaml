@@ -1,0 +1,9 @@
+# Subnet for bcap landing
+name: bcap-landing
+region: us-east4
+ip_cidr_range: 10.84.5.0/29
+description: Landing subnet for bcap environment
+flow_logs_config:
+  aggregation_interval: "INTERVAL_5_SEC"
+  flow_sampling: 1
+  metadata: "INCLUDE_ALL_METADATA"

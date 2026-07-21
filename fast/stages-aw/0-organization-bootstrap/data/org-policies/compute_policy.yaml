@@ -1,0 +1,259 @@
+---
+# This list constraint defines the set of Compute Engine VM instances that
+# are allowed to use external IP addresses. By default, all VM instances are
+# allowed to use external IP addresses. The allowed/denied list of VM instances
+# must be identified by the VM instance name, in the form:
+#  projects/PROJECT_ID/zones/ZONE/instances/INSTANCE
+# MUST HAVE
+# Recommendations:
+# Enable at org level and manage by exception for valid use cases. This is one
+# of constraints that is commonly used and advised.
+compute.vmExternalIpAccess:
+  rules:
+  - deny:
+      all: true
+
+# This boolean constraint disables Compute Engine API access to the Guest
+# Attributes of Compute Engine VMs belonging to the organization, project, or
+# folder where this constraint is set to True. By default, the Compute Engine
+# API can be used to access Compute Engine VM guest attributes.
+# This boolean constraint disables hardware-accelerated nested virtualization
+# for all Compute Engine VMs belonging to the organization, project, or folder
+# where this constraint is set to True. By default, hardware-accelerated nested
+# virtualization is allowed for all Compute Engine VMs running on Intel Haswell
+# or newer CPU platforms.
+# COULD HAVE
+compute.disableNestedVirtualization:
+  rules:
+  - enforce: true
+
+
+# This boolean constraint disables serial port access to Compute Engine VMs
+# belonging to the organization, project, or folder where this constraint is set
+# to True. By default, customers can enable serial port access for Compute
+# Engine VMs on a per-VM or per-project basis using metadata attributes.
+# Enforcing this constraint will disable serial port access for Compute Engine
+# VMs, regardless of the metadata attributes.
+# SHOULD HAVE
+compute.disableSerialPortAccess:
+  rules:
+  - enforce: true
+
+
+# This boolean constraint disables serial port logging to Stackdriver from
+# Compute Engine VMs belonging to the organization, project, or folder where
+# this constraint is being enforced. By default, serial port logging for Compute
+# Engine VMs is disabled, and can be selectively enabled on a per-VM or
+# per-project basis using metadata attributes. When enforced, this constraint
+# disables serial port logging for new Compute Engine VMs whenever a new VM is
+# created, as well as preventing users from changing the metadata attribute of
+# any VMs (old or new) to True. Disabling serial port logging can cause certain
+# services that rely on it, such as GKE Autopilot, to not function correctly.
+# Before you enforce this constraint, verify that the products in your project
+# do not rely on serial port logging.
+# SHOULD HAVE
+# compute.disableSerialPortLogging:
+#   rules:
+#   - enforce: false
+
+
+# This boolean constraint, when set to true, enables OS Login on all newly
+# created Projects. All VM instances created in new projects will have OS Login
+# enabled. On new and existing projects, this constraint prevents metadata
+# updates that disable OS Login at the project or instance level. By default,
+# the OS Login feature is disabled on Compute Engine projects.GKE instances in
+# private clusters running node pool versions 1.20.5-gke.2000 and later support
+# OS Login. GKE instances in public clusters do not currently support OS Login.
+# If this constraint is applied to a Project running public clusters, GKE
+# instances running in that Project may not function properly.
+# COULD HAVE
+compute.requireOsLogin:
+  rules:
+  - enforce: true
+
+
+# This boolean constraint, when set to True, requires that all new Compute
+# Engine VM instances use Shielded disk images with Secure Boot, vTPM, and
+# Integrity Monitoring options enabled. Secure Boot can be disabled after
+# creation, if desired. Existing running instances will continue to work as
+# usual. By default, Shielded VM features do not need to be enabled in order
+# to create Compute Engine VM instances. Shielded VM features add verifiable
+# integrity and exfiltration resistance to your VMs.
+# SHOULD HAVE, at folder or project level
+# compute.requireShieldedVm:
+#   rules:
+#   - enforce: true
+
+
+# The deny list of this list constraint defines the set of services that require
+# all new resources to be created with Confidential Computing enabled. By
+# default, new resources are not required to use Confidential Computing. While
+# this list constraint is enforced, Confidential Computing cannot be disabled
+# throughout the lifecycle of the resource. Existing resources will continue to
+# work as usual. The denied list of services must be identified as the string
+# name of an API, and can only include explicitly denied values from the list
+# below. Explicitly allowing APIs is not currently supported. Explicitly denying
+# APIs not in this list will result in an error. List of supported APIs:
+# [compute.googleapis.com, container.googleapis.com]
+# COULD HAVE
+# compute.restrictNonConfidentialComputing:
+#   rules:
+#   - deny:
+#       values:
+#         - compute.googleapis.com
+
+
+# This list constraint defines the set of Shared VPC host projects that projects
+# at or below this resource can attach to. By default, a project can attach to
+# any host project in the same organization, thereby becoming a service project.
+# Projects, folders, and organizations in allowed/denied lists affect all
+# objects underneath them in the resource hierarchy, and must be specified in
+# the form:
+# under:organizations/ORGANIZATION_ID, under:folders/FOLDER_ID, or
+# projects/PROJECT_ID.
+# SHOULD HAVE
+# compute.restrictSharedVpcHostProjects:
+#   rules:
+#   - allow:
+#       values:
+#         - under:folders/<folder_id>
+
+
+# This list constraint defines the set of shared VPC subnetworks that eligible
+# resources can use. This constraint does not apply to resources within the same
+# project. By default, eligible resources can use any shared VPC subnetwork. The
+# allowed/denied list of subnetworks must be specified in the form:
+# under:organizations/ORGANIZATION_ID, under:folders/FOLDER_ID,
+# under:projects/PROJECT_ID, or
+# projects/PROJECT_ID/regions/REGION/subnetworks/SUBNETWORK-NAME.
+# SHOULD HAVE
+# compute.restrictSharedVpcSubnetworks:
+#   rules:
+#   - allow:
+#       values:
+#         - under:projects/<project_id>
+
+
+# This boolean constraint restricts the set of users that can remove a Shared
+# VPC host project lien without organization-level permission where this
+# constraint is set to True. By default, any user with the permission to update
+# liens can remove a Shared VPC host project lien. Enforcing this constraint
+# requires that permission be granted at the organization level.
+# SHOULD HAVE
+# compute.restrictXpnProjectLienRemoval:
+#   rules:
+#   - enforce: false
+
+
+# This list constraint defines the set of projects that are allowed to create
+# and own shared reservations in the org. A shared reservation is similar to a
+# local reservation, except that instead of being consumable by only owner
+# projects, they can be consumed by other Compute Engine projects in the
+# resource hierarchy. The list of projects allowed to access the shared
+# reservation must be of the form:
+# projects/PROJECT_NUMBER or under:projects/PROJECT_NUMBER.
+# This list constraint defines a set of projects that are allowed to use Compute
+# Engine's storage resources. By default, anyone with appropriate Cloud IAM
+# permissions can access Compute Engine resources. When using this constraint,
+# users must have Cloud IAM permissions, and they must not be restricted by the
+# constraint to access the resource. Projects, folders, and organizations
+# specified in allowed or denied lists must be in the form:
+# under:projects/PROJECT_ID, under:folders/FOLDER_ID,
+# under:organizations/ORGANIZATION_ID.
+# COULD HAVE
+# compute.sharedReservationsOwnerProjects:
+#   rules:
+#   - allow:
+#       all: true
+
+
+# This list constraint defines the set of projects that can be used for image
+# storage and disk instantiation for Compute Engine. By default, instances can
+# be created from images in any project that shares images publicly or
+# explicitly with the user. The allowed/denied list of publisher projects must
+# be strings in the form: projects/PROJECT_ID. If this constraint is active,
+# only images from trusted projects will be allowed as the source for boot
+# disks for new instances.
+# COULD HAVE
+# compute.storageResourceUseRestrictions:
+#   rules:
+#   - allow:
+#       values:
+#         - projects/<project_id>
+
+# This list constraint defines the set of projects that can be used for image
+# storage and disk instantiation for Compute Engine. By default, instances can
+# be created from images in any project that shares images publicly or
+# explicitly with the user. The allowed/denied list of publisher projects must
+# be strings in the form: projects/PROJECT_ID. If this constraint is active,
+# only images from trusted projects will be allowed as the source for boot
+# disks for new instances.
+compute.trustedImageProjects:
+  rules:
+  - allow:
+      values:
+        - "is:projects/centos-cloud"
+        - "is:projects/cos-cloud"
+        - "is:projects/debian-cloud"
+        - "is:projects/fedora-cloud"
+        - "is:projects/fedora-coreos-cloud"
+        - "is:projects/opensuse-cloud"
+        - "is:projects/rhel-cloud"
+        - "is:projects/rhel-sap-cloud"
+        - "is:projects/rocky-linux-cloud"
+        - "is:projects/suse-cloud"
+        - "is:projects/suse-sap-cloud"
+        - "is:projects/ubuntu-os-cloud"
+        - "is:projects/ubuntu-os-pro-cloud"
+        - "is:projects/windows-cloud"
+        - "is:projects/windows-sql-cloud"
+        - "is:projects/confidential-vm-images"
+        - "is:projects/backupdr-images"
+        - "is:projects/deeplearning-platform-release"
+        - "is:projects/serverless-vpc-access-images"
+        - "is:projects/paloaltonetworksgcp-public"
+
+
+# This list constraint defines the set of VM instances that can enable IP
+# forwarding. By default, any VM can enable IP forwarding in any virtual
+# network. VM instances must be specified in the form:
+# under:organizations/ORGANIZATION_ID,
+# under:folders/FOLDER_ID,
+# under:projects/PROJECT_ID, or
+# projects/PROJECT_ID/zones/ZONE/instances/INSTANCE-NAME.
+# This constraint is not retroactive.
+# SHOULD HAVE
+# Recommendations:
+#   Disable at org level and manage by exception for valid use cases
+# (for example, proxy/NAT appliances).
+# compute.vmCanIpForward
+#   rules:
+#   - allow:
+#       values:
+#         - under:folders/<folder_id>
+
+
+# This boolean constraint disables global serial port access to Compute Engine
+# VMs belonging to the organization, project, or folder where the constraint is
+# enforced. By default, customers can enable serial port access for Compute
+# Engine VMs on a per-VM or per-project basis using metadata attributes.
+# Enforcing this constraint will disable global serial port access for Compute
+# Engine VMs, regardless of the metadata attributes. Regional serial port access
+# is not affected by this constraint. To disable all serial port access, use the
+# compute.disableSerialPortAccess constraint instead.
+# COULD HAVE
+# compute.disableGlobalSerialPortAccess:
+#   rules:
+#   - enforce: false
+
+
+# This boolean constraint when enforced, disables creation of VM instance types
+# that do not comply with FIPS requirements.
+# COULD HAVE
+# compute.disableNonFIPSMachineTypes:
+#   rules:
+#   - enforce: true
+
+compute.disableGuestAttributesAccess:
+  rules:
+    - enforce: true

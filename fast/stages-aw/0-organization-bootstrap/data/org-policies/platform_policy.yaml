@@ -1,0 +1,107 @@
+---
+
+
+# When Detailed Audit Logging Mode is enforced, both the request and response
+# are included in Cloud Audit Logs. Changes to this feature may take up to 10
+# minutes to reflect. This Org Policy is highly encouraged in coordination with
+# Bucket Lock when seeking compliances such as SEC Rule 17a-4(f),
+# CFTC Rule 1.31(c)-(d), and FINRA Rule 4511(c). This policy is currently only
+# supported in Cloud Storage.
+# COULD HAVE
+gcp.detailedAuditLoggingMode:
+  rules:
+  - enforce: false
+
+# This boolean constraint, when enforced, disables Cloud Logging for the Cloud
+# Healthcare API. Audit logs aren't affected by this constraint. Cloud Logs
+# generated for the Cloud Healthcare API before the constraint is enforced are
+# not deleted and can still be accessed.
+# COULD HAVE
+gcp.disableCloudLogging:
+  rules:
+  - enforce: false
+
+# This list constraint defines the set of locations where location-based Google
+# Cloud resources can be created. By default, resources can be created in any
+# location. Policies for this constraint can specify multi-regions such as asia
+# and europe, regions such as us-east1 or europe-west1 as allowed or denied
+# locations. Allowing or denying a multi-region does not imply that all included
+# sub-locations should also be allowed or denied. For example, if the policy
+# denies the us multi-region (which refers to multi-region resources, like some
+# storage services), resources can still be created in the regional location
+# us-east1. On the other hand, the in:us-locations group contains all locations
+# within the us region, and can be used to block every region. We recommend
+# using value groups to define your policy. You can specify value groups,
+# collections of locations that are curated by Google to provide a simple way
+# to define your resource locations. To use value groups in your organization
+# policy, prefix your entries with the string in:, followed by the value group.
+# For example, to create resources that will only be physically located within
+# the US, set in:us-locations in the list of allowed values.If the
+# suggested_value field is used in a location policy, it should be a region.
+# If the value specified is a region, a UI for a zonal resource may pre-populate
+# any zone in that region.
+# SHOULD HAVE
+gcp.resourceLocations:
+  rules:
+  - allow:
+      values:
+        - in:us-locations
+        - global
+
+# This constraint defines the set of Google Cloud resource services that can be
+# used within an organization, folder, or project, such as compute.googleapis.com
+# and storage.googleapis.com. By default, all Google Cloud resource services are
+# allowed. For more information, see
+# https://cloud.google.com/resource-manager/help/organization-policy/restricting-resources.
+# COULD HAVE
+# gcp.restrictServiceUsage:
+#   rules:
+#   - allow:
+#       all: true
+
+# This list constraint acts as a check to verify that a project with a service
+# enabled is eligible for cross-organization move. A resource with a supported
+# service enabled must have this constraint enforced and that supported service
+# included in the allowed values to be eligible for a cross-organization move.
+# The current list of allowed values for supported services that can be used is:
+# [SHARED_VPC]. This constraint provides an additional control on top of
+# constraints/resourcemanager.allowedExportDestinations.
+# This list_constraint is empty by default and will not block cross organization
+# moves unless a supported service is enabled on the resource to be exported.
+# This constraint allows more fine-grained control over resources using features
+# that require more caution when being moved to another organization. By default,
+# a resource with a supported service enabled cannot be moved across organizations.
+# SHOULD HAVE
+# resourcemanager.allowEnabledServicesForExport:
+#   rules:
+#   - allow:
+#       all: true
+
+
+# This boolean constraint, when enforced, allows organization policy administrators
+# to ensure that only contacts assigned at the organization or folder level can
+# receive security notifications. Specifically, enforcing this constraint blocks
+# project owners and contact administrators from creating or updating an Essential
+# Contact with a notification_category_subscriptions field that contains either
+# the SECURITY or ALL category, if the contact also has a project resource as a parent.
+# COULD HAVE
+essentialcontacts.disableProjectSecurityContacts:
+  rules:
+  - enforce: false
+
+# This list constraint defines the set of Private Service Connect endpoint types
+# for which users cannot create forwarding rules. When this constraint is
+# enforced, users will be blocked from creating forwarding rules for the Private
+# Service Connect endpoint type. This constraint is not retroactively enforced.
+# By default, forwarding rules can be created for any Private Service Connect
+# endpoint type. The allowed/denied list of Private Service Connect endpoints must
+# come from the list below: [GOOGLE_APIS, SERVICE_PRODUCERS]. Using GOOGLE_APIS
+# in the allowed/denied list will restrict the creation of Private Service Connect
+# forwarding rules for accessing Google APIs. Using SERVICE_PRODUCERS in the
+# allowed/denied list will restrict the creation of Private Service Connect forwarding
+# rules for accessing services in another VPC network.
+# COULD HAVE
+cloudscheduler.allowedTargetTypes:
+  rules:
+  - allow:
+      all: true

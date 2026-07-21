@@ -1,0 +1,16 @@
+---
+# This boolean constraint, when set to True, will disable users from
+# using BigQuery Omni to process data on Amazon Web Services where this
+# constraint is enforced.
+# COULD HAVE
+bigquery.disableBQOmniAWS:
+  rules:
+  - enforce: true
+
+# This boolean constraint, when set to True, will disable users from
+# using BigQuery Omni to process data on Microsoft Azure where this
+# constraint is enforced.
+# COULD HAVE
+bigquery.disableBQOmniAzure:
+  rules:
+  - enforce: true

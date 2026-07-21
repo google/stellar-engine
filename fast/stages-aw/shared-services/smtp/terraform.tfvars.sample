@@ -1,0 +1,24 @@
+# SMTP Shared Service — sample tfvars
+# Copy to terraform.tfvars and update values for your environment.
+
+hub_project_id = "my-vdss-host-project"
+region         = "us-east4"
+network        = "projects/my-vdss-host-project/global/networks/shared-services"
+subnetwork     = "projects/my-vdss-host-project/regions/us-east4/subnetworks/shared-services-default"
+encryption_key = "projects/my-kms-project/locations/us-east4/keyRings/shared-services/cryptoKeys/smtp"
+
+automation = {
+  outputs_bucket = "da1-il5-prod-iac-core-outputs"
+}
+
+# DISA EESG relay IPs — coordinate with DISA POC for IP whitelisting.
+disa_relay_hosts = ["<disa-eesg-relay-ip>"]
+
+# Uncomment to customize:
+# disa_relay_port      = 25
+# prefix               = "da1"
+# smtp_hostname        = "smtp.mil"
+# smtp_domain          = "mil"
+# machine_type         = "e2-small"
+# create_cloud_nat     = true
+# allowed_client_ranges = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]

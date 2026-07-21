@@ -1,0 +1,41 @@
+# use `gcloud beta billing accounts list`
+# if you have too many accounts, check the Cloud Console :)
+assured_workloads = {
+  regime = "compliance-regime"  #"IL4, IL5, FEDRAMP_HIGH, etc... if you wish to not use assured_workloads, set this value to COMPLIANCE_REGIME_UNSPECIFIED"
+  location = "us-east4"
+}
+
+billing_account = {
+  id = "012345-67890A-BCDEF0"
+}
+
+bootstrap_project = "bootstrap-project-name"
+
+# locations for GCS, BigQuery, KMS, and logging buckets created here
+locations = {
+  bq      = "us-east4"
+  gcs     = ["us-east4"]
+  logging = ["us-east4"]
+  pubsub  = ["us-east4"]
+  kms     = "us-east4"
+}
+
+# use `gcloud organizations list`
+organization = {
+  domain      = "example.org"
+  id          = 1234567890
+  customer_id = "C000001"
+}
+
+org_policies_config = {
+  import_defaults = false # No policies to import as of 27 SEP 2024
+  constraints = {
+    allowed_policy_member_domains = [] # Additional externally allowed customer_ids
+    allowed_access_boundaries     = [] # Additional externally allowed organization_ids
+  }
+}
+
+top_level_folder = {
+  name = "Top_level_folder_name" #replace with given folder name 
+  id = "123456788" #replace with given folder id
+}

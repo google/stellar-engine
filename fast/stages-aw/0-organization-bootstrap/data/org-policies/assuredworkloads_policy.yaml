@@ -1,0 +1,15 @@
+# PREVIEW: This constraint defines the set of TLS versions that cannot be used on
+# the organization, folder, or project where this constraint is enforced, or any
+# of that resource's children in the resource hierarchy. By default, all TLS
+# versions are allowed. TLS versions can only be specified in the denied list,
+# and must be identified in the form TLS_VERSION_1 or TLS_VERSION_1_1.This
+# constraint is only applied to requests using TLS. It will not be used to
+# restrict unencrpyted requests. For more information, see
+# https://cloud.google.com/assured-workloads/docs/restrict-tls-versions.
+# SHOULD HAVE
+gcp.restrictTLSVersion:
+  rules:
+  - deny:
+      values:
+        - TLS_VERSION_1
+        - TLS_VERSION_1_1

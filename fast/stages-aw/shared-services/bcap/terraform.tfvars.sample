@@ -1,0 +1,69 @@
+hub_project_id = "xxxx-shared-services"
+
+# VPC Configuration
+network_name = "vdss-bcap-0"
+
+# Primary and Secondary Regions for BCAP Deployment
+region1 = "us-central1"
+region2 = "us-east4"
+
+# DoD Base CIDR Block (to be split into two /25s) - Replace with your DoD NIC assigned /24 CIDR
+dod_base_cidr_block = "x.x.x.0/24"
+
+# Subnet Configurations
+subnet_configs = {
+  "subnet1" = {
+    name        = "bcap-dod-subnet-primary"
+    description = "BCAP DoD Subnet 1 (Region 1)"
+  },
+  "subnet2" = {
+    name        = "bcap-dod-subnet-secondary"
+    description = "BCAP DoD Subnet 2 (Region 2)"
+  }
+}
+
+# Router Configurations
+router_configs = {
+  "router1" = {
+    name        = "bcap-cloud-router-primary"
+    description = "Primary BCAP Cloud Router"
+  },
+  "router2" = {
+    name        = "bcap-cloud-router-secondary"
+    description = "Secondary BCAP Cloud Router"
+  }
+}
+
+# VLAN Attachment Configurations
+attachment_configs = {
+  "router1-attachment1" = {
+    name                     = "bcap-router1-attachment1-domain1"
+    description              = "BCAP Attachment 1 to Router 1 (Region 1 / Domain 1)"
+    router_key               = "router1"
+    edge_availability_domain = "AVAILABILITY_DOMAIN_1"
+    mtu                      = 1440
+  },
+  "router1-attachment2" = {
+    name                     = "bcap-router1-attachment2-domain2"
+    description              = "BCAP Attachment 2 to Router 1 (Region 1 / Domain 2)"
+    router_key               = "router1"
+    edge_availability_domain = "AVAILABILITY_DOMAIN_2"
+    mtu                      = 1440
+  },
+  "router2-attachment1" = {
+    name                     = "bcap-router2-attachment1-domain1"
+    description              = "BCAP Attachment 1 to Router 2 (Region 2 / Domain 1)"
+    router_key               = "router2"
+    edge_availability_domain = "AVAILABILITY_DOMAIN_1"
+    mtu                      = 1440
+  },
+  "router2-attachment2" = {
+    name                     = "bcap-router2-attachment2-domain2"
+    description              = "BCAP Attachment 2 to Router 2 (Region 2 / Domain 2)"
+    router_key               = "router2"
+    edge_availability_domain = "AVAILABILITY_DOMAIN_2"
+    mtu                      = 1440
+  }
+}
+
+router_google_asn = 16550

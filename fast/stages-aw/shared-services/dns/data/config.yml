@@ -1,0 +1,11 @@
+forwarding_zones:
+  mil:
+    domain: "mil."
+    forwarders:
+      "8.8.8.8": "private"
+  gov:
+    domain: "gov."
+    forwarders:
+      "8.8.8.1": "private"
+private_zone_domain: "da1-il5-vdss.private.example.internal."
+
