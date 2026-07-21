@@ -215,6 +215,7 @@ variable "log_sinks" {
     type   = string
   }))
   default = {
+
     audit-logs = {
       filter = "logName:\"/logs/cloudaudit.googleapis.com%2Factivity\" OR logName:\"/logs/cloudaudit.googleapis.com%2Fsystem_event\" OR protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.TransparencyLog\""
       type   = "logging"
