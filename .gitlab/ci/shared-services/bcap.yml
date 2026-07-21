@@ -1,0 +1,47 @@
+stages:
+  - plan
+  - apply
+
+include:
+ - local: '.gitlab/ci/templates/templates.yml'
+ - local: '.gitlab/ci/shared-services/templates.yml'
+ - local: '.gitlab/ci/templates/tf_dependencies_public.yml'
+   rules:
+    - if: $GCP_TF_REGISTRY_TYPE == "PUBLIC" || $GCP_TF_REGISTRY_TYPE == null || $GCP_TF_REGISTRY_TYPE == ""
+ - local: '.gitlab/ci/templates/tf_dependencies_internal.yml'
+   rules:
+    - if: $GCP_TF_REGISTRY_TYPE == "PRIVATE_DW"
+
+plan-bcap:
+  extends: .shared-service-plan
+  environment:
+    name: $ENV_NAME
+  variables:
+    TF_DIR: "fast/stages-aw/shared-services/bcap"
+    SERVICE_NAME: "bcap"
+  before_script:
+    - apt-get update && apt-get install -y jq
+    - !reference [.shared-service-init, before_script]
+    - gcloud storage cp "${GCS_BUCKET}/tfvars/3-networking-shared-services.auto.tfvars.json" ./
+    - gcloud storage cp "${GCS_BUCKET}/providers/shared-services-providers.tf" ./
+    - yq '.' data/config.yml > terraform.tfvars.json
+    - jq '.bcap' 3-networking-shared-services.auto.tfvars.json > networking-bcap.auto.tfvars.json
+    - terraform init -backend-config=prefix=$SERVICE_NAME
+  rules:
+    - if: '$DEPLOY_STAGES =~ /\b(SERVICES|BCAP)\b/'
+      when: on_success
+    - if: '$PREFIX != null && $PREFIX != "" && ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_PIPELINE_SOURCE == "merge_request_event")'
+      when: on_success
+
+apply-bcap:
+  extends: .shared-service-apply
+  environment:
+    name: $ENV_NAME
+  variables:
+    TF_DIR: "fast/stages-aw/shared-services/bcap"
+    SERVICE_NAME: "bcap"
+  rules:
+    - if: '$DEPLOY_STAGES =~ /\b(SERVICES|BCAP)\b/'
+      when: manual
+    - if: '$PREFIX != null && $PREFIX != "" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual

@@ -1,0 +1,95 @@
+# Test stage
+
+shellcheck:
+  stage: test
+  image: koalaman/shellcheck-alpine:stable
+  script:
+    - echo "Running ShellCheck..."
+    - find . -path ./modules -prune -o -type f -name "*.sh" -print0 | xargs -0 shellcheck -x -s bash
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+validate-stages-aw:
+  extends: .terraform_template
+  stage: test
+  script:
+    - cd fast/stages-aw
+    - for i in $(ls -d */); do cd $i; terraform init; terraform validate; cd ..; done
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+  
+validate-blueprints:
+  extends: .terraform_template
+  stage: test
+  script:
+    - cd blueprints/fedramp-high
+    - for i in $(ls -d */); do cd $i; terraform init; terraform validate; cd ..; done
+    - cd ../il5
+    - for i in $(ls -d */); do cd $i; terraform init; terraform validate; cd ..; done
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "blueprints/**/*"
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - "blueprints/**/*"
+
+check-docs-stages-aw:
+  stage: test
+  image:
+    name: python:3.9.19
+    entrypoint:
+      - "/usr/bin/env"
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  script:
+    - cd tools
+    - pip install click marko
+    - python check_documentation.py fast/stages-aw
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+check-docs-blueprints:
+  stage: test
+  image:
+    name: python:3.9.19
+    entrypoint:
+      - "/usr/bin/env"
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  script:
+    - cd tools
+    - pip install click marko
+    - python check_documentation.py blueprints
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "blueprints/**/*"
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - "blueprints/**/*"
+
+checkov-stages-aw:
+  extends: .checkov_template
+  stage: test
+  variables:
+    TARGET_DIR: "fast/stages-aw/"
+    REPORT_NAME: "stages-checkov.sarif"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+checkov-blueprints:
+  extends: .checkov_template
+  stage: test
+  variables:
+    TARGET_DIR: "blueprints/"
+    REPORT_NAME: "blueprints-checkov.sarif"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "blueprints/**/*"
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - "blueprints/**/*"

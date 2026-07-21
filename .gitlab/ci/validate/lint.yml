@@ -1,0 +1,112 @@
+# Lint Stage
+
+check_project_config_file:
+  stage: lint
+  image: alpine:latest
+  script:
+    - |
+      echo "----------------------------------------------------------"
+      echo "❌ ERROR: Local changes detected in project-config.yml"
+      echo "----------------------------------------------------------"
+      echo "This file must match the template in 'main' to pass CI."
+      echo ""
+      echo "TO FIX (Revert changes):"
+      echo "  git checkout origin/main -- project-config.yml"
+      echo ""
+      echo "TO BYPASS (Intentional changes):"
+      echo "  If your MR requires these changes, ensure your LATEST commit"
+      echo "  message contains '[skip-lock]'. You can use an empty commit:"
+      echo "  git commit --allow-empty -m 'Bypass lock [skip-lock]'"
+      echo "----------------------------------------------------------"
+      exit 1
+  rules:
+    - if: '($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH) || ($CI_COMMIT_MESSAGE =~ /\[skip-lock]/)'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH'
+      changes:
+        paths:
+          - "project-config.yml"
+        compare_to: 'refs/heads/main'
+
+stages-aw-formatting:
+  extends: .terraform_template
+  stage: lint
+  script:
+    - cd "fast/stages-aw/"
+    - terraform fmt -check --recursive
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+blueprints-formatting:
+  extends: .terraform_template
+  stage: lint
+  script:
+    - cd "blueprints"
+    - terraform fmt -check --recursive
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "blueprints/**/*"
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - "blueprints/**/*"
+
+tflint-stages-aw:
+  extends: .tflint_template
+  stage: lint
+  before_script:
+    - apk add --no-cache jq
+  script:
+    - chmod +x generate-mocks.sh
+    - ./generate-mocks.sh
+    - mkdir reports/
+    - tflint --recursive --format=sarif --chdir=fast/stages-aw/ | tee reports/stages-tflint.sarif
+  allow_failure: true
+  artifacts:
+    paths:
+      - reports/stages-tflint.sarif
+    when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+tflint-blueprints:
+  extends: .tflint_template
+  stage: lint
+  script:
+    - mkdir reports/
+    - tflint --recursive --format=sarif --chdir=blueprints/ | tee reports/blueprints-tflint.sarif
+  allow_failure: true
+  artifacts:
+    paths:
+      - reports/blueprints-tflint.sarif
+    when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "blueprints/**/*"
+    - if: '$CI_COMMIT_BRANCH'
+      changes:
+        - "blueprints/**/*"
+
+spell-check-code:
+  stage: lint
+  image: python:3.11-slim
+  script:
+    - pip install codespell
+    - codespell
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+
+spell_check_docs:
+  stage: lint
+  image: node:alpine
+  script:
+    - npx cspell "**/*.md" --no-progress --show-suggestions
+  allow_failure: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'

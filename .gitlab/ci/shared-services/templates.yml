@@ -1,0 +1,25 @@
+.shared-service-init:
+  before_script:
+    - cd $CI_PROJECT_DIR/$TF_DIR
+    - !reference [.gcp_wif_auth, script]
+    - !reference [.tf_dependencies, before_script]
+    - GCS_BUCKET="gs://${PREFIX}-il5-prod-iac-core-outputs"
+
+.shared-service-plan:
+  stage: plan
+  extends: .terraform_plan_template
+  variables:
+    GCP_SERVICE_ACCOUNT: "${PREFIX}-resman-shdsvc-1@${PREFIX}-il5-iac.iam.gserviceaccount.com"
+
+.shared-service-apply:
+  stage: apply
+  extends: .terraform_apply_template
+  variables:
+    GCP_SERVICE_ACCOUNT: "${PREFIX}-resman-shdsvc-1@${PREFIX}-il5-iac.iam.gserviceaccount.com"
+  before_script:
+    - cd $CI_PROJECT_DIR/$TF_DIR
+    - !reference [.gcp_wif_auth, script]
+    - !reference [.tf_dependencies, before_script]
+    - GCS_BUCKET="gs://${PREFIX}-il5-prod-iac-core-outputs"
+    - gcloud storage cp "${GCS_BUCKET}/providers/shared-services-providers.tf" ./
+    - terraform init -backend-config=prefix=$SERVICE_NAME

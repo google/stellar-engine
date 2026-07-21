@@ -1,0 +1,426 @@
+# Templates used by deploy.yml for each stage
+# This is very similar to how the automation/stellar-engine-deploy.sh works for each stage
+# The same template is used by the plan and apply stage
+
+.stage-0-before-script:
+  before_script:
+    - cd $CI_PROJECT_DIR/$TF_DIR
+    # Authenticating to google cloud using one of the WIF SA's
+    - !reference [.gcp_wif_auth, script]
+    # Downloading and activating the config.env file
+    - gcloud storage cp gs://${PREFIX}-il5-prod-iac-core-config/config.env ${CI_PROJECT_DIR}/automation/config.env
+    - source ${CI_PROJECT_DIR}/automation/config.env
+    # Create the terraform.tfvars file
+    - |
+      if [ -z "$EXTERNAL_DIRECTORY_CUSTOMER_IDS" ]; then
+        # No External Customer Directory IDs
+        allowed_policy_member_domains_config="[]"
+      else
+        # Trim and Format Member Domains
+        allowed_policy_member_domains_config="[\"$(echo "$EXTERNAL_DIRECTORY_CUSTOMER_IDS" | tr -d '[:space:]' | sed 's/,/\", \"/g')\"]"
+      fi
+      # Organization Policy: Access Boundaries
+      if [ -z "$EXTERNAL_ORGANIZATION_IDS" ]; then
+        # No External Organization IDs
+        allowed_access_boundaries_config="[]"
+      else
+        # Trim and Format Access Boundaries
+        allowed_access_boundaries_config="[\"$(echo "$EXTERNAL_ORGANIZATION_IDS" | tr -d '[:space:]' | sed 's/,/\", \"/g')\"]"
+      fi
+
+      # Convert REGIONS from a string to an array
+      IFS=',' read -r -a REGIONS_ARRAY <<< "$REGIONS"
+      REGIONS_CONFIG=$(printf '%s", "' "${REGIONS_ARRAY[@]}" | sed 's/", "$//')
+      REGIONS_CONFIG="[\"$REGIONS_CONFIG\"]"
+      # Grab first region fron REGIONS_CONFIG for BQ
+      BQ_REGION=$(echo "$REGIONS_CONFIG" | sed -E 's/^\["([a-zA-Z0-9-]+)".*/\1/')
+
+      GROUPS_BLOCK=""
+
+      # Check each variable and append to our string if it exists
+      [ -n "${TF_VAR_gcp_billing_admins_group}" ]      && GROUPS_BLOCK="${GROUPS_BLOCK}  gcp-billing-admins      = \"${TF_VAR_gcp_billing_admins_group}\"\n"
+      [ -n "${TF_VAR_gcp_devops_group}" ]              && GROUPS_BLOCK="${GROUPS_BLOCK}  gcp-devops              = \"${TF_VAR_gcp_devops_group}\"\n"
+      [ -n "${TF_VAR_gcp_vpc_network_admins_group}" ]  && GROUPS_BLOCK="${GROUPS_BLOCK}  gcp-vpc-network-admins  = \"${TF_VAR_gcp_vpc_network_admins_group}\"\n"
+      [ -n "${TF_VAR_gcp_organization_admins_group}" ] && GROUPS_BLOCK="${GROUPS_BLOCK}  gcp-organization-admins = \"${TF_VAR_gcp_organization_admins_group}\"\n"
+      [ -n "${TF_VAR_gcp_security_admins_group}" ]     && GROUPS_BLOCK="${GROUPS_BLOCK}  gcp-security-admins     = \"${TF_VAR_gcp_security_admins_group}\"\n"
+      [ -n "${TF_VAR_gcp_devops_group}" ]              && GROUPS_BLOCK="${GROUPS_BLOCK}  gcp-support             = \"${TF_VAR_gcp_devops_group}\"\n"
+
+      # Wrap it in the Terraform object syntax, interpreting the \n newlines safely
+      # If GROUPS_BLOCK is entirely empty, this outputs a clean "groups = {}"
+      if [ -n "$GROUPS_BLOCK" ]; then
+        GROUPS_OUTPUT=$(printf "{\n%b}" "$GROUPS_BLOCK")
+      else
+        GROUPS_OUTPUT="{}"
+      fi
+    - | 
+      cat <<EOF >terraform.tfvars
+      assured_workloads = {
+        regime   = "${COMPLIANCE_REGIME}" # "IL4, IL5, FEDRAMP_HIGH, etc... if you wish to not use assured_workloads, set this value to COMPLIANCE_REGIME_UNSPECIFIED"
+        location = "${AW_REGION}"
+      }
+
+      billing_account = {
+        id = "${BILLING_ACCOUNT}"
+      }
+
+      bootstrap_project = "${BOOTSTRAP_PROJECT_ID}"
+
+      groups = ${GROUPS_OUTPUT}
+
+      # locations for GCS, BigQuery, KMS, and logging buckets created here
+      locations = {
+        bq      = "${BQ_REGION}"
+        gcs     = ${REGIONS_CONFIG}
+        logging = ${REGIONS_CONFIG}
+        pubsub  = ${REGIONS_CONFIG}
+        kms     = ${REGIONS_CONFIG}
+      }
+
+      # use \`gcloud organizations list\`
+      organization = {
+        domain      = "${FULLY_QUALIFIED_DOMAIN_NAME}"
+        id          = "${ORGANIZATION_ID}"
+        customer_id = "${DIRECTORY_CUSTOMER_ID}"
+      }
+
+      org_policies_config = {
+        import_defaults = false # No policies to import as of 27 SEP 2024
+        constraints = {
+          allowed_policy_member_domains = ${allowed_policy_member_domains_config}  # Additional externally allowed customer_ids
+          allowed_access_boundaries     = ${allowed_access_boundaries_config}  # Additional externally allowed organization_ids
+        }
+      }
+
+      top_level_folder = {
+        name = "${TOP_LEVEL_FOLDER_NAME}"
+        id = "${TOP_LEVEL_FOLDER_ID}"
+      }
+      EOF
+    # Copying providers file from bucket
+    - TOP_LEVEL_FOLDER_NAME_LOWER=$(echo "$TOP_LEVEL_FOLDER_NAME" | tr '[:upper:]' '[:lower:]')
+    - gcloud storage cp gs://${TOP_LEVEL_FOLDER_NAME_LOWER}-org-iac-bootstrap/providers/0-organization-bootstrap-providers.tf .
+
+.stage-1-before-script:
+  before_script:
+    - apt-get update && apt-get install -y jq
+    - cd $CI_PROJECT_DIR/$TF_DIR
+    # Authenticating to google cloud using one of the WIF SA's
+    - !reference [.gcp_wif_auth, script]
+    # Downloading and activating the config.env file
+    - gcloud storage cp gs://${PREFIX}-il5-prod-iac-core-config/config.env ${CI_PROJECT_DIR}/automation/config.env
+    - source ${CI_PROJECT_DIR}/automation/config.env
+    # Create the terraform.tfvars file
+    - |
+      # Convert REGIONS from a string to an array
+      IFS=',' read -r -a REGIONS_ARRAY <<< "$REGIONS"
+      REGIONS_CONFIG=$(printf '%s", "' "${REGIONS_ARRAY[@]}" | sed 's/", "$//')
+      REGIONS_CONFIG="[\"$REGIONS_CONFIG\"]"
+      # Grab first region fron REGIONS_CONFIG for BQ
+      BQ_REGION=$(echo "$REGIONS_CONFIG" | sed -E 's/^\["([a-zA-Z0-9-]+)".*/\1/')
+
+      GROUPS_BLOCK=""
+
+      # Check each variable and append to our string if it exists
+      [ -n "${TF_VAR_gcp_billing_admins_group}" ]      && GROUPS_BLOCK="${GROUPS_BLOCK}  gcp-billing-admins      = \"${TF_VAR_gcp_billing_admins_group}\"\n"
+      [ -n "${TF_VAR_gcp_devops_group}" ]              && GROUPS_BLOCK="${GROUPS_BLOCK}  gcp-devops              = \"${TF_VAR_gcp_devops_group}\"\n"
+      [ -n "${TF_VAR_gcp_vpc_network_admins_group}" ]  && GROUPS_BLOCK="${GROUPS_BLOCK}  gcp-vpc-network-admins  = \"${TF_VAR_gcp_vpc_network_admins_group}\"\n"
+      [ -n "${TF_VAR_gcp_organization_admins_group}" ] && GROUPS_BLOCK="${GROUPS_BLOCK}  gcp-organization-admins = \"${TF_VAR_gcp_organization_admins_group}\"\n"
+      [ -n "${TF_VAR_gcp_security_admins_group}" ]     && GROUPS_BLOCK="${GROUPS_BLOCK}  gcp-security-admins     = \"${TF_VAR_gcp_security_admins_group}\"\n"
+      [ -n "${TF_VAR_gcp_devops_group}" ]              && GROUPS_BLOCK="${GROUPS_BLOCK}  gcp-support             = \"${TF_VAR_gcp_devops_group}\"\n"
+
+      # Wrap it in the Terraform object syntax, interpreting the \n newlines safely
+      # If GROUPS_BLOCK is entirely empty, this outputs a clean "groups = {}"
+      if [ -n "$GROUPS_BLOCK" ]; then
+        GROUPS_OUTPUT=$(printf "{\n%b}" "$GROUPS_BLOCK")
+      else
+        GROUPS_OUTPUT="{}"
+      fi
+    - |
+      cat <<EOF >terraform.tfvars
+      billing_account = {
+        id = "${BILLING_ACCOUNT}"
+      }
+
+      groups = ${GROUPS_OUTPUT}
+
+      # locations for GCS, BigQuery, KMS, and logging buckets created here
+      locations = {
+        bq      = "${BQ_REGION}"
+        gcs     = ${REGIONS_CONFIG}
+        logging = ${REGIONS_CONFIG}
+        pubsub  = ${REGIONS_CONFIG}
+        kms     = ${REGIONS_CONFIG}
+      }
+
+      # use \`gcloud organizations list\`
+      organization = {
+        domain      = "${FULLY_QUALIFIED_DOMAIN_NAME}"
+        id          = "${ORGANIZATION_ID}"
+        customer_id = "${DIRECTORY_CUSTOMER_ID}"
+      }
+
+      outputs_location = "~/fast-config"
+
+      # use something unique and no longer than 9 characters
+      prefix = "${PREFIX}"
+
+      fast_features = {
+        envs = true
+      }
+
+      assured_workloads = {
+        regime   = "${COMPLIANCE_REGIME}" # "IL4, IL5, FEDRAMP_HIGH, etc... if you wish to not use assured_workloads, set this value to COMPLIANCE_REGIME_UNSPECIFIED"
+        location = "${AW_REGION}"
+      }
+
+      bootstrap_project = "${BOOTSTRAP_PROJECT_ID}"
+
+      alert_email = "${LOGGING_ALERTS_EMAIL_ADDRESS}"
+
+      top_level_folder = {
+        name = "${TOP_LEVEL_FOLDER_NAME}"
+        id = "${TOP_LEVEL_FOLDER_ID}"
+      }
+
+      cicd_repositories = {
+        bootstrap = {
+          name              = "${CI_PROJECT_PATH}"
+          type              = "gitlab"
+          identity_provider = "gitlab-fed"
+        }
+        resman = {
+          name              = "${CI_PROJECT_PATH}"
+          type              = "gitlab"
+          identity_provider = "gitlab-fed"
+        }
+        tenant = {
+          name              = "${CI_PROJECT_PATH}"
+          type              = "gitlab"
+          identity_provider = "gitlab-fed"
+        }
+      }
+
+      EOF
+    - |
+      if [[ -n "$CI_PROJECT_PATH" && -n "$GITLAB_URL" ]]; then
+        export CI_PROJECT_PATH GITLAB_URL TENANT_CI_PROJECT_PATH
+        jq -n '
+          .workload_identity_providers["gitlab-fed"] = {
+            "issuer": "gitlab",
+            "attribute_condition": "attribute.project_path == \"\(env.CI_PROJECT_PATH)\"",
+            "custom_settings": {
+              "issuer_uri": env.GITLAB_URL,
+              "audiences": [env.GITLAB_URL],
+              "jwks_json": env.JWKS_KEY
+            }
+          } |
+          .cicd_repositories.bootstrap = {
+            "name": env.CI_PROJECT_PATH,
+            "type": "gitlab",
+            "identity_provider": "gitlab-fed"
+          } |
+          .cicd_repositories.resman = {
+            "name": env.CI_PROJECT_PATH,
+            "type": "gitlab",
+            "identity_provider": "gitlab-fed"
+          } |
+          
+          if (env.TENANT_CI_PROJECT_PATH != null and env.TENANT_CI_PROJECT_PATH != "") then
+            .workload_identity_providers["gitlab-ten"] = {
+              "issuer": "gitlab",
+              "attribute_condition": "attribute.project_path == \"\(env.TENANT_CI_PROJECT_PATH)\"",
+              "custom_settings": {
+                "issuer_uri": env.GITLAB_URL,
+                "audiences": [env.GITLAB_URL],
+                "jwks_json": env.JWKS_KEY
+              }
+            } |
+            .cicd_repositories.tenant = {
+              "name": env.TENANT_CI_PROJECT_PATH,
+              "type": "gitlab",
+              "identity_provider": "gitlab-ten"
+            }
+          else
+            .cicd_repositories.tenant = {
+              "name": env.CI_PROJECT_PATH,
+              "type": "gitlab",
+              "identity_provider": "gitlab-fed"
+            }
+          end
+        ' > identity-providers.auto.tfvars.json
+      fi
+    - |
+      if [ -n "${APPLY_TIER_1_PUBSUB_SINK}" ]; then
+        echo "apply_tier_1_pubsub_sink = ${APPLY_TIER_1_PUBSUB_SINK}" >> terraform.tfvars
+      fi
+
+    # Copying providers file from bucket
+    - gcloud storage cp gs://${PREFIX}-il5-prod-iac-core-outputs/providers/1-assured-workload-providers.tf .
+
+.stage-2-before-script:
+  before_script:
+    - cd $CI_PROJECT_DIR/$TF_DIR
+    # Authenticating to google cloud using one of the WIF SA's
+    - !reference [.gcp_wif_auth, script]
+    # Downloading and activating the config.env file
+    - gcloud storage cp gs://${PREFIX}-il5-prod-iac-core-config/config.env ${CI_PROJECT_DIR}/automation/config.env
+    - source ${CI_PROJECT_DIR}/automation/config.env
+    # Create the terraform.tfvars file
+    - |
+      tenant_environments_config=""
+      IFS=',' read -r -a ENV_ARRAY <<< "$TENANT_ENVIRONMENTS"
+      for ENV_NAME in "${ENV_ARRAY[@]}"; do
+        ENV_NAME=$(echo "$ENV_NAME" | tr -d '[:space:]')
+
+        tenant_environments_config+="
+      ${ENV_NAME} = {
+        admin = \"${TF_VAR_gcp_organization_admins_group:-gcp-organization-admins}@${FULLY_QUALIFIED_DOMAIN_NAME}\"
+      },"
+      done
+    - |
+      cat <<EOF >terraform.tfvars
+      fast_features = {
+        envs = true
+      }
+
+      tenant_environments = {
+      ${tenant_environments_config:1}
+      }
+
+      cicd_repositories = {
+        networking = {
+          name              = "${CI_PROJECT_PATH}"
+          type              = "gitlab"
+          identity_provider = "gitlab-fed"
+        }
+        security = {
+          name              = "${CI_PROJECT_PATH}"
+          type              = "gitlab"
+          identity_provider = "gitlab-fed"
+        }
+        shared_services = {
+          name              = "${CI_PROJECT_PATH}"
+          type              = "gitlab"
+          identity_provider = "gitlab-fed"
+        }
+      }
+      EOF
+    # Downloading the tfvars and providers files from stages 1 and 2
+    - gcloud storage cp gs://${PREFIX}-il5-prod-iac-core-outputs/providers/2-resman-providers.tf .
+    - gcloud storage cp gs://${PREFIX}-il5-prod-iac-core-outputs/tfvars/1-globals.auto.tfvars.json .
+    - gcloud storage cp gs://${PREFIX}-il5-prod-iac-core-outputs/tfvars/1-assured-workload.auto.tfvars.json .
+
+.stage-3-before-script:
+  before_script:
+    - cd $CI_PROJECT_DIR/$TF_DIR
+    # Authenticating to google cloud using one of the WIF SA's
+    - !reference [.gcp_wif_auth, script]
+    # Downloading and activating the config.env file
+    - gcloud storage cp gs://${PREFIX}-il5-prod-iac-core-config/config.env ${CI_PROJECT_DIR}/automation/config.env
+    - source ${CI_PROJECT_DIR}/automation/config.env
+    - apt-get update && apt-get install -y jq
+    # Downloading the tfvars and providers files from stages 1, 2 and 3 
+    - gcloud storage cp gs://"${PREFIX}"-"il5"-prod-iac-core-outputs/providers/3-networking-providers.tf .
+    - gcloud storage cp gs://"${PREFIX}"-"il5"-prod-iac-core-outputs/tfvars/1-globals.auto.tfvars.json .
+    - gcloud storage cp gs://"${PREFIX}"-"il5"-prod-iac-core-outputs/tfvars/1-assured-workload.auto.tfvars.json .
+    - gcloud storage cp gs://"${PREFIX}"-"il5"-prod-iac-core-outputs/tfvars/2-resman.auto.tfvars.json .
+    - |
+      if [ -n "${NETWORK_QUOTA_PREFERRED_VALUE}" ]; then
+        echo "network_quota_preferred_value = ${NETWORK_QUOTA_PREFERRED_VALUE}" >> terraform.tfvars
+      fi
+
+.stage-3-vpn-before-script:
+  before_script:
+    - cd $CI_PROJECT_DIR/$TF_DIR
+    # Authenticating to google cloud using one of the WIF SA's
+    - !reference [.gcp_wif_auth, script]
+    # Downloading and activating the config.env file
+    - gcloud storage cp gs://${PREFIX}-il5-prod-iac-core-config/config.env ${CI_PROJECT_DIR}/automation/config.env
+    - source ${CI_PROJECT_DIR}/automation/config.env
+    - apt-get update && apt-get install -y jq
+    - |
+      cat <<EOF >terraform.tfvars
+      # Global Configuration
+      project_id       = "${PREFIX}-il5-vdss-host"
+      region           = "us-east4"
+      name_prefix      = "vpn"
+      gcp_network_name = "csp-landing"
+      gcp_router_name  = "csp-router"
+      gcp_bgp_asn      = 65100
+
+      # AWS Specific Configuration
+      create_gcp_vpn_tunnels_aws = "${CREATE_GCP_VPN_TUNNELS_AWS}"
+      aws_bgp_asn = "${AWS_BGP_ASN}"
+
+      # CNSA-compliant defaults are built into the module, but can be overridden here.
+      # If you see "NO PROPOSAL CHOSEN", ensure this matches the AWS side exactly.
+      # Example of a highly compatible suite:
+      aws_tunnel_cipher_suite = {
+        phase1 = {
+          encryption = ["AES-GCM-16-256"]
+          integrity  = []
+          prf        = ["PRF-HMAC-SHA2-384"]
+          dh         = ["Group-19"]
+        }
+        phase2 = {
+          encryption = ["AES-GCM-16-256"]
+          integrity  = []
+          pfs        = ["Group-19"]
+        }
+      }
+
+      aws_tunnel_details = {
+        tun1 = { external_ip = "${AWS_TUNNEL_1_EXTERNAL_IP}", gcp_bgp_ip = "${GCP_TUNNEL_1_BGP_IP}", aws_bgp_ip = "${AWS_TUNNEL_1_BGP_IP}" } 
+        tun2 = { external_ip = "${AWS_TUNNEL_2_EXTERNAL_IP}", gcp_bgp_ip = "${GCP_TUNNEL_2_BGP_IP}", aws_bgp_ip = "${AWS_TUNNEL_2_BGP_IP}" }
+        tun3 = { external_ip = "${AWS_TUNNEL_3_EXTERNAL_IP}", gcp_bgp_ip = "${GCP_TUNNEL_3_BGP_IP}", aws_bgp_ip = "${AWS_TUNNEL_3_BGP_IP}" }
+        tun4 = { external_ip = "${AWS_TUNNEL_4_EXTERNAL_IP}", gcp_bgp_ip = "${GCP_TUNNEL_4_BGP_IP}", aws_bgp_ip = "${AWS_TUNNEL_4_BGP_IP}" }
+      }
+      secret_name_aws_conn1_tun1 = "${AWS_CONN1_TUN1_SECRET_NAME}"
+      secret_name_aws_conn1_tun2 = "${AWS_CONN1_TUN2_SECRET_NAME}"
+      secret_name_aws_conn2_tun1 = "${AWS_CONN2_TUN1_SECRET_NAME}"
+      secret_name_aws_conn2_tun2 = "${AWS_CONN2_TUN2_SECRET_NAME}"
+
+      enable_azure_vpn   = "${ENABLE_AZURE_VPN}"
+      azure_bgp_asn      = "${AZURE_BGP_ASN}"
+      azure_gateway_ip_0 = "${AZURE_GATEWAY_IP_0}"
+      azure_gateway_ip_1 = "${AZURE_GATEWAY_IP_1}"
+      secret_name_azure_tunnel0 = "${SECRET_NAME_AZURE_TUNNEL0}"
+      secret_name_azure_tunnel1 = "${SECRET_NAME_AZURE_TUNNEL1}"
+      azure_gcp_bgp_apipa_ip_0   = "${AZURE_GCP_BGP_APIPA_IP_0}"
+      azure_peer_bgp_apipa_ip_0 = "${AZURE_PEER_BGP_APIPA_IP_0}"
+      azure_gcp_bgp_apipa_ip_1   = "${AZURE_GCP_BGP_APIPA_IP_1}"
+      azure_peer_bgp_apipa_ip_1 = "${AZURE_PEER_BGP_APIPA_IP_1}"
+
+      enable_panorama_vpn   = "${ENABLE_PANORAMA_VPN}"
+      mgmt_bgp_asn          = "${MGMT_BGP_ASN}"
+      panorama_project_id   = "${PREFIX}-il5-vdss-host"
+      panorama_vpc_name     = "vdss-mgmt-0"
+      panorama_bgp_asn      = "${PANORAMA_BGP_ASN}"
+      panorama_gateway_ip_0 = "${PANORAMA_GATEWAY_IP_0}"
+      panorama_gateway_ip_1 = "${PANORAMA_GATEWAY_IP_1}"
+      secret_name_panorama_tunnel0 = "${SECRET_NAME_PANORAMA_TUNNEL0}"
+      secret_name_panorama_tunnel1 = "${SECRET_NAME_PANORAMA_TUNNEL1}"
+      panorama_gcp_bgp_apipa_ip_0   = "${PANORAMA_GCP_BGP_APIPA_IP_0}"
+      panorama_peer_bgp_apipa_ip_0 = "${PANORAMA_PEER_BGP_APIPA_IP_0}"
+      panorama_gcp_bgp_apipa_ip_1   = "${PANORAMA_GCP_BGP_APIPA_IP_1}"
+      panorama_peer_bgp_apipa_ip_1 = "${PANORAMA_PEER_BGP_APIPA_IP_1}"
+
+      # Advanced configuration (optional)
+      stack_type         = "IPV4_ONLY"
+      gateway_ip_version = "IPV4"
+      EOF
+    - gcloud storage cp gs://"${PREFIX}"-"il5"-prod-iac-core-outputs/providers/3-vpn-providers.tf .
+
+.stage-4-before-script:
+  before_script:
+    - cd $CI_PROJECT_DIR/$TF_DIR
+    # Authenticating to google cloud using one of the WIF SA's
+    - !reference [.gcp_wif_auth, script]
+    # Downloading and activating the config.env file
+    - gcloud storage cp gs://${PREFIX}-il5-prod-iac-core-config/config.env ${CI_PROJECT_DIR}/automation/config.env
+    - source ${CI_PROJECT_DIR}/automation/config.env
+    # Downloading the tfvars and providers files from stages 1, 2 and 4
+    - gcloud storage cp gs://"${PREFIX}"-"il5"-prod-iac-core-outputs/providers/4-security-providers.tf .
+    - gcloud storage cp gs://"${PREFIX}"-"il5"-prod-iac-core-outputs/tfvars/1-globals.auto.tfvars.json .
+    - gcloud storage cp gs://"${PREFIX}"-"il5"-prod-iac-core-outputs/tfvars/1-assured-workload.auto.tfvars.json .
+    - gcloud storage cp gs://"${PREFIX}"-"il5"-prod-iac-core-outputs/tfvars/2-resman.auto.tfvars.json .

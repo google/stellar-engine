@@ -1,0 +1,41 @@
+#Scan for GCP High level findings
+check:
+#Public
+  - CKV2_GCP_6 #"Ensure that Cloud KMS cryptokeys are not anonymously or publicly accessible"
+  - CKV2_GCP_9 #"Ensure that Container Registry repositories are not anonymously or publicly accessible"
+  - CKV_GCP_28 #"Ensure that Cloud Storage bucket is not anonymously or publicly accessible"
+  - CKV_GCP_94 #"Ensure Dataflow jobs are private"
+  - CKV_GCP_98 #"Ensure that Dataproc clusters are not anonymously or publicly accessible"
+  - CKV_GCP_100 #"Ensure that BigQuery Tables are not anonymously or publicly accessible"
+  - CKV_GCP_101 #"Ensure that Artifact Registry repositories are not anonymously or publicly accessible"
+  - CKV_GCP_103 #"Ensure Dataproc Clusters do not have public IPs"
+#Network
+  - CKV_GCP_11 #"Ensure that Cloud SQL database Instances are not open to the world"
+  - CKV_GCP_32 #"Ensure 'Block Project-wide SSH keys' is enabled for VM instances"
+#IAM
+  - CKV2_GCP_8 #"Ensure that Cloud KMS Key Rings are not anonymously or publicly accessible"
+  - CKV_GCP_41 #"Ensure that IAM users are not assigned the Service Account User or Service Account Token Creator roles at project level"
+  - CKV_GCP_42 #"Ensure that Service Account has no Admin privileges"
+  - CKV_GCP_44 #"Ensure no roles that enable to impersonate and manage all service accounts are used at a folder level"
+  - CKV_GCP_45 #"Ensure no roles that enable to impersonate and manage all service accounts are used at an organization level"
+  - CKV_GCP_46 #"Ensure Default Service account is not used at a project level"
+  - CKV_GCP_47 #"Ensure default service account is not used at an organization level"
+  - CKV_GCP_48 #"Ensure Default Service account is not used at a folder level"
+  - CKV_GCP_112 #"Ensure KMS policy should not allow public access"
+  - CKV_GCP_113 #"Ensure IAM policy should not define public access"
+  - CKV_GCP_115 #"Ensure basic roles are not used at organization level"
+  - CKV_GCP_117 #"Ensure basic roles are not used at project level."
+  - CKV_GCP_118 #"Ensure IAM workload identity pool provider is restricted"
+  - CKV_GCP_125 #"Ensure GCP GitHub Actions OIDC trust policy is configured securely"
+#General
+  - CKV_GCP_14 #"Ensure all Cloud SQL database instance have backup configuration enabled"
+  - CKV_GCP_15 #"Ensure that BigQuery datasets are not anonymously or publicly accessible"
+  - CKV_GCP_38 #"Ensure VM disks for critical VMs are encrypted with Customer Supplied Encryption Keys (CSEK)"
+  - CKV_GCP_114 #"Ensure public access prevention is enforced on Cloud Storage bucket"
+  - CKV_GCP_120 #"Ensure Spanner Database has drop protection enabled"
+
+
+# Checks not run
+# To do a full scan of all Checkov checks with just these omitted, comment out everything above and uncomment the lines below.
+#skip-check:
+#  - CKV_GCP_33 #-false positive- "Ensure oslogin is enabled for a Project"
