@@ -1,0 +1,70 @@
+# Templates
+.terraform_template:
+  image:
+    name: hashicorp/terraform:1.11.4
+    entrypoint: ["/usr/bin/env", "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"]
+
+.tflint_template:
+  image:
+    name: ghcr.io/terraform-linters/tflint:v0.55.0
+    entrypoint:
+      - "/usr/bin/env"
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+.checkov_template:
+  image:
+    name: bridgecrew/checkov:3.2.474
+  before_script:
+    - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@code.cdso.army.mil/".insteadOf "https://code.cdso.army.mil/"
+  script:
+    - >-
+      checkov -o cli -o sarif
+      --output-file-path console,"reports/$REPORT_NAME"
+      --framework terraform
+      --directory $TARGET_DIR
+      --download-external-modules true
+  artifacts:
+    paths:
+      - reports/$REPORT_NAME
+    when: always
+  allow_failure: true
+
+# Authenticates to Google Cloud via Workload Identity Federation using the GCP_SERVICE_ACCOUNT from the deploy.yml
+.gcp_wif_auth:
+  script:
+    - echo "${GITLAB_OIDC_TOKEN}" > .ci_job_jwt_file
+    - gcloud iam workload-identity-pools create-cred-config ${GCP_WORKLOAD_IDENTITY_PROVIDER} 
+      --service-account="${GCP_SERVICE_ACCOUNT}" 
+      --output-file=.gcp_temp_cred.json 
+      --credential-source-file=.ci_job_jwt_file
+    - export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/.gcp_temp_cred.json"
+    - gcloud auth login --cred-file="$(pwd)/.gcp_temp_cred.json"
+
+# Used by all of the plan stages
+# Installs terraform and some other packages for the terraform install then runs terraform init and saves plan
+.terraform_plan_template:
+  image: "${GCP_TERRAFORM_IMAGE}"
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: "${CI_SERVER_URL}"
+  allow_failure: false
+  script:
+    - terraform plan -out=tfplan
+  artifacts:
+    name: "${CI_JOB_NAME}"
+    paths:
+      - "${TF_DIR}/tfplan"
+      - "${TF_DIR}/data/**/*.yaml"
+    expire_in: 3 hours
+
+
+# Used by all of the apply stages
+# Installs terraform and some other packages for the terraform install then runs terraform apply using the plan
+.terraform_apply_template:
+  image: "${GCP_TERRAFORM_IMAGE}"
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: "${CI_SERVER_URL}"
+  allow_failure: false
+  script:
+    - terraform apply -auto-approve tfplan

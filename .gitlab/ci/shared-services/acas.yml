@@ -1,0 +1,221 @@
+stages:
+  - plan-factory
+  - apply-factory
+  - plan-vms
+  - apply-vms
+
+include:
+ - local: '.gitlab/ci/templates/templates.yml'
+ - local: '.gitlab/ci/shared-services/templates.yml'
+ - local: '.gitlab/ci/templates/tf_dependencies_public.yml'
+   rules:
+    - if: $GCP_TF_REGISTRY_TYPE == "PUBLIC" || $GCP_TF_REGISTRY_TYPE == null || $GCP_TF_REGISTRY_TYPE == ""
+ - local: '.gitlab/ci/templates/tf_dependencies_internal.yml'
+   rules:
+    - if: $GCP_TF_REGISTRY_TYPE == "PRIVATE_DW"
+
+# =========================================================================
+# 1. ACAS Image Factory
+# =========================================================================
+
+plan-acas-factory:
+  extends: .shared-service-plan
+  stage: plan-factory
+  environment:
+    name: $ENV_NAME
+  variables:
+    TF_DIR: "fast/stages-aw/shared-services/acas/image-factory"
+    SERVICE_NAME: "acas-factory"
+  before_script:
+    - !reference [.shared-service-init, before_script]
+    - gcloud storage cp ${GCS_BUCKET}/tfvars/1-assured-workload.auto.tfvars.json ./
+    - gcloud storage cp ${GCS_BUCKET}/tfvars/3-networking-shared-services.auto.tfvars.json ./
+    - gcloud storage cp "${GCS_BUCKET}/providers/shared-services-providers.tf" ./
+    # --- Dynamic Variables ---
+    - yq '.image_factory' ../data/config.yml > acas-factory.auto.tfvars.json
+    - echo "prefix = \"${PREFIX}\"" > acas-global.auto.tfvars
+    # --- RPM Ingestion Check ---
+    - |
+      if ! gcloud storage ls "${GCS_BUCKET}/acas-staging/*.rpm" >/dev/null 2>&1; then
+        echo "========================================================================="
+        echo " ERROR: No ACAS RPM packages (*.rpm) found in GCS staging bucket!"
+        echo " Destination Checked: ${GCS_BUCKET}/acas-staging/"
+        echo " Please upload the RHEL8 RPMs to GCS before executing this pipeline."
+        echo "========================================================================="
+        exit 1
+      fi
+    - mkdir -p rpms
+    - gcloud storage cp "${GCS_BUCKET}/acas-staging/*.rpm" ./rpms/
+    - terraform init -backend-config=prefix=$SERVICE_NAME
+  rules:
+    - if: '$DEPLOY_STAGES =~ /\b(SERVICES|ACAS|ACAS-FACTORY)\b/'
+      when: on_success
+    - if: '$PREFIX != null && $PREFIX != "" && ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_PIPELINE_SOURCE == "merge_request_event")'
+      when: on_success
+
+apply-acas-factory:
+  extends: .shared-service-apply
+  stage: apply-factory
+  environment:
+    name: $ENV_NAME
+  variables:
+    TF_DIR: "fast/stages-aw/shared-services/acas/image-factory"
+    SERVICE_NAME: "acas-factory"
+  before_script:
+    - cd $CI_PROJECT_DIR/$TF_DIR
+    - !reference [.gcp_wif_auth, script]
+    - export CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT="${PREFIX}-resman-shdsvc-0@${PREFIX}-il5-iac.iam.gserviceaccount.com"
+    - !reference [.tf_dependencies, before_script]
+    - GCS_BUCKET="gs://${PREFIX}-il5-prod-iac-core-outputs"
+    - gcloud storage cp "${GCS_BUCKET}/tfvars/1-assured-workload.auto.tfvars.json" ./
+    - gcloud storage cp ${GCS_BUCKET}/tfvars/3-networking-shared-services.auto.tfvars.json ./
+    - gcloud storage cp "${GCS_BUCKET}/providers/shared-services-providers.tf" ./
+    # --- Dynamic Variables ---
+    - yq '.image_factory' ../data/config.yml > acas-factory.auto.tfvars.json
+    - echo "prefix = \"${PREFIX}\"" > acas-global.auto.tfvars
+    # --- RPM Ingestion Check ---
+    - |
+      if ! gcloud storage ls "${GCS_BUCKET}/acas-staging/*.rpm" >/dev/null 2>&1; then
+        echo "========================================================================="
+        echo " ERROR: No ACAS RPM packages (*.rpm) found in GCS staging bucket!"
+        echo " Destination Checked: ${GCS_BUCKET}/acas-staging/"
+        echo " Please upload the RHEL8 RPMs to GCS before executing this pipeline."
+        echo "========================================================================="
+        exit 1
+      fi
+    - mkdir -p rpms
+    - gcloud storage cp "${GCS_BUCKET}/acas-staging/*.rpm" ./rpms/
+    - terraform init -backend-config=prefix=$SERVICE_NAME
+  rules:
+    - if: '$DEPLOY_STAGES =~ /\b(SERVICES|ACAS|ACAS-FACTORY)\b/'
+      when: manual
+    - if: '$PREFIX != null && $PREFIX != "" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual
+
+# =========================================================================
+# 2. ACAS Scanner Deployment
+# =========================================================================
+
+plan-acas-scanner:
+  extends: .shared-service-plan
+  stage: plan-vms
+  environment:
+    name: $ENV_NAME
+  variables:
+    TF_DIR: "fast/stages-aw/shared-services/acas/scanner"
+    SERVICE_NAME: "acas-scanner"
+  needs:
+    - job: apply-acas-factory
+      optional: true
+  before_script:
+    - !reference [.shared-service-init, before_script]
+    - |
+      if [ "$(yq '.scanner_deployment.enable' ../data/config.yml)" != "true" ]; then
+        echo "ACAS Scanner Deployment is disabled in config.yml. Skipping job."
+        exit 0
+      fi
+    - gcloud storage cp ${GCS_BUCKET}/tfvars/1-assured-workload.auto.tfvars.json ./
+    - gcloud storage cp ${GCS_BUCKET}/tfvars/3-networking-shared-services.auto.tfvars.json ./
+    - gcloud storage cp "${GCS_BUCKET}/providers/shared-services-providers.tf" ./
+    # --- Dynamic Variables ---
+    - yq '.scanner_deployment' ../data/config.yml | jq 'del(.enable)' > acas-scanner.auto.tfvars.json
+    - echo "prefix = \"${PREFIX}\"" > acas-global.auto.tfvars
+    - terraform init -backend-config=prefix=$SERVICE_NAME
+  rules:
+    - if: '$DEPLOY_STAGES =~ /\b(SERVICES|ACAS|ACAS-SCANNER)\b/'
+      when: on_success
+
+apply-acas-scanner:
+  extends: .shared-service-apply
+  stage: apply-vms
+  environment:
+    name: $ENV_NAME
+  variables:
+    TF_DIR: "fast/stages-aw/shared-services/acas/scanner"
+    SERVICE_NAME: "acas-scanner"
+  needs:
+    - job: plan-acas-scanner
+  before_script:
+    - cd $CI_PROJECT_DIR/$TF_DIR
+    - !reference [.gcp_wif_auth, script]
+    - !reference [.tf_dependencies, before_script]
+    - |
+      if [ "$(yq '.scanner_deployment.enable' ../data/config.yml)" != "true" ]; then
+        echo "ACAS Scanner Deployment is disabled in config.yml. Skipping job."
+        exit 0
+      fi
+    - GCS_BUCKET="gs://${PREFIX}-il5-prod-iac-core-outputs"
+    - gcloud storage cp "${GCS_BUCKET}/tfvars/1-assured-workload.auto.tfvars.json" ./
+    - gcloud storage cp ${GCS_BUCKET}/tfvars/3-networking-shared-services.auto.tfvars.json ./
+    - gcloud storage cp "${GCS_BUCKET}/providers/shared-services-providers.tf" ./
+    # --- Dynamic Variables ---
+    - yq '.scanner_deployment' ../data/config.yml | jq 'del(.enable)' > acas-scanner.auto.tfvars.json
+    - echo "prefix = \"${PREFIX}\"" > acas-global.auto.tfvars
+    - terraform init -backend-config=prefix=$SERVICE_NAME
+  rules:
+    - if: '$DEPLOY_STAGES =~ /\b(SERVICES|ACAS|ACAS-SCANNER)\b/'
+      when: manual
+
+# =========================================================================
+# 3. ACAS SecurityCenter Deployment
+# =========================================================================
+
+plan-acas-sc:
+  extends: .shared-service-plan
+  stage: plan-vms
+  environment:
+    name: $ENV_NAME
+  variables:
+    TF_DIR: "fast/stages-aw/shared-services/acas/securitycenter"
+    SERVICE_NAME: "acas-sc"
+  needs:
+    - job: apply-acas-factory
+      optional: true
+  before_script:
+    - !reference [.shared-service-init, before_script]
+    - |
+      if [ "$(yq '.securitycenter_deployment.enable' ../data/config.yml)" != "true" ]; then
+        echo "ACAS SecurityCenter Deployment is disabled in config.yml. Skipping job."
+        exit 0
+      fi
+    - gcloud storage cp ${GCS_BUCKET}/tfvars/1-assured-workload.auto.tfvars.json ./
+    - gcloud storage cp ${GCS_BUCKET}/tfvars/3-networking-shared-services.auto.tfvars.json ./
+    - gcloud storage cp "${GCS_BUCKET}/providers/shared-services-providers.tf" ./
+    # --- Dynamic Variables ---
+    - yq '.securitycenter_deployment' ../data/config.yml | jq 'del(.enable)' > acas-sc.auto.tfvars.json
+    - echo "prefix = \"${PREFIX}\"" > acas-global.auto.tfvars
+    - terraform init -backend-config=prefix=$SERVICE_NAME
+  rules:
+    - if: '$DEPLOY_STAGES =~ /\b(SERVICES|ACAS|ACAS-SC)\b/'
+      when: on_success
+
+apply-acas-sc:
+  extends: .shared-service-apply
+  stage: apply-vms
+  environment:
+    name: $ENV_NAME
+  variables:
+    TF_DIR: "fast/stages-aw/shared-services/acas/securitycenter"
+    SERVICE_NAME: "acas-sc"
+  needs:
+    - job: plan-acas-sc
+  before_script:
+    - cd $CI_PROJECT_DIR/$TF_DIR
+    - !reference [.gcp_wif_auth, script]
+    - !reference [.tf_dependencies, before_script]
+    - |
+      if [ "$(yq '.securitycenter_deployment.enable' ../data/config.yml)" != "true" ]; then
+        echo "ACAS SecurityCenter Deployment is disabled in config.yml. Skipping job."
+        exit 0
+      fi
+    - GCS_BUCKET="gs://${PREFIX}-il5-prod-iac-core-outputs"
+    - gcloud storage cp "${GCS_BUCKET}/tfvars/1-assured-workload.auto.tfvars.json" ./
+    - gcloud storage cp ${GCS_BUCKET}/tfvars/3-networking-shared-services.auto.tfvars.json ./
+    - gcloud storage cp "${GCS_BUCKET}/providers/shared-services-providers.tf" ./
+    # --- Dynamic Variables ---
+    - yq '.securitycenter_deployment' ../data/config.yml | jq 'del(.enable)' > acas-sc.auto.tfvars.json
+    - echo "prefix = \"${PREFIX}\"" > acas-global.auto.tfvars
+    - terraform init -backend-config=prefix=$SERVICE_NAME
+  rules:
+    - if: '$DEPLOY_STAGES =~ /\b(SERVICES|ACAS|ACAS-SC)\b/'
+      when: manual

@@ -1,0 +1,50 @@
+stages:
+  - plan
+  - apply
+
+include:
+ - local: '.gitlab/ci/templates/templates.yml'
+ - local: '.gitlab/ci/shared-services/templates.yml'
+ - local: '.gitlab/ci/templates/tf_dependencies_public.yml'
+   rules:
+    - if: $GCP_TF_REGISTRY_TYPE == "PUBLIC" || $GCP_TF_REGISTRY_TYPE == null || $GCP_TF_REGISTRY_TYPE == ""
+ - local: '.gitlab/ci/templates/tf_dependencies_internal.yml'
+   rules:
+    - if: $GCP_TF_REGISTRY_TYPE == "PRIVATE_DW"
+
+plan-ad:
+  extends: .shared-service-plan
+  environment:
+    name: $ENV_NAME
+  variables:
+    TF_DIR: "fast/stages-aw/shared-services/ad"
+    SERVICE_NAME: "ad"
+  before_script:
+    - !reference [.shared-service-init, before_script]
+    - gcloud storage cp ${GCS_BUCKET}/tfvars/1-assured-workload.auto.tfvars.json ./
+    - gcloud storage cp "${GCS_BUCKET}/tfvars/3-networking-shared-services.auto.tfvars.json" ./
+    - gcloud storage cp "${GCS_BUCKET}/providers/shared-services-providers.tf" ./
+    - yq '.' data/config.yml > ad-config.auto.tfvars.json
+    - |
+      cat <<EOF >ad-global.auto.tfvars
+      prefix = "${PREFIX}"
+      EOF
+    - terraform init -backend-config=prefix=$SERVICE_NAME
+  rules:
+    - if: '$DEPLOY_STAGES =~ /\b(SERVICES|AD)\b/'
+      when: on_success
+    - if: '$PREFIX != null && $PREFIX != "" && ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_PIPELINE_SOURCE == "merge_request_event")'
+      when: on_success
+
+apply-ad:
+  extends: .shared-service-apply
+  environment:
+    name: $ENV_NAME
+  variables:
+    TF_DIR: "fast/stages-aw/shared-services/ad"
+    SERVICE_NAME: "ad"
+  rules:
+    - if: '$DEPLOY_STAGES =~ /\b(SERVICES|AD)\b/'
+      when: manual
+    - if: '$PREFIX != null && $PREFIX != "" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      when: manual

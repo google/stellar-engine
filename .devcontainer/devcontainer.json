@@ -1,0 +1,32 @@
+{
+  "name": "stellar-engine Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/terraform:1": {
+        "version": "latest",
+        "tflint": "latest",
+        "terragrunt": "latest"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "hashicorp.terraform",
+        "ms-python.python",
+        "bridgecrew.checkov",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "terraform.languageServer.enable": true,
+        "[terraform]": {
+            "editor.defaultFormatter": "hashicorp.terraform",
+            "editor.formatOnSave": true,
+            "editor.formatOnSaveMode": "file"
+        }
+      }
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteUser": "vscode"
+}

@@ -1,0 +1,10 @@
+[codespell]
+# Skip specific directories or file extensions
+skip = ./.git,./.terraform,*.png,*.jpg,*.pdf,*.gif,*.pyc,*.svg,package-lock.json,./__pycache__,*.md,*.pem
+
+# Interactive or Summary mode settings
+count = 
+quiet-level = 1
+
+# The allowed dictionary file
+ignore-words = codespellignore.txt

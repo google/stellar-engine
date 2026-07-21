@@ -1,0 +1,46 @@
+gcp-image-pull-auth:
+  stage: image-auth 
+  id_tokens:
+    GCP_JOB_JWT:
+      aud: ${DW_GCP_JOB_JWT_AUD} 
+  image: us.gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+  script:
+  - mkdir -p .gcloud/
+  - echo ${GCP_JOB_JWT} > .gcloud/gcp_job_jwt.json
+  - echo ${GAC_JSON} > .gcloud/gcp_temp_cred.json
+  - gcloud auth login --cred-file=.gcloud/gcp_temp_cred.json
+  - GCLOUD_TOKEN=$(gcloud auth print-access-token)
+  - |
+    if [[ -z $(gcloud auth print-access-token) ]]; then
+      echo "Unable to assume role"
+      exit 1
+    fi
+  - AUTH_STRING=$(echo -n "oauth2accesstoken:${GCLOUD_TOKEN}" | base64 | tr -d '\n')
+  - DOCKER_CONFIG="{\"auths\":{\"us-central1-docker.pkg.dev\":{\"auth\":\"$AUTH_STRING\"}}}"
+  - echo "DOCKER_AUTH_CONFIG=$DOCKER_CONFIG" > docker.env
+  artifacts:
+    reports:
+      dotenv:
+      - docker.env
+    expire_in: 1 hour
+  variables:
+    GAC_JSON: |
+      {
+        "universe_domain": "googleapis.com",
+        "type": "external_account",
+        "audience": "${DW_GAC_JSON_AUD}",
+        "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+        "token_url": "https://sts.googleapis.com/v1/token",
+        "credential_source": {
+          "file": ".gcloud/gcp_job_jwt.json"
+        },
+        "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${DW_GCP_IMAGE_PULL_SA}:generateAccessToken"
+      }
+  rules:
+    - if: '$PREFIX != null && $PREFIX != "" && ($CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_PIPELINE_SOURCE == "merge_request_event")'
+      changes:
+      - "fast/stages-aw/**/*"
+
+# Used as adapter when swapping between public/private GCP + Terraform images
+.tf_dependencies:
+  before_script: []
