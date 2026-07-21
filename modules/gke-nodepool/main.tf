@@ -58,6 +58,7 @@ locals {
       effect = "NO_EXECUTE"
     }
   })
+  enable_nodepool_autoscaling = try(var.nodepool_config.autoscaling, null) != null && !try(var.nodepool_config.autoscaling.use_total_nodes, false)
 }
 
 resource "google_service_account" "service_account" {
@@ -84,12 +85,7 @@ resource "google_container_node_pool" "nodepool" {
   node_locations     = var.node_locations
 
   dynamic "autoscaling" {
-    for_each = (
-      try(var.nodepool_config.autoscaling, null) != null
-      &&
-      !try(var.nodepool_config.autoscaling.use_total_nodes, false)
-      ? [""] : []
-    )
+    for_each = local.enable_nodepool_autoscaling ? [""] : []
     content {
       location_policy = try(var.nodepool_config.autoscaling.location_policy, null)
       max_node_count  = try(var.nodepool_config.autoscaling.max_node_count, null)
@@ -116,12 +112,39 @@ resource "google_container_node_pool" "nodepool" {
   }
 
   dynamic "network_config" {
-    for_each = var.pod_range != null ? [""] : []
+    for_each = var.network_config != null ? [""] : []
     content {
-      create_pod_range     = var.pod_range.secondary_pod_range.create
-      enable_private_nodes = var.pod_range.secondary_pod_range.enable_private_nodes
-      pod_ipv4_cidr_block  = var.pod_range.secondary_pod_range.cidr
-      pod_range            = var.pod_range.secondary_pod_range.name
+      create_pod_range     = var.network_config.pod_range.create
+      enable_private_nodes = var.network_config.enable_private_nodes
+      pod_ipv4_cidr_block  = var.network_config.pod_range.cidr
+      pod_range            = var.network_config.pod_range.name
+      dynamic "additional_node_network_configs" {
+        for_each = try(var.network_config.additional_node_network_configs, [])
+        content {
+          network    = additional_node_network_configs.value.network
+          subnetwork = additional_node_network_configs.value.subnetwork
+        }
+      }
+      dynamic "additional_pod_network_configs" {
+        for_each = try(var.network_config.additional_pod_network_configs, [])
+        content {
+          subnetwork          = additional_pod_network_configs.value.subnetwork
+          secondary_pod_range = additional_pod_network_configs.value.secondary_pod_range
+          max_pods_per_node   = additional_pod_network_configs.value.max_pods_per_node
+        }
+      }
+      dynamic "network_performance_config" {
+        for_each = try(var.network_config.total_egress_bandwidth_tier, null) != null ? [""] : []
+        content {
+          total_egress_bandwidth_tier = var.network_config.total_egress_bandwidth_tier
+        }
+      }
+      dynamic "pod_cidr_overprovision_config" {
+        for_each = var.network_config.pod_cidr_overprovisioning_disabled ? [""] : []
+        content {
+          disabled = true
+        }
+      }
     }
   }
 
@@ -130,6 +153,21 @@ resource "google_container_node_pool" "nodepool" {
     content {
       max_surge       = try(var.nodepool_config.upgrade_settings.max_surge, null)
       max_unavailable = try(var.nodepool_config.upgrade_settings.max_unavailable, null)
+      strategy        = try(var.nodepool_config.upgrade_settings.strategy, null)
+      dynamic "blue_green_settings" {
+        for_each = try(var.nodepool_config.upgrade_settings.blue_green_settings, null) != null ? [""] : []
+        content {
+          node_pool_soak_duration = var.nodepool_config.upgrade_settings.blue_green_settings.node_pool_soak_duration
+          dynamic "standard_rollout_policy" {
+            for_each = try(var.nodepool_config.upgrade_settings.blue_green_settings.standard_rollout_policy, null) != null ? [""] : []
+            content {
+              batch_percentage    = var.nodepool_config.upgrade_settings.blue_green_settings.standard_rollout_policy.batch_percentage
+              batch_node_count    = var.nodepool_config.upgrade_settings.blue_green_settings.standard_rollout_policy.batch_node_count
+              batch_soak_duration = var.nodepool_config.upgrade_settings.blue_green_settings.standard_rollout_policy.batch_soak_duration
+            }
+          }
+        }
+      }
     }
   }
 
@@ -219,10 +257,18 @@ resource "google_container_node_pool" "nodepool" {
     dynamic "kubelet_config" {
       for_each = var.node_config.kubelet_config != null ? [""] : []
       content {
-        cpu_manager_policy   = var.node_config.kubelet_config.cpu_manager_policy
-        cpu_cfs_quota        = var.node_config.kubelet_config.cpu_cfs_quota
-        cpu_cfs_quota_period = var.node_config.kubelet_config.cpu_cfs_quota_period
-        pod_pids_limit       = var.node_config.kubelet_config.pod_pids_limit
+        cpu_manager_policy                     = var.node_config.kubelet_config.cpu_manager_policy
+        cpu_cfs_quota                          = var.node_config.kubelet_config.cpu_cfs_quota
+        cpu_cfs_quota_period                   = var.node_config.kubelet_config.cpu_cfs_quota_period
+        insecure_kubelet_readonly_port_enabled = var.node_config.kubelet_config.insecure_kubelet_readonly_port_enabled
+        pod_pids_limit                         = var.node_config.kubelet_config.pod_pids_limit
+        container_log_max_size                 = var.node_config.kubelet_config.container_log_max_size
+        container_log_max_files                = var.node_config.kubelet_config.container_log_max_files
+        image_gc_low_threshold_percent         = var.node_config.kubelet_config.image_gc_low_threshold_percent
+        image_gc_high_threshold_percent        = var.node_config.kubelet_config.image_gc_high_threshold_percent
+        image_minimum_gc_age                   = var.node_config.kubelet_config.image_minimum_gc_age
+        image_maximum_gc_age                   = var.node_config.kubelet_config.image_maximum_gc_age
+        allowed_unsafe_sysctls                 = var.node_config.kubelet_config.allowed_unsafe_sysctls
       }
     }
     dynamic "linux_node_config" {

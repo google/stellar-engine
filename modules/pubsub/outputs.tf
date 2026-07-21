@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,19 +14,15 @@
  * limitations under the License.
  */
 
-output "name" {
-  description = "The name of the created Pub/Sub topic."
-  value       = google_pubsub_topic.default.name
-}
-
 output "id" {
-  description = "The full ID (self-link) of the created Pub/Sub topic."
-  value       = google_pubsub_topic.default.id # This typically provides the full resource path/self-link
-}
-
-output "topic_id_static" {
-  description = "The statically constructed topic ID/self-link based on project_id and name."
+  description = "Fully qualified topic id."
   value       = local.topic_id_static
+  depends_on = [
+    google_pubsub_topic.default,
+    google_pubsub_topic_iam_binding.authoritative,
+    google_pubsub_topic_iam_binding.bindings,
+    google_pubsub_topic_iam_member.bindings
+  ]
 }
 
 output "schema" {
@@ -44,15 +40,29 @@ output "subscription_id" {
   value = {
     for k, v in google_pubsub_subscription.default : k => v.id
   }
+  depends_on = [
+    google_pubsub_subscription_iam_binding.authoritative,
+    google_pubsub_subscription_iam_binding.bindings,
+    google_pubsub_subscription_iam_member.members
+  ]
 }
 
 output "subscriptions" {
   description = "Subscription resources."
   value       = google_pubsub_subscription.default
+  depends_on = [
+    google_pubsub_subscription_iam_binding.authoritative,
+    google_pubsub_subscription_iam_binding.bindings,
+    google_pubsub_subscription_iam_member.members
+  ]
 }
 
 output "topic" {
   description = "Topic resource."
   value       = google_pubsub_topic.default
+  depends_on = [
+    google_pubsub_topic_iam_binding.authoritative,
+    google_pubsub_topic_iam_binding.bindings,
+    google_pubsub_topic_iam_member.bindings
+  ]
 }
-

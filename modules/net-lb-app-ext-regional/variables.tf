@@ -39,8 +39,10 @@ variable "group_configs" {
 }
 
 variable "https_proxy_config" {
-  description = "HTTPS proxy connfiguration."
+  description = "HTTPS proxy configuration."
   type = object({
+    name                             = optional(string)
+    description                      = optional(string, "Terraform managed.")
     certificate_manager_certificates = optional(list(string))
     certificate_map                  = optional(string)
     quic_override                    = optional(string)
@@ -64,6 +66,7 @@ variable "name" {
 variable "neg_configs" {
   description = "Optional network endpoint groups to create. Can be referenced in backends via key or outputs."
   type = map(object({
+    project_id  = optional(string)
     description = optional(string)
     cloudfunction = optional(object({
       region          = string
@@ -100,11 +103,13 @@ variable "neg_configs" {
       })))
     }))
     internet = optional(object({
-      use_fqdn = optional(bool, true)
-      endpoints = optional(map(object({
-        destination = string
-        port        = number
-      })))
+      region  = string
+      network = string
+      endpoints = map(object({
+        fqdn       = optional(string)
+        ip_address = optional(string)
+        port       = number
+      }))
     }))
     psc = optional(object({
       region         = string
@@ -148,6 +153,18 @@ variable "neg_configs" {
     ])
     error_message = "Cloud Function NEGs need either target function or target urlmask defined."
   }
+  validation {
+    condition = alltrue([
+      for k, v in var.neg_configs : (
+        v.internet == null
+        ? true
+        : alltrue([
+          for ek, ev in v.internet.endpoints : (ev.fqdn != null || ev.ip_address != null)
+        ])
+      )
+    ])
+    error_message = "Internet NEG endpoints must specify either fqdn or ip_address."
+  }
 }
 
 variable "network_tier_standard" {
@@ -158,9 +175,13 @@ variable "network_tier_standard" {
 }
 
 variable "ports" {
-  description = "Optional ports for HTTP load balancer, valid ports are 80 and 8080."
+  description = "Optional ports for HTTP load balancer."
   type        = list(string)
   default     = null
+  validation {
+    condition     = length(coalesce(var.ports, [])) <= 1
+    error_message = "Application Load Balancer supports at most one port per forwarding rule."
+  }
 }
 
 variable "project_id" {
@@ -191,6 +212,7 @@ variable "ssl_certificates" {
   type = object({
     certificate_ids = optional(list(string), [])
     create_configs = optional(map(object({
+      name        = optional(string)
       certificate = string
       private_key = string
     })), {})

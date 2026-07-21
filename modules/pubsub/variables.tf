@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,81 +14,56 @@
  * limitations under the License.
  */
 
-variable "iam" {
-  description = "Topic-level IAM bindings (non-authoritative) in {ROLE => [MEMBERS]} format."
-  type        = map(list(string))
-  default     = {}
-  nullable    = false
-}
-
-variable "iam_bindings" {
-  description = "Authoritative IAM bindings for the Pub/Sub topic in {KEY => {role = ROLE, members = [], condition = {}}}. Keys are arbitrary identifiers. Use this to explicitly define all roles/members for a topic."
-  type = map(object({
-    members = list(string)
-    role    = string
-    condition = optional(object({
-      expression  = string
-      title       = string
-      description = optional(string)
-    }))
-  }))
-  nullable = false
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    custom_roles   = optional(map(string), {})
+    iam_principals = optional(map(string), {})
+    locations      = optional(map(string), {})
+    project_ids    = optional(map(string), {})
+  })
   default  = {}
-}
-
-variable "iam_bindings_additive" {
-  description = "Additive (non-authoritative) IAM bindings for the Pub/Sub topic. Keys are arbitrary identifiers. Use this to add individual members to specific roles without managing all members for that role."
-  type = map(object({
-    member = string
-    role   = string
-    condition = optional(object({
-      expression  = string
-      title       = string
-      description = optional(string)
-    }))
-  }))
   nullable = false
-  default  = {}
 }
 
 variable "kms_key" {
-  description = "The full resource path of the Cloud KMS CryptoKey to use for Customer-Managed Encryption Keys (CMEK) on the Pub/Sub topic. Set to `null` to use Google-managed encryption."
+  description = "KMS customer managed encryption key."
   type        = string
   default     = null
 }
 
 variable "labels" {
-  description = "Optional labels to apply to the Pub/Sub topic."
+  description = "Labels."
   type        = map(string)
   default     = {}
   nullable    = false
 }
 
 variable "message_retention_duration" {
-  description = "The minimum duration (e.g., '10s', '24h', '7d') to retain a message after it is published to the topic. Minimum is 10 minutes, maximum is 7 days. Set to `null` to use default."
+  description = "Minimum duration to retain a message after it is published to the topic."
   type        = string
   default     = null
 }
 
 variable "name" {
-  description = "The name of the Pub/Sub topic to be created."
+  description = "PubSub topic name."
   type        = string
 }
 
 variable "project_id" {
-  description = "The Google Cloud Project ID where the Pub/Sub topic and subscriptions will be created."
+  description = "Project used for resources."
   type        = string
 }
 
 variable "regions" {
-  description = "A list of Google Cloud regions where messages published to the topic are allowed to be stored. If empty, the topic will use the default global storage policy."
+  description = "List of regions used to set persistence policy."
   type        = list(string)
   default     = []
   nullable    = false
 }
 
 variable "schema" {
-  description = "Optional topic schema configuration. If set, all messages in this topic should follow this schema."
+  description = "Topic schema. If set, all messages in this topic should follow this schema."
   type = object({
     definition   = string
     msg_encoding = optional(string, "ENCODING_UNSPECIFIED")
@@ -98,14 +73,14 @@ variable "schema" {
 }
 
 variable "subscriptions" {
-  description = "Map of subscriptions to create for the topic. Keys are subscription names. Each value is an object configuring subscription properties (e.g., push configs, dead-letter policies, BigQuery/Cloud Storage exports, retry policies, IAM)."
+  description = "Topic subscriptions. Also define push configs for push subscriptions. If options is set to null subscription defaults will be used. Labels default to topic labels if set to null."
   type = map(object({
     ack_deadline_seconds         = optional(number)
     enable_exactly_once_delivery = optional(bool, false)
     enable_message_ordering      = optional(bool, false)
     expiration_policy_ttl        = optional(string)
     filter                       = optional(string)
-    iam                          = optional(map(list(string)), {}) # Non-authoritative IAM on subscription
+    iam                          = optional(map(list(string)), {})
     labels                       = optional(map(string))
     message_retention_duration   = optional(string)
     retain_acked_messages        = optional(bool, false)
@@ -139,7 +114,7 @@ variable "subscriptions" {
         title       = string
         description = optional(string)
       }))
-    })), {}) # Authoritative IAM on subscription
+    })), {})
     iam_bindings_additive = optional(map(object({
       member = string
       role   = string
@@ -148,22 +123,23 @@ variable "subscriptions" {
         title       = string
         description = optional(string)
       }))
-    })), {}) # Additive IAM on subscription
+    })), {})
     push = optional(object({
       endpoint   = string
       attributes = optional(map(string))
-      no_wrapper = optional(bool, false)
+      no_wrapper = optional(object({
+        write_metadata = optional(bool, false)
+      }))
       oidc_token = optional(object({
         audience              = optional(string)
         service_account_email = string
       }))
     }))
     retry_policy = optional(object({
-      minimum_backoff = optional(string)
-      maximum_backoff = optional(string)
+      minimum_backoff = optional(number)
+      maximum_backoff = optional(number)
     }))
   }))
   default  = {}
   nullable = false
 }
-

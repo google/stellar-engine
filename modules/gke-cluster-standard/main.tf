@@ -1,5 +1,5 @@
 /**
- * Copyright 2024 Google LLC
+ * Copyright 2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ locals {
   cas        = var.cluster_autoscaling
   cas_apd    = try(local.cas.auto_provisioning_defaults, null)
   cas_apd_us = try(local.cas_apd.upgrade_settings, null)
+
+  create_network_policy = var.enable_addons.network_policy && !var.enable_features.dataplane_v2
 }
 
 resource "google_container_cluster" "cluster" {
@@ -34,6 +36,7 @@ resource "google_container_cluster" "cluster" {
   subnetwork                               = var.vpc_config.subnetwork
   resource_labels                          = var.labels
   default_max_pods_per_node                = var.max_pods_per_node
+  enable_multi_networking                  = var.enable_features.multi_networking
   enable_intranode_visibility              = var.enable_features.intranode_visibility
   enable_l4_ilb_subsetting                 = var.enable_features.l4_ilb_subsetting
   enable_shielded_nodes                    = var.enable_features.shielded_nodes
@@ -81,8 +84,24 @@ resource "google_container_cluster" "cluster" {
   # gcfs_config deactivation need the block to be defined so it can't be dynamic
   node_pool_defaults {
     node_config_defaults {
+      insecure_kubelet_readonly_port_enabled = upper(var.node_config.kubelet_readonly_port_enabled)
       gcfs_config {
         enabled = var.enable_features.image_streaming
+      }
+    }
+  }
+  dynamic "node_pool_auto_config" {
+    for_each = try(local.cas.enabled, null) == true ? [""] : []
+    content {
+      network_tags {
+        tags = var.node_pool_auto_config.network_tags
+      }
+      resource_manager_tags = var.node_pool_auto_config.resource_manager_tags
+      node_kubelet_config {
+        insecure_kubelet_readonly_port_enabled = upper(var.node_pool_auto_config.kubelet_readonly_port_enabled)
+      }
+      linux_node_config {
+        cgroup_mode = var.node_pool_auto_config.cgroup_mode
       }
     }
   }
@@ -218,6 +237,7 @@ resource "google_container_cluster" "cluster" {
           }
         }
       }
+      auto_provisioning_locations = var.cluster_autoscaling.auto_provisioning_locations
       dynamic "resource_limits" {
         for_each = local.cas.cpu_limits != null ? [""] : []
         content {
@@ -249,12 +269,12 @@ resource "google_container_cluster" "cluster" {
       }
     }
   }
-  dynamic "control_plane_endpoints_config" {
-    for_each = var.access_config.dns_access == true ? [""] : []
-    content {
-      dns_endpoint_config {
-        allow_external_traffic = true
-      }
+  control_plane_endpoints_config {
+    dns_endpoint_config {
+      allow_external_traffic = var.access_config.dns_access == true
+    }
+    ip_endpoints_config {
+      enabled = var.access_config.ip_access != null
     }
   }
   dynamic "database_encryption" {
@@ -267,9 +287,10 @@ resource "google_container_cluster" "cluster" {
   dynamic "dns_config" {
     for_each = var.enable_features.dns != null ? [""] : []
     content {
-      cluster_dns        = var.enable_features.dns.provider
-      cluster_dns_scope  = var.enable_features.dns.scope
-      cluster_dns_domain = var.enable_features.dns.domain
+      additive_vpc_scope_dns_domain = var.enable_features.dns.additive_vpc_scope_dns_domain
+      cluster_dns                   = var.enable_features.dns.provider
+      cluster_dns_scope             = var.enable_features.dns.scope
+      cluster_dns_domain            = var.enable_features.dns.domain
     }
   }
   dynamic "enable_k8s_beta_apis" {
@@ -392,10 +413,22 @@ resource "google_container_cluster" "cluster" {
     }
   }
   dynamic "master_authorized_networks_config" {
-    for_each = try(var.access_config.ip_access.authorized_ranges, null) != null ? [""] : []
+    for_each = (
+      try(var.access_config.ip_access.private_endpoint_authorized_ranges_enforcement, null) != null ||
+      try(var.access_config.ip_access.authorized_ranges, null) != null ||
+      try(var.access_config.ip_access.gcp_public_cidrs_access_enabled, null) != null
+    ) ? [""] : []
     content {
+      gcp_public_cidrs_access_enabled = try(
+        var.access_config.ip_access.gcp_public_cidrs_access_enabled,
+        null
+      )
+      private_endpoint_enforcement_enabled = try(
+        var.access_config.ip_access.private_endpoint_authorized_ranges_enforcement,
+        null
+      )
       dynamic "cidr_blocks" {
-        for_each = var.access_config.ip_access.authorized_ranges
+        for_each = coalesce(var.access_config.ip_access.authorized_ranges, {})
         iterator = range
         content {
           cidr_block   = range.value
@@ -449,11 +482,7 @@ resource "google_container_cluster" "cluster" {
   }
   # Dataplane V2 has built-in network policies
   dynamic "network_policy" {
-    for_each = (
-      var.enable_addons.network_policy && !var.enable_features.dataplane_v2
-      ? [""]
-      : []
-    )
+    for_each = local.create_network_policy ? [""] : []
     content {
       enabled  = true
       provider = "CALICO"
@@ -477,17 +506,24 @@ resource "google_container_cluster" "cluster" {
     content {
       enable_private_nodes = true
       enable_private_endpoint = (
-        var.access_config.ip_access.disable_public_endpoint
+        var.access_config.ip_access == null
+        # when ip_access is disabled, the API returns true. We return
+        # true to avoid a permadiff
+        ? true
+        : try(var.access_config.ip_access.disable_public_endpoint, null)
       )
+      master_ipv4_cidr_block = try(var.access_config.master_ipv4_cidr_block, null)
       private_endpoint_subnetwork = try(
         var.access_config.ip_access.private_endpoint_config.endpoint_subnetwork,
         null
       )
-      master_global_access_config {
-        enabled = try(
-          var.access_config.ip_access.private_endpoint_config.global_access,
-          null
-        )
+      dynamic "master_global_access_config" {
+        for_each = try(var.access_config.ip_access.private_endpoint_config.global_access, false) == true ? [""] : []
+        content {
+          enabled = (
+            var.access_config.ip_access.private_endpoint_config.global_access
+          )
+        }
       }
     }
   }

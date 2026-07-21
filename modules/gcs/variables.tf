@@ -26,6 +26,20 @@ variable "bucket_create" {
   default     = true
 }
 
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    condition_vars = optional(map(map(string)), {})
+    custom_roles   = optional(map(string), {})
+    iam_principals = optional(map(string), {})
+    locations      = optional(map(string), {})
+    project_ids    = optional(map(string), {})
+    tag_values     = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "cors" {
   description = "CORS configuration for the bucket. Defaults to null."
   type = object({
@@ -73,47 +87,15 @@ variable "force_destroy" {
   default     = false
 }
 
-variable "iam" {
-  description = "IAM bindings in {ROLE => [MEMBERS]} format."
-  type        = map(list(string))
-  default     = {}
-}
-
-variable "iam_bindings" {
-  description = "Authoritative IAM bindings in {KEY => {role = ROLE, members = [], condition = {}}}. Keys are arbitrary."
-  type = map(object({
-    members = list(string)
-    role    = string
-    condition = optional(object({
-      expression  = string
-      title       = string
-      description = optional(string)
-    }))
-  }))
-  nullable = false
-  default  = {}
-}
-
-variable "iam_bindings_additive" {
-  description = "Individual additive IAM bindings. Keys are arbitrary."
-  type = map(object({
-    member = string
-    role   = string
-    condition = optional(object({
-      expression  = string
-      title       = string
-      description = optional(string)
-    }))
-  }))
-  nullable = false
-  default  = {}
-}
-
-variable "iam_by_principals" {
-  description = "Authoritative IAM binding in {PRINCIPAL => [ROLES]} format. Principals need to be statically defined to avoid cycle errors. Merged internally with the `iam` variable."
-  type        = map(list(string))
-  default     = {}
-  nullable    = false
+variable "ip_filter" {
+  description = "The bucket's IP filter configuration."
+  type = object({
+    allow_cross_org_vpcs           = optional(bool)
+    allow_all_service_agent_access = optional(bool)
+    public_network_sources         = optional(list(string))
+    vpc_network_sources            = optional(map(list(string)), {})
+  })
+  default = null
 }
 
 variable "labels" {
@@ -300,7 +282,7 @@ variable "requester_pays" {
 variable "retention_policy" {
   description = "Bucket retention policy."
   type = object({
-    retention_period = number
+    retention_period = string
     is_locked        = optional(bool)
   })
   default = null

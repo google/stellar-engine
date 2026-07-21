@@ -20,9 +20,20 @@ variable "auto_create_subnetworks" {
   default     = false
 }
 
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    regions = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "create_googleapis_routes" {
   description = "Toggle creation of googleapis private/restricted routes. Disabled when vpc creation is turned off, or when set to null."
   type = object({
+    directpath   = optional(bool, true)
+    directpath-6 = optional(bool, false)
     private      = optional(bool, true)
     private-6    = optional(bool, false)
     restricted   = optional(bool, true)
@@ -59,9 +70,6 @@ variable "dns_policy" {
 variable "factories_config" {
   description = "Paths to data files and folders that enable factory functionality."
   type = object({
-    context = optional(object({
-      regions = optional(map(string), {})
-    }), {})
     subnets_folder = optional(string)
   })
   default = {}
@@ -272,7 +280,9 @@ variable "subnets" {
       access_type = optional(string, "INTERNAL")
       # this field is marked for internal use in the API documentation
       # enable_private_access = optional(string)
+      ipv6_only = optional(bool, false)
     }))
+    ip_collection       = optional(string, null)
     secondary_ip_ranges = optional(map(string))
     iam                 = optional(map(list(string)), {})
     iam_bindings = optional(map(object({
@@ -376,8 +386,20 @@ variable "subnets_psc" {
   nullable = false
 }
 
-variable "vpc_create" {
-  description = "Create VPC. When set to false, uses a data source to reference existing VPC."
-  type        = bool
-  default     = true
+variable "vpc_reuse" {
+  description = "Reuse existing VPC if not null. If the network_id number is not passed in, a data source is used."
+  type = object({
+    use_data_source = optional(bool, true)
+    attributes = optional(object({
+      network_id = number
+    }))
+  })
+  default = null
+  validation {
+    condition = (
+      try(var.vpc_reuse.use_data_source, null) != false ||
+      try(var.vpc_reuse.attributes, null) != null
+    )
+    error_message = "Reuse datasource can be disabled only if attributes are set."
+  }
 }

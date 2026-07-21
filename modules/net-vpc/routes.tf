@@ -18,6 +18,8 @@
 
 locals {
   _googleapis_ranges = {
+    directpath   = "34.126.0.0/18"
+    directpath-6 = "2001:4860:8040::/42"
     private      = "199.36.153.8/30"
     private-6    = "2600:2d00:2:2000::/64"
     restricted   = "199.36.153.4/30"
@@ -33,7 +35,7 @@ locals {
       tags          = null
     }
     if(
-      var.vpc_create &&
+      var.vpc_reuse == null &&
       lookup(coalesce(var.create_googleapis_routes, {}), k, false)
     )
   }

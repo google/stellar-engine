@@ -39,6 +39,7 @@ variable "access_levels" {
       vpc_subnets            = optional(map(list(string)), {})
     })), [])
     description = optional(string)
+    title       = optional(string)
   }))
   default  = {}
   nullable = false
@@ -79,6 +80,18 @@ variable "access_policy_create" {
   default = null
 }
 
+variable "context" {
+  description = "External context used in replacements."
+  type = object({
+    identity_sets   = optional(map(list(string)), {})
+    project_numbers = optional(map(number), {})
+    resource_sets   = optional(map(list(string)), {})
+    service_sets    = optional(map(list(string)), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "egress_policies" {
   description = "Egress policy definitions that can be referenced in perimeters."
   type = map(object({
@@ -97,6 +110,7 @@ variable "egress_policies" {
         service_name         = string
       })), [])
       resources = optional(list(string))
+      roles     = optional(list(string))
     })
   }))
   default  = {}
@@ -124,10 +138,10 @@ variable "egress_policies" {
 variable "factories_config" {
   description = "Paths to folders that enable factory functionality."
   type = object({
-    access_levels       = optional(string)
-    egress_policies     = optional(string)
-    ingress_policies    = optional(string)
-    restricted_services = optional(string, "data/restricted-services.yaml")
+    access_levels    = optional(string)
+    egress_policies  = optional(string)
+    ingress_policies = optional(string)
+    perimeters       = optional(string)
   })
   nullable = false
   default  = {}
@@ -186,6 +200,7 @@ variable "ingress_policies" {
         service_name         = string
       })), [])
       resources = optional(list(string))
+      roles     = optional(list(string))
     })
   }))
   default  = {}
@@ -210,44 +225,42 @@ variable "ingress_policies" {
   }
 }
 
-variable "service_perimeters_bridge" {
-  description = "Bridge service perimeters."
-  type = map(object({
-    spec_resources            = optional(list(string))
-    status_resources          = optional(list(string))
-    use_explicit_dry_run_spec = optional(bool, false)
-  }))
-  default = {}
-}
-
-variable "service_perimeters_regular" {
+variable "perimeters" {
   description = "Regular service perimeters."
   type = map(object({
-    description = optional(string)
+    description               = optional(string)
+    ignore_resource_changes   = optional(bool, false)
+    title                     = optional(string)
+    use_explicit_dry_run_spec = optional(bool, false)
     spec = optional(object({
-      access_levels       = optional(list(string))
-      resources           = optional(list(string))
-      restricted_services = optional(list(string))
-      egress_policies     = optional(list(string))
-      ingress_policies    = optional(list(string))
+      access_levels       = optional(list(string), [])
+      egress_policies     = optional(list(string), [])
+      ingress_policies    = optional(list(string), [])
+      restricted_services = optional(list(string), [])
+      resources           = optional(list(string), [])
       vpc_accessible_services = optional(object({
         allowed_services   = list(string)
         enable_restriction = optional(bool, true)
       }))
     }))
     status = optional(object({
-      access_levels       = optional(list(string))
-      resources           = optional(list(string))
-      restricted_services = optional(list(string))
-      egress_policies     = optional(list(string))
-      ingress_policies    = optional(list(string))
+      access_levels       = optional(list(string), [])
+      egress_policies     = optional(list(string), [])
+      ingress_policies    = optional(list(string), [])
+      resources           = optional(list(string), [])
+      restricted_services = optional(list(string), [])
       vpc_accessible_services = optional(object({
         allowed_services   = list(string)
-        enable_restriction = bool
+        enable_restriction = optional(bool, true)
       }))
     }))
-    use_explicit_dry_run_spec = optional(bool, false)
   }))
   default  = {}
   nullable = false
+}
+
+variable "project_id_search_scope" {
+  description = "Set this to an organization or folder ID to use Cloud Asset Inventory to automatically translate project ids to numbers."
+  type        = string
+  default     = null
 }

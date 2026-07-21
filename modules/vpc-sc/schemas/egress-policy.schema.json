@@ -22,6 +22,7 @@
           }
         },
         "identity_type": {
+          "type": "string",
           "enum": [
             "IDENTITY_TYPE_UNSPECIFIED",
             "ANY_IDENTITY",
@@ -34,7 +35,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^(?:serviceAccount:|user:|group:|principal:)"
+            "pattern": "^(?:serviceAccount:|user:|group:|principal:|\\$identity_sets:)"
           }
         },
         "resources": {
@@ -83,6 +84,12 @@
           }
         },
         "resources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "roles": {
           "type": "array",
           "items": {
             "type": "string"
