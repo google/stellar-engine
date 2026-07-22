@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Shared Services — DNS
+# Optional Shared Services Template — Enterprise Hybrid DNS Forwarding
 
-This module deploys IL5-compliant DNS forwarding for cross-cloud name resolution.
-Domain-specific forwarding zones send queries to the Enterprise DNS resolver in Azure
-via the cross-cloud VPN tunnel. DNS peering zones chain resolution across VPCs
-within Cloud DNS's 3-VPC / 1-transitive-hop limit.
+This reference template deploys optional enterprise DNS forwarding zones and policies for hybrid name resolution. Domain-specific forwarding zones route queries to external or on-premises enterprise DNS resolvers via hybrid network connections (VPN or Cloud Interconnect).
+
+> [!NOTE]
+> This is an **optional reference template**. It is fully decoupled from the core landing zone (Stages 0–5) and can be adapted or omitted based on your DNS resolution architecture.
 
 ## Architecture
 

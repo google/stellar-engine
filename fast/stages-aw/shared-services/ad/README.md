@@ -14,8 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Shared Services - Active Directory Domain Controller 
-This module deploys two high-availability Windows Server Domain Controllers (DCs) on Google Cloud Platform (GCP) . This infrastructure extends an existing identity perimeter into GCP, acting as a replication partner to a primary Active Directory environment hosted in the Azure example Cloud.
+# Optional Shared Services Template — Active Directory Domain Controllers
+
+This reference template deploys optional high-availability Windows Server Domain Controllers (DCs) on Google Cloud Platform (GCP). This infrastructure extends an existing identity perimeter into GCP, acting as a replication partner to an existing on-premises or multi-cloud Active Directory environment.
+
+> [!NOTE]
+> This is an **optional reference template**. It is fully decoupled from the core landing zone (Stages 0–5) and can be adapted or omitted based on your identity architecture.
 
 ## Architecture Overview
 The configuration is designed to satisfy strict DoD Impact Level 5 (IL5) and DISA STIG compliance requirements while ensuring high availability for authentication services. 

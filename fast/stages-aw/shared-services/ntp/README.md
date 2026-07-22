@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Shared Services — NTP Relay
+# Optional Shared Services Template — Network Time Protocol (NTP) Synchronization
 
-This module deploys a DISA STIG-compliant NTP relay in the shared-services VPC.
-Relay VMs synchronize against US Naval Observatory (USNO) authoritative sources over the public internet and serve all spoke VMs internally over UDP 123.
+This reference template deploys an optional Chrony NTP server in the shared-services VPC. Internal NTP instances synchronize against designated upstream time sources and serve internal workloads over UDP 123 in restricted or air-gapped environments.
+
+> [!NOTE]
+> This is an **optional reference template**. It is fully decoupled from the core landing zone (Stages 0–5) and can be adapted or omitted based on your time synchronization requirements.
 
 ## Architecture
 

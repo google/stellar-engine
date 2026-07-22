@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# ACAS Shared Service (Nessus Scanner & Tenable SecurityCenter)
+# Optional Shared Services Template — Vulnerability Scanner (Nessus & SecurityCenter / ACAS)
 
-This blueprint provisions an ACAS solution (Tenable SecurityCenter and Nessus Scanners) on Google Cloud Platform (GCP), designed for IL5 compliance under DoD Assured Workloads requirements.
+This reference template provisions an optional vulnerability scanning solution (Tenable SecurityCenter and Nessus Scanners) on Google Cloud Platform (GCP). Organizations can deploy or adapt this template to meet centralized vulnerability assessment and security compliance scanning requirements.
+
+> [!NOTE]
+> This is an **optional reference template**. It is fully decoupled from the core landing zone (Stages 0–5) and can be adapted or omitted based on your security and scanning architecture.
 
 ---
 

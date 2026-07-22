@@ -14,13 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Shared Services — SMTP Relay
+# Optional Shared Services Template — Outbound Mail & SMTP Relay
 
-This module deploys a DISA STIG-compliant Postfix SMTP relay (smarthost) in the
-shared-services VPC. All outbound email from spoke VMs is relayed through the
-Enterprise Email Security Gateway (EESG) at `mail.example.com` via Cloud
-Interconnect / BCAP. GCP blocks outbound port 25 on the public internet, but
-traffic routed internally over Cloud Interconnect is permitted on port 25.
+This reference template deploys an optional Postfix SMTP relay (smarthost) in the shared-services VPC. Outbound email from internal workloads is relayed through an enterprise Email Security Gateway without requiring public internet egress on port 25.
+
+> [!NOTE]
+> This is an **optional reference template**. It is fully decoupled from the core landing zone (Stages 0–5) and can be adapted or omitted based on your mail delivery architecture.
 
 ## Architecture
 

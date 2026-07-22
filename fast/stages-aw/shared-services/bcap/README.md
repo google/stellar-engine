@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Boundary Cloud Access Point (BCAP)
+# Optional Shared Services Template — Boundary Access Point (BCAP) & Interconnect Routing
 
-This Terraform blueprint provisions the necessary Google Cloud infrastructure to establish a highly available connection to a Boundary Cloud Access Point (BCAP) provider, such as DISA, using Google Cloud Partner Interconnect.
+This reference template provisions the Google Cloud infrastructure required to establish a 99.99% highly available connection to a Boundary Access Point (BCAP) or external boundary provider using Google Cloud Partner Interconnect.
 
-The BCAP architecture follows the **99.99% Availability for Partner Interconnect** topology as recommended in the [GCP Documentation](https://cloud.google.com/network-connectivity/docs/interconnect/tutorials/partner-creating-9999-availability). 
-Google BCAP Contact: <trusted-networks@gss.google>
+> [!NOTE]
+> This is an **optional reference template**. It is fully decoupled from the core landing zone (Stages 0–5) and can be adapted or omitted based on your external network connectivity requirements.
+
+The BCAP architecture follows the **99.99% Availability for Partner Interconnect** topology as recommended in the [GCP Documentation](https://cloud.google.com/network-connectivity/docs/interconnect/tutorials/partner-creating-9999-availability).
 
 <!-- BEGIN TOC -->
 - [Architecture](#architecture)
