@@ -210,7 +210,7 @@ if promptUser "Shared Services - BCAP -"; then
   echo ""
   echo "Post-Apply Steps:"
   echo "  1. Retrieve pairing keys: terraform output -json pairing_keys"
-  echo "  2. Provide pairing keys to the BCAP provider (DISA/Google BCAP Team)"
+  echo "  2. Provide pairing keys to the Boundary / Interconnect network provider"
   echo "  3. Once attachments are active, configure BGP peering on Cloud Routers"
   echo ""
 fi
@@ -221,7 +221,7 @@ echo -e "\n#######################################################"
 echo "  Shared Services - NTP Relay Deployment"
 echo "#######################################################"
 echo ""
-echo "This script deploys STIG-compliant NTP relay VMs that sync to USNO."
+echo "This script deploys STIG-compliant NTP relay VMs that sync to upstream time servers."
 echo "Prerequisites: Stages 0-2 must already be deployed via stellar-deploy.sh."
 
 if promptUser "Shared Services - NTP Relay -"; then
@@ -336,69 +336,7 @@ echo "  Shared Services - SMTP Relay Deployment"
 echo "#######################################################"
 echo ""
 echo "This script deploys a STIG-compliant Postfix SMTP relay (smarthost)"
-echo "that relays all outbound email through the DISA EESG via BCAP."
-echo "Prerequisites: Stages 0-3 must already be deployed via stellar-deploy.sh."
-
-if promptUser "Shared Services - SMTP Relay -"; then
-  cd "${SMTP_DIR}" || exit
-
-  resourceFile="${SCRIPT_DIR}/tmp/shared-services-smtp_tf_resources_$$"
-  statusFile="${SCRIPT_DIR}/tmp/shared-services-smtp_tf_status_$$"
-
-  cmd=(
-    "gcloud storage cp ${GCS_BUCKET}/tfvars/1-assured-workload.auto.tfvars.json ./"
-    "gcloud storage cp ${GCS_BUCKET}/tfvars/3-networking-shared-services.auto.tfvars.json ./"
-  )
-  promptUser "Would you like to pull the remote tfvars files created in Stage 1 and Stage 3?" "${cmd[@]}"
-
-  if promptUser "Would you like to pull the shared-services providers file from GCS?"; then
-    gcloud storage cp "${GCS_BUCKET}/providers/shared-services-providers.tf" ./
-  fi
-
-  if promptUser "Would you to generate a new tfvars file?"; then
-    yq -o=json '.' data/config.yml > smtp-config.auto.tfvars.json
-    # Override encryption_key with the SMTP-specific KMS key from the shared-services output.
-    # The shared-services tfvars exports encryption_key (NTP) and smtp_encryption_key (SMTP).
-    jq -n --arg key "$(jq -r '.smtp_encryption_key' 3-networking-shared-services.auto.tfvars.json)" \
-      '{encryption_key: $key}' > smtp-encryption.auto.tfvars.json
-    cat <<EOF >smtp-global.auto.tfvars
-prefix = "${PREFIX}"
-EOF
-  fi
-
-  if promptUser "Would you like to perform the terraform init?"; then
-    runTerraformCommand "init -backend-config=prefix=smtp" "$resourceFile" "$statusFile"
-  fi
-
-  if promptUser "Would you like to perform a terraform plan?"; then
-    runTerraformCommand "plan" "$resourceFile" "$statusFile"
-  fi
-
-  if promptUser "Would you like to perform the terraform apply?"; then
-    runTerraformCommand "apply" "$resourceFile" "$statusFile"
-  fi
-
-  echo ""
-  echo "Congratulations, you have completed the SMTP Relay deployment!"
-  echo ""
-  echo "Post-Apply Steps:"
-  echo "  1. Retrieve relay IP: terraform output relay_ip"
-  echo "  2. Relay IP has been published to GCS at:"
-  echo "     ${GCS_BUCKET}/tfvars/shared-services-smtp.auto.tfvars.json"
-  echo "  3. Configure spoke applications to relay mail through:"
-  echo "     SMTP_HOST=<relay-ip> SMTP_PORT=25"
-  echo "  4. Verify from a spoke VM: telnet <relay-ip> 25"
-  echo ""
-fi
-
-# --- Shared Services - SMTP Relay Deployment ---
-
-echo -e "\n#######################################################"
-echo "  Shared Services - SMTP Relay Deployment"
-echo "#######################################################"
-echo ""
-echo "This script deploys a STIG-compliant Postfix SMTP relay (smarthost)"
-echo "that relays all outbound email through the DISA EESG via BCAP."
+echo "that relays all outbound email through an Enterprise Email Gateway via BCAP."
 echo "Prerequisites: Stages 0-3 must already be deployed via stellar-deploy.sh."
 
 if promptUser "Shared Services - SMTP Relay -"; then
@@ -460,7 +398,7 @@ echo "  Shared Services - Active Directory Domain Controller Deployment"
 echo "#######################################################"
 echo ""
 echo "This script deploys a STIG-compliant Active Directory Domain Controller"
-echo "that replicates from the the Domain Controllers in Azure."
+echo "that replicates from existing enterprise Domain Controllers."
 echo "Prerequisites: Stages 0-3 must already be deployed via stellar-deploy.sh."
 
 if promptUser "Shared Services - Active Directory -"; then
@@ -568,10 +506,8 @@ EOF
         echo -e "========================================================================="
         echo " Path Checked: ${GCS_BUCKET}/acas-staging/"
         echo ""
-        echo " Please download the RHEL8 RPMs from the DoD Patch Repository:"
-        echo "   -> https://patches.csd.disa.mil (CAC required)"
-        echo ""
-        echo " Then upload them to your GCS outputs bucket using this command:"
+        echo " Please download the RHEL8 RPM packages from your vendor or package repository,"
+        echo " and upload them to your GCS outputs bucket using this command:"
         echo "   $ gcloud storage cp *.rpm ${GCS_BUCKET}/acas-staging/"
         echo ""
         echo " For detailed instructions, refer to: "
