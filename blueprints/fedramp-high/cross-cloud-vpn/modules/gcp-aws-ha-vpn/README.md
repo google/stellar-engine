@@ -13,10 +13,10 @@ It implements the 4-tunnel active-active redundancy architecture utilizing the i
 
 We provide two complete, production-grade examples in the `examples/` directory depending on your deployment model:
 
-### 1. [GCP-Only Deployment](./options/gcp-only)
+### 1. [GCP-Only Deployment](./examples/gcp-only)
 For environments where the AWS resources are already provisioned. You must provide the AWS Public IPs and BGP IPs manually via the `aws_tunnel_details` input map.
 
-### 2. [GCP & AWS Managed Deployment](./options/gcp-and-aws)
+### 2. [GCP & AWS Managed Deployment](./examples/gcp-and-aws)
 For environments where you want this Terraform module to dynamically provision the AWS Virtual Private Gateway and Site-to-Site connections automatically.
 
 <!-- BEGIN_TF_DOCS -->
