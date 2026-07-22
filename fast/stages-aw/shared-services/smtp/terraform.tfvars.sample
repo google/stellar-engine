@@ -27,14 +27,14 @@ automation = {
   outputs_bucket = "da1-il5-prod-iac-core-outputs"
 }
 
-# DISA EESG relay IPs — coordinate with DISA POC for IP whitelisting.
-disa_relay_hosts = ["<disa-eesg-relay-ip>"]
+# Enterprise EESG relay IPs — coordinate with network admin for IP whitelisting.
+relay_hosts = ["<enterprise-relay-ip>"]
 
 # Uncomment to customize:
-# disa_relay_port      = 25
+# relay_port           = 25
 # prefix               = "da1"
-# smtp_hostname        = "smtp.mil"
-# smtp_domain          = "mil"
+# smtp_hostname        = "smtp.example.com"
+# smtp_domain          = "example.com"
 # machine_type         = "e2-small"
 # create_cloud_nat     = true
 # allowed_client_ranges = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]

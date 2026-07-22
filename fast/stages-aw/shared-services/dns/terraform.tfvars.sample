@@ -51,13 +51,13 @@ forwarding_zones = {
   mil = {
     domain     = "mil."
     forwarders = {
-      "<ARMY_DNS_IP>" = "private"
+      "<ENTERPRISE_DNS_IP>" = "private"
     }
   }
   gov = {
     domain     = "gov."
     forwarders = {
-      "<ARMY_DNS_IP>" = "private"
+      "<ENTERPRISE_DNS_IP>" = "private"
     }
   }
 }

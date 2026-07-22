@@ -105,13 +105,13 @@ variable "region" {
 variable "smtp_domain" {
   description = "Domain name used in Postfix mydomain directive."
   type        = string
-  default     = "mil"
+  default     = "example.com"
 }
 
 variable "smtp_hostname" {
   description = "Hostname used in Postfix myhostname directive."
   type        = string
-  default     = "smtp.mil"
+  default     = "smtp.example.com"
 }
 
 variable "subnetwork" {

@@ -18,7 +18,7 @@ limitations under the License.
 
 This module deploys a DISA STIG-compliant Postfix SMTP relay (smarthost) in the
 shared-services VPC. All outbound email from spoke VMs is relayed through the
-DISA Enterprise Email Security Gateway (EESG) at `mail.mil` via Cloud
+Enterprise Email Security Gateway (EESG) at `mail.example.com` via Cloud
 Interconnect / BCAP. GCP blocks outbound port 25 on the public internet, but
 traffic routed internally over Cloud Interconnect is permitted on port 25.
 
@@ -31,7 +31,7 @@ Spoke VMs (dev/prod tenants)
 SMTP Relay VM in shared-services       ← Postfix smarthost
     │  TCP 25 via Cloud Interconnect / BCAP
     ▼
-DISA EESG (mail.mil)                   ← Enterprise Email Security Gateway
+EESG (mail.example.com)                ← Enterprise Email Security Gateway
 ```
 
 ## STIG Compliance
@@ -154,8 +154,8 @@ module "smtp" {
 | [instance_name_prefix](variables.tf#L57) | Name prefix for SMTP relay VM instances. | <code>string</code> |  | <code>&#34;smtp-relay&#34;</code> |
 | [machine_type](variables.tf#L63) | Machine type for SMTP relay VMs. e2-small provides sufficient resources for Postfix workloads. | <code>string</code> |  | <code>&#34;e2-small&#34;</code> |
 | [prefix](variables.tf#L74) | Prefix applied to resource names for org-level naming consistency (e.g. 'da1'). Set to null to disable prefixing. | <code>string</code> |  | <code>null</code> |
-| [smtp_domain](variables.tf#L89) | Domain name used in Postfix mydomain directive. | <code>string</code> |  | <code>&#34;mil&#34;</code> |
-| [smtp_hostname](variables.tf#L95) | Hostname used in Postfix myhostname directive. | <code>string</code> |  | <code>&#34;smtp.mil&#34;</code> |
+| [smtp_domain](variables.tf#L89) | Domain name used in Postfix mydomain directive. | <code>string</code> |  | <code>&#34;example.com&#34;</code> |
+| [smtp_hostname](variables.tf#L95) | Hostname used in Postfix myhostname directive. | <code>string</code> |  | <code>&#34;smtp.example.com&#34;</code> |
 
 ## Outputs
 
