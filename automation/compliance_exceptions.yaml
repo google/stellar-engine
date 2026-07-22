@@ -1,0 +1,29 @@
+# lz_exceptions.yaml
+# Combined list of Category 1 and Category 2 API exceptions for LZ Infrastructure
+# These APIs are authorized for use in Core LZ projects only.
+COA2:
+# Category 1: IL5 Authorized / compliance Catalog Update Pending
+#category_1_exceptions:
+  - accesscontextmanager.googleapis.com
+  - cloudasset.googleapis.com
+  - cloudbilling.googleapis.com
+  - networkconnectivity.googleapis.com
+  - servicedirectory.googleapis.com
+# Category 2: Management/Enabling APIs Not Listed in compliance Catalog
+# category_2_exceptions:
+  - assuredworkloads.googleapis.com
+  - bigqueryreservation.googleapis.com
+  - bigquerystorage.googleapis.com
+  - billingbudgets.googleapis.com
+  - cloudquotas.googleapis.com
+  - cloudresourcemanager.googleapis.com
+  - essentialcontacts.googleapis.com
+  - iamcredentials.googleapis.com
+  - iap.googleapis.com
+  - networksecurity.googleapis.com
+  - orgpolicy.googleapis.com
+  - servicenetworking.googleapis.com
+  - serviceusage.googleapis.com
+  - stackdriver.googleapis.com
+  - storage-component.googleapis.com
+  - sts.googleapis.com
