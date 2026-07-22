@@ -120,5 +120,5 @@ provision a project with the necessary APIs enabled.
 
 ## Contributing
 
-Refer to the [contribution guidelines](./CONTRIBUTING.md) for
+Refer to the [contribution guidelines](../../docs/CONTRIBUTING.md) for
 information on contributing to this module.
