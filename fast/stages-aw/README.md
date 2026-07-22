@@ -43,3 +43,17 @@ To destroy a previous FAST deployment follow the instructions detailed in [Googl
 - [Security](4-security/README.md)
 This stage provides an added layer of security to deployment. To further secure your environment, please see the [Security Best Practices Guide](https://docs.google.com/document/d/1uv62Fqg73r9oJNP-NPZebpzoBom8rOgLoHkiMZPutbo/edit?tab=t.0#heading=h.gjdgxs). You will need to request access if you do not already have it.
 
+
+
+### Optional Shared Services
+
+In addition to the core 6-stage lifecycle (Stages 0–5), `fast/stages-aw/shared-services` contains **optional, standalone enterprise services** that can be selectively deployed based on organizational requirements:
+
+- **`acas` (Optional)**: Assured Compliance Assessment Solution (Tenable vulnerability scanners for defense/federal compliance).
+- **`bcap` (Optional)**: Boundary Cloud Access Point for connecting to NIPRNet or dedicated enterprise boundary networks.
+- **`ad` (Optional)**: Windows Active Directory Domain Controllers.
+- **`dns` (Optional)**: Centralized enterprise DNS forwarding.
+- **`ntp` (Optional)**: Internal Network Time Protocol servers.
+- **`smtp` (Optional)**: Internal SMTP mail relays.
+
+*These services are completely optional and decoupled from the baseline landing zone deployment.*
