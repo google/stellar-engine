@@ -13,27 +13,55 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description Data Catalog Taxonomy definition
 
 locals {
-  name = (
-    var.name != null ? var.name : "${local.prefix}taxonomy"
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    } if !endswith(k, "_vars")
+  }
+  ctx_p    = "$"
+  location = try(local.ctx.locations[var.location], var.location)
+  project_id = var.project_id == null ? null : lookup(
+    local.ctx.project_ids, var.project_id, var.project_id
   )
-  prefix = var.prefix == null ? "" : "${var.prefix}-"
+  _factory_data = try(
+    yamldecode(file(pathexpand(var.factories_config.taxonomy))),
+    {}
+  )
+  description = try(local._factory_data.description, var.description)
+  tags = merge(var.tags, {
+    for k, v in try(local._factory_data.tags, {}) : k => {
+      description = try(v.description, null)
+      iam         = try(v.iam, {})
+      iam_bindings = {
+        for ik, iv in try(v.iam_bindings, {}) : ik => merge(iv, {
+          condition = try(iv.condition, null)
+        })
+      }
+      iam_bindings_additive = {
+        for ik, iv in try(v.iam_bindings_additive, {}) : ik => merge(iv, {
+          condition = try(iv.condition, null)
+        })
+      }
+    }
+  })
 }
 
 resource "google_data_catalog_taxonomy" "default" {
   provider               = google-beta
-  project                = var.project_id
-  region                 = var.location
-  display_name           = local.name
-  description            = var.description
+  project                = local.project_id
+  region                 = local.location
+  display_name           = var.name
+  description            = local.description
   activated_policy_types = var.activated_policy_types
 }
 
 resource "google_data_catalog_policy_tag" "default" {
-  for_each     = var.tags
   provider     = google-beta
+  for_each     = local.tags
   taxonomy     = google_data_catalog_taxonomy.default.id
   display_name = each.key
   description = coalesce(

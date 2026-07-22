@@ -13,24 +13,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    } if !endswith(k, "_vars")
+  }
+  ctx_p = "$"
+  _tag_bindings = {
+    for k, v in var.tag_bindings : k => lookup(local.ctx.tag_values, v, v)
+  }
   format_obj    = one([for k, v in var.format : v if v != null])
   format_string = one([for k, v in var.format : k if v != null])
+  location      = lookup(local.ctx.locations, var.location, var.location)
   mode_string   = one([for k, v in local.format_obj : k if v != null && v != false])
+  project_id    = lookup(local.ctx.project_ids, var.project_id, var.project_id)
 }
 
 resource "google_artifact_registry_repository" "registry" {
   provider      = google-beta
-  project       = var.project_id
-  location      = var.location
+  project       = local.project_id
+  location      = local.location
   description   = var.description
   format        = upper(local.format_string)
   labels        = var.labels
   repository_id = var.name
   mode          = "${upper(local.mode_string)}_REPOSITORY"
-  kms_key_name  = var.encryption_key
-
+  kms_key_name = var.encryption_key == null ? null : lookup(
+    local.ctx.kms_keys, var.encryption_key, var.encryption_key
+  )
   cleanup_policy_dry_run = var.cleanup_policy_dry_run
+
+  vulnerability_scanning_config {
+    enablement_config = (
+      var.enable_vulnerability_scanning == true
+      ? "INHERITED"
+      : var.enable_vulnerability_scanning == false ? "DISABLED" : null
+    )
+  }
+
   dynamic "cleanup_policies" {
     for_each = var.cleanup_policies == null ? {} : var.cleanup_policies
     content {
@@ -62,7 +84,7 @@ resource "google_artifact_registry_repository" "registry" {
   dynamic "docker_config" {
     # TODO: open a bug on the provider for this permadiff
     for_each = (
-      local.format_string == "docker" && try(local.format_obj.standard.immutable_tags, null) == true
+      local.format_string == "docker" && try(local.format_obj.standard.immutable_tags, null) != null
       ? [""] : []
     )
     content {
@@ -86,8 +108,12 @@ resource "google_artifact_registry_repository" "registry" {
         for_each = local.format_obj.remote.upstream_credentials != null ? [""] : []
         content {
           username_password_credentials {
-            username                = local.format_obj.remote.upstream_credentials.username
-            password_secret_version = local.format_obj.remote.upstream_credentials.password_secret_version
+            username = local.format_obj.remote.upstream_credentials.username
+            password_secret_version = lookup(
+              local.ctx.secrets,
+              local.format_obj.remote.upstream_credentials.password_secret_version,
+              local.format_obj.remote.upstream_credentials.password_secret_version
+            )
           }
         }
       }
@@ -108,7 +134,8 @@ resource "google_artifact_registry_repository" "registry" {
       }
       dynamic "common_repository" {
         for_each = (
-          local.format_string == "docker" && try(local.format_obj.remote.common_repository, null) != null
+          contains(["docker", "maven", "npm", "python"], local.format_string) &&
+          try(local.format_obj.remote.common_repository, null) != null
           ? [""] : []
         )
         content {
@@ -131,7 +158,10 @@ resource "google_artifact_registry_repository" "registry" {
         }
       }
       dynamic "maven_repository" {
-        for_each = local.format_string == "maven" ? [""] : []
+        for_each = (
+          local.format_string == "maven" && try(local.format_obj.remote.common_repository, null) == null
+          ? [""] : []
+        )
         content {
           public_repository = local.format_obj.remote.public_repository
           dynamic "custom_repository" {
@@ -143,7 +173,10 @@ resource "google_artifact_registry_repository" "registry" {
         }
       }
       dynamic "npm_repository" {
-        for_each = local.format_string == "npm" ? [""] : []
+        for_each = (
+          local.format_string == "npm" && try(local.format_obj.remote.common_repository, null) == null
+          ? [""] : []
+        )
         content {
           public_repository = local.format_obj.remote.public_repository
           dynamic "custom_repository" {
@@ -155,7 +188,10 @@ resource "google_artifact_registry_repository" "registry" {
         }
       }
       dynamic "python_repository" {
-        for_each = local.format_string == "python" ? [""] : []
+        for_each = (
+          local.format_string == "python" && try(local.format_obj.remote.common_repository, null) == null
+          ? [""] : []
+        )
         content {
           public_repository = local.format_obj.remote.public_repository
           dynamic "custom_repository" {
@@ -190,9 +226,13 @@ resource "google_artifact_registry_repository" "registry" {
       dynamic "upstream_policies" {
         for_each = local.format_obj.virtual
         content {
-          id         = upstream_policies.key
-          repository = upstream_policies.value.repository
-          priority   = upstream_policies.value.priority
+          id = upstream_policies.key
+          repository = lookup(
+            local.ctx.artifact_registries,
+            upstream_policies.value.repository,
+            upstream_policies.value.repository
+          )
+          priority = upstream_policies.value.priority
         }
       }
     }
@@ -207,4 +247,11 @@ resource "google_artifact_registry_repository" "registry" {
     }
   }
 
+}
+
+resource "google_tags_location_tag_binding" "binding" {
+  for_each  = var.tag_bindings
+  parent    = "//artifactregistry.googleapis.com/${google_artifact_registry_repository.registry.id}"
+  location  = local.location
+  tag_value = templatestring(local._tag_bindings[each.key], var.context.tag_vars)
 }

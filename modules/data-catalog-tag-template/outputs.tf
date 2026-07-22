@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "data_catalog_tag_template_ids" {
   description = "Data catalog tag template ids."
   value = {

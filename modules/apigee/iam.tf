@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 resource "google_apigee_environment_iam_binding" "authoritative" {
   for_each = merge(concat([for k1, v1 in var.environments : {
     for k2, v2 in v1.iam : "${k1}-${k2}" => {

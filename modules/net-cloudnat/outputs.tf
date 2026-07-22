@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "id" {
   description = "Fully qualified NAT (router) id."
   value       = google_compute_router_nat.nat.id

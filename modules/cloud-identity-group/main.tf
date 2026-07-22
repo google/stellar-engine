@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 resource "google_cloud_identity_group" "group" {
   display_name = var.display_name
   parent       = var.customer_id

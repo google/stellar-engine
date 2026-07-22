@@ -1,22 +1,6 @@
-<!--
-Copyright 2026 Google LLC
+# Projects Data Source Module
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
-# Projects Data Source Module 
-
-This module extends functionality of [google_projects](https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/projects) data source by retrieving all the projects under a specific `parent` recursively with only one API call against [Cloud Asset Inventory](https://cloud.google.com/asset-inventory) service. 
+This module extends functionality of [google_projects](https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/projects) data source by retrieving all the projects under a specific `parent` recursively with only one API call against [Cloud Asset Inventory](https://cloud.google.com/asset-inventory/docs) service.
 
 A good usage pattern would be when we want all the projects under a specific folder (including nested subfolders) to be included into [VPC Service Controls](../vpc-sc/). Instead of manually maintaining the list of project numbers as an input to the `vpc-sc` module we can use that module to retrieve all the project numbers dynamically.
 

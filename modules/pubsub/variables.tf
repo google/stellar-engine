@@ -13,11 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "context" {
   description = "Context-specific interpolations."
   type = object({
     custom_roles   = optional(map(string), {})
     iam_principals = optional(map(string), {})
+    kms_keys       = optional(map(string), {})
     locations      = optional(map(string), {})
     project_ids    = optional(map(string), {})
   })
@@ -41,6 +43,12 @@ variable "labels" {
 variable "message_retention_duration" {
   description = "Minimum duration to retain a message after it is published to the topic."
   type        = string
+  default     = null
+}
+
+variable "message_storage_enforce_in_transit" {
+  description = "If true, var.regions is also used to enforce in-transit guarantees for messages."
+  type        = bool
   default     = null
 }
 

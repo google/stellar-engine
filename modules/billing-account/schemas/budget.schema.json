@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Project",
+  "title": "Budget",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -42,7 +42,17 @@
             "include_specified": {
               "type": "array",
               "items": {
-                "type": "string"
+                "type": "string",
+                "enum": [
+                  "COMMITTED_USAGE_DISCOUNT",
+                  "COMMITTED_USAGE_DISCOUNT_DOLLAR_BASE",
+                  "DISCOUNT",
+                  "FREE_TIER",
+                  "PROMOTION",
+                  "RESELLER_MARGIN",
+                  "SUBSCRIPTION_BENEFIT",
+                  "SUSTAINED_USAGE_DISCOUNT"
+                ]
               }
             }
           }

@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "addresses" {
   description = "Optional list of external address self links."
   type        = list(string)
+  nullable    = false
   default     = []
 }
 
@@ -73,6 +75,19 @@ variable "config_timeouts" {
     tcp_time_wait   = optional(number)
     tcp_transitory  = optional(number)
     udp             = optional(number)
+  })
+  default  = {}
+  nullable = false
+}
+
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    addresses   = optional(map(string), {})
+    locations   = optional(map(string), {})
+    networks    = optional(map(string), {})
+    project_ids = optional(map(string), {})
+    subnets     = optional(map(string), {})
   })
   default  = {}
   nullable = false

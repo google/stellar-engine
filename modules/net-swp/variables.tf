@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "certificates" {
   description = "List of certificates to be used for Secure Web Proxy."
   type        = list(string)

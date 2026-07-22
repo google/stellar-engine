@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "id" {
   description = "Fully qualified nodepool id."
   value       = google_container_node_pool.nodepool.id

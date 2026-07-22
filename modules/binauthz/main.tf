@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 resource "google_binary_authorization_policy" "policy" {
   project = var.project_id
   dynamic "admission_whitelist_patterns" {

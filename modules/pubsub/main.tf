@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   ctx = {
     for k, v in var.context : k => {
@@ -33,9 +34,13 @@ resource "google_pubsub_schema" "default" {
 }
 
 resource "google_pubsub_topic" "default" {
-  project                    = local.project_id
-  name                       = var.name
-  kms_key_name               = var.kms_key
+  project = local.project_id
+  name    = var.name
+  kms_key_name = (
+    var.kms_key == null
+    ? null
+    : lookup(local.ctx.kms_keys, var.kms_key, var.kms_key)
+  )
   labels                     = var.labels
   message_retention_duration = var.message_retention_duration
   dynamic "message_storage_policy" {
@@ -44,6 +49,7 @@ resource "google_pubsub_topic" "default" {
       allowed_persistence_regions = [
         for v in var.regions : lookup(local.ctx.locations, v, v)
       ]
+      enforce_in_transit = var.message_storage_enforce_in_transit
     }
   }
   dynamic "schema_settings" {
@@ -59,7 +65,7 @@ resource "google_pubsub_subscription" "default" {
   for_each                     = var.subscriptions
   project                      = local.project_id
   name                         = each.key
-  topic                        = google_pubsub_topic.default.name
+  topic                        = google_pubsub_topic.default.id
   labels                       = coalesce(each.value.labels, var.labels)
   ack_deadline_seconds         = each.value.ack_deadline_seconds
   message_retention_duration   = each.value.message_retention_duration

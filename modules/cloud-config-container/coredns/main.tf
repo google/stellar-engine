@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   cloud_config = templatefile(local.template, merge(var.config_variables, {
     corefile = templatefile(local.corefile, var.config_variables)

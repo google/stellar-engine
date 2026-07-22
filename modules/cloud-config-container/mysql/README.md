@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Containerized MySQL on Container Optimized OS
 
 This module manages a `cloud-config` configuration that starts a containerized [MySQL](https://www.mysql.com/) service on Container Optimized OS, using the [official image](https://hub.docker.com/_/mysql).
@@ -60,9 +44,13 @@ module "vm" {
     google-logging-enabled = true
   }
   boot_disk = {
-    image = "projects/cos-cloud/global/images/family/cos-stable"
-    type  = "pd-ssd"
-    size  = 10
+    source = {
+      image = "projects/cos-cloud/global/images/family/cos-stable"
+    }
+    initialize_params = {
+      type = "pd-ssd"
+      size = 10
+    }
   }
   tags = ["mysql", "ssh"]
 }
@@ -88,7 +76,6 @@ module "cos-mysql" {
 # tftest modules=0 resources=0
 ```
 <!-- BEGIN TFDOC -->
-
 ## Variables
 
 | name | description | type | required | default |
@@ -97,7 +84,7 @@ module "cos-mysql" {
 | [cloud_config](variables.tf#L17) | Cloud config template path. If null default will be used. | <code>string</code> |  | <code>null</code> |
 | [config_variables](variables.tf#L23) | Additional variables used to render the cloud-config template. | <code>map&#40;any&#41;</code> |  | <code>&#123;&#125;</code> |
 | [image](variables.tf#L29) | MySQL container image. | <code>string</code> |  | <code>&#34;mysql:5.7&#34;</code> |
-| [kms_config](variables.tf#L35) | Optional KMS configuration to decrypt passed-in password. Leave null if a plaintext password is used. | <code title="object&#40;&#123;&#10;  project_id &#61; string&#10;  keyring    &#61; string&#10;  location   &#61; string&#10;  key        &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [kms_config](variables.tf#L35) | Optional KMS configuration to decrypt passed-in password. Leave null if a plaintext password is used. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [mysql_config](variables.tf#L46) | MySQL configuration file content, if null container default will be used. | <code>string</code> |  | <code>null</code> |
 | [mysql_data_disk](variables.tf#L52) | MySQL data disk name in /dev/disk/by-id/ including the google- prefix. If null the boot disk will be used for data. | <code>string</code> |  | <code>null</code> |
 
@@ -106,5 +93,4 @@ module "cos-mysql" {
 | name | description | sensitive |
 |---|---|:---:|
 | [cloud_config](outputs.tf#L17) | Rendered cloud-config file to be passed as user-data instance metadata. |  |
-
 <!-- END TFDOC -->

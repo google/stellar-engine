@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "clusters" {
   description = "Clusters to be created in the BigTable instance. Set more than one cluster to enable replication. If you set autoscaling, num_nodes will be ignored."
   nullable    = false

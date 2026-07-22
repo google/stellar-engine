@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   org_id   = try(google_apigee_organization.organization[0].id, "organizations/${var.project_id}")
   org_name = try(google_apigee_organization.organization[0].name, var.project_id)
@@ -37,8 +38,8 @@ resource "google_apigee_organization" "organization" {
       dynamic "property" {
         for_each = var.organization.properties
         content {
-          name  = properties.key
-          value = properties.value
+          name  = property.key
+          value = property.value
         }
       }
     }
@@ -102,6 +103,13 @@ resource "google_apigee_instance" "instances" {
   )
   disk_encryption_key_name = each.value.disk_encryption_key
   consumer_accept_list     = each.value.consumer_accept_list
+  dynamic "access_logging_config" {
+    for_each = each.value.access_logging == null ? [] : [""]
+    content {
+      enabled = each.value.access_logging.enabled
+      filter  = each.value.access_logging.filter
+    }
+  }
 }
 
 resource "google_apigee_nat_address" "apigee_nat" {
@@ -112,6 +120,7 @@ resource "google_apigee_nat_address" "apigee_nat" {
   }
   name        = each.key
   instance_id = each.value
+  activate    = var.instances[each.key].activate_nat
 }
 
 resource "google_apigee_instance_attachment" "instance_attachments" {
@@ -169,5 +178,17 @@ resource "google_apigee_addons_config" "addons_config" {
         enabled = true
       }
     }
+  }
+}
+
+resource "google_apigee_dns_zone" "dns_zones" {
+  for_each    = var.dns_zones
+  org_id      = google_apigee_organization.organization[0].id
+  dns_zone_id = each.key
+  domain      = each.value.domain
+  description = each.value.description
+  peering_config {
+    target_project_id = each.value.target_project_id
+    target_network_id = each.value.target_network_id
   }
 }

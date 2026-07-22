@@ -13,15 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "context" {
   description = "Context-specific interpolations."
   type = object({
     custom_roles   = optional(map(string), {})
     folder_ids     = optional(map(string), {})
     iam_principals = optional(map(string), {})
+    kms_keys       = optional(map(string), {})
     locations      = optional(map(string), {})
     project_ids    = optional(map(string), {})
     tag_values     = optional(map(string), {})
+    tag_vars = optional(object({
+      projects     = optional(map(map(string)), {})
+      organization = optional(map(string), {})
+    }), {})
   })
   default  = {}
   nullable = false
@@ -43,6 +49,16 @@ variable "location" {
   description = "Location of the bucket."
   type        = string
   default     = "global"
+}
+
+variable "locked" {
+  description = "Whether the bucket is locked. Locked buckets may only be deleted if they are empty. This can only be set for project-level buckets."
+  type        = bool
+  default     = null
+  validation {
+    condition     = var.parent_type == "project" || var.locked == null
+    error_message = "The 'locked' attribute can only be set for project-level buckets."
+  }
 }
 
 variable "log_analytics" {

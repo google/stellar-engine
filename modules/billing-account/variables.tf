@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "budget_notification_channels" {
   description = "Notification channels used by budget alerts."
   type = map(object({
@@ -78,8 +79,8 @@ variable "budgets" {
           }))
         }))
       }))
-      projects           = optional(list(string))
-      resource_ancestors = optional(list(string))
+      projects           = optional(list(string), [])
+      resource_ancestors = optional(list(string), [])
       services           = optional(list(string))
       subaccounts        = optional(list(string))
     }))
@@ -116,6 +117,40 @@ variable "budgets" {
     ]))
     error_message = "Budget notification rules need either a pubsub topic or monitoring channels defined."
   }
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.budgets : [
+        for c in try(v.filter.credit_types_treatment.include_specified, []) : contains([
+          "COMMITTED_USAGE_DISCOUNT",
+          "COMMITTED_USAGE_DISCOUNT_DOLLAR_BASE",
+          "DISCOUNT",
+          "FREE_TIER",
+          "PROMOTION",
+          "RESELLER_MARGIN",
+          "SUBSCRIPTION_BENEFIT",
+          "SUSTAINED_USAGE_DISCOUNT"
+        ], c) if c != null
+      ]
+    ]))
+    error_message = "Budget filter credit types must be one of COMMITTED_USAGE_DISCOUNT, COMMITTED_USAGE_DISCOUNT_DOLLAR_BASE, DISCOUNT, FREE_TIER, PROMOTION, RESELLER_MARGIN, SUBSCRIPTION_BENEFIT, SUSTAINED_USAGE_DISCOUNT."
+  }
+}
+
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    custom_roles          = optional(map(string), {})
+    folder_ids            = optional(map(string), {})
+    folder_sets           = optional(map(list(string)), {})
+    iam_principals        = optional(map(string), {})
+    notification_channels = optional(map(string), {})
+    project_ids           = optional(map(string), {})
+    project_sets          = optional(map(list(string)), {})
+    storage_buckets       = optional(map(string), {})
+    project_numbers       = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
 }
 
 variable "factories_config" {

@@ -13,11 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "addresses" {
   description = "Optional IP address used for the forwarding rule."
   type        = map(string)
   default     = null
 }
+
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    addresses   = optional(map(string), {})
+    locations   = optional(map(string), {})
+    networks    = optional(map(string), {})
+    project_ids = optional(map(string), {})
+    subnets     = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 
 variable "description" {
   description = "Optional description used for resources."
@@ -28,6 +43,8 @@ variable "description" {
 variable "group_configs" {
   description = "Optional unmanaged groups to create. Can be referenced in backends via key or outputs."
   type = map(object({
+    name        = optional(string)
+    description = optional(string, "Terraform managed.")
     zone        = string
     instances   = optional(list(string))
     named_ports = optional(map(number), {})
@@ -37,12 +54,27 @@ variable "group_configs" {
   nullable = false
 }
 
+variable "http_proxy_config" {
+  description = "HTTP proxy configuration."
+  type = object({
+    name                   = optional(string)
+    description            = optional(string, "Terraform managed.")
+    http_keepalive_timeout = optional(string)
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "https_proxy_config" {
   description = "HTTPS proxy configuration."
   type = object({
+    name                             = optional(string)
+    description                      = optional(string, "Terraform managed.")
     certificate_manager_certificates = optional(list(string), [])
+    http_keepalive_timeout           = optional(string)
     quic_override                    = optional(string)
     ssl_policy                       = optional(string)
+    server_tls_policy                = optional(string)
   })
   default  = {}
   nullable = false
@@ -126,9 +158,13 @@ variable "neg_configs" {
 }
 
 variable "ports" {
-  description = "Optional ports for HTTP load balancer, valid ports are 80 and 8080."
+  description = "Optional ports for HTTP load balancer."
   type        = list(string)
   default     = null
+  validation {
+    condition     = length(coalesce(var.ports, [])) <= 1
+    error_message = "Application Load Balancer supports at most one port per forwarding rule."
+  }
 }
 
 variable "project_id" {
@@ -147,6 +183,21 @@ variable "protocol" {
     )
     error_message = "Protocol must be HTTP or HTTPS"
   }
+}
+
+variable "service_attachment" {
+  description = "PSC service attachments."
+  type = object({
+    automatic_connection  = optional(bool, false)
+    consumer_accept_lists = optional(map(string), {})
+    consumer_reject_lists = optional(list(string))
+    description           = optional(string)
+    domain_name           = optional(map(string))
+    enable_proxy_protocol = optional(bool, false)
+    nat_subnets           = map(list(string))
+    reconcile_connections = optional(bool)
+  })
+  default = null
 }
 
 variable "service_directory_registration" {

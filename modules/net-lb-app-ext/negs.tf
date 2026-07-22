@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description NEG resources.
 
 locals {
@@ -26,7 +27,10 @@ locals {
   _neg_endpoints_zonal = flatten([
     for k, v in local.neg_zonal : [
       for kk, vv in v.endpoints : merge(vv, {
-        key = "${k}-${kk}", neg = k, zone = v.zone
+        key        = "${k}-${kk}"
+        neg        = k
+        zone       = v.zone
+        ip_address = try(local.ctx.addresses[vv.ip_address], vv.ip_address)
       })
     ]
   ])
@@ -41,22 +45,28 @@ locals {
     k => v if v.internet != null
   }
   neg_regional_psc = {
-    for k, v in var.neg_configs :
-    k => v if v.psc != null
+    for k, v in var.neg_configs : k => merge(v, {
+      psc = {
+        region         = lookup(local.ctx.locations, v.psc.region, v.psc.region)
+        target_service = v.psc.target_service
+        network        = v.psc.network == null ? null : lookup(local.ctx.networks, v.psc.network, v.psc.network)
+        subnetwork     = v.psc.subnetwork == null ? null : lookup(local.ctx.subnets, v.psc.subnetwork, v.psc.subnetwork)
+      }
+    }) if v.psc != null
   }
   neg_regional_serverless = {
     for k, v in var.neg_configs :
-    k => v if v.cloudrun != null || v.cloudfunction != null
+    k => v if v.cloudrun != null || v.cloudfunction != null || v.serverless_deployment != null
   }
   neg_zonal = {
     # we need to rebuild new objects as we cannot merge different types
     for k, v in var.neg_configs : k => {
       description = v.description
       endpoints   = v.gce != null ? v.gce.endpoints : v.hybrid.endpoints
-      network     = v.gce != null ? v.gce.network : v.hybrid.network
-      subnetwork  = v.gce != null ? v.gce.subnetwork : null
+      network     = v.gce != null ? try(local.ctx.networks[v.gce.network], v.gce.network) : try(local.ctx.networks[v.hybrid.network], v.hybrid.network)
+      subnetwork  = v.gce != null ? try(local.ctx.subnets[v.gce.subnetwork], v.gce.subnetwork) : null
       type        = v.gce != null ? "GCE_VM_IP_PORT" : "NON_GCP_PRIVATE_IP_PORT"
-      zone        = v.gce != null ? v.gce.zone : v.hybrid.zone
+      zone        = v.gce != null ? try(local.ctx.locations[v.gce.zone], v.gce.zone) : try(local.ctx.locations[v.hybrid.zone], v.hybrid.zone)
     } if v.gce != null || v.hybrid != null
   }
 }
@@ -64,7 +74,7 @@ locals {
 
 resource "google_compute_global_network_endpoint_group" "default" {
   for_each = local.neg_global
-  project  = var.project_id
+  project  = local.project_id
   name     = "${var.name}-${each.key}"
   # re-enable once provider properly supports this
   # default_port = each.value.default_port
@@ -90,18 +100,18 @@ resource "google_compute_global_network_endpoint" "default" {
 
 resource "google_compute_network_endpoint_group" "default" {
   for_each = local.neg_zonal
-  project  = var.project_id
+  project  = local.project_id
   zone     = each.value.zone
   name     = "${var.name}-${each.key}"
   # re-enable once provider properly supports this
   # default_port = each.value.default_port
   description           = coalesce(each.value.description, var.description)
   network_endpoint_type = each.value.type
-  network               = each.value.network
+  network               = try(local.ctx.networks[each.value.network], each.value.network)
   subnetwork = (
     each.value.type == "NON_GCP_PRIVATE_IP_PORT"
     ? null
-    : each.value.subnetwork
+    : try(local.ctx.subnets[each.value.subnetwork], each.value.subnetwork)
   )
 }
 
@@ -121,7 +131,7 @@ resource "google_compute_network_endpoint" "default" {
 
 resource "google_compute_region_network_endpoint_group" "psc" {
   for_each              = local.neg_regional_psc
-  project               = var.project_id
+  project               = local.project_id
   region                = each.value.psc.region
   name                  = "${var.name}-${each.key}"
   description           = coalesce(each.value.description, var.description)
@@ -136,10 +146,25 @@ resource "google_compute_region_network_endpoint_group" "psc" {
 }
 
 resource "google_compute_region_network_endpoint_group" "serverless" {
+  provider = google-beta
   for_each = local.neg_regional_serverless
-  project  = var.project_id
-  region = try(
-    each.value.cloudrun.region, each.value.cloudfunction.region, null
+  project = (
+    each.value.project_id == null
+    ? local.project_id
+    : each.value.project_id
+  )
+  region = (
+    try(each.value.cloudrun.region, null) != null
+    ? lookup(local.ctx.locations, each.value.cloudrun.region, each.value.cloudrun.region)
+    : (
+      try(each.value.cloudfunction.region, null) != null
+      ? lookup(local.ctx.locations, each.value.cloudfunction.region, each.value.cloudfunction.region)
+      : (
+        try(each.value.serverless_deployment.region, null) != null
+        ? lookup(local.ctx.locations, each.value.serverless_deployment.region, each.value.serverless_deployment.region)
+        : null
+      )
+    )
   )
   name                  = "${var.name}-${each.key}"
   description           = coalesce(each.value.description, var.description)
@@ -157,6 +182,15 @@ resource "google_compute_region_network_endpoint_group" "serverless" {
       service  = try(each.value.cloudrun.target_service.name, null)
       tag      = try(each.value.cloudrun.target_service.tag, null)
       url_mask = each.value.cloudrun.target_urlmask
+    }
+  }
+  dynamic "serverless_deployment" {
+    for_each = each.value.serverless_deployment == null ? [] : [""]
+    content {
+      platform = each.value.serverless_deployment.platform
+      resource = each.value.serverless_deployment.resource
+      version  = each.value.serverless_deployment.version
+      url_mask = each.value.serverless_deployment.url_mask
     }
   }
 }

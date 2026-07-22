@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "data" {
   description = "The data source for DataScan. The source can be either a Dataplex `entity` or a BigQuery `resource`."
   type = object({

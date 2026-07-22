@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "cluster_hostname" {
   description = "Cluster hostname."
   value       = var.private_cluster_config != null ? google_workstations_workstation_cluster.cluster.private_cluster_config[0].cluster_hostname : null

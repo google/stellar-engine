@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 resource "google_certificate_manager_certificate_map" "map" {
   count       = var.map == null ? 0 : 1
   project     = var.project_id

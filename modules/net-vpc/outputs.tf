@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "id" {
   description = "Fully qualified network id."
   value       = local.network.id
@@ -28,6 +29,23 @@ output "id" {
 output "internal_ipv6_range" {
   description = "ULA range."
   value       = try(google_compute_network.network[0].internal_ipv6_range, null)
+}
+
+output "internal_range_ids" {
+  description = "Map of internal range IDs keyed by name."
+  value       = { for k, v in google_network_connectivity_internal_range.internal_range : k => v.id }
+}
+
+output "internal_range_ip_cidr_ranges" {
+  description = "Map of internal range IP CIDR ranges keyed by name."
+  value = {
+    for k, v in google_network_connectivity_internal_range.internal_range : k => v.ip_cidr_range
+  }
+}
+
+output "internal_ranges" {
+  description = "Internal range resources."
+  value       = { for k, v in google_network_connectivity_internal_range.internal_range : k => v }
 }
 
 output "name" {
@@ -62,9 +80,21 @@ output "network_attachment_ids" {
   }
 }
 
+output "network_id" {
+  description = "Numeric network id."
+  value       = local.network.network_id
+  depends_on = [
+    google_compute_network_peering.local,
+    google_compute_network_peering.remote,
+    google_compute_shared_vpc_host_project.shared_vpc_host,
+    google_compute_shared_vpc_service_project.service_projects,
+    google_service_networking_connection.psa_connection
+  ]
+}
+
 output "project_id" {
   description = "Project ID containing the network. Use this when you need to create resources *after* the VPC is fully set up (e.g. subnets created, shared VPC service projects attached, Private Service Networking configured)."
-  value       = var.project_id
+  value       = local.project_id
   depends_on = [
     google_compute_subnetwork.subnetwork,
     google_compute_network_peering.local,
@@ -85,6 +115,16 @@ output "self_link" {
     google_compute_shared_vpc_service_project.service_projects,
     google_service_networking_connection.psa_connection
   ]
+}
+
+output "service_connection_policies" {
+  description = "Service connection policy resources."
+  value       = google_network_connectivity_service_connection_policy.service_connection_policy
+}
+
+output "service_connection_policy_ids" {
+  description = "Service connection policy IDs."
+  value       = { for k, v in google_network_connectivity_service_connection_policy.service_connection_policy : k => v.id }
 }
 
 output "subnet_ids" {

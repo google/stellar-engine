@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   _ctx = {
     for k, v in var.context : k => {
@@ -30,6 +31,9 @@ locals {
     )
   )
   ctx = merge(local._ctx, {
+    iam_principals_list = {
+      for k, v in local._ctx.iam_principals : k => [v]
+    }
     project_numbers = {
       for k, v in local._ctx.project_numbers : k => "projects/${v}"
     }

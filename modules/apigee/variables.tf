@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "addons_config" {
   description = "Addons configuration."
   type = object({
@@ -23,6 +24,18 @@ variable "addons_config" {
     monetization        = optional(bool, false)
   })
   default = null
+}
+
+variable "dns_zones" {
+  description = "DNS zones."
+  type = map(object({
+    domain            = string
+    description       = string
+    target_project_id = string
+    target_network_id = string
+  }))
+  default  = {}
+  nullable = false
 }
 
 variable "endpoint_attachments" {
@@ -78,10 +91,15 @@ variable "instances" {
     disk_encryption_key           = optional(string)
     display_name                  = optional(string)
     enable_nat                    = optional(bool, false)
+    activate_nat                  = optional(bool, false)
     environments                  = optional(list(string), [])
     name                          = optional(string)
     runtime_ip_cidr_range         = optional(string)
     troubleshooting_ip_cidr_range = optional(string)
+    access_logging = optional(object({
+      enabled = optional(bool, true)
+      filter  = optional(string)
+    }))
   }))
   validation {
     condition = alltrue([

@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # NCC Spoke RA Module
 
 This module allows management of NCC Spokes backed by Router Appliances. Network virtual appliances used as router appliances allow to connect an external network to Google Cloud by using a SD-WAN router or another appliance with BGP capabilities (_site-to-cloud_ connectivity). It is also possible to enable site-to-site data transfer, although this feature is not available in all regions, particularly not in EMEA.
@@ -159,13 +143,13 @@ module "spoke-ra" {
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [hub](variables.tf#L23) | The NCC hub. You should either provide an existing hub id or a hub name if create is true. | <code title="object&#40;&#123;&#10;  create      &#61; optional&#40;bool, false&#41;&#10;  description &#61; optional&#40;string&#41;&#10;  id          &#61; optional&#40;string&#41;&#10;  name        &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [hub](variables.tf#L23) | The NCC hub. You should either provide an existing hub id or a hub name if create is true. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [name](variables.tf#L37) | The name of the NCC spoke. | <code>string</code> | ✓ |  |
 | [project_id](variables.tf#L42) | The ID of the project where the NCC hub & spokes will be created. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L47) | Region where the spoke is located. | <code>string</code> | ✓ |  |
-| [router_appliances](variables.tf#L52) | List of router appliances this spoke is associated with. | <code title="list&#40;object&#40;&#123;&#10;  internal_ip  &#61; string&#10;  vm_self_link &#61; string&#10;&#125;&#41;&#41;">list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [router_config](variables.tf#L60) | Configuration of the Cloud Router. | <code title="object&#40;&#123;&#10;  asn &#61; number&#10;  custom_advertise &#61; optional&#40;object&#40;&#123;&#10;    all_subnets &#61; bool&#10;    ip_ranges   &#61; map&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;  ip_interface0   &#61; string&#10;  ip_interface1   &#61; string&#10;  keepalive       &#61; optional&#40;number&#41;&#10;  peer_asn        &#61; number&#10;  routes_priority &#61; optional&#40;number, 100&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [vpc_config](variables.tf#L76) | Network and subnetwork for the CR interfaces. | <code title="object&#40;&#123;&#10;  network_name     &#61; string&#10;  subnet_self_link &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [router_appliances](variables.tf#L52) | List of router appliances this spoke is associated with. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [router_config](variables.tf#L60) | Configuration of the Cloud Router. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [vpc_config](variables.tf#L76) | Network and subnetwork for the CR interfaces. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [data_transfer](variables.tf#L17) | Site-to-site data transfer feature, available only in some regions. | <code>bool</code> |  | <code>false</code> |
 
 ## Outputs
@@ -175,7 +159,7 @@ module "spoke-ra" {
 | [hub](outputs.tf#L17) | NCC hub resource (only if auto-created). |  |
 | [id](outputs.tf#L22) | Fully qualified hub id. |  |
 | [router](outputs.tf#L27) | Cloud Router resource. |  |
-| [spoke-ra](outputs.tf#L32) | NCC spoke resource. |  |
+| [spoke_ra](outputs.tf#L32) | NCC spoke resource. |  |
 
 ## Fixtures
 

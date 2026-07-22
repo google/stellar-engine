@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Apigee
 
 This module simplifies the creation of a Apigee resources (organization, environment groups, environment group attachments, environments, instances and instance attachments).
@@ -33,7 +17,9 @@ This module simplifies the creation of a Apigee resources (organization, environ
   - [New instance (Non VPC Peering Provisioning Mode)](#new-instance-non-vpc-peering-provisioning-mode)
   - [New endpoint attachment](#new-endpoint-attachment)
   - [Apigee add-ons](#apigee-add-ons)
+- [New DNS ZONE](#new-dns-zone)
   - [IAM](#iam)
+- [Recipes](#recipes)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
@@ -254,6 +240,8 @@ module "apigee" {
 
 ### New instance (VPC Peering Provisioning Mode)
 
+Access logging is optional, shown here as an example.
+
 ```hcl
 module "apigee" {
   source     = "./fabric/modules/apigee"
@@ -262,10 +250,13 @@ module "apigee" {
     europe-west1 = {
       runtime_ip_cidr_range         = "10.0.4.0/22"
       troubleshooting_ip_cidr_range = "10.1.1.0/28"
+      access_logging = {
+        filter = "statusCode >= 200 && statusCode < 300"
+      }
     }
   }
 }
-# tftest modules=1 resources=1
+# tftest modules=1 resources=1 inventory=access-logging.yaml
 ```
 
 ### New instance (Non VPC Peering Provisioning Mode)
@@ -321,6 +312,24 @@ module "apigee" {
 # tftest modules=1 resources=1
 ```
 
+## New DNS ZONE
+
+```
+module "apigee" {
+  source     = "./fabric/modules/apigee"
+  project_id = "my-project"
+  dns_zones = {
+    test = {
+      domain            = "mydomain.com"
+      description       = "Zone for mydomain.com"
+      target_project_id = "my-other-project"
+      target_network_id = "projects/my-other-projects/global/networks/vpc"
+    }
+  }
+}
+# tftest modules=1 resources=1
+```
+
 ### IAM
 
 ```hcl
@@ -371,17 +380,22 @@ module "apigee" {
 # tftest modules=1 resources=10
 ```
 <!-- BEGIN TFDOC -->
+## Recipes
+
+- [Apigee X with Secure Web Proxy](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/master/modules/apigee/recipe-apigee-swp)
+
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [project_id](variables.tf#L131) | Project ID. | <code>string</code> | ✓ |  |
-| [addons_config](variables.tf#L17) | Addons configuration. | <code title="object&#40;&#123;&#10;  advanced_api_ops    &#61; optional&#40;bool, false&#41;&#10;  api_security        &#61; optional&#40;bool, false&#41;&#10;  connectors_platform &#61; optional&#40;bool, false&#41;&#10;  integration         &#61; optional&#40;bool, false&#41;&#10;  monetization        &#61; optional&#40;bool, false&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [endpoint_attachments](variables.tf#L29) | Endpoint attachments. | <code title="map&#40;object&#40;&#123;&#10;  region             &#61; string&#10;  service_attachment &#61; string&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [envgroups](variables.tf#L39) | Environment groups (NAME => [HOSTNAMES]). | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [environments](variables.tf#L46) | Environments. | <code title="map&#40;object&#40;&#123;&#10;  api_proxy_type    &#61; optional&#40;string&#41;&#10;  description       &#61; optional&#40;string, &#34;Terraform-managed&#34;&#41;&#10;  display_name      &#61; optional&#40;string&#41;&#10;  deployment_type   &#61; optional&#40;string&#41;&#10;  envgroups         &#61; optional&#40;list&#40;string&#41;, &#91;&#93;&#41;&#10;  forward_proxy_uri &#61; optional&#40;string&#41;&#10;  iam               &#61; optional&#40;map&#40;list&#40;string&#41;&#41;, &#123;&#125;&#41;&#10;  iam_bindings &#61; optional&#40;map&#40;object&#40;&#123;&#10;    role    &#61; string&#10;    members &#61; list&#40;string&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;  iam_bindings_additive &#61; optional&#40;map&#40;object&#40;&#123;&#10;    role   &#61; string&#10;    member &#61; string&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;  node_config &#61; optional&#40;object&#40;&#123;&#10;    min_node_count &#61; optional&#40;number&#41;&#10;    max_node_count &#61; optional&#40;number&#41;&#10;  &#125;&#41;&#41;&#10;  type &#61; optional&#40;string&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [instances](variables.tf#L74) | Instances ([REGION] => [INSTANCE]). | <code title="map&#40;object&#40;&#123;&#10;  consumer_accept_list          &#61; optional&#40;list&#40;string&#41;&#41;&#10;  description                   &#61; optional&#40;string, &#34;Terraform-managed&#34;&#41;&#10;  disk_encryption_key           &#61; optional&#40;string&#41;&#10;  display_name                  &#61; optional&#40;string&#41;&#10;  enable_nat                    &#61; optional&#40;bool, false&#41;&#10;  environments                  &#61; optional&#40;list&#40;string&#41;, &#91;&#93;&#41;&#10;  name                          &#61; optional&#40;string&#41;&#10;  runtime_ip_cidr_range         &#61; optional&#40;string&#41;&#10;  troubleshooting_ip_cidr_range &#61; optional&#40;string&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [organization](variables.tf#L99) | Apigee organization. If set to null the organization must already exist. | <code title="object&#40;&#123;&#10;  analytics_region                 &#61; optional&#40;string&#41;&#10;  api_consumer_data_encryption_key &#61; optional&#40;string&#41;&#10;  api_consumer_data_location       &#61; optional&#40;string&#41;&#10;  authorized_network               &#61; optional&#40;string&#41;&#10;  billing_type                     &#61; optional&#40;string&#41;&#10;  control_plane_encryption_key     &#61; optional&#40;string&#41;&#10;  database_encryption_key          &#61; optional&#40;string&#41;&#10;  description                      &#61; optional&#40;string, &#34;Terraform-managed&#34;&#41;&#10;  disable_vpc_peering              &#61; optional&#40;bool, false&#41;&#10;  display_name                     &#61; optional&#40;string&#41;&#10;  properties                       &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;  runtime_type                     &#61; optional&#40;string, &#34;CLOUD&#34;&#41;&#10;  retention                        &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [project_id](variables.tf#L148) | Project ID. | <code>string</code> | ✓ |  |
+| [addons_config](variables.tf#L17) | Addons configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [dns_zones](variables.tf#L29) | DNS zones. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [endpoint_attachments](variables.tf#L41) | Endpoint attachments. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [envgroups](variables.tf#L51) | Environment groups (NAME => [HOSTNAMES]). | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [environments](variables.tf#L58) | Environments. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [instances](variables.tf#L86) | Instances ([REGION] => [INSTANCE]). | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [organization](variables.tf#L116) | Apigee organization. If set to null the organization must already exist. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 
 ## Outputs
 

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "id" {
   description = "Fully qualified firewall policy id."
   value = (
@@ -20,8 +21,8 @@ output "id" {
     ? google_compute_firewall_policy.hierarchical[0].id
     : (
       local.use_regional
-      ? google_compute_region_network_firewall_policy.net-regional[0].id
-      : google_compute_network_firewall_policy.net-global[0].id
+      ? google_compute_region_network_firewall_policy.net_regional[0].id
+      : google_compute_network_firewall_policy.net_global[0].id
     )
   )
 }

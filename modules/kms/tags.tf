@@ -13,9 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+locals {
+  _tag_bindings = {
+    for k, v in var.tag_bindings : k => lookup(local.ctx.tag_values, v, v)
+  }
+}
+
 resource "google_tags_location_tag_binding" "binding" {
   for_each  = var.tag_bindings
   parent    = "//cloudkms.googleapis.com/${local.keyring.id}"
-  tag_value = each.value
-  location  = var.keyring.location
+  tag_value = templatestring(local._tag_bindings[each.key], var.context.tag_vars)
+  location  = lookup(local.ctx.locations, var.keyring.location, var.keyring.location)
 }

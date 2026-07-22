@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   _logging_metrics_factory_data_raw = merge([
     for k in local.observability_factory_data_raw :
@@ -62,13 +63,18 @@ locals {
 }
 
 resource "google_logging_metric" "metrics" {
-  for_each         = local.metrics
-  project          = local.project.project_id
-  name             = each.key
-  filter           = each.value.filter
-  description      = each.value.description
-  disabled         = each.value.disabled
-  bucket_name      = each.value.bucket_name
+  for_each    = local.metrics
+  project     = local.project.project_id
+  name        = each.key
+  filter      = each.value.filter
+  description = each.value.description
+  disabled    = each.value.disabled
+  bucket_name = try(
+    # first try to check the context
+    local.ctx.log_buckets[each.value.bucket_name],
+    # if nothing else, use the provided channel as is
+    each.value.bucket_name
+  )
   value_extractor  = each.value.value_extractor
   label_extractors = each.value.label_extractors
 

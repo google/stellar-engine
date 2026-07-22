@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "address" {
   description = "Forwarding rule addresses."
   value = {
@@ -94,4 +95,9 @@ output "serverless_neg_ids" {
   value = {
     for k, v in google_compute_region_network_endpoint_group.serverless : k => v.id
   }
+}
+
+output "url_map_id" {
+  description = "Fully qualified URL map ID (resource path) for use in IAM conditions and API calls."
+  value       = google_compute_url_map.default.id
 }

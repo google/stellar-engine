@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "endpoint_attachment_hosts" {
   description = "Endpoint hosts."
   value       = { for k, v in google_apigee_endpoint_attachment.endpoint_attachments : k => v.host }

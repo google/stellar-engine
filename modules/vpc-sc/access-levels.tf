@@ -13,11 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description Access level resources.
 
 # this code implements "additive" access levels, if "authoritative"
 # access levels are needed, switch to the
 # google_access_context_manager_access_levels resource
+
+locals {
+  access_levels = {
+    for k, v in google_access_context_manager_access_level.basic : k => v.id
+  }
+  ctx_access_levels = merge(local.ctx.access_levels, {
+    for k, v in local.access_levels : "$access_levels:${k}" => v
+  })
+}
 
 resource "google_access_context_manager_access_level" "basic" {
   for_each    = merge(local.data.access_levels, var.access_levels)
@@ -35,8 +45,11 @@ resource "google_access_context_manager_access_level" "basic" {
       content {
         ip_subnetworks = c.value.ip_subnetworks
         members = flatten([
-          for i in c.value.members :
-          lookup(local.ctx.identity_sets, i, [i])
+          for i in c.value.members : (
+            startswith(i, "$identity_sets:")
+            ? lookup(local.ctx.identity_sets, i, [i])
+            : lookup(local.ctx.iam_principals_list, i, [i])
+          )
         ])
         negate                 = c.value.negate
         regions                = c.value.regions
@@ -53,7 +66,7 @@ resource "google_access_context_manager_access_level" "basic" {
             allowed_encryption_statuses = (
               dp.value.allowed_encryption_statuses
             )
-            require_admin_approval = dp.value.key.require_admin_approval
+            require_admin_approval = dp.value.require_admin_approval
             require_corp_owned     = dp.value.require_corp_owned
             require_screen_lock    = dp.value.require_screen_lock
 

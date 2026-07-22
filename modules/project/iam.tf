@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description IAM bindings.
 
 # IAM notes:
@@ -37,14 +38,23 @@ locals {
       k if try(index(v, r), null) != null
     ]
   }
-  ctx_iam_principals = merge(local.ctx.iam_principals, {
-    for k, v in local.aliased_service_agents :
-    "$service_agents:${k}" => v.iam_email
-  })
+  ctx_iam_principals = merge(
+    local.ctx.iam_principals,
+    {
+      for k, v in local.aliased_service_agents :
+      "$service_agents:${k}" => v.iam_email
+    },
+    {
+      "$iam_principalsets:service_accounts/all" = format(
+        "principalSet://cloudresourcemanager.googleapis.com/projects/%s/type/ServiceAccount",
+        coalesce(local.project.number, "-")
+      )
+    }
+  )
   custom_role_ids = {
+    for k, v in google_project_iam_custom_role.roles :
     # build the string manually so that role IDs can be used as map
     # keys (useful for folder/organization/project-level iam bindings)
-    for k, v in google_project_iam_custom_role.roles :
     (k) => "projects/${local.project_id}/roles/${local.custom_roles[k].name}"
   }
   custom_roles = merge(
@@ -65,7 +75,12 @@ locals {
     for role in distinct(concat(keys(var.iam), keys(local._iam_principals))) :
     role => concat(
       try(var.iam[role], []),
-      try(local._iam_principals[role], [])
+      try(local._iam_principals[role], []),
+      (
+        role == "roles/editor" && var.service_agents_config.grant_service_agent_editor
+        ? ["$service_agents:cloudservices"]
+        : []
+      )
     )
   }
   iam_bindings_additive = merge(
@@ -80,6 +95,30 @@ locals {
         }
       }
     ]...
+  )
+  _iam_bindings_conditional = flatten([
+    for principal, config in var.iam_by_principals_conditional : [
+      for role in config.roles : {
+        principal = principal
+        role      = role
+        condition = config.condition
+      }
+    ]
+  ])
+  _iam_bindings_conditional_grouped = {
+    for binding in local._iam_bindings_conditional :
+    "iam-bpc:${binding.role}-${binding.condition.title}" => binding...
+  }
+  iam_bindings = merge(
+    var.iam_bindings,
+    {
+      for k, v in local._iam_bindings_conditional_grouped :
+      k => {
+        role      = v[0].role
+        condition = v[0].condition
+        members   = [for b in v : b.principal]
+      }
+    }
   )
 }
 
@@ -121,7 +160,7 @@ resource "google_project_iam_binding" "authoritative" {
 }
 
 resource "google_project_iam_binding" "bindings" {
-  for_each = var.iam_bindings
+  for_each = local.iam_bindings
   project  = local.project.project_id
   role     = lookup(local.ctx.custom_roles, each.value.role, each.value.role)
   members = [

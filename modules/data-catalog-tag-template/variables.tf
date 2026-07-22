@@ -13,10 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "factories_config" {
   description = "Paths to data files and folders that enable factory functionality."
   type = object({
     tag_templates = optional(string)
+    context = optional(object({
+      regions = optional(map(string), {})
+    }), {})
   })
   nullable = false
   default  = {}
@@ -30,6 +34,7 @@ variable "project_id" {
 variable "region" {
   description = "Default region for tag templates."
   type        = string
+  default     = null
 }
 
 variable "tag_templates" {

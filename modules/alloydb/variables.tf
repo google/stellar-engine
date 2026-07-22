@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "annotations" {
   description = "Map FLAG_NAME=>VALUE for annotations which allow client tools to store small amount of arbitrary data."
   type        = map(string)
@@ -21,7 +22,6 @@ variable "annotations" {
 
 variable "automated_backup_configuration" {
   description = "Automated backup settings for cluster."
-  nullable    = false
   type = object({
     enabled       = optional(bool, false)
     backup_window = optional(string, "1800s")
@@ -30,45 +30,31 @@ variable "automated_backup_configuration" {
       days_of_week = optional(list(string), [
         "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"
       ])
-      start_times = optional(object({
-        hours   = optional(number, 23)
-        minutes = optional(number, 0)
-        seconds = optional(number, 0)
-        nanos   = optional(number, 0)
-      }), {})
+      start_times = optional(list(object({
+        hours = number
+      })), [{ hours = 23 }])
     }), {})
     retention_count  = optional(number, 7)
-    retention_period = optional(string, null)
+    retention_period = optional(string)
   })
-  default = {
-    enabled       = false
-    backup_window = "1800s"
-    location      = null
-    weekly_schedule = {
-      days_of_week = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]
-      start_times = {
-        hours   = 23
-        minutes = 0
-        seconds = 0
-        nanos   = 0
-      }
-    }
-    retention_count  = 7
-    retention_period = null
-  }
+  default  = {}
+  nullable = false
   validation {
     condition = (
       var.automated_backup_configuration.enabled ? (
-        # Maintenance window validation below
+        # Backup window validation below
         !(var.automated_backup_configuration.retention_count != null && var.automated_backup_configuration.retention_period != null) &&
-        # Maintenance window day validation
-        length([
-          for day in var.automated_backup_configuration.weekly_schedule.days_of_week : true
-          if contains(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"], day)
-        ]) == length(var.automated_backup_configuration.weekly_schedule.days_of_week)
+        # Backup window hours below
+        (alltrue([
+          for v in var.automated_backup_configuration.weekly_schedule.start_times :
+          v.hours >= 0 &&
+          v.hours <= 23
+        ])) &&
+        # Backup window day validation
+        setintersection(["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"], var.automated_backup_configuration.weekly_schedule.days_of_week) == toset(var.automated_backup_configuration.weekly_schedule.days_of_week)
       ) : true
     )
-    error_message = "Days of week must contains one or more days with the following format 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'. You can only specify retention_count or retention_period."
+    error_message = "Days of week must contains one or more days with the following format 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'. Backup window hour must be between 0 and 23. You can only specify retention_count or retention_period."
   }
 }
 
@@ -84,7 +70,7 @@ variable "client_connection_config" {
     require_connectors = optional(bool, false)
     ssl_config = optional(object({
       ssl_mode = string
-    }), null)
+    }))
   })
   default = null
 }
@@ -98,19 +84,30 @@ variable "cluster_display_name" {
 variable "cluster_name" {
   description = "Name of the primary cluster."
   type        = string
+  nullable    = false
+}
+
+variable "connection_pool_flags" {
+  description = "Map FLAG_NAME=>VALUE for managed connection pooling."
+  type        = map(string)
+  default     = null
+  validation {
+    condition = var.connection_pool_flags == null || alltrue([
+      for k in keys(var.connection_pool_flags) :
+      (!startswith(k, "connection-pooling-") && length(regexall("-", k)) == 0)
+    ])
+    error_message = "Remove the \"connection-pooling-\" prefix and use underscores instead of dashes in the name. For example, \"connection-pooling-pool-mode\" would be \"pool_mode\"."
+  }
 }
 
 variable "continuous_backup_configuration" {
   description = "Continuous backup settings for cluster."
-  nullable    = true
   type = object({
-    enabled              = optional(bool, false)
+    enabled              = optional(bool, true)
     recovery_window_days = optional(number, 14)
   })
-  default = {
-    enabled              = true
-    recovery_window_days = 14
-  }
+  nullable = false
+  default  = {}
 }
 
 variable "cross_region_replication" {
@@ -119,23 +116,54 @@ variable "cross_region_replication" {
     enabled                         = optional(bool, false)
     promote_secondary               = optional(bool, false)
     switchover_mode                 = optional(bool, false)
-    region                          = optional(string, null)
-    secondary_cluster_display_name  = optional(string, null)
-    secondary_cluster_name          = optional(string, null)
-    secondary_instance_display_name = optional(string, null)
-    secondary_instance_name         = optional(string, null)
+    region                          = optional(string)
+    secondary_cluster_display_name  = optional(string)
+    secondary_cluster_name          = optional(string)
+    secondary_instance_display_name = optional(string)
+    secondary_instance_name         = optional(string)
     secondary_machine_config = optional(object({
-      cpu_count = number
-    }), null)
+      cpu_count    = number
+      machine_type = optional(string)
+    }))
+    read_pool = optional(map(object({
+      display_name = optional(string)
+      node_count   = optional(number, 1)
+      flags        = optional(map(string))
+      client_connection_config = optional(object({
+        require_connectors = optional(bool, false)
+        ssl_config = optional(object({
+          ssl_mode = string
+        }))
+      }))
+      machine_config = optional(object({
+        cpu_count    = optional(number, 2)
+        machine_type = optional(string)
+      }), {})
+      network_config = optional(object({
+        authorized_external_networks = optional(list(string), [])
+        enable_public_ip             = optional(bool, false)
+      }), {})
+      query_insights_config = optional(object({
+        query_string_length     = optional(number, 1024)
+        record_application_tags = optional(bool, true)
+        record_client_address   = optional(bool, true)
+        query_plans_per_minute  = optional(number, 5)
+      }))
+    })), {})
   })
-  default = {}
+  default  = {}
+  nullable = false
   validation {
     condition     = !var.cross_region_replication.enabled || var.cross_region_replication.enabled && var.cross_region_replication.region != null
     error_message = "Region must be available when cross region replication is enabled."
   }
   validation {
     condition     = !(var.cross_region_replication.switchover_mode && var.cross_region_replication.promote_secondary)
-    error_message = "Please choose to either promote secondary cluster or align an existing cluster after swtichover."
+    error_message = "Please choose to either promote secondary cluster or align an existing cluster after switchover."
+  }
+  validation {
+    condition     = contains([1, 2, 4, 8, 16, 32, 64, 72, 96, 128], try(var.cross_region_replication.secondary_machine_config.cpu_count, 2))
+    error_message = "The number of CPU's in the VM instance must be one of [1, 2, 4, 8, 16, 32, 64, 72, 96, 128]"
   }
 }
 
@@ -151,6 +179,12 @@ variable "deletion_policy" {
   default     = null
 }
 
+variable "deletion_protection" {
+  description = "Whether Terraform will be prevented from destroying the cluster. When the field is set to true or unset in Terraform state, a terraform apply or terraform destroy that would delete the cluster will fail. When the field is set to false, deleting the cluster is allowed."
+  type        = bool
+  default     = null
+}
+
 variable "display_name" {
   description = "AlloyDB instance display name."
   type        = string
@@ -161,10 +195,9 @@ variable "encryption_config" {
   description = "Set encryption configuration. KMS name format: 'projects/[PROJECT]/locations/[REGION]/keyRings/[RING]/cryptoKeys/[KEY_NAME]'."
   type = object({
     primary_kms_key_name   = string
-    secondary_kms_key_name = optional(string, null)
+    secondary_kms_key_name = optional(string)
   })
-  default  = null
-  nullable = true
+  default = null
 }
 
 variable "flags" {
@@ -182,8 +215,8 @@ variable "gce_zone" {
 variable "initial_user" {
   description = "AlloyDB cluster initial user credentials."
   type = object({
-    user     = optional(string, "root")
-    password = string
+    user     = optional(string, "postgres")
+    password = optional(string)
   })
   default = null
 }
@@ -191,6 +224,7 @@ variable "initial_user" {
 variable "instance_name" {
   description = "Name of primary instance."
   type        = string
+  nullable    = false
 }
 
 variable "labels" {
@@ -202,16 +236,20 @@ variable "labels" {
 variable "location" {
   description = "Region or zone of the cluster and instance."
   type        = string
+  nullable    = false
 }
 
 variable "machine_config" {
   description = "AlloyDB machine config."
   type = object({
-    cpu_count = optional(number, 2)
+    cpu_count    = optional(number, 2)
+    machine_type = optional(string)
   })
   nullable = false
-  default = {
-    cpu_count = 2
+  default  = {}
+  validation {
+    condition     = contains([1, 2, 4, 8, 16, 32, 64, 72, 96, 128], var.machine_config.cpu_count)
+    error_message = "The number of CPU's in the VM instance must be one of [1, 2, 4, 8, 16, 32, 64, 72, 96, 128]"
   }
 }
 
@@ -221,37 +259,22 @@ variable "maintenance_config" {
     enabled = optional(bool, false)
     day     = optional(string, "SUNDAY")
     start_time = optional(object({
-      hours   = optional(number, 23)
-      minutes = optional(number, 0)
-      seconds = optional(number, 0)
-      nanos   = optional(number, 0)
+      hours = optional(number, 23)
     }), {})
   })
-  default = {
-    enabled = false
-    day     = "SUNDAY"
-    start_time = {
-      hours   = 23
-      minutes = 0
-      seconds = 0
-      nanos   = 0
-    }
-  }
+  default = {}
   validation {
     condition = (
       var.maintenance_config.enabled ? (
         # Maintenance window validation below
         var.maintenance_config.start_time.hours >= 0 &&
         var.maintenance_config.start_time.hours <= 23 &&
-        var.maintenance_config.start_time.minutes == 0 &&
-        var.maintenance_config.start_time.seconds == 0 &&
-        var.maintenance_config.start_time.nanos == 0 &&
         # Maintenance window day validation
         contains([
           "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"
       ], var.maintenance_config.day)) : true
     )
-    error_message = "Maintenance window day must one of 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'. Maintenance window hour must be between 0 and 23 and maintenance window minutes, seconds and nanos should be 0."
+    error_message = "Maintenance window day must one of 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'. Maintenance window hour must be between 0 and 23."
   }
 }
 
@@ -259,33 +282,46 @@ variable "network_config" {
   description = "Network configuration for cluster and instance. Only one between psa_config and psc_config can be used."
   type = object({
     psa_config = optional(object({
-      network                      = optional(string)
+      network                      = string
       allocated_ip_range           = optional(string)
       authorized_external_networks = optional(list(string), [])
       enable_public_ip             = optional(bool, false)
+      enable_outbound_public_ip    = optional(bool, false)
     }))
     psc_config = optional(object({
-      allowed_consumer_projects = optional(list(string), [])
-    }), null)
+      allowed_consumer_projects = list(string)
+      network_attachment_uri    = optional(string)
+      psc_auto_connections = optional(list(object({
+        consumer_project = optional(string)
+        consumer_network = optional(string)
+      })))
+    }))
   })
   nullable = false
   validation {
-    condition = (
-      var.network_config.psa_config == null || (
-        (
-          try(var.network_config.psa_config.enable_public_ip, false) &&
-          try(length(var.network_config.psa_config.authorized_external_networks), 0) > 0
-          ) || (
-          try(length(var.network_config.psa_config.authorized_external_networks), 0) == 0
-        )
-      )
-    )
-    error_message = "A list of external network authorized to access this instance is required only in case public ip is enabled for the instance."
+    condition     = try(length(var.network_config.psa_config.authorized_external_networks) > 0, false) ? try(var.network_config.psa_config.enable_public_ip, false) : true
+    error_message = "A list of external network authorized to access this instance is required only in case public IP is enabled for the instance."
   }
   validation {
     condition     = (var.network_config.psc_config == null) != (var.network_config.psa_config == null)
     error_message = "Please specify either psa_config or psc_config."
   }
+}
+
+variable "observability_config" {
+  description = "Advanced query insights config for AlloyDB. Mutually exclusive with query_insights_config."
+  type = object({
+    enabled                       = optional(bool, false)
+    preserve_comments             = optional(bool, false)
+    track_wait_events             = optional(bool, true)
+    max_query_string_length       = optional(number, 10240)
+    record_application_tags       = optional(bool, false)
+    query_plans_per_minute        = optional(number, 20)
+    track_active_queries          = optional(bool, false)
+    track_client_address          = optional(bool, false)
+    assistive_experiences_enabled = optional(bool, false)
+  })
+  default = null
 }
 
 variable "prefix" {
@@ -310,19 +346,82 @@ variable "project_number" {
 }
 
 variable "query_insights_config" {
-  description = "Query insights config."
+  description = "Query insights config. Mutually exclusive with observability_config. It will be ignored if observability_config is enabled."
   type = object({
     query_string_length     = optional(number, 1024)
     record_application_tags = optional(bool, true)
     record_client_address   = optional(bool, true)
     query_plans_per_minute  = optional(number, 5)
   })
-  default = {
-    query_string_length     = 1024
-    record_application_tags = true
-    record_client_address   = true
-    query_plans_per_minute  = 5
+  default = {}
+}
+
+variable "read_pool" {
+  description = "Map of read pool instances to create in the primary cluster."
+  type = map(object({
+    display_name = optional(string)
+    node_count   = optional(number, 1)
+    flags        = optional(map(string))
+    client_connection_config = optional(object({
+      require_connectors = optional(bool, false)
+      ssl_config = optional(object({
+        ssl_mode = string
+      }))
+    }))
+    machine_config = optional(object({
+      cpu_count    = optional(number, 2)
+      machine_type = optional(string)
+    }), {})
+    network_config = optional(object({
+      authorized_external_networks = optional(list(string), [])
+      enable_public_ip             = optional(bool, false)
+    }), {})
+    query_insights_config = optional(object({
+      query_string_length     = optional(number, 1024)
+      record_application_tags = optional(bool, true)
+      record_client_address   = optional(bool, true)
+      query_plans_per_minute  = optional(number, 5)
+    }))
+    observability_config = optional(object({
+      enabled                       = optional(bool, false)
+      preserve_comments             = optional(bool, false)
+      track_wait_events             = optional(bool, true)
+      max_query_string_length       = optional(number, 10240)
+      record_application_tags       = optional(bool, false)
+      query_plans_per_minute        = optional(number, 20)
+      track_active_queries          = optional(bool, false)
+      track_client_address          = optional(bool, false)
+      assistive_experiences_enabled = optional(bool, false)
+    }), null)
+  }))
+  nullable = false
+  default  = {}
+  validation {
+    condition = alltrue([
+      for k, v in var.read_pool :
+      contains([1, 2, 4, 8, 16, 32, 64, 72, 96, 128], v.machine_config.cpu_count)
+    ])
+    error_message = "The number of CPU's in the VM instance must be one of [1, 2, 4, 8, 16, 32, 64, 72, 96, 128]"
   }
+  validation {
+    condition = alltrue([
+      for k, v in var.read_pool :
+      try(length(v.network_config.psa_config.authorized_external_networks) > 0, false) ? try(v.network_config.psa_config.enable_public_ip, false) : true
+    ])
+    error_message = "A list of external network authorized to access this replica pool instance is required only in case public IP is enabled for the replica pool instance."
+  }
+}
+
+variable "skip_await_major_version_upgrade" {
+  description = "Set to true to skip awaiting on the major version upgrade of the cluster."
+  type        = bool
+  default     = true
+}
+
+variable "subscription_type" {
+  description = "The subscription type of cluster. Possible values are: 'STANDARD' or 'TRIAL'."
+  type        = string
+  default     = "STANDARD"
 }
 
 variable "tag_bindings" {
@@ -337,41 +436,15 @@ variable "users" {
   type = map(object({
     password = optional(string)
     roles    = optional(list(string), ["alloydbsuperuser"])
-    type     = optional(string)
+    type     = optional(string, "ALLOYDB_BUILT_IN")
   }))
-  default = null
+  nullable = false
+  default  = {}
   validation {
     condition = alltrue([
-      for user in coalesce(var.users, {}) :
-      try(contains(["ALLOYDB_BUILT_IN", "ALLOYDB_IAM_USER"], user.type), true)
+      for user in var.users :
+      contains(["ALLOYDB_BUILT_IN", "ALLOYDB_IAM_USER"], user.type)
     ])
-    error_message = "User type must one of 'ALLOYDB_BUILT_IN', 'ALLOYDB_IAM_USER'"
+    error_message = "User type must one of 'ALLOYDB_BUILT_IN', 'ALLOYDB_IAM_USER'."
   }
-}
-
-
-variable "primary_read_pools" {
-  description = "A map of read pool configurations for the primary cluster. The key is the instance ID."
-  type = map(object({
-    node_count        = number
-    cpu_count         = optional(number, 2)
-    availability_type = optional(string, "REGIONAL")
-    labels            = optional(map(string))
-    annotations       = optional(map(string))
-    database_flags    = optional(map(string), {})
-  }))
-  default = {}
-}
-
-variable "secondary_read_pools" {
-  description = "A map of read pool configurations for the secondary cluster. The key is the instance ID."
-  type = map(object({
-    node_count        = number
-    cpu_count         = optional(number, 2)
-    availability_type = optional(string, "REGIONAL")
-    labels            = optional(map(string))
-    annotations       = optional(map(string))
-    database_flags    = optional(map(string), {})
-  }))
-  default = {}
 }

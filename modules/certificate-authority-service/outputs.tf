@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "ca_chains" {
   description = "The CA chains in PEM format."
   value = {

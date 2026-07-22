@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "data_transfer" {
   description = "Site-to-site data transfer feature, available only in some regions."
   type        = bool

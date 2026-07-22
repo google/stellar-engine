@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "interconnect_attachments" {
   description = "VLAN attachments used by the VPN Gateway."
   type = object({

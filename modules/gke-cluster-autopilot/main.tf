@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 resource "google_container_cluster" "cluster" {
   provider    = google-beta
   project     = var.project_id
@@ -22,16 +23,19 @@ resource "google_container_cluster" "cluster" {
   node_locations = (
     length(var.node_locations) == 0 ? null : var.node_locations
   )
-  min_master_version       = var.min_master_version
-  network                  = var.vpc_config.network
-  subnetwork               = var.vpc_config.subnetwork
-  resource_labels          = var.labels
-  enable_l4_ilb_subsetting = var.enable_features.l4_ilb_subsetting
-  enable_tpu               = var.enable_features.tpu
-  initial_node_count       = 1
-  enable_autopilot         = true
-  allow_net_admin          = var.enable_features.allow_net_admin
-  deletion_protection      = var.deletion_protection
+  min_master_version                       = var.min_master_version
+  network                                  = var.vpc_config.network
+  subnetwork                               = var.vpc_config.subnetwork
+  resource_labels                          = var.labels
+  enable_multi_networking                  = var.enable_features.multi_networking
+  enable_l4_ilb_subsetting                 = var.enable_features.l4_ilb_subsetting
+  enable_tpu                               = var.enable_features.tpu
+  initial_node_count                       = 1
+  enable_autopilot                         = true
+  allow_net_admin                          = var.enable_features.allow_net_admin
+  deletion_protection                      = var.deletion_protection
+  enable_cilium_clusterwide_network_policy = var.enable_features.cilium_clusterwide_network_policy
+  enable_fqdn_network_policy               = var.enable_features.fqdn_network_policy
 
   addons_config {
     # HTTP Load Balancing is required to be enabled in Autopilot clusters
@@ -80,12 +84,14 @@ resource "google_container_cluster" "cluster" {
       service_account   = var.node_config.service_account
     }
   }
-  dynamic "control_plane_endpoints_config" {
-    for_each = var.access_config.dns_access == true ? [""] : []
-    content {
-      dns_endpoint_config {
-        allow_external_traffic = true
-      }
+  control_plane_endpoints_config {
+    dns_endpoint_config {
+      allow_external_traffic    = var.access_config.dns_access.allow_external_traffic == true
+      enable_k8s_tokens_via_dns = var.access_config.dns_access.enable_k8s_tokens
+      enable_k8s_certs_via_dns  = var.access_config.dns_access.enable_k8s_certs
+    }
+    ip_endpoints_config {
+      enabled = var.access_config.ip_access != null
     }
   }
   dynamic "database_encryption" {
@@ -104,15 +110,22 @@ resource "google_container_cluster" "cluster" {
   dynamic "dns_config" {
     for_each = var.enable_features.dns != null ? [""] : []
     content {
-      cluster_dns        = var.enable_features.dns.provider
-      cluster_dns_scope  = var.enable_features.dns.scope
-      cluster_dns_domain = var.enable_features.dns.domain
+      additive_vpc_scope_dns_domain = var.enable_features.dns.additive_vpc_scope_dns_domain
+      cluster_dns                   = var.enable_features.dns.provider
+      cluster_dns_scope             = var.enable_features.dns.scope
+      cluster_dns_domain            = var.enable_features.dns.domain
     }
   }
   dynamic "enable_k8s_beta_apis" {
     for_each = var.enable_features.beta_apis != null ? [""] : []
     content {
       enabled_apis = var.enable_features.beta_apis
+    }
+  }
+  dynamic "fleet" {
+    for_each = var.fleet_project != null ? [""] : []
+    content {
+      project = var.fleet_project
     }
   }
   dynamic "gateway_api_config" {
@@ -207,10 +220,22 @@ resource "google_container_cluster" "cluster" {
     }
   }
   dynamic "master_authorized_networks_config" {
-    for_each = try(var.access_config.ip_access.authorized_ranges, null) != null ? [""] : []
+    for_each = (
+      try(var.access_config.ip_access.private_endpoint_authorized_ranges_enforcement, null) != null ||
+      try(var.access_config.ip_access.authorized_ranges, null) != null ||
+      try(var.access_config.ip_access.gcp_public_cidrs_access_enabled, null) != null
+    ) ? [""] : []
     content {
+      gcp_public_cidrs_access_enabled = try(
+        var.access_config.ip_access.gcp_public_cidrs_access_enabled,
+        null
+      )
+      private_endpoint_enforcement_enabled = try(
+        var.access_config.ip_access.private_endpoint_authorized_ranges_enforcement,
+        null
+      )
       dynamic "cidr_blocks" {
-        for_each = var.access_config.ip_access.authorized_ranges
+        for_each = coalesce(var.access_config.ip_access.authorized_ranges, {})
         iterator = range
         content {
           cidr_block   = range.value
@@ -245,12 +270,33 @@ resource "google_container_cluster" "cluster" {
     managed_prometheus {
       enabled = var.monitoring_config.enable_managed_prometheus
     }
+    dynamic "advanced_datapath_observability_config" {
+      for_each = (
+        var.monitoring_config.advanced_datapath_observability == null
+        ? []
+        : [""]
+      )
+      content {
+        enable_metrics = (
+          var.monitoring_config.advanced_datapath_observability.enable_metrics
+        )
+        enable_relay = (
+          var.monitoring_config.advanced_datapath_observability.enable_relay
+        )
+      }
+    }
   }
   dynamic "notification_config" {
     for_each = var.enable_features.upgrade_notifications != null ? [""] : []
     content {
       pubsub {
-        enabled = true
+        enabled = var.enable_features.upgrade_notifications.enabled
+        dynamic "filter" {
+          for_each = var.enable_features.upgrade_notifications.event_types != null ? [""] : []
+          content {
+            event_type = var.enable_features.upgrade_notifications.event_types
+          }
+        }
         topic = (
           try(var.enable_features.upgrade_notifications.topic_id, null) != null
           ? var.enable_features.upgrade_notifications.topic_id
@@ -259,30 +305,41 @@ resource "google_container_cluster" "cluster" {
       }
     }
   }
-  dynamic "node_pool_auto_config" {
-    for_each = var.node_config.tags != null ? [""] : []
-    content {
-      network_tags {
+  node_pool_auto_config {
+    node_kubelet_config {
+      insecure_kubelet_readonly_port_enabled = try(upper(var.node_config.kubelet_readonly_port_enabled), null)
+    }
+    dynamic "network_tags" {
+      for_each = var.node_config.tags != null ? [""] : []
+      content {
         tags = toset(var.node_config.tags)
       }
     }
+    resource_manager_tags = var.node_config.resource_manager_tags
   }
   dynamic "private_cluster_config" {
     for_each = var.access_config.private_nodes == true ? [""] : []
     content {
       enable_private_nodes = true
       enable_private_endpoint = (
-        var.access_config.ip_access.disable_public_endpoint
+        var.access_config.ip_access == null
+        # when ip_access is disabled, the API returns true. We return
+        # true to avoid a permadiff
+        ? true
+        : try(var.access_config.ip_access.disable_public_endpoint, null)
       )
+      master_ipv4_cidr_block = try(var.access_config.master_ipv4_cidr_block, null)
       private_endpoint_subnetwork = try(
         var.access_config.ip_access.private_endpoint_config.endpoint_subnetwork,
         null
       )
-      master_global_access_config {
-        enabled = try(
-          var.access_config.ip_access.private_endpoint_config.global_access,
-          null
-        )
+      dynamic "master_global_access_config" {
+        for_each = try(var.access_config.ip_access.private_endpoint_config.global_access, false) == true ? [""] : []
+        content {
+          enabled = (
+            var.access_config.ip_access.private_endpoint_config.global_access
+          )
+        }
       }
     }
   }
@@ -292,10 +349,30 @@ resource "google_container_cluster" "cluster" {
       enabled = var.enable_features.pod_security_policy
     }
   }
+  dynamic "rbac_binding_config" {
+    for_each = var.enable_features.rbac_binding_config != null ? [""] : []
+    content {
+      enable_insecure_binding_system_unauthenticated = var.enable_features.rbac_binding_config.enable_insecure_binding_system_unauthenticated
+      enable_insecure_binding_system_authenticated   = var.enable_features.rbac_binding_config.enable_insecure_binding_system_authenticated
+    }
+  }
   dynamic "secret_manager_config" {
     for_each = var.enable_features.secret_manager_config != null ? [""] : []
     content {
       enabled = var.enable_features.secret_manager_config
+    }
+  }
+  dynamic "secret_sync_config" {
+    for_each = var.enable_features.secret_sync_config != null ? [""] : []
+    content {
+      enabled = var.enable_features.secret_sync_config.enabled
+      dynamic "rotation_config" {
+        for_each = try(var.enable_features.secret_sync_config.rotation_config, null) != null ? [""] : []
+        content {
+          enabled           = var.enable_features.secret_sync_config.rotation_config.enabled
+          rotation_interval = var.enable_features.secret_sync_config.rotation_config.rotation_interval
+        }
+      }
     }
   }
   dynamic "security_posture_config" {
@@ -365,7 +442,7 @@ resource "google_gke_backup_backup_plan" "backup_plan" {
   backup_config {
     include_volume_data = each.value.include_volume_data
     include_secrets     = each.value.include_secrets
-
+    permissive_mode     = each.value.permissive_mode
     dynamic "encryption_key" {
       for_each = each.value.encryption_key != null ? [""] : []
       content {
@@ -393,4 +470,5 @@ resource "google_pubsub_topic" "notifications" {
   labels = {
     content = "gke-notifications"
   }
+  kms_key_name = try(var.enable_features.upgrade_notifications.kms_key_name, null)
 }

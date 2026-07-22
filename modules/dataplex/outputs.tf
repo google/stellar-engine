@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "assets" {
   description = "Assets attached to the lake of Dataplex Lake."
   value       = local.zone_assets[*]
@@ -32,4 +33,3 @@ output "zones" {
   description = "The zone name of Dataplex Lake."
   value       = distinct(local.zone_assets[*]["zone_name"])
 }
-

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   vm_startup_script = <<END
     apt update
@@ -22,12 +23,12 @@ END
 }
 
 module "vm-left" {
-  source        = "../../../modules/compute-vm"
-  for_each      = local.zones
-  project_id    = module.project.project_id
-  zone          = each.value
-  name          = "${var.prefix}-vm-left-${each.key}"
-  instance_type = "f1-micro"
+  source       = "../../../modules/compute-vm"
+  for_each     = local.zones
+  project_id   = module.project.project_id
+  zone         = each.value
+  name         = "${var.prefix}-vm-left-${each.key}"
+  machine_type = "f1-micro"
   network_interfaces = [
     {
       network    = module.vpc-left.self_link
@@ -44,12 +45,12 @@ module "vm-left" {
 }
 
 module "vm-right" {
-  source        = "../../../modules/compute-vm"
-  for_each      = local.zones
-  project_id    = module.project.project_id
-  zone          = each.value
-  name          = "${var.prefix}-vm-right-${each.key}"
-  instance_type = "f1-micro"
+  source       = "../../../modules/compute-vm"
+  for_each     = local.zones
+  project_id   = module.project.project_id
+  zone         = each.value
+  name         = "${var.prefix}-vm-right-${each.key}"
+  machine_type = "f1-micro"
   network_interfaces = [
     {
       network    = module.vpc-right.self_link

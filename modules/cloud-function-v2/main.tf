@@ -13,7 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
+  _ctx_p = "$"
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local._ctx_p}${k}:${kk}" => vv
+    } if !endswith(k, "_vars")
+  }
   bucket = (
     var.bucket_config == null
     ? var.bucket_name
@@ -23,12 +30,9 @@ locals {
       : null
     )
   )
-  prefix = var.prefix == null ? "" : "${var.prefix}-"
-  service_account_email = (
-    var.service_account_create
-    ? google_service_account.service_account[0].email
-    : var.service_account
-  )
+  location   = lookup(local.ctx.locations, var.region, var.region)
+  prefix     = var.prefix == null ? "" : "${var.prefix}-"
+  project_id = lookup(local.ctx.project_ids, var.project_id, var.project_id)
   trigger_sa_create = (
     try(var.trigger_config.service_account_create, false) == true
   )
@@ -37,37 +41,16 @@ locals {
     var.trigger_config.service_account_email,
     null
   )
-  vpc_connector = (
-    var.vpc_connector == null
-    ? null
-    : (
-      try(var.vpc_connector.create, false) == false
-      ? var.vpc_connector.name
-      : google_vpc_access_connector.connector[0].id
-    )
-  )
-}
-
-resource "google_vpc_access_connector" "connector" {
-  count          = try(var.vpc_connector.create, false) == true ? 1 : 0
-  project        = var.project_id
-  name           = var.vpc_connector.name
-  region         = var.region
-  ip_cidr_range  = var.vpc_connector_config.ip_cidr_range
-  network        = var.vpc_connector_config.network
-  max_instances  = try(var.vpc_connector_config.instances.max, null)
-  min_instances  = try(var.vpc_connector_config.instances.min, null)
-  max_throughput = try(var.vpc_connector_config.throughput.max, null)
-  min_throughput = try(var.vpc_connector_config.throughput.min, null)
+  vpc_connector = var.vpc_connector_create != null ? google_vpc_access_connector.connector[0].id : var.vpc_connector.name
 }
 
 resource "google_cloudfunctions2_function" "function" {
   provider     = google-beta
-  project      = var.project_id
-  location     = var.region
+  project      = local.project_id
+  location     = local.location
   name         = "${local.prefix}${var.name}"
   description  = var.description
-  kms_key_name = var.kms_key
+  kms_key_name = var.kms_key == null ? null : lookup(local.ctx.kms_keys, var.kms_key, var.kms_key)
   build_config {
     service_account       = var.build_service_account
     worker_pool           = var.build_worker_pool
@@ -75,6 +58,17 @@ resource "google_cloudfunctions2_function" "function" {
     entry_point           = var.function_config.entry_point
     environment_variables = var.build_environment_variables
     docker_repository     = var.docker_repository_id
+
+    dynamic "automatic_update_policy" {
+      for_each = try(var.function_config.automatic_update_policy, null) == true ? [""] : []
+      content {}
+    }
+
+    dynamic "on_deploy_update_policy" {
+      for_each = try(var.function_config.on_deploy_update_policy, null) == true ? [""] : []
+      content {}
+    }
+
     source {
       storage_source {
         bucket = local.bucket
@@ -110,18 +104,35 @@ resource "google_cloudfunctions2_function" "function" {
     }
   }
   service_config {
-    max_instance_count             = var.function_config.instance_count
-    min_instance_count             = 0
-    available_memory               = "${var.function_config.memory_mb}M"
-    available_cpu                  = var.function_config.cpu
-    timeout_seconds                = var.function_config.timeout_seconds
-    environment_variables          = var.environment_variables
-    ingress_settings               = var.ingress_settings
-    all_traffic_on_latest_revision = true
-    service_account_email          = local.service_account_email
-    vpc_connector                  = local.vpc_connector
-    vpc_connector_egress_settings = try(
-    var.vpc_connector.egress_settings, null)
+    all_traffic_on_latest_revision   = true
+    available_cpu                    = var.function_config.cpu
+    available_memory                 = "${var.function_config.memory_mb}M"
+    binary_authorization_policy      = var.function_config.binary_authorization_policy
+    environment_variables            = var.environment_variables
+    ingress_settings                 = var.ingress_settings
+    max_instance_count               = var.function_config.instance_count
+    max_instance_request_concurrency = var.function_config.max_instance_request_concurrency
+    min_instance_count               = var.function_config.min_instance_count
+    service_account_email            = local.service_account_email
+    timeout_seconds                  = var.function_config.timeout_seconds
+    vpc_connector                    = local.vpc_connector
+    vpc_connector_egress_settings    = var.vpc_connector.egress_settings
+    direct_vpc_egress                = try(var.direct_vpc_egress.mode, null)
+
+    dynamic "direct_vpc_network_interface" {
+      for_each = var.direct_vpc_egress == null ? [] : [""]
+      content {
+        network = lookup(
+          local.ctx.networks, var.direct_vpc_egress.network,
+          var.direct_vpc_egress.network
+        )
+        subnetwork = lookup(
+          local.ctx.subnets, var.direct_vpc_egress.subnetwork,
+          var.direct_vpc_egress.subnetwork
+        )
+        tags = var.direct_vpc_egress.tags
+      }
+    }
 
     dynamic "secret_environment_variables" {
       for_each = { for k, v in var.secrets : k => v if !v.is_volume }
@@ -159,14 +170,23 @@ resource "google_cloudfunctions2_function_iam_binding" "binding" {
   for_each = {
     for k, v in var.iam : k => v if k != "roles/run.invoker"
   }
-  project        = var.project_id
-  location       = google_cloudfunctions2_function.function.location
+  project        = local.project_id
+  location       = local.location
   cloud_function = google_cloudfunctions2_function.function.name
-  role           = each.key
-  members        = each.value
+  role           = lookup(local.ctx.custom_roles, each.key, each.key)
+  members        = [for member in each.value : lookup(local.ctx.iam_principals, member, member)]
   lifecycle {
-    replace_triggered_by = [google_cloudfunctions2_function.function]
+    replace_triggered_by = [google_cloudfunctions2_function.function.id]
   }
+}
+
+locals {
+  run_invoker_members = distinct(compact(concat(
+    !local.trigger_sa_create
+    ? []
+    : ["serviceAccount:${local.trigger_sa_email}"],
+    lookup(var.iam, "roles/run.invoker", []),
+  )))
 }
 
 resource "google_cloud_run_service_iam_binding" "invoker" {
@@ -174,20 +194,13 @@ resource "google_cloud_run_service_iam_binding" "invoker" {
   count = (
     lookup(var.iam, "roles/run.invoker", null) != null
   ) ? 1 : 0
-  project  = var.project_id
-  location = google_cloudfunctions2_function.function.location
+  project  = local.project_id
+  location = local.location
   service  = google_cloudfunctions2_function.function.name
   role     = "roles/run.invoker"
-  members = distinct(compact(concat(
-    lookup(var.iam, "roles/run.invoker", []),
-    (
-      !local.trigger_sa_create
-      ? []
-      : ["serviceAccount:${local.trigger_sa_email}"]
-    )
-  )))
+  members  = [for member in local.run_invoker_members : lookup(local.ctx.iam_principals, member, member)]
   lifecycle {
-    replace_triggered_by = [google_cloudfunctions2_function.function]
+    replace_triggered_by = [google_cloudfunctions2_function.function.id]
   }
 }
 
@@ -198,21 +211,14 @@ resource "google_cloud_run_service_iam_member" "invoker" {
     lookup(var.iam, "roles/run.invoker", null) == null &&
     local.trigger_sa_create
   ) ? 1 : 0
-  project  = var.project_id
-  location = google_cloudfunctions2_function.function.location
+  project  = local.project_id
+  location = local.location
   service  = google_cloudfunctions2_function.function.name
   role     = "roles/run.invoker"
   member   = "serviceAccount:${local.trigger_sa_email}"
   lifecycle {
-    replace_triggered_by = [google_cloudfunctions2_function.function]
+    replace_triggered_by = [google_cloudfunctions2_function.function.id]
   }
-}
-
-resource "google_service_account" "service_account" {
-  count        = var.service_account_create ? 1 : 0
-  project      = var.project_id
-  account_id   = "tf-cf-${var.name}"
-  display_name = "Terraform Cloud Function ${var.name}."
 }
 
 resource "google_service_account" "trigger_service_account" {

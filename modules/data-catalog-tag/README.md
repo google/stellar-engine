@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Google Cloud Data Catalog Tag Module
 
 This module allows managing [Data Catalog Tag](https://cloud.google.com/data-catalog/docs/tags-and-tag-templates) on GCP resources such as BigQuery Datasets, Tables or columns.
@@ -104,7 +88,7 @@ module "data-catalog-tag" {
 
 ### Factory
 
-Similarly to other modules, a rules factory (see [Resource Factories](../../blueprints/factories/)) is also included here to allow tags management via descriptive configuration files.
+Similarly to other modules, a rules factory is also included here to allow tags management via descriptive configuration files.
 
 Factory configuration is via one optional attributes in the `factory_config_path` variable specifying the path where tags files are stored.
 
@@ -144,11 +128,11 @@ parent: projects/project-data-product/datasets/exposure
 location: europe-west1
 template: projects/project-datagov/locations/europe-west1/tagTemplates/test
 fields:
-  owner_email: 
+  owner_email:
     string_value: example@example.com
-  num: 
+  num:
     double_value: 5
-  pii: 
+  pii:
     enum_value: NONE
 ```
 <!-- BEGIN TFDOC -->
@@ -156,8 +140,8 @@ fields:
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [factories_config](variables.tf#L17) | Paths to data files and folders that enable factory functionality. | <code title="object&#40;&#123;&#10;  tags &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [tags](variables.tf#L26) | Tags definitions in the form {TAG => TAG_DEFINITION}. | <code title="map&#40;object&#40;&#123;&#10;  project_id &#61; string&#10;  parent     &#61; string&#10;  column     &#61; optional&#40;string&#41;&#10;  location   &#61; string&#10;  template   &#61; string&#10;  fields &#61; map&#40;object&#40;&#123;&#10;    double_value    &#61; optional&#40;number&#41;&#10;    string_value    &#61; optional&#40;string&#41;&#10;    timestamp_value &#61; optional&#40;string&#41;&#10;    enum_value      &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [factories_config](variables.tf#L17) | Paths to data files and folders that enable factory functionality. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [tags](variables.tf#L26) | Tags definitions in the form {TAG => TAG_DEFINITION}. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 

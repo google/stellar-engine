@@ -13,26 +13,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    } if !endswith(k, "_vars")
+  }
+  ctx_p = "$"
   keyring = (
     var.keyring_create
     ? google_kms_key_ring.default[0]
     : data.google_kms_key_ring.default[0]
   )
+  project_id = lookup(local.ctx.project_ids, var.project_id, var.project_id)
 }
 
 data "google_kms_key_ring" "default" {
   count    = var.keyring_create ? 0 : 1
-  project  = var.project_id
+  project  = local.project_id
   name     = var.keyring.name
-  location = var.keyring.location
+  location = lookup(local.ctx.locations, var.keyring.location, var.keyring.location)
 }
 
 resource "google_kms_key_ring" "default" {
   count    = var.keyring_create ? 1 : 0
-  project  = var.project_id
+  project  = local.project_id
   name     = var.keyring.name
-  location = var.keyring.location
+  location = lookup(local.ctx.locations, var.keyring.location, var.keyring.location)
 }
 
 resource "google_kms_crypto_key" "default" {

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "endpoints" {
   description = "A list of Endpoint objects."
   value       = google_endpoints_service.default.endpoints

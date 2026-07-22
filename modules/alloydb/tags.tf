@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 data "google_project" "project" {
   count      = var.project_number == null ? 1 : 0
   project_id = var.project_id

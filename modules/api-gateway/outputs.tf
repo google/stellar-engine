@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "api" {
   description = "API."
   value       = google_api_gateway_api.api

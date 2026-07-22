@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "id" {
   description = "Fully qualified taxonomy id."
   value       = google_data_catalog_taxonomy.default.id

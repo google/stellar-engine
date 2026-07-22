@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "instance" {
   description = "Instance."
   value       = try(google_secure_source_manager_instance.instance[0], null)

@@ -1,0 +1,283 @@
+/**
+ * Copyright 2026 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+# TODO: add project sa to context
+
+locals {
+  # project data from folders tree
+  _folder_projects_raw = {
+    for f in try(fileset(local.paths.folders, "**/*.yaml"), []) :
+    trimsuffix(f, ".yaml") => merge(
+      { parent = dirname(f) == "." ? null : "$folder_ids:${dirname(f)}" },
+      yamldecode(file("${local.paths.folders}/${f}"))
+    ) if !endswith(f, "/.config.yaml")
+  }
+  _projects_input = {
+    for k, v in merge(local._folder_projects_raw, local._projects_raw) :
+    basename(k) => merge(
+      try(local._templates_raw[v.project_template], {}),
+      v
+    )
+    # apply exclusions
+    if alltrue([
+      for x in var.factories_config.exclusions.projects : !startswith(k, x)
+    ])
+  }
+  # project data from projects folder
+  _projects_raw = {
+    for f in try(fileset(local.paths.projects, "**/*.yaml"), []) :
+    trimsuffix(f, ".yaml") => yamldecode(file("${local.paths.projects}/${f}"))
+    if !endswith(f, ".config.yaml")
+  }
+  _templates_path = try(
+    pathexpand(local.paths.project_templates), null
+  )
+  _templates_raw = {
+    for f in try(fileset(local._templates_path, "**/*.yaml"), []) :
+    trimsuffix(f, ".yaml") => yamldecode(file("${local._templates_path}/${f}"))
+  }
+  ctx_project_ids     = merge(local.ctx.project_ids, local.project_ids)
+  ctx_project_numbers = merge(local.ctx.project_numbers, local.project_numbers)
+  # cross-project tag contexts, keyed on project name
+  ctx_tag_keys = merge(local.ctx.tag_keys, {
+    for k, v in merge({}, [
+      for pk, pv in local.projects_input : {
+        for tk, tv in module.projects[pk].tag_keys :
+        "${pk}/${tk}" => tv.id
+      }
+    ]...) : k => v
+  })
+  ctx_tag_values = merge(local.ctx.tag_values, {
+    for k, v in merge({}, [
+      for pk, pv in local.projects_input : {
+        for tk, tv in module.projects[pk].tag_values :
+        "${pk}/${tk}" => tv.id
+      }
+    ]...) : k => v
+  })
+  tag_vars_projects = {
+    for k, v in local.projects_input : v.name => {
+      for kk, vv in module.projects[k].tag_keys :
+      kk => vv.namespaced_name
+      if vv.allowed_values_regex != null
+    }
+  }
+  per_project_service_agents = {
+    for k, v in module.projects : k => {
+      for kk, vv in v.service_agents :
+      "service_agents/_self_/${kk}" => vv.iam_email
+    }
+  }
+  project_ids = {
+    for k, v in module.projects : k => v.project_id
+  }
+  project_numbers = {
+    for k, v in module.projects : k => v.number
+  }
+  projects_input = merge(var.projects, local._projects_output)
+  projects_service_agents = merge([
+    for k, v in module.projects : {
+      for kk, vv in v.service_agents : "service_agents/${k}/${kk}" => vv.iam_email
+    }
+  ]...)
+}
+
+moved {
+  from = terraform_data.project-preconditions
+  to   = terraform_data.project_preconditions
+}
+
+resource "terraform_data" "project_preconditions" {
+  lifecycle {
+    precondition {
+      condition = alltrue([
+        for k, v in local._projects_input :
+        try(v.project_template, null) == null ||
+        lookup(local._templates_raw, v.project_template, null) != null
+      ])
+      error_message = "Missing project templates referenced in projects."
+    }
+  }
+}
+
+module "projects" {
+  source              = "../project"
+  for_each            = local.projects_input
+  billing_account     = each.value.billing_account
+  deletion_policy     = each.value.deletion_policy
+  name                = each.value.name
+  descriptive_name    = each.value.descriptive_name
+  parent              = each.value.parent
+  prefix              = each.value.prefix
+  project_reuse       = each.value.project_reuse
+  alerts              = try(each.value.alerts, null)
+  asset_feeds         = each.value.asset_feeds
+  auto_create_network = try(each.value.auto_create_network, false)
+  compute_metadata    = try(each.value.compute_metadata, {})
+  # TODO: concat lists for each key
+  contacts = merge(
+    each.value.contacts, var.data_merges.contacts
+  )
+  context = merge(local.ctx, {
+    condition_vars = merge(local.ctx.condition_vars, {
+      folder_ids = {
+        for k, v in local.ctx_folder_ids : replace(k, "$folder_ids:", "") => v
+      }
+    })
+    folder_ids = local.ctx_folder_ids
+  })
+  default_service_account = try(each.value.default_service_account, "keep")
+  # Exclude factories that are either:
+  # a) Handled in parallel by calling specific modules (e.g., aspect_types, data_catalog_taxonomy)
+  # b) Handled in the projects-iam call to leverage expanded context (e.g., org_policies)
+  factories_config = {
+    for k, v in each.value.factories_config : k => try(pathexpand(
+      var.factories_config.basepath == null || startswith(v, "/") || startswith(v, ".")
+      ? v :
+      "${var.factories_config.basepath}/${v}"
+    ), null)
+    if !contains(["aspect_types", "data_catalog_taxonomy", "org_policies"], k)
+  }
+  kms_autokeys = try(each.value.kms.autokeys, {})
+  labels = merge(
+    each.value.labels, var.data_merges.labels
+  )
+  lien_reason           = try(each.value.lien_reason, null)
+  log_scopes            = try(each.value.log_scopes, null)
+  logging_exclusions    = try(each.value.logging_exclusions, {})
+  logging_metrics       = try(each.value.logging_metrics, null)
+  logging_sinks         = try(each.value.logging_sinks, {})
+  notification_channels = try(each.value.notification_channels, null)
+  quotas                = each.value.quotas
+  # Most service agent permissions must be granted in this first pass
+  # to ensure dependencies (like CMEK or Shared VPC) work correctly.
+  # We disable grant_service_agent_editor here because the authoritative
+  # IAM editor role is managed in the second pass (projects-iam).
+  service_agents_config = {
+    create_primary_agents      = each.value.service_agents_config.create_primary_agents
+    grant_default_roles        = each.value.service_agents_config.grant_default_roles
+    grant_service_agent_editor = false
+    skip_iam                   = each.value.service_agents_config.skip_iam
+  }
+  services = distinct(concat(
+    each.value.services,
+    var.data_merges.services
+  ))
+  tags = each.value.tags
+  tags_config = {
+    ignore_iam = true
+  }
+  universe                = each.value.universe
+  vpc_sc                  = each.value.vpc_sc
+  workload_identity_pools = each.value.workload_identity_pools
+}
+
+module "projects-iam" {
+  source       = "../project"
+  for_each     = local.projects_input
+  name         = each.value.name
+  prefix       = each.value.prefix
+  org_policies = each.value.org_policies
+  project_reuse = {
+    use_data_source = false
+    attributes = {
+      name             = module.projects[each.key].name
+      number           = module.projects[each.key].number
+      services_enabled = module.projects[each.key].services
+    }
+  }
+  context = merge(local.ctx, {
+    condition_vars = merge(
+      local.ctx.condition_vars, {
+        folder_ids = {
+          for k, v in local.ctx_folder_ids : replace(k, "$folder_ids:", "") => v
+        }
+        projects = {
+          for k, v in module.projects : k => v.project_id
+        }
+      }
+    )
+    tag_vars = {
+      projects     = merge(try(local.ctx.tag_vars.projects, {}), local.tag_vars_projects)
+      organization = try(local.ctx.tag_vars.organization, {})
+    }
+    folder_ids = local.ctx_folder_ids
+    kms_keys   = merge(local.ctx.kms_keys, local.kms_keys)
+    iam_principals = merge(
+      local.ctx_iam_principals,
+      lookup(local.per_project_service_agents, each.key, {}),
+      lookup(local.self_sas_iam_emails, each.key, {}),
+      local.projects_service_agents
+    )
+    custom_roles = merge(
+      try(local.ctx.custom_roles, {}),
+      module.projects[each.key].custom_role_id
+    )
+    project_ids = merge(
+      local.ctx.project_ids,
+      { for k, v in module.projects : k => v.project_id }
+    )
+    tag_keys   = local.ctx_tag_keys
+    tag_values = local.ctx_tag_values
+  })
+  factories_config = {
+    # we do anything that can refer to IAM and custom roles in this call
+    pam_entitlements = try(each.value.factories_config.pam_entitlements, null)
+    org_policies = lookup(each.value.factories_config, "org_policies", null) == null ? null : try(pathexpand(
+      var.factories_config.basepath == null || startswith(each.value.factories_config.org_policies, "/") || startswith(each.value.factories_config.org_policies, ".")
+      ? each.value.factories_config.org_policies :
+      "${var.factories_config.basepath}/${each.value.factories_config.org_policies}"
+    ), null)
+  }
+  iam                           = lookup(each.value, "iam", {})
+  iam_bindings                  = lookup(each.value, "iam_bindings", {})
+  iam_bindings_additive         = lookup(each.value, "iam_bindings_additive", {})
+  iam_by_principals             = lookup(each.value, "iam_by_principals", {})
+  iam_by_principals_conditional = lookup(each.value, "iam_by_principals_conditional", {})
+  iam_by_principals_additive    = lookup(each.value, "iam_by_principals_additive", {})
+  logging_data_access           = lookup(each.value, "logging_data_access", {})
+  metric_scopes = distinct(concat(
+    each.value.metric_scopes, var.data_merges.metric_scopes
+  ))
+  pam_entitlements = try(each.value.pam_entitlements, {})
+  # The second pass handles the authoritative cloudservices editor binding.
+  # We disable primary agents creation and default roles here because they
+  # are already handled in the first pass, avoiding duplicate resource errors.
+  service_agents_config = {
+    create_primary_agents      = false
+    grant_default_roles        = false
+    grant_service_agent_editor = each.value.service_agents_config.grant_service_agent_editor
+  }
+  service_encryption_key_ids = merge(
+    each.value.service_encryption_key_ids,
+    var.data_merges.service_encryption_key_ids
+  )
+  shared_vpc_host_config    = each.value.shared_vpc_host_config
+  shared_vpc_service_config = each.value.shared_vpc_service_config
+  tag_bindings = merge(
+    each.value.tag_bindings, var.data_merges.tag_bindings
+  )
+  tags = each.value.tags
+  tags_config = {
+    force_context_ids = true
+  }
+  iam_deny_policies = lookup(each.value, "iam_deny_policies", {})
+  universe          = each.value.universe
+  # we use explicit depends_on as this allows us passing name and prefix
+  depends_on = [
+    module.projects
+  ]
+}

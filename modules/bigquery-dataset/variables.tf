@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "access" {
   description = "Map of access rules with role and identity type. Keys are arbitrary and must match those in the `access_identities` variable, types are `domain`, `group`, `special_group`, `user`, `view`."
   type = map(object({
@@ -64,6 +65,25 @@ variable "authorized_views" {
   default = []
 }
 
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    condition_vars = optional(map(map(string)), {})
+    custom_roles   = optional(map(string), {})
+    kms_keys       = optional(map(string), {})
+    iam_principals = optional(map(string), {})
+    locations      = optional(map(string), {})
+    project_ids    = optional(map(string), {})
+    tag_values     = optional(map(string), {})
+    tag_vars = optional(object({
+      projects     = optional(map(map(string)), {})
+      organization = optional(map(string), {})
+    }), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "dataset_access" {
   description = "Set access in the dataset resource instead of using separate resources."
   type        = bool
@@ -88,11 +108,9 @@ variable "friendly_name" {
   default     = null
 }
 
-variable "iam" {
-  description = "IAM bindings in {ROLE => [MEMBERS]} format. Mutually exclusive with the access_* variables used for basic roles."
-  type        = map(list(string))
-  default     = {}
-}
+
+
+
 
 variable "id" {
   description = "Dataset id."
@@ -121,7 +139,7 @@ variable "materialized_views" {
     enable_refresh                   = optional(bool)
     friendly_name                    = optional(string)
     labels                           = optional(map(string), {})
-    refresh_interval_ms              = optional(bool)
+    refresh_interval_ms              = optional(number)
     require_partition_filter         = optional(bool)
     options = optional(object({
       clustering      = optional(list(string))
@@ -173,6 +191,7 @@ variable "routines" {
     imported_libraries   = optional(list(string))
     determinism_level    = optional(string)
     data_governance_type = optional(string)
+    return_type          = optional(string)
     return_table_type    = optional(string)
     arguments = optional(map(object({
       argument_kind = optional(string)
@@ -302,6 +321,12 @@ variable "views" {
     friendly_name       = optional(string)
     labels              = optional(map(string), {})
     use_legacy_sql      = optional(bool)
+    schema = optional(list(object({
+      name        = string
+      type        = string
+      description = string
+      mode        = optional(string)
+    })))
   }))
   default = {}
 }

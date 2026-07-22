@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "data_catalog_tag_ids" {
   description = "Data catalog tag ids."
   value       = { for k, v in google_data_catalog_tag.engine : k => v.id }

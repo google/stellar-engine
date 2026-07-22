@@ -13,27 +13,44 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
-  ctx = {
+  _ctx = {
     for k, v in var.context : k => {
       for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
-    } if k != "condition_vars"
+    } if !endswith(k, "_vars")
   }
+  # add service agents into the iam_principals context namespace
+  ctx = merge(local._ctx, {
+    iam_principals = merge(
+      local._ctx.iam_principals,
+      local.service_agents_ctx,
+      {
+        "$iam_principalsets:service_accounts/all" = format(
+          "principalSet://cloudresourcemanager.googleapis.com/organizations/%s/type/ServiceAccount",
+          local.organization_id_numeric
+        )
+      }
+    )
+  })
   ctx_p                   = "$"
   organization_id_numeric = split("/", var.organization_id)[1]
 }
 
 resource "google_essential_contacts_contact" "contact" {
-  provider                            = google-beta
-  for_each                            = var.contacts
-  parent                              = var.organization_id
-  email                               = each.key
+  provider = google-beta
+  for_each = var.contacts
+  parent   = var.organization_id
+  email = lookup(
+    local.ctx.email_addresses, each.key, each.key
+  )
   language_tag                        = "en"
   notification_category_subscriptions = each.value
   depends_on = [
     google_organization_iam_binding.authoritative,
     google_organization_iam_binding.bindings,
-    google_organization_iam_member.bindings
+    google_organization_iam_member.bindings,
+    google_org_policy_policy.default
   ]
 }
 

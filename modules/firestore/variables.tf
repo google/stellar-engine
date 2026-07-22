@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "backup_schedule" {
   description = "Backup schedule."
   type = object({

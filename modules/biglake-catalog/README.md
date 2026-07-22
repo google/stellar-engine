@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Biglake Catalog
 
 This module allows to create a BigLake Metastore with databases and corresponding tables in each database.
@@ -97,7 +81,7 @@ module "biglake_catalog" {
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [databases](variables.tf#L17) | Databases. | <code title="map&#40;object&#40;&#123;&#10;  type &#61; string&#10;  hive_options &#61; object&#40;&#123;&#10;    location_uri &#61; string&#10;    parameters   &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;  &#125;&#41;&#10;  tables &#61; map&#40;object&#40;&#123;&#10;    type &#61; string&#10;    hive_options &#61; object&#40;&#123;&#10;      table_type    &#61; string&#10;      location_uri  &#61; string&#10;      input_format  &#61; string&#10;      output_format &#61; string&#10;      parameters    &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;    &#125;&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [databases](variables.tf#L17) | Databases. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [location](variables.tf#L38) | Location. | <code>string</code> | ✓ |  |
 | [name](variables.tf#L43) | Name. | <code>string</code> | ✓ |  |
 | [project_id](variables.tf#L48) | Project ID. | <code>string</code> | ✓ |  |

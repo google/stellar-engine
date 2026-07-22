@@ -13,6 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+output "access_levels" {
+  description = "Access level resources."
+  value       = google_access_context_manager_access_level.basic
+}
+
+output "asset_search_results" {
+  description = "Cloud Asset Inventory search results."
+  value = {
+    for k, v in data.google_cloud_asset_search_all_resources.default : k => v.results
+  }
+}
+
+output "context_aware_access_bindings" {
+  description = "GCP User Access Bindings for securing Console and APIs."
+  value       = google_access_context_manager_gcp_user_access_binding.binding
+  depends_on = [
+    google_access_context_manager_access_level.basic
+  ]
+}
+
 output "custom_constraint_ids" {
   description = "Map of CUSTOM_CONSTRAINTS => ID in the organization."
   value       = { for k, v in google_org_policy_custom_constraint.constraint : k => v.id }
@@ -44,6 +65,26 @@ output "id" {
     google_tags_tag_value.default,
     google_tags_tag_value_iam_binding.default,
   ]
+}
+
+output "logging_identities" {
+  description = "Principals used for logging sinks."
+  value = {
+    kms = try(
+      google_logging_organization_settings.default[0].kms_service_account_id, null
+    )
+    logging = try(
+      google_logging_organization_settings.default[0].logging_service_account_id, null
+    )
+  }
+}
+
+output "logging_sinks" {
+  description = "Logging sink resources."
+  value = {
+    for name, sink in google_logging_organization_sink.sink :
+    name => sink
+  }
 }
 
 output "network_tag_keys" {
@@ -82,6 +123,43 @@ output "organization_id" {
   ]
 }
 
+output "organization_policies_ids" {
+  description = "Map of ORGANIZATION_POLICIES => ID in the organization."
+  value       = { for k, v in google_org_policy_policy.default : k => v.id }
+}
+
+output "scc_custom_sha_modules_ids" {
+  description = "Map of SCC CUSTOM SHA MODULES => ID in the organization."
+  value       = { for k, v in google_scc_management_organization_security_health_analytics_custom_module.scc_organization_custom_module : k => v.id }
+}
+
+output "scc_mute_configs" {
+  description = "SCC mute configurations."
+  value       = google_scc_v2_organization_mute_config.scc_mute_configs
+}
+
+output "scim_tenants" {
+  description = "Workforce Identity provider SCIM tenants."
+  value = {
+    for k, v in google_iam_workforce_pool_provider_scim_tenant.default : k => {
+      id            = v.id
+      pool          = v.workforce_pool_id
+      provider      = v.provider_id
+      state         = v.state
+      base_uri      = v.base_uri
+      service_agent = v.service_agent
+    }
+  }
+}
+
+output "service_agents" {
+  description = "Identities of all organization-level service agents."
+  value       = local.service_agents
+  depends_on = [
+    google_organization_service_identity.default
+  ]
+}
+
 output "sink_writer_identities" {
   description = "Writer identities created for each sink."
   value = {
@@ -104,5 +182,29 @@ output "tag_values" {
   value = {
     for k, v in google_tags_tag_value.default :
     k => v if local.tag_values[k].tag_network == null
+  }
+}
+
+output "workforce_identity_pool_ids" {
+  description = "Workforce identity pool ids."
+  value = {
+    for k, v in google_iam_workforce_pool.default : k => v.name
+  }
+}
+
+output "workforce_identity_provider_names" {
+  description = "Workforce Identity provider names."
+  value = {
+    for k, v in google_iam_workforce_pool_provider.default : k => v.name
+  }
+}
+
+output "workforce_identity_providers" {
+  description = "Workforce Identity provider attributes."
+  value = {
+    for k, v in local.wfif_providers : k => {
+      name = google_iam_workforce_pool_provider.default[k].name
+      pool = google_iam_workforce_pool.default[v.pool].name
+    }
   }
 }

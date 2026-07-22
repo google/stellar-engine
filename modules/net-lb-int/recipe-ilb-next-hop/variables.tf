@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+# tflint-ignore: terraform_naming_convention
 variable "_testing" {
   description = "Populate this variable to avoid triggering the data source."
   type = object({

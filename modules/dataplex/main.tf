@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   prefix = var.prefix == null ? "" : "${var.prefix}-"
   zone_assets = flatten([

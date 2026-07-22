@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Resource Manager Tags
 
 <!-- markdownlint-disable MD036 -->
@@ -22,6 +6,7 @@ limitations under the License.
 
 *additional properties: false*
 
+- **allowed_values_regex**: *string*
 - **name**: *string*
 - **description**: *string*
 - **id**: *string*
@@ -31,7 +16,7 @@ limitations under the License.
 - **iam_bindings_additive**: *reference([iam_bindings_additive](#refs-iam_bindings_additive))*
 - **values**: *object*
   <br>*additional properties: false*
-  - **`^[a-z-][a-z0-9-]+$`**: *object*
+  - **`^[a-z-][^\\'"/]+$`**: *object*
     <br>*additional properties: false*
     - **name**: *string*
     - **description**: *string*
@@ -46,14 +31,14 @@ limitations under the License.
   <br>*additional properties: false*
   - **`^roles/`**: *array*
     - items: *string*
-      <br>*pattern: ^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|[a-z])*
+      <br>*pattern: ^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|\$iam_principals:[a-z0-9_-]+)*
 - **iam_bindings**<a name="refs-iam_bindings"></a>: *object*
   <br>*additional properties: false*
   - **`^[a-z0-9_-]+$`**: *object*
     <br>*additional properties: false*
     - **members**: *array*
       - items: *string*
-        <br>*pattern: ^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|[a-z])*
+        <br>*pattern: ^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|\$iam_principals:[a-z0-9_-]+)*
     - **role**: *string*
       <br>*pattern: ^roles/*
     - **condition**: *object*
@@ -66,7 +51,7 @@ limitations under the License.
   - **`^[a-z0-9_-]+$`**: *object*
     <br>*additional properties: false*
     - **member**: *string*
-      <br>*pattern: ^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|[a-z])*
+      <br>*pattern: ^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|\$iam_principals:[a-z0-9_-]+)*
     - **role**: *string*
       <br>*pattern: ^[a-zA-Z0-9_/]+$*
     - **condition**: *object*

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description Data Catalog Taxonomy IAM definition.
 
 locals {
@@ -24,14 +25,35 @@ locals {
     ]
   }
   iam = {
-    for role in distinct(concat(keys(var.iam), keys(local._iam_principals))) :
+    for role in distinct(concat(
+      keys(var.iam),
+      keys(local._iam_principals),
+      keys(try(local._factory_data.iam, {}))
+    )) :
     role => concat(
       try(var.iam[role], []),
-      try(local._iam_principals[role], [])
+      try(local._iam_principals[role], []),
+      try(local._factory_data.iam[role], [])
     )
   }
+  iam_bindings = merge(
+    var.iam_bindings,
+    {
+      for k, v in try(local._factory_data.iam_bindings, {}) : k => merge(v, {
+        condition = try(v.condition, null)
+      })
+    }
+  )
+  iam_bindings_additive = merge(
+    var.iam_bindings_additive,
+    {
+      for k, v in try(local._factory_data.iam_bindings_additive, {}) : k => merge(v, {
+        condition = try(v.condition, null)
+      })
+    }
+  )
   tags_iam = flatten([
-    for k, v in var.tags : [
+    for k, v in local.tags : [
       for role, members in v.iam : {
         tag     = k
         role    = role
@@ -39,26 +61,50 @@ locals {
       }
     ]
   ])
+  tags_iam_bindings = merge({}, [
+    for k, v in local.tags : {
+      for bk, bv in v.iam_bindings : "${k}.${bk}" => merge(bv, {
+        tag = k
+        key = bk
+      })
+    }
+  ]...)
+  tags_iam_bindings_additive = merge({}, [
+    for k, v in local.tags : {
+      for bk, bv in v.iam_bindings_additive : "${k}.${bk}" => merge(bv, {
+        tag = k
+        key = bk
+      })
+    }
+  ]...)
 }
 
 resource "google_data_catalog_taxonomy_iam_binding" "authoritative" {
   provider = google-beta
   for_each = local.iam
   taxonomy = google_data_catalog_taxonomy.default.id
-  role     = each.key
-  members  = each.value
+  role     = lookup(local.ctx.custom_roles, each.key, each.key)
+  members = [
+    for v in each.value :
+    lookup(local.ctx.iam_principals, v, v)
+  ]
 }
 
 resource "google_data_catalog_taxonomy_iam_binding" "bindings" {
   provider = google-beta
-  for_each = var.iam_bindings
+  for_each = local.iam_bindings
   taxonomy = google_data_catalog_taxonomy.default.id
-  role     = each.value.role
-  members  = each.value.members
+  role     = lookup(local.ctx.custom_roles, each.value.role, each.value.role)
+  members = [
+    for v in each.value.members :
+    lookup(local.ctx.iam_principals, v, v)
+  ]
   dynamic "condition" {
     for_each = each.value.condition == null ? [] : [""]
     content {
-      expression  = each.value.condition.expression
+      expression = templatestring(
+        each.value.condition.expression, var.context.condition_vars
+      )
       title       = each.value.condition.title
       description = each.value.condition.description
     }
@@ -67,14 +113,16 @@ resource "google_data_catalog_taxonomy_iam_binding" "bindings" {
 
 resource "google_data_catalog_taxonomy_iam_member" "bindings" {
   provider = google-beta
-  for_each = var.iam_bindings_additive
+  for_each = local.iam_bindings_additive
   taxonomy = google_data_catalog_taxonomy.default.id
-  role     = each.value.role
-  member   = each.value.member
+  role     = lookup(local.ctx.custom_roles, each.value.role, each.value.role)
+  member   = lookup(local.ctx.iam_principals, each.value.member, each.value.member)
   dynamic "condition" {
     for_each = each.value.condition == null ? [] : [""]
     content {
-      expression  = each.value.condition.expression
+      expression = templatestring(
+        each.value.condition.expression, var.context.condition_vars
+      )
       title       = each.value.condition.title
       description = each.value.condition.description
     }
@@ -87,6 +135,48 @@ resource "google_data_catalog_policy_tag_iam_binding" "authoritative" {
     for v in local.tags_iam : "${v.tag}.${v.role}" => v
   }
   policy_tag = google_data_catalog_policy_tag.default[each.value.tag].name
-  role       = each.value.role
-  members    = each.value.members
+  role       = lookup(local.ctx.custom_roles, each.value.role, each.value.role)
+  members = [
+    for v in each.value.members :
+    lookup(local.ctx.iam_principals, v, v)
+  ]
+}
+
+resource "google_data_catalog_policy_tag_iam_binding" "bindings" {
+  provider   = google-beta
+  for_each   = local.tags_iam_bindings
+  policy_tag = google_data_catalog_policy_tag.default[each.value.tag].name
+  role       = lookup(local.ctx.custom_roles, each.value.role, each.value.role)
+  members = [
+    for v in each.value.members :
+    lookup(local.ctx.iam_principals, v, v)
+  ]
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression = templatestring(
+        each.value.condition.expression, var.context.condition_vars
+      )
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
+}
+
+resource "google_data_catalog_policy_tag_iam_member" "bindings" {
+  provider   = google-beta
+  for_each   = local.tags_iam_bindings_additive
+  policy_tag = google_data_catalog_policy_tag.default[each.value.tag].name
+  role       = lookup(local.ctx.custom_roles, each.value.role, each.value.role)
+  member     = lookup(local.ctx.iam_principals, each.value.member, each.value.member)
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression = templatestring(
+        each.value.condition.expression, var.context.condition_vars
+      )
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }

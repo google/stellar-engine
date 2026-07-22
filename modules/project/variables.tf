@@ -13,10 +13,92 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+
+variable "asset_feeds" {
+  description = "Cloud Asset Inventory feeds."
+  type = map(object({
+    billing_project = optional(string)
+    content_type    = optional(string)
+    asset_types     = optional(list(string))
+    asset_names     = optional(list(string))
+    feed_output_config = object({
+      pubsub_destination = object({
+        topic = string
+      })
+    })
+    condition = optional(object({
+      expression  = string
+      title       = optional(string)
+      description = optional(string)
+      location    = optional(string)
+    }))
+  }))
+  default  = {}
+  nullable = false
+  validation {
+    condition = alltrue([
+      for k, v in var.asset_feeds :
+      v.content_type == null || contains(
+        ["RESOURCE", "IAM_POLICY", "ORG_POLICY", "ACCESS_POLICY", "OS_INVENTORY", "RELATIONSHIP"],
+        v.content_type
+      )
+    ])
+    error_message = "Content type must be one of RESOURCE, IAM_POLICY, ORG_POLICY, ACCESS_POLICY, OS_INVENTORY, RELATIONSHIP."
+  }
+}
+
+variable "asset_search" {
+  description = "Cloud Asset Inventory search configurations."
+  type = map(object({
+    asset_types = list(string)
+    query       = optional(string)
+  }))
+  default  = {}
+  nullable = false
+}
+
 variable "auto_create_network" {
   description = "Whether to create the default network for the project."
   type        = bool
   default     = false
+}
+
+variable "bigquery_reservations" {
+  description = "BigQuery reservations and assignments. Assignment specified as {JOB_TYPE = ['projects/PROJECT_ID']}."
+  type = map(object({
+    location           = string
+    slot_capacity      = number
+    ignore_idle_slots  = optional(bool, false)
+    concurrency        = optional(number)
+    edition            = optional(string, "STANDARD")
+    secondary_location = optional(string)
+    max_slots          = optional(number)
+    scaling_mode       = optional(string, "AUTOSCALE_ONLY")
+    assignments        = optional(map(list(string)), {})
+  }))
+  validation {
+    condition = alltrue([
+      for name, reservation in var.bigquery_reservations :
+      # Check the keys of the 'assignments' map within each reservation object.
+      # If 'assignments' is omitted (defaults to {}), the inner 'alltrue' evaluates to true.
+      alltrue([
+        for key in keys(reservation.assignments) :
+        contains(["JOB_TYPE_UNSPECIFIED",
+          "PIPELINE",
+          "QUERY",
+          "ML_EXTERNAL",
+          "BACKGROUND",
+          "CONTINUOUS",
+          "BACKGROUND_CHANGE_DATA_CAPTURE",
+          "BACKGROUND_COLUMN_METADATA_INDEX",
+        "BACKGROUND_SEARCH_INDEX_REFRESH"], key)
+      ])
+    ])
+    error_message = "All keys in the nested 'assignments' map (within 'bigquery_reservations') must be one of the following allowed values: ML_EXTERNAL, QUERY, or BACKGROUND."
+  }
+  default  = {}
+  nullable = false
 }
 
 variable "billing_account" {
@@ -37,21 +119,41 @@ variable "contacts" {
   type        = map(list(string))
   default     = {}
   nullable    = false
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.contacts : [
+        for vv in v : contains([
+          "ALL", "SUSPENSION", "SECURITY", "TECHNICAL", "BILLING", "LEGAL",
+          "PRODUCT_UPDATES"
+        ], vv)
+      ]
+    ]))
+    error_message = "Invalid contact notification value."
+  }
 }
 
 variable "context" {
   description = "Context-specific interpolations."
   type = object({
+    bigquery_datasets     = optional(map(string), {})
     condition_vars        = optional(map(map(string)), {})
     custom_roles          = optional(map(string), {})
+    email_addresses       = optional(map(string), {})
     folder_ids            = optional(map(string), {})
-    kms_keys              = optional(map(string), {})
     iam_principals        = optional(map(string), {})
+    kms_keys              = optional(map(string), {})
+    log_buckets           = optional(map(string), {})
     notification_channels = optional(map(string), {})
     project_ids           = optional(map(string), {})
+    pubsub_topics         = optional(map(string), {})
+    storage_buckets       = optional(map(string), {})
     tag_keys              = optional(map(string), {})
     tag_values            = optional(map(string), {})
-    vpc_sc_perimeters     = optional(map(string), {})
+    tag_vars = optional(object({
+      projects     = optional(map(map(string)), {})
+      organization = optional(map(string), {})
+    }), {})
+    vpc_sc_perimeters = optional(map(string), {})
   })
   default  = {}
   nullable = false
@@ -95,7 +197,7 @@ variable "deletion_policy" {
 }
 
 variable "descriptive_name" {
-  description = "Name of the project name. Used for project name instead of `name` variable."
+  description = "Descriptive project name. Set when name differs from project id."
   type        = string
   default     = null
 }
@@ -103,14 +205,35 @@ variable "descriptive_name" {
 variable "factories_config" {
   description = "Paths to data files and folders that enable factory functionality."
   type = object({
-    custom_roles  = optional(string)
-    observability = optional(string)
-    org_policies  = optional(string)
-    quotas        = optional(string)
-    tags          = optional(string)
+    custom_roles           = optional(string)
+    observability          = optional(string)
+    org_policies           = optional(string)
+    pam_entitlements       = optional(string)
+    quotas                 = optional(string)
+    scc_mute_configs       = optional(string)
+    scc_sha_custom_modules = optional(string)
+    tags                   = optional(string)
   })
   nullable = false
   default  = {}
+}
+
+variable "kms_autokeys" {
+  description = "KMS Autokey key handles."
+  type = map(object({
+    location               = string
+    resource_type_selector = optional(string, "compute.googleapis.com/Disk")
+  }))
+  nullable = false
+  default  = {}
+  validation {
+    condition = alltrue([
+      for k, v in var.kms_autokeys : k == try(regex(
+        "^[a-z][a-z0-9-]+[a-z0-9]$", k
+      ), null)
+    ])
+    error_message = "Autokey keys need to be valid GCP resource names."
+  }
 }
 
 variable "labels" {
@@ -206,8 +329,10 @@ variable "project_reuse" {
 variable "service_agents_config" {
   description = "Automatic service agent configuration options."
   type = object({
-    create_primary_agents = optional(bool, true)
-    grant_default_roles   = optional(bool, true)
+    create_primary_agents      = optional(bool, true)
+    grant_default_roles        = optional(bool, true)
+    grant_service_agent_editor = optional(bool, true)
+    skip_iam                   = optional(set(string), [])
   })
   default  = {}
   nullable = false
@@ -301,6 +426,7 @@ variable "universe" {
   description = "GCP universe where to deploy the project. The prefix will be prepended to the project id."
   type = object({
     prefix                         = string
+    forced_jit_service_identities  = optional(list(string), [])
     unavailable_services           = optional(list(string), [])
     unavailable_service_identities = optional(list(string), [])
   })

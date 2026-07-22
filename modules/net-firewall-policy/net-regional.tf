@@ -13,46 +13,83 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-resource "google_compute_region_network_firewall_policy" "net-regional" {
-  count       = !local.use_hierarchical && local.use_regional ? 1 : 0
-  project     = var.parent_id
-  name        = var.name
-  description = var.description
-  region      = var.region
+
+moved {
+  from = google_compute_region_network_firewall_policy.net-regional
+  to   = google_compute_region_network_firewall_policy.net_regional
 }
 
-resource "google_compute_region_network_firewall_policy_association" "net-regional" {
+resource "google_compute_region_network_firewall_policy" "net_regional" {
+  count       = !local.use_hierarchical && local.use_regional ? 1 : 0
+  project     = lookup(local.ctx.project_ids, var.parent_id, var.parent_id)
+  name        = var.name
+  description = var.description
+  region      = lookup(local.ctx.locations, var.region, var.region)
+}
+
+moved {
+  from = google_compute_region_network_firewall_policy_association.net-regional
+  to   = google_compute_region_network_firewall_policy_association.net_regional
+}
+
+resource "google_compute_region_network_firewall_policy_association" "net_regional" {
   for_each = (
     !local.use_hierarchical && local.use_regional ? var.attachments : {}
   )
-  project           = var.parent_id
-  region            = var.region
+  project           = lookup(local.ctx.project_ids, var.parent_id, var.parent_id)
+  region            = lookup(local.ctx.locations, var.region, var.region)
   name              = "${var.name}-${each.key}"
-  attachment_target = each.value
-  firewall_policy   = google_compute_region_network_firewall_policy.net-regional[0].name
+  attachment_target = lookup(local.ctx.networks, each.value, each.value)
+  firewall_policy   = google_compute_region_network_firewall_policy.net_regional[0].name
 }
 
-resource "google_compute_region_network_firewall_policy_rule" "net-regional" {
+moved {
+  from = google_compute_region_network_firewall_policy_rule.net-regional
+  to   = google_compute_region_network_firewall_policy_rule.net_regional
+}
+
+resource "google_compute_region_network_firewall_policy_rule" "net_regional" {
   # Terraform's type system barfs in the condition if we use the locals map
   for_each = toset(
     !local.use_hierarchical && local.use_regional
     ? keys(local.rules)
     : []
   )
-  project                 = var.parent_id
-  region                  = var.region
-  firewall_policy         = google_compute_region_network_firewall_policy.net-regional[0].name
-  rule_name               = local.rules[each.key].name
-  action                  = local.rules[each.key].action
-  description             = local.rules[each.key].description
-  direction               = local.rules[each.key].direction
-  disabled                = local.rules[each.key].disabled
-  enable_logging          = local.rules[each.key].enable_logging
-  priority                = local.rules[each.key].priority
-  target_service_accounts = local.rules[each.key].target_service_accounts
+  project         = lookup(local.ctx.project_ids, var.parent_id, var.parent_id)
+  region          = lookup(local.ctx.locations, var.region, var.region)
+  firewall_policy = google_compute_region_network_firewall_policy.net_regional[0].name
+  rule_name       = local.rules[each.key].name
+  action          = local.rules[each.key].action
+  description     = local.rules[each.key].description
+  direction       = local.rules[each.key].direction
+  disabled        = local.rules[each.key].disabled
+  enable_logging  = local.rules[each.key].enable_logging
+  priority        = local.rules[each.key].priority
+  target_service_accounts = (
+    local.rules[each.key].target_service_accounts == null ? null : [
+      for n in local.rules[each.key].target_service_accounts :
+      lookup(local.ctx.iam_principals, n, n)
+    ]
+  )
   match {
-    dest_ip_ranges = local.rules[each.key].match.destination_ranges
-    src_ip_ranges  = local.rules[each.key].match.source_ranges
+    dest_ip_ranges = (
+      local.rules[each.key].match.destination_ranges == null ? null : distinct(flatten([
+        for r in local.rules[each.key].match.destination_ranges : try(
+          local.ctx.cidr_ranges_sets[r],
+          local.ctx.cidr_ranges[r],
+          r
+        )
+      ]))
+    )
+    src_ip_ranges = (
+      local.rules[each.key].match.source_ranges == null ? null : distinct(flatten([
+        for r in local.rules[each.key].match.source_ranges : try(
+          local.ctx.cidr_ranges_sets[r],
+          local.ctx.cidr_ranges[r],
+          r
+        )
+      ]))
+    )
     dest_address_groups = (
       local.rules[each.key].direction == "EGRESS"
       ? local.rules[each.key].match.address_groups
@@ -103,7 +140,9 @@ resource "google_compute_region_network_firewall_policy_rule" "net-regional" {
     dynamic "src_secure_tags" {
       for_each = toset(coalesce(local.rules[each.key].match.source_tags, []))
       content {
-        name = src_secure_tags.key
+        name = lookup(
+          local.ctx.tag_values, src_secure_tags.key, src_secure_tags.key
+        )
       }
     }
   }
@@ -114,7 +153,9 @@ resource "google_compute_region_network_firewall_policy_rule" "net-regional" {
       : local.rules[each.key].target_tags
     )
     content {
-      name = target_secure_tags.value
+      name = lookup(
+        local.ctx.tag_values, target_secure_tags.value, target_secure_tags.value
+      )
     }
   }
 }

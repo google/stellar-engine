@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "email" {
   description = "Service account email."
   value       = local.static_email
@@ -38,8 +39,8 @@ output "id" {
 }
 
 output "name" {
-  description = "Service account name."
-  value       = local.static_id
+  description = "Service account email (mirrors email output for symmetry when chaining create and reuse)."
+  value       = local.static_email
   depends_on = [
     local.service_account
   ]
@@ -48,4 +49,9 @@ output "name" {
 output "service_account" {
   description = "Service account resource."
   value       = local.service_account
+}
+
+output "unique_id" {
+  description = "Fully qualified service account id."
+  value       = try(local.service_account.unique_id, null)
 }

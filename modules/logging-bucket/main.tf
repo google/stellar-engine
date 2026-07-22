@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   bucket = try(
     google_logging_project_bucket_config.bucket[0],
@@ -23,9 +24,15 @@ locals {
   ctx = {
     for k, v in var.context : k => {
       for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
-    }
+    } if !endswith(k, "_vars")
   }
   ctx_p = "$"
+  _tag_bindings = {
+    for k, v in var.tag_bindings : k => lookup(local.ctx.tag_values, v, v)
+  }
+  location = lookup(
+    local.ctx.locations, var.location, var.location
+  )
   parent_id = (
     var.parent_type == "project"
     ? lookup(local.ctx.project_ids, var.parent, var.parent)
@@ -38,30 +45,28 @@ locals {
   }
 }
 
+
 resource "google_logging_project_bucket_config" "bucket" {
-  count   = var.parent_type == "project" ? 1 : 0
-  project = local.parent_id
-  location = lookup(
-    local.ctx.locations, var.location, var.location
-  )
+  count            = var.parent_type == "project" ? 1 : 0
+  project          = local.parent_id
+  location         = local.location
   retention_days   = var.retention
   bucket_id        = var.name
   description      = var.description
   enable_analytics = var.log_analytics.enable
+  locked           = var.locked
   dynamic "cmek_settings" {
     for_each = var.kms_key_name == null ? [] : [""]
     content {
-      kms_key_name = var.kms_key_name
+      kms_key_name = lookup(local.ctx.kms_keys, var.kms_key_name, var.kms_key_name)
     }
   }
 }
 
 resource "google_logging_folder_bucket_config" "bucket" {
-  count  = var.parent_type == "folder" ? 1 : 0
-  folder = local.parent_id
-  location = lookup(
-    local.ctx.locations, var.location, var.location
-  )
+  count          = var.parent_type == "folder" ? 1 : 0
+  folder         = local.parent_id
+  location       = local.location
   retention_days = var.retention
   bucket_id      = var.name
   description    = var.description
@@ -72,16 +77,14 @@ resource "google_logging_linked_dataset" "dataset" {
   link_id     = var.log_analytics.dataset_link_id
   parent      = "projects/${google_logging_project_bucket_config.bucket[0].project}"
   bucket      = google_logging_project_bucket_config.bucket[0].id
-  location    = var.location
+  location    = local.location
   description = var.log_analytics.description
 }
 
 resource "google_logging_organization_bucket_config" "bucket" {
-  count        = var.parent_type == "organization" ? 1 : 0
-  organization = local.parent_id
-  location = lookup(
-    local.ctx.locations, var.location, var.location
-  )
+  count          = var.parent_type == "organization" ? 1 : 0
+  organization   = local.parent_id
+  location       = local.location
   retention_days = var.retention
   bucket_id      = var.name
   description    = var.description
@@ -90,12 +93,10 @@ resource "google_logging_organization_bucket_config" "bucket" {
 resource "google_logging_billing_account_bucket_config" "bucket" {
   count           = var.parent_type == "billing_account" ? 1 : 0
   billing_account = local.parent_id
-  location = lookup(
-    local.ctx.locations, var.location, var.location
-  )
-  retention_days = var.retention
-  bucket_id      = var.name
-  description    = var.description
+  location        = local.location
+  retention_days  = var.retention
+  bucket_id       = var.name
+  description     = var.description
 }
 
 resource "google_logging_log_view" "views" {
@@ -112,5 +113,5 @@ resource "google_logging_log_view" "views" {
 resource "google_tags_tag_binding" "binding" {
   for_each  = var.tag_bindings
   parent    = "//logging.googleapis.com/${local.bucket.id}"
-  tag_value = lookup(local.ctx.tag_values, each.value, each.value)
+  tag_value = templatestring(local._tag_bindings[each.key], var.context.tag_vars)
 }

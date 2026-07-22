@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   _factory_data = (
     var.factories_config.rules != null
@@ -20,6 +21,12 @@ locals {
     : "{}"
   )
   _factory_rules = yamldecode(local._factory_data)
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    }
+  }
+  ctx_p = "$"
   factory_rules = {
     for k, v in local._factory_rules : k => {
       dns_name = v.dns_name
@@ -35,18 +42,19 @@ locals {
     ? google_dns_response_policy.default[0].response_policy_name
     : var.name
   )
+  project_id = lookup(local.ctx.project_ids, var.project_id, var.project_id)
 }
 
 resource "google_dns_response_policy" "default" {
   provider             = google-beta
   count                = var.policy_create ? 1 : 0
-  project              = var.project_id
+  project              = local.project_id
   description          = var.description
   response_policy_name = var.name
   dynamic "networks" {
     for_each = var.networks
     content {
-      network_url = networks.value
+      network_url = lookup(local.ctx.networks, networks.value, networks.value)
     }
   }
   dynamic "gke_clusters" {
@@ -60,10 +68,14 @@ resource "google_dns_response_policy" "default" {
 resource "google_dns_response_policy_rule" "default" {
   provider        = google-beta
   for_each        = merge(local.factory_rules, var.rules)
-  project         = var.project_id
+  project         = local.project_id
   response_policy = local.policy_name
   rule_name       = each.key
-  dns_name        = each.value.dns_name
+  dns_name = lookup(
+    local.ctx.dns_names,
+    each.value.dns_name,
+    each.value.dns_name
+  )
   behavior = (
     length(each.value.local_data) == 0 ? each.value.behavior : null
   )
@@ -78,10 +90,21 @@ resource "google_dns_response_policy_rule" "default" {
           # so we comply with the console UI and set it to the rule dns name
           # name    = split(" ", data.key)[1]
           # type    = split(" ", data.key)[0]
-          name    = each.value.dns_name
-          type    = data.key
-          ttl     = data.value.ttl
-          rrdatas = data.value.rrdatas
+          name = lookup(
+            local.ctx.dns_names,
+            each.value.dns_name,
+            each.value.dns_name
+          )
+          type = data.key
+          ttl  = data.value.ttl
+          rrdatas = [
+            for rrdata in data.value.rrdatas
+            : lookup(
+              local.ctx.addresses,
+              rrdata,
+              rrdata
+            )
+          ]
         }
       }
     }

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "admission_whitelist_patterns" {
   description = "An image name pattern to allowlist."
   type        = list(string)

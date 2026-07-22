@@ -13,10 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "access_config" {
   description = "Control plane endpoint and nodes access configurations."
   type = object({
-    dns_access = optional(bool, true)
+    dns_access = optional(object({
+      allow_external_traffic = optional(bool, true)
+      enable_k8s_tokens      = optional(bool)
+      enable_k8s_certs       = optional(bool)
+    }), {})
     ip_access = optional(object({
       authorized_ranges                              = optional(map(string))
       disable_public_endpoint                        = optional(bool)
@@ -53,6 +58,7 @@ variable "backup_configs" {
       include_volume_data               = optional(bool, true)
       labels                            = optional(map(string))
       namespaces                        = optional(list(string))
+      permissive_mode                   = optional(bool)
       schedule                          = optional(string)
       retention_policy_days             = optional(number)
       retention_policy_lock             = optional(bool, false)
@@ -214,16 +220,27 @@ variable "enable_features" {
       state    = string
       key_name = string
     }))
-    dataplane_v2          = optional(bool, true)
-    fqdn_network_policy   = optional(bool, true)
-    gateway_api           = optional(bool, false)
-    groups_for_rbac       = optional(string)
-    image_streaming       = optional(bool, false)
-    intranode_visibility  = optional(bool, false)
-    l4_ilb_subsetting     = optional(bool, false)
-    mesh_certificates     = optional(bool)
-    pod_security_policy   = optional(bool, false)
+    dataplane_v2         = optional(bool, true)
+    fqdn_network_policy  = optional(bool, true)
+    gateway_api          = optional(bool, false)
+    groups_for_rbac      = optional(string)
+    image_streaming      = optional(bool, false)
+    intranode_visibility = optional(bool, false)
+    l4_ilb_subsetting    = optional(bool, false)
+    mesh_certificates    = optional(bool)
+    pod_security_policy  = optional(bool, false)
+    rbac_binding_config = optional(object({
+      enable_insecure_binding_system_unauthenticated = optional(bool)
+      enable_insecure_binding_system_authenticated   = optional(bool)
+    }))
     secret_manager_config = optional(bool)
+    secret_sync_config = optional(object({
+      enabled = bool
+      rotation_config = optional(object({
+        enabled           = optional(bool)
+        rotation_interval = optional(string)
+      }))
+    }))
     security_posture_config = optional(object({
       mode               = string
       vulnerability_mode = string
@@ -237,7 +254,10 @@ variable "enable_features" {
     shielded_nodes       = optional(bool, false)
     tpu                  = optional(bool, false)
     upgrade_notifications = optional(object({
-      topic_id = optional(string)
+      enabled      = optional(bool, true)
+      event_types  = optional(list(string), [])
+      topic_id     = optional(string)
+      kms_key_name = optional(string)
     }))
     vertical_pod_autoscaling = optional(bool, false)
     workload_identity        = optional(bool, true)
@@ -250,6 +270,22 @@ variable "enable_features" {
     )
     error_message = "FQDN network policy is only supported for clusters with Dataplane v2."
   }
+  validation {
+    condition = alltrue([
+      for e in try(var.enable_features.upgrade_notifications.event_types, []) :
+      contains([
+        "UPGRADE_AVAILABLE_EVENT", "UPGRADE_EVENT",
+        "SECURITY_BULLETIN_EVENT", "UPGRADE_INFO_EVENT"
+      ], e)
+    ])
+    error_message = "Invalid upgrade notification event type."
+  }
+}
+
+variable "fleet_project" {
+  description = "The name of the fleet host project where this cluster will be registered."
+  type        = string
+  default     = null
 }
 
 variable "issue_client_certificate" {
@@ -310,7 +346,7 @@ variable "maintenance_config" {
   default = {
     daily_window_start_time = "03:00"
     recurring_window        = null
-    maintenance_exclusion   = []
+    maintenance_exclusions  = []
   }
 }
 
@@ -394,7 +430,8 @@ variable "node_config" {
     service_account               = optional(string)
     tags                          = optional(list(string))
     workload_metadata_config_mode = optional(string)
-    kubelet_readonly_port_enabled = optional(bool, true)
+    kubelet_readonly_port_enabled = optional(bool)
+    resource_manager_tags         = optional(map(string), {})
   })
   default  = {}
   nullable = false
@@ -418,7 +455,7 @@ variable "node_pool_auto_config" {
   description = "Node pool configs that apply to auto-provisioned node pools in autopilot clusters and node auto-provisioning-enabled clusters."
   type = object({
     cgroup_mode                   = optional(string)
-    kubelet_readonly_port_enabled = optional(bool, true)
+    kubelet_readonly_port_enabled = optional(bool)
     network_tags                  = optional(list(string), [])
     resource_manager_tags         = optional(map(string), {})
   })

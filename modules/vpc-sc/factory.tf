@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   _data = {
     for k, v in local._data_paths : k => {
@@ -47,7 +48,7 @@ locals {
       }
     }
     egress_policies = {
-      for k, v in local._data.egress_policies : k => {
+      for k, v in local._data.egress_policies : "$egress_policies:${k}" => {
         title = try(v.title, null)
         from = merge({
           access_levels = []
@@ -70,7 +71,7 @@ locals {
       }
     }
     ingress_policies = {
-      for k, v in local._data.ingress_policies : k => {
+      for k, v in local._data.ingress_policies : "$ingress_policies:${k}" => {
         title = try(v.title, null)
         from = merge({
           access_levels = []

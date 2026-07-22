@@ -13,9 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "egress_public_ip" {
   description = "Public IP address of Looker instance for egress."
   value       = google_looker_instance.looker.egress_public_ip
+}
+
+output "egress_service_attachments" {
+  description = "Egress service attachment connection statuses and configurations."
+  value       = try(google_looker_instance.looker.psc_config[0].service_attachments, [])
 }
 
 output "id" {
@@ -35,6 +41,12 @@ output "ingress_public_ip" {
 
 output "instance" {
   description = "Looker Core instance resource."
+  value       = google_looker_instance.looker
+  sensitive   = true
+}
+
+output "instance_id" {
+  description = "Looker Core instance id."
   value       = google_looker_instance.looker.id
   sensitive   = true
 }
@@ -42,6 +54,11 @@ output "instance" {
 output "instance_name" {
   description = "Name of the looker instance."
   value       = google_looker_instance.looker.name
+}
+
+output "looker_service_attachment" {
+  description = "Service attachment URI for the Looker instance."
+  value       = try(google_looker_instance.looker.psc_config[0].looker_service_attachment_uri, null)
 }
 
 output "looker_uri" {

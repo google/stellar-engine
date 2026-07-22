@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   _policy_rules_path = try(pathexpand(var.factories_config.policy_rules), null)
   _policy_rules = {
@@ -88,4 +89,9 @@ resource "google_network_security_gateway_security_policy_rule" "default" {
       each.value.allow == false ? "DENY" : "BASIC_PROFILE_UNSPECIFIED"
     )
   )
+  lifecycle {
+    # add a trigger to recreate rules, if the policy is replaced
+    # because it is referenced by name, this won't happen automatically, as it would, if referenced by id
+    replace_triggered_by = [google_network_security_gateway_security_policy.default.id]
+  }
 }

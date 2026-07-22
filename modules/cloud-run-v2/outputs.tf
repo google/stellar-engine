@@ -13,35 +13,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "id" {
   description = "Fully qualified job or service id."
-  value       = var.create_job ? google_cloud_run_v2_job.job[0].id : google_cloud_run_v2_service.service[0].id
+  value       = local.resource.id
 }
 
 output "invoke_command" {
   description = "Command to invoke Cloud Run Service / submit job."
-  value = (
-    var.create_job ? <<-EOT
-    gcloud run jobs execute --project ${var.project_id} --region ${var.region} --wait ${google_cloud_run_v2_job.job[0].name} --args=
-  EOT
-    : <<-EOT
-    curl -H "Authorization: bearer $(gcloud auth print-identity-token)" \
-        ${google_cloud_run_v2_service.service[0].uri} \
-        -X POST -d 'data'
-  EOT
-  )
+  value       = local.invoke_command
 }
 
 output "job" {
   description = "Cloud Run Job."
-  value       = var.create_job ? google_cloud_run_v2_job.job[0] : null
+  value       = var.type == "JOB" ? local._resource[var.type] : null
+}
+
+output "resource" {
+  description = "Cloud Run resource (job, service or worker_pool)."
+  value       = local._resource[var.type]
+}
+
+output "resource_name" {
+  description = "Cloud Run resource (job, service or workerpool)  service name."
+  value       = local.resource.name
 }
 
 output "service" {
   description = "Cloud Run Service."
-  value       = var.create_job ? null : google_cloud_run_v2_service.service[0]
+  value       = var.type == "SERVICE" ? local._resource[var.type] : null
 }
-
 output "service_account" {
   description = "Service account resource."
   value       = try(google_service_account.service_account[0], null)
@@ -62,12 +63,12 @@ output "service_account_iam_email" {
 
 output "service_name" {
   description = "Cloud Run service name."
-  value       = var.create_job ? null : google_cloud_run_v2_service.service[0].name
+  value       = var.type == "SERVICE" ? local.resource.name : null
 }
 
 output "service_uri" {
   description = "Main URI in which the service is serving traffic."
-  value       = var.create_job ? null : google_cloud_run_v2_service.service[0].uri
+  value       = local.resource.uri
 }
 
 output "vpc_connector" {

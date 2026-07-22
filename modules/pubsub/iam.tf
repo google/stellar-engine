@@ -2,7 +2,7 @@
  * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
+ * you may not use this file except in compliance with the authoritative.
  * You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   _iam_principal_roles = distinct(flatten(values(var.iam_by_principals)))
   _iam_principals = {
@@ -64,7 +65,7 @@ locals {
 resource "google_pubsub_topic_iam_binding" "authoritative" {
   for_each = local.iam
   project  = local.project_id
-  topic    = google_pubsub_topic.default.name
+  topic    = google_pubsub_topic.default.id
   role     = lookup(local.ctx.custom_roles, each.key, each.key)
   members = [
     for v in each.value : lookup(local.ctx.iam_principals, v, v)
@@ -73,8 +74,7 @@ resource "google_pubsub_topic_iam_binding" "authoritative" {
 
 resource "google_pubsub_topic_iam_binding" "bindings" {
   for_each = var.iam_bindings
-  topic    = google_pubsub_topic.default.name
-  project  = local.project_id
+  topic    = google_pubsub_topic.default.id
   role     = lookup(local.ctx.custom_roles, each.value.role, each.value.role)
   members = [
     for v in each.value.members : lookup(local.ctx.iam_principals, v, v)
@@ -91,8 +91,7 @@ resource "google_pubsub_topic_iam_binding" "bindings" {
 
 resource "google_pubsub_topic_iam_member" "bindings" {
   for_each = var.iam_bindings_additive
-  topic    = google_pubsub_topic.default.name
-  project  = local.project_id
+  topic    = google_pubsub_topic.default.id
   role     = lookup(local.ctx.custom_roles, each.value.role, each.value.role)
   member = lookup(
     local.ctx.iam_principals, each.value.member, each.value.member
@@ -113,7 +112,7 @@ resource "google_pubsub_subscription_iam_binding" "authoritative" {
     "${binding.subscription}.${binding.role}" => binding
   }
   project      = local.project_id
-  subscription = google_pubsub_subscription.default[each.value.subscription].name
+  subscription = google_pubsub_subscription.default[each.value.subscription].id
   role         = lookup(local.ctx.custom_roles, each.value.role, each.value.role)
   members = [
     for v in each.value.members : lookup(local.ctx.iam_principals, v, v)
@@ -123,7 +122,7 @@ resource "google_pubsub_subscription_iam_binding" "authoritative" {
 resource "google_pubsub_subscription_iam_binding" "bindings" {
   for_each     = local.subscription_iam_bindings
   project      = local.project_id
-  subscription = google_pubsub_subscription.default[each.value.subscription].name
+  subscription = google_pubsub_subscription.default[each.value.subscription].id
   role         = lookup(local.ctx.custom_roles, each.value.role, each.value.role)
   members = [
     for v in each.value.members : lookup(local.ctx.iam_principals, v, v)
@@ -141,7 +140,7 @@ resource "google_pubsub_subscription_iam_binding" "bindings" {
 resource "google_pubsub_subscription_iam_member" "members" {
   for_each     = local.subscription_iam_bindings_additive
   project      = local.project_id
-  subscription = google_pubsub_subscription.default[each.value.subscription].name
+  subscription = google_pubsub_subscription.default[each.value.subscription].id
   role         = lookup(local.ctx.custom_roles, each.value.role, each.value.role)
   member = lookup(
     local.ctx.iam_principals, each.value.member, each.value.member

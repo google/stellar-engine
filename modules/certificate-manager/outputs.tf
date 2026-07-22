@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "certificate_ids" {
   description = "Certificate ids."
   value       = { for k, v in google_certificate_manager_certificate.certificates : k => v.id }

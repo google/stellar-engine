@@ -13,11 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "alert_ids" {
   description = "Monitoring alert IDs."
   value = {
     for k, v in google_monitoring_alert_policy.alerts :
     k => v.id
+  }
+}
+
+output "asset_search_results" {
+  description = "Cloud Asset Inventory search results."
+  value = {
+    for k, v in data.google_cloud_asset_search_all_resources.default : k => v.results
+  }
+}
+
+output "bigquery_reservations" {
+  description = "BigQuery reservations and assignments."
+  value = {
+    reservations = google_bigquery_reservation.default
+    assignments  = local.bigquery_reservations_assigments
   }
 }
 
@@ -33,10 +49,7 @@ output "custom_roles" {
 
 output "default_service_accounts" {
   description = "Emails of the default service accounts for this project."
-  value = {
-    compute = "${local.project.number}-compute@developer.gserviceaccount.com"
-    gae     = "${local.project.project_id}@appspot.gserviceaccount.com"
-  }
+  value       = local.default_service_accounts
 }
 
 output "id" {
@@ -55,6 +68,13 @@ output "id" {
     google_project_service_identity.default,
     google_project_iam_member.service_agents
   ]
+}
+
+output "kms_autokeys" {
+  description = "KMS Autokey key ids."
+  value = {
+    for k, v in google_kms_key_handle.default : k => v.kms_key
+  }
 }
 
 output "name" {
@@ -114,6 +134,10 @@ output "number" {
     google_project_iam_member.service_agents
   ]
 }
+output "organization_policies_ids" {
+  description = "Map of ORGANIZATION_POLICIES => ID in the organization."
+  value       = { for k, v in google_org_policy_policy.default : k => v.id }
+}
 
 # TODO: deprecate in favor of id
 
@@ -149,6 +173,11 @@ output "quota_configs" {
 output "quotas" {
   description = "Quota resources."
   value       = google_cloud_quotas_quota_preference.default
+}
+
+output "scc_custom_sha_modules_ids" {
+  description = "Map of SCC CUSTOM SHA MODULES => ID in the project."
+  value       = { for k, v in google_scc_management_project_security_health_analytics_custom_module.scc_project_custom_module : k => v.id }
 }
 
 output "service_agents" {
@@ -190,5 +219,31 @@ output "tag_values" {
   value = {
     for k, v in google_tags_tag_value.default :
     k => v if try(local.tag_values[k].tag_network, null) == null
+  }
+}
+
+output "workload_identity_pool_ids" {
+  description = "Workload identity provider ids."
+  value = {
+    for k, v in google_iam_workload_identity_pool.default : k => v.name
+  }
+}
+
+output "workload_identity_provider_ids" {
+  description = "Workload identity provider attributes."
+  value = {
+    for k, v in google_iam_workload_identity_pool_provider.default :
+    k => v.name
+  }
+}
+
+output "workload_identity_providers" {
+  description = "Workload identity provider attributes."
+  value = {
+    for k, v in local.wif_providers : k => {
+      name = google_iam_workload_identity_pool_provider.default[k].name
+      pool = google_iam_workload_identity_pool.default[v.pool].name
+      type = try(v.identity_provider.oidc.template, null)
+    }
   }
 }

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   _ignore_folder_numbers = [for folder_id in var.ignore_folders : trimprefix(folder_id, "folders/")]
   _ignore_folders_query  = join(" AND NOT folders:", concat([""], local._ignore_folder_numbers))

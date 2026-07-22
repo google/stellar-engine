@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description Backend services variables.
 
 variable "backend_service_configs" {
@@ -24,20 +25,24 @@ variable "backend_service_configs" {
     connection_draining_timeout_sec = optional(number)
     enable_cdn                      = optional(bool)
     health_checks                   = optional(list(string), ["default"])
-    log_sample_rate                 = optional(number)
-    port_name                       = optional(string)
-    project_id                      = optional(string)
-    protocol                        = optional(string)
-    security_policy                 = optional(string)
-    session_affinity                = optional(string)
-    timeout_sec                     = optional(number)
+    log_config = optional(object({
+      enable          = optional(bool)
+      sample_rate     = optional(number)
+      optional_mode   = optional(string)
+      optional_fields = optional(list(string))
+    }))
+    port_name          = optional(string)
+    project_id         = optional(string)
+    protocol           = optional(string)
+    security_policy    = optional(string)
+    session_affinity   = optional(string)
+    locality_lb_policy = optional(string)
+    timeout_sec        = optional(number)
     backends = list(object({
-      # group renamed to backend
-      backend         = string
+      group           = string
       balancing_mode  = optional(string, "UTILIZATION")
       capacity_scaler = optional(number, 1)
       description     = optional(string, "Terraform managed.")
-      failover        = optional(bool, false)
       max_connections = optional(object({
         per_endpoint = optional(number)
         per_group    = optional(number)
@@ -118,6 +123,11 @@ variable "backend_service_configs" {
         nanos   = optional(number)
       }))
     }))
+    tls_settings = optional(object({
+      authentication_config = optional(string)
+      sni                   = optional(string)
+      subject_alt_names     = optional(list(string))
+    }))
   }))
   default  = {}
   nullable = false
@@ -126,12 +136,24 @@ variable "backend_service_configs" {
       for backend_service in values(var.backend_service_configs) : contains(
         [
           "NONE", "CLIENT_IP", "CLIENT_IP_NO_DESTINATION",
-          "CLIENT_IP_PORT_PROTO", "CLIENT_IP_PROTO"
+          "CLIENT_IP_PORT_PROTO", "CLIENT_IP_PROTO", "HTTP_COOKIE"
         ],
         coalesce(backend_service.session_affinity, "NONE")
       )
     ])
     error_message = "Invalid session affinity value."
+  }
+  validation {
+    condition = alltrue([
+      for backend_service in values(var.backend_service_configs) : contains(
+        [
+          "ROUND_ROBIN", "LEAST_REQUEST", "RING_HASH",
+          "RANDOM", "ORIGINAL_DESTINATION", "MAGLEV"
+        ],
+        coalesce(backend_service.locality_lb_policy, "ROUND_ROBIN")
+      )
+    ])
+    error_message = "Invalid locality lb policy value."
   }
   validation {
     condition = alltrue(flatten([

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "cleanup_policies" {
   description = "Object containing details about the cleanup policies for an Artifact Registry repository."
   type = map(object({
@@ -40,10 +41,37 @@ variable "cleanup_policy_dry_run" {
   default     = null
 }
 
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    artifact_registries = optional(map(string), {})
+    condition_vars      = optional(map(map(string)), {})
+    custom_roles        = optional(map(string), {})
+    iam_principals      = optional(map(string), {})
+    kms_keys            = optional(map(string), {})
+    locations           = optional(map(string), {})
+    project_ids         = optional(map(string), {})
+    secrets             = optional(map(string), {})
+    tag_values          = optional(map(string), {})
+    tag_vars = optional(object({
+      projects     = optional(map(map(string)), {})
+      organization = optional(map(string), {})
+    }), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "description" {
   description = "An optional description for the repository."
   type        = string
   default     = "Terraform-managed registry"
+}
+
+variable "enable_vulnerability_scanning" {
+  description = "Whether vulnerability scanning should be enabled in the repository."
+  type        = bool
+  default     = null
 }
 
 variable "encryption_key" {
@@ -103,6 +131,7 @@ variable "format" {
     maven = optional(object({
       remote = optional(object({
         public_repository = optional(string)
+        common_repository = optional(string)
         custom_repository = optional(string)
 
         disable_upstream_validation = optional(bool)
@@ -123,6 +152,7 @@ variable "format" {
     npm = optional(object({
       remote = optional(object({
         public_repository = optional(string)
+        common_repository = optional(string)
         custom_repository = optional(string)
 
         disable_upstream_validation = optional(bool)
@@ -140,6 +170,7 @@ variable "format" {
     python = optional(object({
       remote = optional(object({
         public_repository = optional(string)
+        common_repository = optional(string)
         custom_repository = optional(string)
 
         disable_upstream_validation = optional(bool)
@@ -215,4 +246,20 @@ variable "name" {
 variable "project_id" {
   description = "Registry project id."
   type        = string
+}
+
+variable "tag_bindings" {
+  description = "Tag bindings for this repository, in key => tag value id format."
+  type        = map(string)
+  nullable    = false
+  default     = {}
+}
+
+variable "universe" {
+  description = "GCP universe where to deploy the project. The prefix will be prepended to the project id."
+  type = object({
+    package_domain = string
+    prefix         = string
+  })
+  default = null
 }

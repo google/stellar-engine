@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   prefix_length = 22
   ip_allocation = (
@@ -57,9 +58,6 @@ resource "google_compute_firewall" "default" {
     protocol = "tcp"
     ports    = ["22"]
   }
-  log_config {
-    metadata = "INCLUDE_ALL_METADATA"
-  }
 }
 
 resource "google_data_fusion_instance" "default" {
@@ -78,4 +76,3 @@ resource "google_data_fusion_instance" "default" {
     ip_allocation = local.ip_allocation
   }
 }
-

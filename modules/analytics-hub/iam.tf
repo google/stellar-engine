@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   _exchange_iam_principal_roles = distinct(flatten(values(var.iam_by_principals)))
   _exchange_iam_principals = {

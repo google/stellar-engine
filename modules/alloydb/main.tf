@@ -13,45 +13,76 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   prefix      = var.prefix == null ? "" : "${var.prefix}-"
   is_regional = var.availability_type == "REGIONAL"
-  # secondary instance type is aligned with cluster type unless apply is targeting a promotion, in that
-  # case cluster will be 'primary' while instance still 'secondary'.
+
+  require_connectors = try(var.client_connection_config.require_connectors, false) ? true : null
+  ssl_mode           = try(var.client_connection_config.ssl_config.ssl_mode, null)
+
+  has_public_ip                = try(var.network_config.psa_config.enable_public_ip, false) || try(var.network_config.psa_config.enable_outbound_public_ip, false)
+  authorized_external_networks = toset(try(var.network_config.psa_config.authorized_external_networks, []))
+  enable_public_ip             = try(var.network_config.psa_config.enable_public_ip, false) ? true : null
+  enable_outbound_public_ip    = try(var.network_config.psa_config.enable_outbound_public_ip, false) ? true : null
+  allowed_consumer_projects    = try(var.network_config.psc_config.allowed_consumer_projects, [])
+
   primary_cluster_name    = "${local.prefix}${var.cluster_name}"
   primary_instance_name   = "${local.prefix}${var.instance_name}"
+  primary_kms_key_name    = try(var.encryption_config.primary_kms_key_name, null)
   secondary_cluster_name  = coalesce(var.cross_region_replication.secondary_cluster_name, "${var.cluster_name}-sec")
   secondary_instance_name = coalesce(var.cross_region_replication.secondary_instance_name, "${var.instance_name}-sec")
+  secondary_kms_key_name  = try(var.encryption_config.secondary_kms_key_name, null)
+  # secondary instance type is aligned with cluster type unless apply is targeting a promotion, in that
+  # case cluster will be 'primary' while instance still 'secondary'.
   secondary_instance_type = try(
     var.cross_region_replication.promote_secondary && google_alloydb_cluster.secondary[0].cluster_type == "SECONDARY"
     ? "SECONDARY"
     : google_alloydb_cluster.secondary[0].cluster_type, null
   )
-  users = {
-    for k, v in coalesce(var.users, {}) :
-    k => {
-      name     = k
-      password = try(v.type, "ALLOYDB_BUILT_IN") == "ALLOYDB_BUILT_IN" ? try(random_password.passwords[k].result, v.password) : null
-      roles    = v.roles
-      type     = coalesce(v.type, "ALLOYDB_BUILT_IN")
-    }
+  secondary_machine_type = (
+    try(var.cross_region_replication.secondary_machine_config.machine_type, null) != null
+    ? var.cross_region_replication.secondary_machine_config.machine_type
+    : var.machine_config.machine_type
+  )
+
+  read_pool_primary = {
+    for name, instance in var.read_pool : name => merge(instance, {
+      require_connectors = try(instance.client_connection_config.require_connectors, false) ? true : null
+      ssl_mode           = try(instance.client_connection_config.ssl_config.ssl_mode, null)
+    })
   }
+
+  read_pool_secondary = {
+    for name, instance in var.cross_region_replication.read_pool : name => merge(instance, {
+      require_connectors = try(instance.client_connection_config.require_connectors, false) ? true : null
+      ssl_mode           = try(instance.client_connection_config.ssl_config.ssl_mode, null)
+    })
+  }
+
 }
 
 resource "google_alloydb_cluster" "primary" {
-  project          = var.project_id
-  annotations      = var.annotations
-  cluster_id       = local.primary_cluster_name
-  cluster_type     = var.cross_region_replication.switchover_mode ? "SECONDARY" : "PRIMARY"
-  database_version = var.database_version
-  deletion_policy  = var.deletion_policy
-  display_name     = coalesce(var.cluster_display_name, local.primary_cluster_name)
-  labels           = var.labels
-  location         = var.location
+  project                          = var.project_id
+  annotations                      = var.annotations
+  cluster_id                       = local.primary_cluster_name
+  cluster_type                     = var.cross_region_replication.switchover_mode ? "SECONDARY" : "PRIMARY"
+  database_version                 = var.database_version
+  deletion_policy                  = var.deletion_policy
+  deletion_protection              = var.deletion_protection
+  display_name                     = coalesce(var.cluster_display_name, local.primary_cluster_name)
+  labels                           = var.labels
+  location                         = var.location
+  skip_await_major_version_upgrade = var.skip_await_major_version_upgrade
+  subscription_type                = var.subscription_type
 
-  network_config {
-    network            = try(var.network_config.psa_config.network, null)
-    allocated_ip_range = try(var.network_config.psa_config.allocated_ip_range, null)
+  # network_config block should exist only when PSA VPC resource link is present to prevent Terraform state drift
+  dynamic "network_config" {
+    for_each = var.network_config.psa_config != null ? [""] : []
+    content {
+      network            = var.network_config.psa_config.network
+      allocated_ip_range = var.network_config.psa_config.allocated_ip_range
+    }
   }
 
   dynamic "automated_backup_policy" {
@@ -63,19 +94,22 @@ resource "google_alloydb_cluster" "primary" {
       labels        = var.labels
 
       dynamic "encryption_config" {
-        for_each = var.encryption_config != null ? [""] : []
+        for_each = local.primary_kms_key_name != null ? [""] : []
         content {
-          kms_key_name = var.encryption_config.primary_kms_key_name
+          kms_key_name = local.primary_kms_key_name
         }
       }
 
       weekly_schedule {
         days_of_week = var.automated_backup_configuration.weekly_schedule.days_of_week
-        start_times {
-          hours   = var.automated_backup_configuration.weekly_schedule.start_times.hours
-          minutes = var.automated_backup_configuration.weekly_schedule.start_times.minutes
-          seconds = var.automated_backup_configuration.weekly_schedule.start_times.seconds
-          nanos   = var.automated_backup_configuration.weekly_schedule.start_times.nanos
+        dynamic "start_times" {
+          for_each = var.automated_backup_configuration.weekly_schedule.start_times
+          content {
+            hours   = start_times.value.hours
+            minutes = 0
+            seconds = 0
+            nanos   = 0
+          }
         }
       }
 
@@ -95,24 +129,21 @@ resource "google_alloydb_cluster" "primary" {
     }
   }
 
-  dynamic "continuous_backup_config" {
-    for_each = var.continuous_backup_configuration.enabled ? [""] : []
-    content {
-      enabled              = true
-      recovery_window_days = var.continuous_backup_configuration.recovery_window_days
-      dynamic "encryption_config" {
-        for_each = var.encryption_config != null ? [""] : []
-        content {
-          kms_key_name = var.encryption_config.primary_kms_key_name
-        }
+  continuous_backup_config {
+    enabled              = var.continuous_backup_configuration.enabled
+    recovery_window_days = var.continuous_backup_configuration.recovery_window_days
+    dynamic "encryption_config" {
+      for_each = local.primary_kms_key_name != null ? [""] : []
+      content {
+        kms_key_name = local.primary_kms_key_name
       }
     }
   }
 
   dynamic "encryption_config" {
-    for_each = var.encryption_config != null ? [""] : []
+    for_each = local.primary_kms_key_name != null ? [""] : []
     content {
-      kms_key_name = var.encryption_config.primary_kms_key_name
+      kms_key_name = local.primary_kms_key_name
     }
   }
 
@@ -131,16 +162,20 @@ resource "google_alloydb_cluster" "primary" {
         day = var.maintenance_config.day
         start_time {
           hours   = var.maintenance_config.start_time.hours
-          minutes = var.maintenance_config.start_time.minutes
-          seconds = var.maintenance_config.start_time.seconds
-          nanos   = var.maintenance_config.start_time.nanos
+          minutes = 0
+          seconds = 0
+          nanos   = 0
         }
       }
     }
   }
 
-  psc_config {
-    psc_enabled = var.network_config.psc_config != null ? true : null
+  # psc_config block should exist only when PSC is enabled to prevent Terraform state drift
+  dynamic "psc_config" {
+    for_each = (try(var.network_config.psc_config, null) != null ? [""] : [])
+    content {
+      psc_enabled = true
+    }
   }
 
   dynamic "secondary_config" {
@@ -154,13 +189,12 @@ resource "google_alloydb_cluster" "primary" {
   lifecycle {
     ignore_changes = [
       display_name,
-      network_config,
-      psc_config
     ]
   }
 }
 
 resource "google_alloydb_instance" "primary" {
+  provider          = google-beta
   annotations       = var.annotations
   availability_type = var.availability_type
   cluster           = google_alloydb_cluster.primary.id
@@ -172,47 +206,71 @@ resource "google_alloydb_instance" "primary" {
   labels            = var.labels
 
   dynamic "client_connection_config" {
-    for_each = var.client_connection_config != null ? [""] : []
+    for_each = local.require_connectors != null || local.ssl_mode != null ? [""] : []
     content {
-      require_connectors = var.client_connection_config.require_connectors
+      require_connectors = local.require_connectors
       dynamic "ssl_config" {
-        for_each = var.client_connection_config.ssl_config != null ? [""] : []
+        for_each = local.ssl_mode != null ? [""] : []
         content {
-          ssl_mode = var.client_connection_config.ssl_config.ssl_mode
+          ssl_mode = local.ssl_mode
         }
       }
     }
   }
 
-  dynamic "machine_config" {
-    for_each = var.machine_config != null ? [""] : []
+  dynamic "connection_pool_config" {
+    for_each = var.connection_pool_flags != null ? [""] : []
     content {
-      cpu_count = var.machine_config.cpu_count
+      enabled = true
+      flags   = var.connection_pool_flags
     }
   }
 
+  machine_config {
+    cpu_count    = var.machine_config.cpu_count
+    machine_type = var.machine_config.machine_type
+  }
+
+  # network_config block should exist only when (outbound) public IP is enabled to prevent Terraform state drift
   dynamic "network_config" {
-    for_each = var.network_config.psa_config != null ? [""] : []
+    for_each = local.has_public_ip ? [""] : []
     content {
       dynamic "authorized_external_networks" {
-        for_each = coalesce(var.network_config.psa_config.authorized_external_networks, [])
+        for_each = local.authorized_external_networks
         content {
           cidr_range = authorized_external_networks.value
         }
       }
-      enable_public_ip = var.network_config.psa_config.enable_public_ip
+      enable_public_ip          = local.enable_public_ip
+      enable_outbound_public_ip = local.enable_outbound_public_ip
     }
   }
 
+  # psc_instance_config block should exist only when there are PSC allowed consumer projects to prevent Terraform state drift
   dynamic "psc_instance_config" {
-    for_each = var.network_config.psc_config != null ? [""] : []
+    for_each = (try(var.network_config.psc_config, null) != null ? [""] : [])
     content {
-      allowed_consumer_projects = var.network_config.psc_config.allowed_consumer_projects
+      allowed_consumer_projects = local.allowed_consumer_projects
+
+      dynamic "psc_interface_configs" {
+        for_each = (try(var.network_config.psc_config.psc_interface_configs, null) != null ? [""] : [])
+        content {
+          network_attachment_resource = try(var.network_config.psc_config.psc_interface_configs.network_attachment_resource, null)
+        }
+      }
+
+      dynamic "psc_auto_connections" {
+        for_each = try(var.network_config.psc_config.psc_auto_connections, null) == null ? [] : var.network_config.psc_config.psc_auto_connections
+        content {
+          consumer_network = psc_auto_connections.value.consumer_network
+          consumer_project = psc_auto_connections.value.consumer_project
+        }
+      }
     }
   }
 
   dynamic "query_insights_config" {
-    for_each = var.query_insights_config != null ? [""] : []
+    for_each = var.query_insights_config != null && !try(var.observability_config.enabled, false) ? [""] : []
     content {
       query_string_length     = var.query_insights_config.query_string_length
       record_application_tags = var.query_insights_config.record_application_tags
@@ -221,29 +279,44 @@ resource "google_alloydb_instance" "primary" {
     }
   }
 
-  # waiting to fix this issue https://github.com/hashicorp/terraform-provider-google/issues/14944
-  lifecycle {
-    ignore_changes = [
-      network_config
-    ]
+  dynamic "observability_config" {
+    for_each = try(var.observability_config.enabled, false) ? [""] : []
+    content {
+      enabled                       = var.observability_config.enabled
+      preserve_comments             = var.observability_config.preserve_comments
+      track_wait_events             = var.observability_config.track_wait_events
+      max_query_string_length       = var.observability_config.max_query_string_length
+      record_application_tags       = var.observability_config.record_application_tags
+      query_plans_per_minute        = var.observability_config.query_plans_per_minute
+      track_active_queries          = var.observability_config.track_active_queries
+      track_client_address          = var.observability_config.track_client_address
+      assistive_experiences_enabled = var.observability_config.assistive_experiences_enabled
+    }
   }
 }
 
 resource "google_alloydb_cluster" "secondary" {
-  count            = var.cross_region_replication.enabled ? 1 : 0
-  project          = var.project_id
-  annotations      = var.annotations
-  cluster_id       = local.secondary_cluster_name
-  cluster_type     = var.cross_region_replication.promote_secondary || var.cross_region_replication.switchover_mode ? "PRIMARY" : "SECONDARY"
-  database_version = var.database_version
-  deletion_policy  = "FORCE"
-  display_name     = coalesce(var.cross_region_replication.secondary_cluster_display_name, local.secondary_cluster_name)
-  labels           = var.labels
-  location         = var.cross_region_replication.region
+  count                            = var.cross_region_replication.enabled ? 1 : 0
+  project                          = var.project_id
+  annotations                      = var.annotations
+  cluster_id                       = local.secondary_cluster_name
+  cluster_type                     = var.cross_region_replication.promote_secondary || var.cross_region_replication.switchover_mode ? "PRIMARY" : "SECONDARY"
+  database_version                 = var.database_version
+  deletion_policy                  = "FORCE"
+  deletion_protection              = var.deletion_protection
+  display_name                     = coalesce(var.cross_region_replication.secondary_cluster_display_name, local.secondary_cluster_name)
+  labels                           = var.labels
+  location                         = var.cross_region_replication.region
+  skip_await_major_version_upgrade = var.skip_await_major_version_upgrade
+  subscription_type                = var.subscription_type
 
-  network_config {
-    network            = try(var.network_config.psa_config.network, null)
-    allocated_ip_range = try(var.network_config.psa_config.allocated_ip_range, null)
+  # network_config block should exist only when PSA VPC resource link is present to prevent Terraform state drift
+  dynamic "network_config" {
+    for_each = var.network_config.psa_config != null ? [""] : []
+    content {
+      network            = var.network_config.psa_config.network
+      allocated_ip_range = var.network_config.psa_config.allocated_ip_range
+    }
   }
 
   dynamic "automated_backup_policy" {
@@ -255,19 +328,22 @@ resource "google_alloydb_cluster" "secondary" {
       labels        = var.labels
 
       dynamic "encryption_config" {
-        for_each = var.encryption_config != null ? [""] : []
+        for_each = local.secondary_kms_key_name != null ? [""] : []
         content {
-          kms_key_name = var.encryption_config.secondary_kms_key_name
+          kms_key_name = local.secondary_kms_key_name
         }
       }
 
       weekly_schedule {
         days_of_week = var.automated_backup_configuration.weekly_schedule.days_of_week
-        start_times {
-          hours   = var.automated_backup_configuration.weekly_schedule.start_times.hours
-          minutes = var.automated_backup_configuration.weekly_schedule.start_times.minutes
-          seconds = var.automated_backup_configuration.weekly_schedule.start_times.seconds
-          nanos   = var.automated_backup_configuration.weekly_schedule.start_times.nanos
+        dynamic "start_times" {
+          for_each = var.automated_backup_configuration.weekly_schedule.start_times
+          content {
+            hours   = start_times.value.hours
+            minutes = 0
+            seconds = 0
+            nanos   = 0
+          }
         }
       }
 
@@ -287,24 +363,21 @@ resource "google_alloydb_cluster" "secondary" {
     }
   }
 
-  dynamic "continuous_backup_config" {
-    for_each = var.continuous_backup_configuration.enabled ? [""] : []
-    content {
-      enabled              = true
-      recovery_window_days = var.continuous_backup_configuration.recovery_window_days
-      dynamic "encryption_config" {
-        for_each = var.encryption_config != null ? [""] : []
-        content {
-          kms_key_name = var.encryption_config.secondary_kms_key_name
-        }
+  continuous_backup_config {
+    enabled              = var.continuous_backup_configuration.enabled
+    recovery_window_days = var.continuous_backup_configuration.recovery_window_days
+    dynamic "encryption_config" {
+      for_each = local.secondary_kms_key_name != null ? [""] : []
+      content {
+        kms_key_name = local.secondary_kms_key_name
       }
     }
   }
 
   dynamic "encryption_config" {
-    for_each = var.encryption_config != null ? [""] : []
+    for_each = local.secondary_kms_key_name != null ? [""] : []
     content {
-      kms_key_name = var.encryption_config.secondary_kms_key_name
+      kms_key_name = local.secondary_kms_key_name
     }
   }
 
@@ -315,16 +388,20 @@ resource "google_alloydb_cluster" "secondary" {
         day = var.maintenance_config.day
         start_time {
           hours   = var.maintenance_config.start_time.hours
-          minutes = var.maintenance_config.start_time.minutes
-          seconds = var.maintenance_config.start_time.seconds
-          nanos   = var.maintenance_config.start_time.nanos
+          minutes = 0
+          seconds = 0
+          nanos   = 0
         }
       }
     }
   }
 
-  psc_config {
-    psc_enabled = var.network_config.psc_config != null ? true : null
+  # psc_config block should exist only when PSC is enabled to prevent Terraform state drift
+  dynamic "psc_config" {
+    for_each = (try(var.network_config.psc_config, null) != null ? [""] : [])
+    content {
+      psc_enabled = true
+    }
   }
 
   dynamic "secondary_config" {
@@ -335,17 +412,17 @@ resource "google_alloydb_cluster" "secondary" {
   }
 
   depends_on = [google_alloydb_instance.primary]
+
   # waiting to fix this issue https://github.com/hashicorp/terraform-provider-google/issues/14944
   lifecycle {
     ignore_changes = [
       display_name,
-      network_config,
-      psc_config
     ]
   }
 }
 
 resource "google_alloydb_instance" "secondary" {
+  provider          = google-beta
   count             = var.cross_region_replication.enabled ? 1 : 0
   annotations       = var.annotations
   availability_type = var.availability_type
@@ -358,42 +435,66 @@ resource "google_alloydb_instance" "secondary" {
   labels            = var.labels
 
   dynamic "client_connection_config" {
-    for_each = var.client_connection_config != null ? [""] : []
+    for_each = local.require_connectors != null || local.ssl_mode != null ? [""] : []
     content {
-      require_connectors = var.client_connection_config.require_connectors
+      require_connectors = local.require_connectors
       dynamic "ssl_config" {
-        for_each = var.client_connection_config.ssl_config != null ? [""] : []
+        for_each = local.ssl_mode != null ? [""] : []
         content {
-          ssl_mode = var.client_connection_config.ssl_config.ssl_mode
+          ssl_mode = local.ssl_mode
         }
       }
     }
   }
 
-  dynamic "machine_config" {
-    for_each = var.machine_config != null || var.cross_region_replication.secondary_machine_config != null ? [""] : []
+  dynamic "connection_pool_config" {
+    for_each = var.connection_pool_flags != null ? [""] : []
     content {
-      cpu_count = coalesce(try(var.cross_region_replication.secondary_machine_config.cpu_count, null), try(var.machine_config.cpu_count, null))
+      enabled = true
+      flags   = var.connection_pool_flags
     }
   }
 
+  machine_config {
+    cpu_count    = coalesce(try(var.cross_region_replication.secondary_machine_config.cpu_count, null), var.machine_config.cpu_count)
+    machine_type = local.secondary_machine_type
+  }
+
+  # network_config block should exist only when (outbound) public IP is enabled to prevent Terraform state drift
   dynamic "network_config" {
-    for_each = var.network_config.psa_config != null ? [""] : []
+    for_each = local.has_public_ip ? [""] : []
     content {
       dynamic "authorized_external_networks" {
-        for_each = coalesce(var.network_config.psa_config.authorized_external_networks, [])
+        for_each = local.authorized_external_networks
         content {
           cidr_range = authorized_external_networks.value
         }
       }
-      enable_public_ip = var.network_config.psa_config.enable_public_ip
+      enable_public_ip          = local.enable_public_ip
+      enable_outbound_public_ip = local.enable_outbound_public_ip
     }
   }
 
+  # psc_instance_config block should exist only when there are PSC allowed consumer projects to prevent Terraform state drift
   dynamic "psc_instance_config" {
-    for_each = var.network_config.psc_config != null ? [""] : []
+    for_each = (try(var.network_config.psc_config, null) != null ? [""] : [])
     content {
-      allowed_consumer_projects = var.network_config.psc_config.allowed_consumer_projects
+      allowed_consumer_projects = local.allowed_consumer_projects
+
+      dynamic "psc_interface_configs" {
+        for_each = (try(var.network_config.psc_config.psc_interface_configs, null) != null ? [""] : [])
+        content {
+          network_attachment_resource = try(var.network_config.psc_config.psc_interface_configs.network_attachment_resource, null)
+        }
+      }
+
+      dynamic "psc_auto_connections" {
+        for_each = try(var.network_config.psc_config.psc_auto_connections, null) == null ? [] : var.network_config.psc_config.psc_auto_connections
+        content {
+          consumer_network = psc_auto_connections.value.consumer_network
+          consumer_project = psc_auto_connections.value.consumer_project
+        }
+      }
     }
   }
 
@@ -406,87 +507,233 @@ resource "google_alloydb_instance" "secondary" {
       query_plans_per_minute  = var.query_insights_config.query_plans_per_minute
     }
   }
-
-  # waiting to fix this issue https://github.com/hashicorp/terraform-provider-google/issues/14944
-  lifecycle {
-    ignore_changes = [
-      network_config
-    ]
-  }
 }
 
+moved {
+  from = google_alloydb_instance.read_pool
+  to   = google_alloydb_instance.read_pool_primary
+}
 
+# Read pool (instance_type = "READ_POOL") does not support the following attributes:
+# * availability_type: Because 1 node pool (read_pool_config.node_count) is always zonal, two or more is always regional.
+# * gce_zone
+# * network_config.enable_outbound_public_ip
+resource "google_alloydb_instance" "read_pool_primary" {
+  provider       = google-beta
+  for_each       = local.read_pool_primary
+  annotations    = var.annotations
+  cluster        = google_alloydb_cluster.primary.id
+  database_flags = each.value.flags
+  display_name   = coalesce(each.value.display_name, "${local.prefix}${each.key}")
+  instance_id    = "${local.prefix}${each.key}"
+  instance_type  = "READ_POOL"
+  labels         = var.labels
 
-# 1. READ POOLS FOR THE PRIMARY CLUSTER
-resource "google_alloydb_instance" "primary_read_pools" {
-  for_each = var.primary_read_pools
+  dynamic "client_connection_config" {
+    for_each = each.value.require_connectors != null || each.value.ssl_mode != null ? [""] : []
+    content {
+      require_connectors = each.value.require_connectors
+      dynamic "ssl_config" {
+        for_each = each.value.ssl_mode != null ? [""] : []
+        content {
+          ssl_mode = each.value.ssl_mode
+        }
+      }
+    }
+  }
 
-  instance_id   = each.key
-  cluster       = google_alloydb_cluster.primary.name
-  instance_type = "READ_POOL"
+  dynamic "connection_pool_config" {
+    for_each = var.connection_pool_flags != null ? [""] : []
+    content {
+      enabled = true
+      flags   = var.connection_pool_flags
+    }
+  }
+
+  machine_config {
+    cpu_count    = each.value.machine_config.cpu_count
+    machine_type = each.value.machine_config.machine_type
+  }
+
+  # network_config block should exist only when (outbound) public IP is enabled to prevent Terraform state drift
+  dynamic "network_config" {
+    for_each = each.value.network_config.enable_public_ip ? [""] : []
+    content {
+      dynamic "authorized_external_networks" {
+        for_each = toset(each.value.network_config.authorized_external_networks)
+        content {
+          cidr_range = authorized_external_networks.value
+        }
+      }
+      enable_public_ip = true
+    }
+  }
+
+  # psc_instance_config block should exist only when there are PSC allowed consumer projects to prevent Terraform state drift
+  dynamic "psc_instance_config" {
+    for_each = (try(var.network_config.psc_config, null) != null ? [""] : [])
+    content {
+      allowed_consumer_projects = local.allowed_consumer_projects
+
+      dynamic "psc_interface_configs" {
+        for_each = (try(var.network_config.psc_config.psc_interface_configs, null) != null ? [""] : [])
+        content {
+          network_attachment_resource = try(var.network_config.psc_config.psc_interface_configs.network_attachment_resource, null)
+        }
+      }
+
+      dynamic "psc_auto_connections" {
+        for_each = try(var.network_config.psc_config.psc_auto_connections, null) == null ? [] : var.network_config.psc_config.psc_auto_connections
+        content {
+          consumer_network = psc_auto_connections.value.consumer_network
+          consumer_project = psc_auto_connections.value.consumer_project
+        }
+      }
+    }
+  }
 
   read_pool_config {
     node_count = each.value.node_count
   }
 
-  availability_type = each.value.availability_type
-  labels            = each.value.labels
-  annotations       = each.value.annotations
-  database_flags    = each.value.database_flags
+  dynamic "query_insights_config" {
+    for_each = each.value.query_insights_config != null && !try(each.value.observability_config.enabled, false) ? [""] : []
+    content {
+      query_string_length     = each.value.query_insights_config.query_string_length
+      record_application_tags = each.value.query_insights_config.record_application_tags
+      record_client_address   = each.value.query_insights_config.record_client_address
+      query_plans_per_minute  = each.value.query_insights_config.query_plans_per_minute
+    }
+  }
 
-  machine_config {
-    cpu_count = each.value.cpu_count
+  dynamic "observability_config" {
+    for_each = try(each.value.observability_config.enabled, false) ? [""] : []
+    content {
+      enabled                       = each.value.observability_config.enabled
+      preserve_comments             = each.value.observability_config.preserve_comments
+      track_wait_events             = each.value.observability_config.track_wait_events
+      max_query_string_length       = each.value.observability_config.max_query_string_length
+      record_application_tags       = each.value.observability_config.record_application_tags
+      query_plans_per_minute        = each.value.observability_config.query_plans_per_minute
+      track_active_queries          = each.value.observability_config.track_active_queries
+      track_client_address          = each.value.observability_config.track_client_address
+      assistive_experiences_enabled = each.value.observability_config.assistive_experiences_enabled
+    }
   }
 
   depends_on = [google_alloydb_instance.primary]
 }
 
-# 2. READ POOLS FOR THE SECONDARY CLUSTER
-resource "google_alloydb_instance" "secondary_read_pools" {
-  for_each = var.secondary_read_pools
+resource "google_alloydb_instance" "read_pool_secondary" {
+  for_each       = local.read_pool_secondary
+  annotations    = var.annotations
+  cluster        = google_alloydb_cluster.secondary[0].id
+  database_flags = each.value.flags
+  display_name   = coalesce(each.value.display_name, "${local.prefix}${each.key}")
+  instance_id    = "${local.prefix}${each.key}"
+  instance_type  = "READ_POOL"
+  labels         = var.labels
 
-  instance_id = each.key
-  # Note: The [0] is required because the secondary cluster uses 'count'
-  cluster       = google_alloydb_cluster.secondary[0].name
-  instance_type = "READ_POOL"
+  dynamic "client_connection_config" {
+    for_each = each.value.require_connectors != null || each.value.ssl_mode != null ? [""] : []
+    content {
+      require_connectors = each.value.require_connectors
+      dynamic "ssl_config" {
+        for_each = each.value.ssl_mode != null ? [""] : []
+        content {
+          ssl_mode = each.value.ssl_mode
+        }
+      }
+    }
+  }
+
+  dynamic "connection_pool_config" {
+    for_each = var.connection_pool_flags != null ? [""] : []
+    content {
+      enabled = true
+      flags   = var.connection_pool_flags
+    }
+  }
+
+  machine_config {
+    cpu_count    = each.value.machine_config.cpu_count
+    machine_type = each.value.machine_config.machine_type
+  }
+
+  # network_config block should exist only when (outbound) public IP is enabled to prevent Terraform state drift
+  dynamic "network_config" {
+    for_each = each.value.network_config.enable_public_ip ? [""] : []
+    content {
+      dynamic "authorized_external_networks" {
+        for_each = toset(each.value.network_config.authorized_external_networks)
+        content {
+          cidr_range = authorized_external_networks.value
+        }
+      }
+      enable_public_ip = true
+    }
+  }
+
+  # psc_instance_config block should exist only when there are PSC allowed consumer projects to prevent Terraform state drift
+  dynamic "psc_instance_config" {
+    for_each = (try(var.network_config.psc_config, null) != null ? [""] : [])
+    content {
+      allowed_consumer_projects = local.allowed_consumer_projects
+
+      dynamic "psc_interface_configs" {
+        for_each = (try(var.network_config.psc_config.psc_interface_configs, null) != null ? [""] : [])
+        content {
+          network_attachment_resource = try(var.network_config.psc_config.psc_interface_configs.network_attachment_resource, null)
+        }
+      }
+
+      dynamic "psc_auto_connections" {
+        for_each = try(var.network_config.psc_config.psc_auto_connections, null) == null ? [] : var.network_config.psc_config.psc_auto_connections
+        content {
+          consumer_network = psc_auto_connections.value.consumer_network
+          consumer_project = psc_auto_connections.value.consumer_project
+        }
+      }
+    }
+  }
 
   read_pool_config {
     node_count = each.value.node_count
   }
 
-  availability_type = each.value.availability_type
-  labels            = each.value.labels
-  annotations       = each.value.annotations
-  database_flags    = each.value.database_flags
-
-  machine_config {
-    cpu_count = each.value.cpu_count
+  dynamic "query_insights_config" {
+    for_each = each.value.query_insights_config != null ? [""] : []
+    content {
+      query_string_length     = each.value.query_insights_config.query_string_length
+      record_application_tags = each.value.query_insights_config.record_application_tags
+      record_client_address   = each.value.query_insights_config.record_client_address
+      query_plans_per_minute  = each.value.query_insights_config.query_plans_per_minute
+    }
   }
 
-  # This depends on the secondary instance, which also uses 'count'
-  depends_on = [google_alloydb_instance.secondary[0]]
+  depends_on = [google_alloydb_instance.secondary]
 }
 
-
-
-
-
 resource "random_password" "passwords" {
-  for_each = toset([
-    for k, v in coalesce(var.users, {}) :
-    k
-    if v.password == null
-  ])
+  for_each = {
+    for k, v in var.users :
+    k => v
+    if v.type == "ALLOYDB_BUILT_IN" && v.password == null
+  }
   length  = 16
   special = true
 }
 
 resource "google_alloydb_user" "users" {
-  for_each       = local.users
-  cluster        = google_alloydb_cluster.primary.id
-  user_id        = each.value.name
-  user_type      = each.value.type
-  password       = each.value.password
+  for_each  = var.users
+  cluster   = google_alloydb_cluster.primary.id
+  user_id   = each.key
+  user_type = each.value.type
+  password = (
+    each.value.type == "ALLOYDB_BUILT_IN" && each.value.password == null ?
+    random_password.passwords[each.key].result
+    : each.value.password
+  )
   database_roles = each.value.roles
   depends_on     = [google_alloydb_instance.primary]
 }

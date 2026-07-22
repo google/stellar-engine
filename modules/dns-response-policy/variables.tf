@@ -13,11 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "clusters" {
   description = "Map of GKE clusters to which this policy is applied in name => id format."
   type        = map(string)
   default     = {}
   nullable    = false
+}
+
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    addresses   = optional(map(string), {})
+    dns_names   = optional(map(string), {})
+    networks    = optional(map(string), {})
+    project_ids = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
 }
 
 variable "description" {

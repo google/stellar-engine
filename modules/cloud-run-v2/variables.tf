@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "containers" {
   description = "Containers in name => attributes format."
   type = map(object({
-    image   = string
-    command = optional(list(string))
-    args    = optional(list(string))
-    env     = optional(map(string))
+    image      = string
+    depends_on = optional(list(string))
+    command    = optional(list(string))
+    args       = optional(list(string))
+    env        = optional(map(string))
     env_from_key = optional(map(object({
       secret  = string
       version = string
@@ -32,6 +34,7 @@ variable "containers" {
       http_get = optional(object({
         http_headers = optional(map(string))
         path         = optional(string)
+        port         = optional(number)
       }))
       failure_threshold     = optional(number)
       initial_delay_seconds = optional(number)
@@ -43,10 +46,7 @@ variable "containers" {
       name           = optional(string)
     })))
     resources = optional(object({
-      limits = optional(object({
-        cpu    = string
-        memory = string
-      }))
+      limits            = optional(map(string))
       cpu_idle          = optional(bool)
       startup_cpu_boost = optional(bool)
     }))
@@ -58,6 +58,7 @@ variable "containers" {
       http_get = optional(object({
         http_headers = optional(map(string))
         path         = optional(string)
+        port         = optional(number)
       }))
       tcp_socket = optional(object({
         port = optional(number)
@@ -71,18 +72,48 @@ variable "containers" {
   }))
   default  = {}
   nullable = false
+
+  validation {
+    condition = alltrue([
+      for c in var.containers : (
+        c.resources == null ? true : 0 == length(setsubtract(
+          keys(lookup(c.resources, "limits", {})),
+          ["cpu", "memory", "nvidia.com/gpu"]
+        ))
+      )
+    ])
+    error_message = "Only following resource limits are available: 'cpu', 'memory' and 'nvidia.com/gpu'."
+  }
+  validation {
+    condition = alltrue([
+      for c in var.containers : (
+        var.type != "WORKERPOOL" || c.depends_on == null
+      )
+    ])
+    error_message = "depends_on is not supported when type is WORKERPOOL."
+  }
 }
 
-variable "create_job" {
-  description = "Create Cloud Run Job instead of Service."
-  type        = bool
-  default     = false
-}
-
-variable "custom_audiences" {
-  description = "Custom audiences for service."
-  type        = list(string)
-  default     = null
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    condition_vars = optional(map(map(string)), {}) # not needed here?
+    cidr_ranges    = optional(map(string), {})
+    custom_roles   = optional(map(string), {})
+    iam_principals = optional(map(string), {})
+    kms_keys       = optional(map(string), {})
+    locations      = optional(map(string), {})
+    networks       = optional(map(string), {})
+    project_ids    = optional(map(string), {})
+    subnets        = optional(map(string), {})
+    tag_values     = optional(map(string), {})
+    tag_vars = optional(object({
+      projects     = optional(map(map(string)), {})
+      organization = optional(map(string), {})
+    }), {})
+  })
+  nullable = false
+  default  = {}
 }
 
 variable "deletion_protection" {
@@ -97,44 +128,24 @@ variable "encryption_key" {
   default     = null
 }
 
-variable "eventarc_triggers" {
-  description = "Event arc triggers for different sources."
-  type = object({
-    audit_log = optional(map(object({
-      method  = string
-      service = string
-    })))
-    pubsub                 = optional(map(string))
-    service_account_email  = optional(string)
-    service_account_create = optional(bool, false)
-  })
-  default = {}
-  validation {
-    condition     = var.eventarc_triggers.audit_log == null || (var.eventarc_triggers.audit_log != null && (var.eventarc_triggers.service_account_email != null || var.eventarc_triggers.service_account_create))
-    error_message = "When setting var.eventarc_triggers.audit_log provide either service_account_email or set service_account_create to true"
-  }
-}
-
 variable "iam" {
   description = "IAM bindings for Cloud Run service in {ROLE => [MEMBERS]} format."
   type        = map(list(string))
   default     = {}
 }
 
-variable "ingress" {
-  description = "Ingress settings."
-  type        = string
-  default     = null
+variable "job_config" {
+  description = "Cloud Run Job specific configuration."
+  type = object({
+    max_retries = optional(number)
+    task_count  = optional(number)
+    timeout     = optional(string)
+  })
+  default  = {}
+  nullable = false
   validation {
-    condition = (
-      var.ingress == null ? true : contains(
-        ["INGRESS_TRAFFIC_ALL", "INGRESS_TRAFFIC_INTERNAL_ONLY",
-      "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"], var.ingress)
-    )
-    error_message = <<EOF
-    Ingress should be one of INGRESS_TRAFFIC_ALL, INGRESS_TRAFFIC_INTERNAL_ONLY,
-    INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER.
-    EOF
+    condition     = var.job_config.timeout == null ? true : endswith(var.job_config.timeout, "s")
+    error_message = "Timeout should follow format of number with up to nine fractional digits, ending with 's'. Example: '3.5s'."
   }
 }
 
@@ -161,19 +172,16 @@ variable "launch_stage" {
   }
 }
 
+variable "managed_revision" {
+  description = "Whether the Terraform module should control the deployment of revisions."
+  type        = bool
+  nullable    = false
+  default     = true
+}
+
 variable "name" {
   description = "Name used for Cloud Run service."
   type        = string
-}
-
-variable "prefix" {
-  description = "Optional prefix used for resource names."
-  type        = string
-  default     = null
-  validation {
-    condition     = var.prefix != ""
-    error_message = "Prefix cannot be empty, please use null instead."
-  }
 }
 
 variable "project_id" {
@@ -189,15 +197,12 @@ variable "region" {
 variable "revision" {
   description = "Revision template configurations."
   type = object({
-    name                       = optional(string)
-    gen2_execution_environment = optional(bool)
-    max_concurrency            = optional(number)
-    max_instance_count         = optional(number)
-    min_instance_count         = optional(number)
-    job = optional(object({
-      max_retries = optional(number)
-      task_count  = optional(number)
-    }), {})
+    gpu_zonal_redundancy_disabled = optional(bool)
+    labels                        = optional(map(string))
+    name                          = optional(string)
+    node_selector = optional(object({
+      accelerator = string
+    }))
     vpc_access = optional(object({
       connector = optional(string)
       egress    = optional(string)
@@ -206,9 +211,35 @@ variable "revision" {
       tags      = optional(list(string))
     }), {})
     timeout = optional(string)
+    # deprecated fields
+    gen2_execution_environment = optional(any) # DEPRECATED
+    job                        = optional(any) # DEPRECATED
+    max_concurrency            = optional(any) # DEPRECATED
+    max_instance_count         = optional(any) # DEPRECATED
+    min_instance_count         = optional(any) # DEPRECATED
   })
   default  = {}
   nullable = false
+  validation {
+    condition     = lookup(var.revision, "gen2_execution_environment", null) == null
+    error_message = "Field gen2_execution_environment has moved to var.service_config."
+  }
+  validation {
+    condition     = lookup(var.revision, "job", null) == null
+    error_message = "Field job has moved to var.job_config."
+  }
+  validation {
+    condition     = lookup(var.revision, "max_concurrency", null) == null
+    error_message = "Field max_concurrency has moved to var.service_config."
+  }
+  validation {
+    condition     = lookup(var.revision, "max_instance_count", null) == null
+    error_message = "Field max_instance_count has moved to var.service_config."
+  }
+  validation {
+    condition     = lookup(var.revision, "min_instance_count", null) == null
+    error_message = "Field min_instance_count has moved to var.service_config."
+  }
   validation {
     condition = (
       try(var.revision.vpc_access.egress, null) == null ? true : contains(
@@ -222,25 +253,95 @@ variable "revision" {
     )
     error_message = "When providing vpc_access.network provide also vpc_access.subnet."
   }
+  validation {
+    condition = try(var.revision.vpc_access.connector, null) == null || (
+      try(var.revision.vpc_access.connector, null) != null && var.vpc_connector_create == null
+    )
+    error_message = "Either provide connector to create in var.vpc_connector_create or provide externally managed connector in var.revision.vpc_access.connector"
+  }
 }
 
-variable "service_account" {
-  description = "Service account email. Unused if service account is auto-created."
-  type        = string
-  default     = null
+variable "service_config" {
+  description = "Cloud Run service specific configuration options."
+  type = object({
+    custom_audiences = optional(list(string), null)
+    eventarc_triggers = optional(
+      object({
+        audit_log = optional(map(object({
+          method  = string
+          service = string
+        })))
+        pubsub = optional(map(string))
+        storage = optional(map(object({
+          bucket = string
+          path   = optional(string)
+        })))
+        service_account_email = optional(string)
+    }), {})
+    gen2_execution_environment = optional(bool, false)
+    iap_config = optional(object({
+      iam          = optional(list(string), [])
+      iam_additive = optional(list(string), [])
+    }), null)
+    ingress              = optional(string, null)
+    invoker_iam_disabled = optional(bool, false)
+    max_concurrency      = optional(number)
+    multi_region_settings = optional(object({
+      regions = list(string)
+    }), null)
+    scaling = optional(object({
+      max_instance_count = optional(number)
+      min_instance_count = optional(number)
+    }))
+    timeout = optional(string)
+  })
+  default  = {}
+  nullable = false
+
+  validation {
+    condition     = var.service_config.eventarc_triggers.audit_log == null || var.service_config.eventarc_triggers.service_account_email != null
+    error_message = "When setting var.eventarc_triggers.audit_log provide service_account_email."
+  }
+
+  validation {
+    condition     = !(length(try(var.service_config.iap_config.iam, [])) > 0 && length(try(var.service_config.iap_config.iam_additive, [])) > 0)
+    error_message = "Providing both 'iam' and 'iam_additive' in iap_config is not supported."
+  }
+
+  validation {
+    condition     = var.service_config.iap_config == null || var.launch_stage != "GA"
+    error_message = "iap is currently not supported in GA. Set launch_stage to 'BETA' or lower."
+  }
+
+  validation {
+    condition = (
+      var.service_config.ingress == null ? true : contains(
+        ["INGRESS_TRAFFIC_ALL", "INGRESS_TRAFFIC_INTERNAL_ONLY",
+      "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"], var.service_config.ingress)
+    )
+    error_message = <<EOF
+    Ingress should be one of INGRESS_TRAFFIC_ALL, INGRESS_TRAFFIC_INTERNAL_ONLY,
+    INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER.
+    EOF
+  }
 }
 
-variable "service_account_create" {
-  description = "Auto-create service account."
-  type        = bool
-  default     = false
-}
 
 variable "tag_bindings" {
   description = "Tag bindings for this service, in key => tag value id format."
   type        = map(string)
   nullable    = false
   default     = {}
+}
+
+variable "type" {
+  description = "Type of Cloud Run resource to deploy: JOB, SERVICE or WORKERPOOL."
+  type        = string
+  default     = "SERVICE"
+  validation {
+    condition     = contains(["JOB", "WORKERPOOL", "SERVICE"], var.type)
+    error_message = "Allowed values for var.type are: 'JOB', 'SERVICE', 'WORKERPOOL'"
+  }
 }
 
 variable "volumes" {
@@ -275,4 +376,18 @@ variable "volumes" {
     ])
     error_message = "Only one type of volume can be defined at a time."
   }
+}
+
+variable "workerpool_config" {
+  description = "Cloud Run Worker Pool specific configuration."
+  type = object({
+    scaling = optional(object({
+      manual_instance_count = optional(number)
+      max_instance_count    = optional(number)
+      min_instance_count    = optional(number)
+      mode                  = optional(string)
+    }))
+  })
+  default  = {}
+  nullable = false
 }

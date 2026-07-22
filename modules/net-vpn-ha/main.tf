@@ -14,26 +14,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    }
+  }
+  ctx_p = "$"
   md5_keys = {
     for k, v in random_id.md5_keys
     : k => v.b64_url
   }
+  network = lookup(local.ctx.networks, var.network, var.network)
   peer_gateways_external = {
     for k, v in var.peer_gateways : k => v.external if v.external != null
   }
   peer_gateways_gcp = {
-    for k, v in var.peer_gateways : k => v.gcp if v.gcp != null
+    for k, v in var.peer_gateways :
+    k => lookup(local.ctx.vpn_gateways, v.gcp, v.gcp) if v.gcp != null
   }
+  project_id = lookup(
+    local.ctx.project_ids, var.project_id, var.project_id
+  )
+  region = lookup(
+    local.ctx.locations, var.region, var.region
+  )
   router = (
     var.router_config.create
     ? try(google_compute_router.router[0].name, null)
-    : var.router_config.name
+    : lookup(local.ctx.routers, var.router_config.name, var.router_config.name)
   )
   vpn_gateway = (
     var.vpn_gateway_create != null
     ? try(google_compute_ha_vpn_gateway.ha_gateway[0].self_link, null)
-    : var.vpn_gateway
+    : lookup(local.ctx.vpn_gateways, var.vpn_gateway, var.vpn_gateway)
   )
   secret = random_id.secret.b64_url
 }
@@ -42,23 +57,23 @@ resource "google_compute_ha_vpn_gateway" "ha_gateway" {
   count       = var.vpn_gateway_create != null ? 1 : 0
   name        = var.name
   description = var.vpn_gateway_create.description
-  project     = var.project_id
-  region      = var.region
-  network     = var.network
+  project     = local.project_id
+  region      = local.region
+  network     = local.network
   stack_type  = var.vpn_gateway_create.ipv6 ? "IPV4_IPV6" : "IPV4_ONLY"
 }
 
 resource "google_compute_external_vpn_gateway" "external_gateway" {
   for_each        = local.peer_gateways_external
   name            = each.value.name != null ? each.value.name : "${var.name}-${each.key}"
-  project         = var.project_id
+  project         = local.project_id
   redundancy_type = each.value.redundancy_type
   description     = each.value.description
   dynamic "interface" {
     for_each = each.value.interfaces
     content {
       id         = interface.key
-      ip_address = interface.value
+      ip_address = lookup(local.ctx.addresses, interface.value, interface.value)
     }
   }
 }
@@ -66,9 +81,9 @@ resource "google_compute_external_vpn_gateway" "external_gateway" {
 resource "google_compute_router" "router" {
   count   = var.router_config.create ? 1 : 0
   name    = coalesce(var.router_config.name, "vpn-${var.name}")
-  project = var.project_id
-  region  = var.region
-  network = var.network
+  project = local.project_id
+  region  = local.region
+  network = local.network
   bgp {
     advertise_mode = (
       var.router_config.custom_advertise != null
@@ -95,8 +110,8 @@ resource "google_compute_router" "router" {
 
 resource "google_compute_router_peer" "bgp_peer" {
   for_each                  = var.tunnels
-  region                    = var.region
-  project                   = var.project_id
+  region                    = local.region
+  project                   = local.project_id
   name                      = each.value.bgp_peer.name != null ? each.value.bgp_peer.name : "${var.name}-${each.key}"
   router                    = coalesce(each.value.router, local.router)
   peer_ip_address           = each.value.bgp_peer.address
@@ -116,6 +131,17 @@ resource "google_compute_router_peer" "bgp_peer" {
       description = range.value
     }
   }
+  dynamic "custom_learned_ip_ranges" {
+    for_each = try(each.value.bgp_peer.custom_learned_ip_ranges.ip_ranges, {})
+    iterator = range
+    content {
+      range = range.value
+    }
+  }
+  custom_learned_route_priority = try(
+    each.value.bgp_peer.custom_learned_ip_ranges.route_priority,
+    null
+  )
   dynamic "md5_authentication_key" {
     for_each = each.value.bgp_peer.md5_authentication_key != null ? toset([each.value.bgp_peer.md5_authentication_key]) : []
     content {
@@ -123,18 +149,23 @@ resource "google_compute_router_peer" "bgp_peer" {
       key  = coalesce(md5_authentication_key.value.key, local.md5_keys[each.key])
     }
   }
-  enable_ipv6               = try(each.value.bgp_peer.ipv6, null) == null ? false : true
-  interface                 = google_compute_router_interface.router_interface[each.key].name
-  ipv6_nexthop_address      = try(each.value.bgp_peer.ipv6.nexthop_address, null)
-  peer_ipv6_nexthop_address = try(each.value.bgp_peer.ipv6.peer_nexthop_address, null)
+  enable_ipv6                        = try(each.value.bgp_peer.ipv6, null) == null ? false : true
+  interface                          = google_compute_router_interface.router_interface[each.key].name
+  ipv6_nexthop_address               = try(each.value.bgp_peer.ipv6.nexthop_address, null)
+  peer_ipv6_nexthop_address          = try(each.value.bgp_peer.ipv6.peer_nexthop_address, null)
+  zero_custom_learned_route_priority = try(each.value.bgp_peer.custom_learned_ip_ranges.route_priority, 1000) == 0 ? true : false
 }
 
 resource "google_compute_router_interface" "router_interface" {
   for_each = var.tunnels
-  project  = var.project_id
-  region   = var.region
-  name     = each.value.peer_router_interface_name != null ? each.value.peer_router_interface_name : "${var.name}-${each.key}"
-  router   = local.router
+  project  = local.project_id
+  region   = local.region
+  name = (
+    each.value.peer_router_interface_name != null
+    ? each.value.peer_router_interface_name :
+    "${var.name}-${each.key}"
+  )
+  router = local.router
   # FIXME: can bgp_session_range be null?
   ip_range   = each.value.bgp_session_range == "" ? null : each.value.bgp_session_range
   vpn_tunnel = google_compute_vpn_tunnel.tunnels[each.key].name
@@ -142,8 +173,8 @@ resource "google_compute_router_interface" "router_interface" {
 
 resource "google_compute_vpn_tunnel" "tunnels" {
   for_each = var.tunnels
-  project  = var.project_id
-  region   = var.region
+  project  = local.project_id
+  region   = local.region
   name     = each.value.name != null ? each.value.name : "${var.name}-${each.key}"
   router   = local.router
   peer_external_gateway = try(
@@ -158,6 +189,29 @@ resource "google_compute_vpn_tunnel" "tunnels" {
   ike_version           = each.value.ike_version
   shared_secret         = coalesce(each.value.shared_secret, local.secret)
   vpn_gateway           = local.vpn_gateway
+
+  dynamic "cipher_suite" {
+    for_each = each.value.cipher_suite != null ? [each.value.cipher_suite] : []
+    content {
+      dynamic "phase1" {
+        for_each = [cipher_suite.value.phase1]
+        content {
+          dh         = try(phase1.value.dh, null)
+          encryption = try(phase1.value.encryption, null)
+          integrity  = try(phase1.value.integrity, null)
+          prf        = try(phase1.value.prf, null)
+        }
+      }
+      dynamic "phase2" {
+        for_each = [cipher_suite.value.phase2]
+        content {
+          encryption = try(phase2.value.encryption, null)
+          integrity  = try(phase2.value.integrity, null)
+          pfs        = try(phase2.value.pfs, null)
+        }
+      }
+    }
+  }
 }
 
 resource "random_id" "secret" {

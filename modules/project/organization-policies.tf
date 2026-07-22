@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description Project-level organization policies.
 
 locals {
@@ -137,8 +138,12 @@ resource "google_org_policy_policy" "default" {
           dynamic "values" {
             for_each = rule.value.has_values ? [1] : []
             content {
-              allowed_values = try(rule.value.allow.values, null)
-              denied_values  = try(rule.value.deny.values, null)
+              allowed_values = try(rule.value.allow.values, null) == null ? null : [
+                for v in rule.value.allow.values : templatestring(v, var.context.condition_vars)
+              ]
+              denied_values = try(rule.value.deny.values, null) == null ? null : [
+                for v in rule.value.deny.values : templatestring(v, var.context.condition_vars)
+              ]
             }
           }
         }
@@ -176,12 +181,18 @@ resource "google_org_policy_policy" "default" {
           dynamic "values" {
             for_each = rule.value.has_values ? [1] : []
             content {
-              allowed_values = try(rule.value.allow.values, null)
-              denied_values  = try(rule.value.deny.values, null)
+              allowed_values = try(rule.value.allow.values, null) == null ? null : [
+                for v in rule.value.allow.values : templatestring(v, var.context.condition_vars)
+              ]
+              denied_values = try(rule.value.deny.values, null) == null ? null : [
+                for v in rule.value.deny.values : templatestring(v, var.context.condition_vars)
+              ]
             }
           }
         }
       }
     }
   }
+
+  depends_on = [google_project_service.org_policy_service]
 }

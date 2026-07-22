@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "autoscaler" {
   description = "Auto-created autoscaler resource."
   value = var.autoscaler_config == null ? null : try(

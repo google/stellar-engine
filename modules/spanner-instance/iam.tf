@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   spanner_database_iam = merge([for k1, v1 in var.databases : { for k2, v2 in v1.iam :
     "${k1}.${k2}" => {

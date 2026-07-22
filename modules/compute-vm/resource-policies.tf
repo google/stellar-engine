@@ -13,40 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description Resource policies.
 
 locals {
-  ischedule = try(var.instance_schedule.create_config, null)
-  ischedule_attach = var.instance_schedule == null ? null : (
-    var.instance_schedule.create_config != null
-    # created policy with optional attach to allow policy destroy
-    ? (
-      var.instance_schedule.create_config.active
-      ? [google_compute_resource_policy.schedule[0].id]
-      : null
-    )
-    # externally managed policy
-    : [var.instance_schedule.resource_policy_id]
-  )
-
+  ischedule = var.instance_schedule == null ? null : [
+    google_compute_resource_policy.schedule[0].id
+  ]
   disk_zonal_schedule_attachments = flatten([
-    for disk_key, disk_data in try(local.attached_disks_zonal, []) :
-    disk_data.snapshot_schedule != null ? [
-      for schedule in disk_data.snapshot_schedule : {
-        disk_key          = disk_key
-        source_type       = disk_data.source_type
-        source            = disk_data.source
+    for k, v in local.attached_disks_zonal :
+    v.snapshot_schedule != null ? [
+      for schedule in v.snapshot_schedule : {
+        disk_key          = k
+        source            = v.source
         snapshot_schedule = schedule
       }
     ] : []
   ])
   disk_regional_schedule_attachments = flatten([
-    for disk_key, disk_data in try(local.attached_disks_regional, []) :
-    disk_data.snapshot_schedule != null ? [
-      for schedule in disk_data.snapshot_schedule : {
-        disk_key          = disk_key
-        source_type       = disk_data.source_type
-        source            = disk_data.source
+    for k, v in try(local.attached_disks_regional, []) :
+    v.snapshot_schedule != null ? [
+      for schedule in v.snapshot_schedule : {
+        disk_key          = k
+        source            = v.source
         snapshot_schedule = schedule
       }
     ] : []
@@ -54,27 +43,27 @@ locals {
 }
 
 resource "google_compute_resource_policy" "schedule" {
-  count   = local.ischedule != null ? 1 : 0
-  project = var.project_id
-  region  = substr(var.zone, 0, length(var.zone) - 2)
+  count   = var.instance_schedule != null ? 1 : 0
+  project = local.project_id
+  region  = substr(local.zone, 0, length(local.zone) - 2)
   name    = var.name
   description = coalesce(
-    local.ischedule.description, "Schedule policy for ${var.name}."
+    var.instance_schedule.description, "Schedule policy for ${var.name}."
   )
   instance_schedule_policy {
-    expiration_time = local.ischedule.expiration_time
-    start_time      = local.ischedule.start_time
-    time_zone       = local.ischedule.timezone
+    expiration_time = var.instance_schedule.expiration_time
+    start_time      = var.instance_schedule.start_time
+    time_zone       = var.instance_schedule.timezone
     dynamic "vm_start_schedule" {
-      for_each = local.ischedule.vm_start != null ? [""] : []
+      for_each = var.instance_schedule.vm_start != null ? [""] : []
       content {
-        schedule = local.ischedule.vm_start
+        schedule = var.instance_schedule.vm_start
       }
     }
     dynamic "vm_stop_schedule" {
-      for_each = local.ischedule.vm_stop != null ? [""] : []
+      for_each = var.instance_schedule.vm_stop != null ? [""] : []
       content {
-        schedule = local.ischedule.vm_stop
+        schedule = var.instance_schedule.vm_stop
       }
     }
   }
@@ -82,8 +71,8 @@ resource "google_compute_resource_policy" "schedule" {
 
 resource "google_compute_resource_policy" "snapshot" {
   for_each = var.snapshot_schedules
-  project  = var.project_id
-  region   = substr(var.zone, 0, length(var.zone) - 2)
+  project  = local.project_id
+  region   = substr(local.zone, 0, length(local.zone) - 2)
   name     = "${var.name}-${each.key}"
   description = coalesce(
     each.value.description, "Schedule policy ${each.key} for ${var.name}."
@@ -141,15 +130,15 @@ resource "google_compute_resource_policy" "snapshot" {
 
 resource "google_compute_disk_resource_policy_attachment" "boot" {
   for_each = var.boot_disk.snapshot_schedule != null ? toset(var.boot_disk.snapshot_schedule) : []
-  project  = var.project_id
-  zone     = var.zone
+  project  = local.project_id
+  zone     = local.zone
   name = try(
     google_compute_resource_policy.snapshot[each.value].name,
     each.value
   )
   # if independent disk is used for boot disk it will have a different name compared to when created implicitly
   disk = (
-    !local.template_create && var.boot_disk.use_independent_disk
+    !local.is_template && var.boot_disk.use_independent_disk != null
     ? google_compute_disk.boot[0].name
     : var.name
   )
@@ -162,15 +151,15 @@ resource "google_compute_disk_resource_policy_attachment" "attached" {
     "${attachment.disk_key}-${attachment.snapshot_schedule}" => attachment
   }
 
-  project = var.project_id
-  zone    = var.zone
+  project = local.project_id
+  zone    = local.zone
   name = try(
     google_compute_resource_policy.snapshot[each.value.snapshot_schedule].name,
     each.value.snapshot_schedule
   )
   disk = (
-    each.value.source_type == "attach"
-    ? each.value.source
+    each.value.source.attach != null
+    ? each.value.source.attach
     : google_compute_disk.disks[each.value.disk_key].name
   )
   depends_on = [
@@ -184,19 +173,19 @@ resource "google_compute_region_disk_resource_policy_attachment" "attached" {
     for attachment in local.disk_regional_schedule_attachments :
     "${attachment.disk_key}-${attachment.snapshot_schedule}" => attachment
   }
-
-  project = var.project_id
+  project = local.project_id
+  region  = local.region
   name = try(
     google_compute_resource_policy.snapshot[each.value.snapshot_schedule].name,
     each.value.snapshot_schedule
   )
   disk = (
-    each.value.source_type == "attach"
-    ? each.value.source
-    : google_compute_disk.disks[each.value.disk_key].name
+    each.value.source.attach != null
+    ? each.value.source.attach
+    : google_compute_region_disk.disks[each.value.disk_key].name
   )
   depends_on = [
     google_compute_instance.default,
-    google_compute_disk.disks
+    google_compute_region_disk.disks
   ]
 }

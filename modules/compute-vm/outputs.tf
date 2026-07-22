@@ -13,9 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "external_ip" {
   description = "Instance main interface external IP addresses."
-  value       = null
+  value = (
+    var.network_interfaces[0].nat
+    ? try(google_compute_instance.default[0].network_interface[0].access_config[0].nat_ip, null)
+    : null
+  )
 }
 
 output "group" {
@@ -25,7 +30,12 @@ output "group" {
 
 output "id" {
   description = "Fully qualified instance id."
-  value       = try(google_compute_instance.default[0].id, null)
+  value = try(
+    google_compute_instance.default[0].id,
+    google_tpu_v2_vm.default[0].id,
+    google_tpu_v2_queued_resource.default[0].id,
+    null
+  )
 }
 
 output "instance" {
@@ -38,21 +48,28 @@ output "internal_ip" {
   description = "Instance main interface internal IP address."
   value = try(
     google_compute_instance.default[0].network_interface[0].network_ip,
+    google_tpu_v2_vm.default[0].network_endpoints[0].ip_address,
     null
   )
 }
 
 output "internal_ips" {
   description = "Instance interfaces internal IP addresses."
-  value = [
-    for nic in try(google_compute_instance.default[0].network_interface, [])
-    : nic.network_ip
-  ]
+  value = concat(
+    [
+      for nic in try(google_compute_instance.default[0].network_interface, [])
+      : nic.network_ip
+    ],
+    [
+      for ep in try(google_tpu_v2_vm.default[0].network_endpoints, [])
+      : ep.ip_address
+    ]
+  )
 }
 
 output "login_command" {
   description = "Command to SSH into the machine."
-  value       = "gcloud compute ssh --project ${var.project_id} --zone ${var.zone} ${var.name}"
+  value       = "gcloud compute ssh --project ${local.project_id} --zone ${local.zone} ${var.name}"
 }
 
 output "self_link" {

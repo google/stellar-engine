@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Google Network Peering
 
 This module allows creation of a [VPC Network Peering](https://cloud.google.com/vpc/docs/vpc-peering) between two networks.
@@ -95,10 +79,10 @@ module "peering" {
 |---|---|:---:|:---:|:---:|
 | [local_network](variables.tf#L17) | Resource link of the network to add a peering to. | <code>string</code> | ✓ |  |
 | [peer_network](variables.tf#L38) | Resource link of the peer network. | <code>string</code> | ✓ |  |
-| [name](variables.tf#L22) | Optional names for the the peering resources. If not set, peering names will be generated based on the network names. | <code title="object&#40;&#123;&#10;  local &#61; optional&#40;string&#41;&#10;  peer  &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [name](variables.tf#L22) | Optional names for the the peering resources. If not set, peering names will be generated based on the network names. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [peer_create_peering](variables.tf#L32) | Create the peering on the remote side. If false, only the peering from this network to the remote network is created. | <code>bool</code> |  | <code>true</code> |
 | [prefix](variables.tf#L43) | Optional name prefix for the network peerings. | <code>string</code> |  | <code>null</code> |
-| [routes_config](variables.tf#L53) | Control import/export for local and remote peer. Remote configuration is only used when creating remote peering. | <code title="object&#40;&#123;&#10;  local &#61; optional&#40;object&#40;&#123;&#10;    export        &#61; optional&#40;bool, true&#41;&#10;    import        &#61; optional&#40;bool, true&#41;&#10;    public_export &#61; optional&#40;bool&#41;&#10;    public_import &#61; optional&#40;bool&#41;&#10;  &#125;&#41;, &#123;&#125;&#41;&#10;  peer &#61; optional&#40;object&#40;&#123;&#10;    export        &#61; optional&#40;bool, true&#41;&#10;    import        &#61; optional&#40;bool, true&#41;&#10;    public_export &#61; optional&#40;bool&#41;&#10;    public_import &#61; optional&#40;bool&#41;&#10;  &#125;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [routes_config](variables.tf#L53) | Control import/export for local and remote peer. Remote configuration is only used when creating remote peering. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [stack_type](variables.tf#L73) | IP version(s) of traffic and routes that are allowed to be imported or exported between peer networks. Possible values: IPV4_ONLY, IPV4_IPV6. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs

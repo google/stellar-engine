@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "iam" {
   description = "IAM bindings in {ROLE => [MEMBERS]} format."
   type        = map(list(string))
@@ -55,4 +56,3 @@ variable "iam_by_principals" {
   default     = {}
   nullable    = false
 }
-

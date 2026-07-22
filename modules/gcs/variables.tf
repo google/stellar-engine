@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "autoclass" {
   description = "Enable autoclass to automatically transition objects to appropriate storage classes based on their access pattern. If set to true, storage_class must be set to STANDARD. Defaults to false."
   type        = bool
@@ -22,18 +23,25 @@ variable "autoclass" {
 variable "bucket_create" {
   description = "Create bucket."
   type        = bool
+  nullable    = false
   default     = true
 }
 
 variable "context" {
   description = "Context-specific interpolations."
   type = object({
-    condition_vars = optional(map(map(string)), {})
-    custom_roles   = optional(map(string), {})
-    iam_principals = optional(map(string), {})
-    locations      = optional(map(string), {})
-    project_ids    = optional(map(string), {})
-    tag_values     = optional(map(string), {})
+    condition_vars  = optional(map(map(string)), {})
+    custom_roles    = optional(map(string), {})
+    iam_principals  = optional(map(string), {})
+    kms_keys        = optional(map(string), {})
+    locations       = optional(map(string), {})
+    project_ids     = optional(map(string), {})
+    storage_buckets = optional(map(string), {})
+    tag_values      = optional(map(string), {})
+    tag_vars = optional(object({
+      projects     = optional(map(map(string)), {})
+      organization = optional(map(string), {})
+    }), {})
   })
   default  = {}
   nullable = false
@@ -97,6 +105,24 @@ variable "ip_filter" {
   default = null
 }
 
+variable "kms_autokeys" {
+  description = "KMS Autokey key handles. If location is not specified the bucket location will be used. Key handle names will be added to the kms_keys context with an `autokeys/` prefix."
+  type = map(object({
+    location               = optional(string)
+    resource_type_selector = optional(string, "storage.googleapis.com/Bucket")
+  }))
+  nullable = false
+  default  = {}
+  validation {
+    condition = alltrue([
+      for k, v in var.kms_autokeys : k == try(regex(
+        "^[a-z][a-z0-9-]+[a-z0-9]$", k
+      ), null)
+    ])
+    error_message = "Autokey keys need to be valid GCP resource names."
+  }
+}
+
 variable "labels" {
   description = "Labels to be attached to all buckets."
   type        = map(string)
@@ -157,8 +183,8 @@ variable "location" {
   type        = string
   default     = null
   validation {
-    condition     = ((var.bucket_create == true) == (var.location != null))
-    error_message = "Bucket location is required if and only if bucket_create is true."
+    condition     = var.bucket_create != true || var.location != null
+    error_message = "Bucket location needs to be defined when creating a bucket."
   }
 }
 
@@ -212,6 +238,7 @@ variable "notification_config" {
     sa_email       = string
     topic_name     = string
     create_topic = optional(object({
+      create     = optional(bool, true)
       kms_key_id = optional(string)
     }), {})
     event_types        = optional(list(string))
@@ -258,8 +285,22 @@ variable "prefix" {
 }
 
 variable "project_id" {
-  description = "Bucket project id."
+  description = "Bucket project id. Only required when creating buckets, or notification config topics."
   type        = string
+  nullable    = true
+  default     = null
+  validation {
+    condition = (
+      var.bucket_create != true || var.project_id != null
+    )
+    error_message = "Project id needs to be defined when creating a bucket."
+  }
+  validation {
+    condition = (
+      try(var.notification_config.create_topic.create, null) != true || var.project_id != null
+    )
+    error_message = "Project id needs to be defined when creating a notification topic."
+  }
 }
 
 variable "public_access_prevention" {

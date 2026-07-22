@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Firestore
 
 This module allows to crete a firestore datatabase, fields, indexes and documents.
@@ -167,13 +151,13 @@ module "firestore" {
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [database](variables.tf#L41) | Database attributes. | <code title="object&#40;&#123;&#10;  app_engine_integration_mode       &#61; optional&#40;string&#41;&#10;  concurrency_mode                  &#61; optional&#40;string&#41;&#10;  deletion_policy                   &#61; optional&#40;string&#41;&#10;  delete_protection_state           &#61; optional&#40;string&#41;&#10;  kms_key_name                      &#61; optional&#40;string&#41;&#10;  location_id                       &#61; optional&#40;string&#41;&#10;  name                              &#61; string&#10;  point_in_time_recovery_enablement &#61; optional&#40;string&#41;&#10;  type                              &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [database](variables.tf#L41) | Database attributes. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [project_id](variables.tf#L228) | Project id. | <code>string</code> | ✓ |  |
-| [backup_schedule](variables.tf#L17) | Backup schedule. | <code title="object&#40;&#123;&#10;  retention         &#61; string&#10;  daily_recurrence  &#61; optional&#40;bool, false&#41;&#10;  weekly_recurrence &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [backup_schedule](variables.tf#L17) | Backup schedule. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [database_create](variables.tf#L95) | Flag indicating whether the database should be created of not. | <code>string</code> |  | <code>&#34;true&#34;</code> |
-| [documents](variables.tf#L101) | Documents. | <code title="map&#40;object&#40;&#123;&#10;  collection  &#61; string&#10;  document_id &#61; string&#10;  fields      &#61; any&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [fields](variables.tf#L112) | Fields. | <code title="map&#40;object&#40;&#123;&#10;  collection &#61; string&#10;  field      &#61; string&#10;  indexes &#61; optional&#40;list&#40;object&#40;&#123;&#10;    query_scope  &#61; optional&#40;string&#41;&#10;    order        &#61; optional&#40;string&#41;&#10;    array_config &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#41;&#10;  ttl_config &#61; optional&#40;bool, false&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [indexes](variables.tf#L164) | Indexes. | <code title="map&#40;object&#40;&#123;&#10;  api_scope  &#61; optional&#40;string&#41;&#10;  collection &#61; string&#10;  fields &#61; list&#40;object&#40;&#123;&#10;    field_path   &#61; optional&#40;string&#41;&#10;    order        &#61; optional&#40;string&#41;&#10;    array_config &#61; optional&#40;string&#41;&#10;    vector_config &#61; optional&#40;object&#40;&#123;&#10;      dimension &#61; optional&#40;number&#41;&#10;      flat      &#61; optional&#40;bool&#41;&#10;    &#125;&#41;&#41;&#10;  &#125;&#41;&#41;&#10;  query_scope &#61; optional&#40;string&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [documents](variables.tf#L101) | Documents. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [fields](variables.tf#L112) | Fields. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [indexes](variables.tf#L164) | Indexes. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 

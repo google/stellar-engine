@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description URLmap variable.
 
 variable "urlmap_config" {
@@ -229,12 +230,12 @@ variable "urlmap_config" {
           request_mirror_backend = optional(string)
           cors_policy = optional(object({
             allow_credentials    = optional(bool)
-            allow_headers        = optional(string)
-            allow_methods        = optional(string)
+            allow_headers        = optional(list(string))
+            allow_methods        = optional(list(string))
             allow_origin_regexes = list(string)
             allow_origins        = list(string)
             disabled             = optional(bool)
-            expose_headers       = optional(string)
+            expose_headers       = optional(list(string))
             max_age              = optional(string)
           }))
           fault_injection_policy = optional(object({

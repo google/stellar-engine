@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   _factory_data = (
     var.factories_config.data_quality_spec == null

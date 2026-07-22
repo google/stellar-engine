@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "ca_certificate" {
   description = "Public certificate of the cluster (base64-encoded)."
   value = (

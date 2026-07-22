@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "address" {
   description = "VPN gateway address."
   value       = local.gateway_address
@@ -36,6 +37,7 @@ output "name" {
 output "random_secret" {
   description = "Generated secret."
   value       = local.secret
+  sensitive   = true
 }
 
 

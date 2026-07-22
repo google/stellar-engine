@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   _quota_factory_path = pathexpand(coalesce(var.factories_config.quotas, "-"))
   _quota_factory_data_raw = merge([

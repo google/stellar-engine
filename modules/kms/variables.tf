@@ -13,6 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    condition_vars = optional(map(map(string)), {})
+    custom_roles   = optional(map(string), {})
+    kms_keys       = optional(map(string), {})
+    iam_principals = optional(map(string), {})
+    locations      = optional(map(string), {})
+    project_ids    = optional(map(string), {})
+    tag_keys       = optional(map(string), {})
+    tag_values     = optional(map(string), {})
+    tag_vars = optional(object({
+      projects     = optional(map(map(string)), {})
+      organization = optional(map(string), {})
+    }), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "iam" {
   description = "Keyring IAM bindings in {ROLE => [MEMBERS]} format."
   type        = map(list(string))
@@ -66,6 +87,7 @@ variable "keyring" {
     location = string
     name     = string
   })
+  nullable = false
 }
 
 variable "keyring_create" {
@@ -108,6 +130,24 @@ variable "keys" {
   }))
   default  = {}
   nullable = false
+  validation {
+    condition = alltrue([
+      for k, v in var.keys : contains([
+        "CRYPTO_KEY_PURPOSE_UNSPECIFIED", "ENCRYPT_DECRYPT", "ASYMMETRIC_SIGN",
+        "ASYMMETRIC_DECRYPT", "RAW_ENCRYPT_DECRYPT", "MAC"
+        ], v.purpose
+      )
+    ])
+    error_message = "Invalid key purpose."
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.keys : contains([
+        "SOFTWARE", "HSM", "EXTERNAL", "EXTERNAL_VPC"
+      ], try(v.version_template.protection_level, "SOFTWARE"))
+    ])
+    error_message = "Invalid version template protection level."
+  }
 }
 
 variable "project_id" {

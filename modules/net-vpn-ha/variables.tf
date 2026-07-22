@@ -13,6 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    addresses    = optional(map(string), {})
+    locations    = optional(map(string), {})
+    networks     = optional(map(string), {})
+    project_ids  = optional(map(string), {})
+    routers      = optional(map(string), {})
+    vpn_gateways = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "name" {
   description = "VPN Gateway name (if an existing VPN Gateway is not used), and prefix used for dependent resources."
   type        = string
@@ -81,6 +96,10 @@ variable "tunnels" {
         all_subnets = bool
         ip_ranges   = map(string)
       }))
+      custom_learned_ip_ranges = optional(object({
+        route_priority = optional(number, 1000)
+        ip_ranges      = map(string)
+      }))
       md5_authentication_key = optional(object({
         name = string
         key  = optional(string)
@@ -93,7 +112,20 @@ variable "tunnels" {
     })
     # each BGP session on the same Cloud Router must use a unique /30 CIDR
     # from the 169.254.0.0/16 block.
-    bgp_session_range               = string
+    bgp_session_range = string
+    cipher_suite = optional(object({
+      phase1 = optional(object({
+        dh         = optional(list(string))
+        encryption = optional(list(string))
+        integrity  = optional(list(string))
+        prf        = optional(list(string))
+      }))
+      phase2 = optional(object({
+        encryption = optional(list(string))
+        integrity  = optional(list(string))
+        pfs        = optional(list(string))
+      }))
+    }))
     ike_version                     = optional(number, 2)
     name                            = optional(string)
     peer_external_gateway_interface = optional(number)

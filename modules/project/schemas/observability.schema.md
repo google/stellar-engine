@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Observability Schema
 
 <!-- markdownlint-disable MD036 -->
@@ -39,7 +23,7 @@ limitations under the License.
       - items: *string*
     - **severity**: *string*
     - **user_labels**: *object*
-      *additional properties: String*
+      <br>*additional properties: string*
     - **alert_strategy**: *object*
       <br>*additional properties: false*
       - **auto_close**: *string*
@@ -73,7 +57,7 @@ limitations under the License.
     - **description**: *string*
     - **disabled**: *boolean*
     - **label_extractors**: *object*
-      *additional properties: String*
+      <br>*additional properties: string*
     - **value_extractor**: *string*
     - **bucket_options**: *object*
       <br>*additional properties: false*
@@ -112,9 +96,9 @@ limitations under the License.
     - **display_name**: *string*
     - **enabled**: *boolean*
     - **labels**: *object*
-      *additional properties: String*
+      <br>*additional properties: string*
     - **user_labels**: *object*
-      *additional properties: String*
+      <br>*additional properties: string*
     - **sensitive_labels**: *object*
       <br>*additional properties: false*
       - **auth_token**: *string*
@@ -138,7 +122,7 @@ limitations under the License.
   <br>*additional properties: false*
   - ⁺**filter**: *string*
   - **label_extractors**: *object*
-    *additional properties: String*
+    <br>*additional properties: string*
 - **monitoring_query_condition**<a name="refs-monitoring_query_condition"></a>: *object*
   <br>*additional properties: false*
   - ⁺**duration**: *string*
@@ -153,7 +137,7 @@ limitations under the License.
   - **duration**: *string*
   - **evaluation_interval**: *string*
   - **labels**: *object*
-    *additional properties: String*
+    <br>*additional properties: string*
   - **rule_group**: *string*
 - **threshold_condition**<a name="refs-threshold_condition"></a>: *object*
   <br>*additional properties: false*
@@ -169,13 +153,14 @@ limitations under the License.
     <br>*additional properties: false*
     - **forecast_horizon**: *string*
   - **trigger**: *reference([trigger](#refs-trigger))*
-- **aggregations**<a name="refs-aggregations"></a>: *object*
-  <br>*additional properties: false*
-  - **per_series_aligner**: *string*
-  - **group_by_fields**: *array*
-    - items: *string*
-  - **cross_series_reducer**: *string*
-  - **alignment_period**: *string*
+- **aggregations**<a name="refs-aggregations"></a>: *array*
+  - items: *object*
+    <br>*additional properties: false*
+    - **per_series_aligner**: *string*
+    - **group_by_fields**: *array*
+      - items: *string*
+    - **cross_series_reducer**: *string*
+    - **alignment_period**: *string*
 - **trigger**<a name="refs-trigger"></a>: *object*
   <br>*additional properties: false*
   - **count**: *number*

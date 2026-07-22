@@ -13,40 +13,123 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-variable "iam" {
-  description = "IAM bindings in {SECRET => {ROLE => [MEMBERS]}} format."
-  type        = map(map(list(string)))
-  default     = {}
+
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    condition_vars = optional(map(map(string)), {})
+    custom_roles   = optional(map(string), {})
+    iam_principals = optional(map(string), {})
+    kms_keys       = optional(map(string), {})
+    locations      = optional(map(string), {})
+    project_ids    = optional(map(string), {})
+    tag_keys       = optional(map(string), {})
+    tag_values     = optional(map(string), {})
+    tag_vars = optional(object({
+      projects     = optional(map(map(string)), {})
+      organization = optional(map(string), {})
+    }), {})
+  })
+  default  = {}
+  nullable = false
 }
 
-variable "labels" {
-  description = "Optional labels for each secret."
-  type        = map(map(string))
-  default     = {}
-}
+# variable "kms_autokey_config" {
+#   description = "Key handle definitions for KMS autokey, in name => location format. Injected in the context $kms_keys:autokey/ namespace."
+#   type        = map(string)
+#   nullable    = false
+#   default     = {}
+# }
 
 variable "project_id" {
-  description = "Project ID where the secrets will be created."
+  description = "Project id where the keyring will be created."
   type        = string
 }
 
+variable "project_number" {
+  description = "Project number of var.project_id. Set this to avoid permadiffs when creating tag bindings."
+  type        = string
+  default     = null
+}
+
 variable "secrets" {
-  description = "Map of secret configurations. Each key is the `secret_id` (name) of the secret. Each value is an object with optional `expire_time`, `version_destroy_ttl`, `locations` (list of regions for user-managed replication), and `keys` (a map where keys are replication locations (or 'global') and values are full KMS CryptoKey self-links for encryption)." # Clarified description
+  description = "Map of secrets to manage. Defaults to global secrets unless region is set."
   type = map(object({
-    expire_time         = optional(string)
-    locations           = optional(list(string))
-    keys                = optional(map(string))
-    version_destroy_ttl = optional(string)
+    annotations              = optional(map(string), {})
+    deletion_protection      = optional(bool)
+    kms_key                  = optional(string)
+    labels                   = optional(map(string), {})
+    global_replica_locations = optional(map(string))
+    location                 = optional(string)
+    tag_bindings             = optional(map(string))
+    tags                     = optional(map(string), {})
+    expiration_config = optional(object({
+      time = optional(string)
+      ttl  = optional(string)
+    }))
+    iam = optional(map(list(string)), {})
+    iam_bindings = optional(map(object({
+      members = list(string)
+      role    = string
+      condition = optional(object({
+        expression  = string
+        title       = string
+        description = optional(string)
+      }))
+    })), {})
+    iam_bindings_additive = optional(map(object({
+      member = string
+      role   = string
+      condition = optional(object({
+        expression  = string
+        title       = string
+        description = optional(string)
+      }))
+    })), {})
+    version_config = optional(object({
+      aliases     = optional(map(number))
+      destroy_ttl = optional(string)
+    }), {})
+    versions = optional(map(object({
+      data            = string
+      deletion_policy = optional(string)
+      enabled         = optional(bool)
+      data_config = optional(object({
+        is_base64          = optional(bool, false)
+        is_file            = optional(bool, false)
+        write_only_version = optional(number)
+      }))
+    })), {})
+    # rotation_config = optional(object({
+    #   next_time = string
+    #   period    = number
+    # }))
+    # topics
   }))
   default = {}
+  validation {
+    condition = alltrue([
+      for k, v in var.secrets :
+      try(v.expiration_config.time, null) == null ||
+      try(v.expiration_config.ttl, null) == null
+    ])
+    error_message = "Only one of time and ttl can be set in expiration config."
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.secrets :
+      v.location == null || v.global_replica_locations == null
+    ])
+    error_message = "Global replication cannot be configured on regional secrets."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.secrets : [
+        for sk, sv in v.versions : contains(
+          ["DELETE", "DISABLE", "ABANDON"], coalesce(sv.deletion_policy, "DELETE")
+        )
+      ]
+    ]))
+    error_message = "Invalid version deletion policy."
+  }
 }
-
-variable "versions" {
-  description = "Optional map of secret versions to manage. Keys are `secret_id`s, values are maps where keys are internal version names and values are objects containing `enabled` (bool) and `data` (string, the actual secret content)."
-  type = map(map(object({
-    enabled = bool
-    data    = string
-  })))
-  default = {}
-}
-

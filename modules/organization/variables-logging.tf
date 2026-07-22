@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "logging_data_access" {
   description = "Control activation of data access logs. The special 'allServices' key denotes configuration for all services."
   type = map(object({
-    ADMIN_READ = optional(object({ exempted_members = optional(list(string)) })),
-    DATA_READ  = optional(object({ exempted_members = optional(list(string)) })),
-    DATA_WRITE = optional(object({ exempted_members = optional(list(string)) }))
+    ADMIN_READ = optional(object({ exempted_members = optional(list(string), []) })),
+    DATA_READ  = optional(object({ exempted_members = optional(list(string), []) })),
+    DATA_WRITE = optional(object({ exempted_members = optional(list(string), []) }))
   }))
   default  = {}
   nullable = false
@@ -34,8 +35,8 @@ variable "logging_exclusions" {
 variable "logging_settings" {
   description = "Default settings for logging resources."
   type = object({
-    # TODO: add support for CMEK
     disable_default_sink = optional(bool)
+    kms_key_name         = optional(string)
     storage_location     = optional(string)
   })
   default = null

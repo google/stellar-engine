@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # we need a separate variable as address will be dynamic in most cases
 variable "endpoint_config" {
   description = "Map of endpoint attributes, keys are in service/endpoint format."

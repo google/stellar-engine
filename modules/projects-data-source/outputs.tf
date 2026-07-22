@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "project_numbers" {
   description = "List of project numbers."
   value       = [for item in local.projects_after_ignore : trimprefix(item.project, "projects/")]

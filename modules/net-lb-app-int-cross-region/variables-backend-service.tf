@@ -13,21 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description Backend services variables.
 
 variable "backend_service_configs" {
   description = "Backend service level configuration."
   type = map(object({
+    name                            = optional(string)
+    description                     = optional(string, "Terraform managed.")
     affinity_cookie_ttl_sec         = optional(number)
     connection_draining_timeout_sec = optional(number)
     health_checks                   = optional(list(string), ["default"])
     locality_lb_policy              = optional(string)
-    log_sample_rate                 = optional(number)
-    port_name                       = optional(string)
-    project_id                      = optional(string)
-    protocol                        = optional(string)
-    session_affinity                = optional(string)
-    timeout_sec                     = optional(number)
+    log_config = optional(object({
+      enable          = optional(bool)
+      sample_rate     = optional(number)
+      optional_mode   = optional(string)
+      optional_fields = optional(list(string))
+    }))
+    port_name        = optional(string)
+    project_id       = optional(string)
+    protocol         = optional(string)
+    session_affinity = optional(string)
+    timeout_sec      = optional(number)
     backends = list(object({
       group           = string
       balancing_mode  = optional(string, "UTILIZATION")
@@ -65,8 +73,8 @@ variable "backend_service_configs" {
       }))
     }))
     iap_config = optional(object({
-      oauth2_client_id            = string
-      oauth2_client_secret        = string
+      oauth2_client_id            = optional(string)
+      oauth2_client_secret        = optional(string)
       oauth2_client_secret_sha256 = optional(string)
     }))
     outlier_detection = optional(object({

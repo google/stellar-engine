@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "cluster_ids" {
   description = "Fully qualified ids of all clusters."
   value = {
@@ -22,5 +23,7 @@ output "cluster_ids" {
     google_gke_hub_membership.default,
     google_gke_hub_feature.default,
     google_gke_hub_feature_membership.default,
+    google_gke_hub_feature_membership.policycontroller,
+    google_gke_hub_feature_membership.servicemesh,
   ]
 }

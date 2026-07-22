@@ -13,41 +13,67 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "activated_policy_types" {
   description = "A list of policy types that are activated for this taxonomy."
   type        = list(string)
+  nullable    = true
   default     = ["FINE_GRAINED_ACCESS_CONTROL"]
+  validation {
+    condition = alltrue([
+      for v in coalesce(var.activated_policy_types, []) : contains(
+        ["FINE_GRAINED_ACCESS_CONTROL", "POLICY_TYPE_UNSPECIFIED"], v
+      )
+    ])
+    error_message = "Invalid policy type activation value."
+  }
+}
+
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    condition_vars = optional(map(map(string)), {})
+    custom_roles   = optional(map(string), {})
+    iam_principals = optional(map(string), {})
+    locations      = optional(map(string), {})
+    project_ids    = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
 }
 
 variable "description" {
   description = "Description of this taxonomy."
   type        = string
+  nullable    = true
   default     = "Taxonomy - Terraform managed"
+}
+
+variable "factories_config" {
+  description = "Paths to folders and files for the optional factories."
+  type = object({
+    taxonomy = optional(string)
+  })
+  nullable = false
+  default  = {}
 }
 
 variable "location" {
   description = "Data Catalog Taxonomy location."
   type        = string
+  nullable    = false
 }
 
 variable "name" {
   description = "Name of this taxonomy."
   type        = string
-}
-
-variable "prefix" {
-  description = "Optional prefix used to generate project id and name."
-  type        = string
-  default     = null
-  validation {
-    condition     = var.prefix != ""
-    error_message = "Prefix cannot be empty, please use null instead."
-  }
+  nullable    = false
 }
 
 variable "project_id" {
   description = "GCP project id."
   type        = string
+  nullable    = false
 }
 
 variable "tags" {
@@ -55,6 +81,24 @@ variable "tags" {
   type = map(object({
     description = optional(string)
     iam         = optional(map(list(string)), {})
+    iam_bindings = optional(map(object({
+      members = list(string)
+      role    = string
+      condition = optional(object({
+        expression  = string
+        title       = string
+        description = optional(string)
+      }))
+    })), {})
+    iam_bindings_additive = optional(map(object({
+      member = string
+      role   = string
+      condition = optional(object({
+        expression  = string
+        title       = string
+        description = optional(string)
+      }))
+    })), {})
   }))
   nullable = false
   default  = {}

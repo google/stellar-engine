@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "customer_id" {
   description = "Directory customer ID in the form customers/C0xxxxxxx."
   type        = string

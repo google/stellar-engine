@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "certificates" {
   description = "Certificates."
   type = map(object({
@@ -32,20 +33,30 @@ variable "certificates" {
   }))
   default  = {}
   nullable = false
-
   validation {
-    condition = alltrue([for k, v in var.certificates : (
-      v.self_managed != null && v.managed == null
-      || v.self_managed == null && v.managed != null
-    )])
+    condition = alltrue([
+      for k, v in var.certificates : (
+        (v.self_managed == null ? 0 : 1) + (v.managed == null ? 0 : 1) == 1
+      )
+    ])
     error_message = "Either a self-managed or a managed configuration must be specified for a certificate."
   }
   validation {
-    condition = alltrue([for k, v in var.certificates : v.managed == null ? true :
-      !(v.managed.dns_authorizations != null
-      && v.managed.issuance_config != null)
+    condition = alltrue([
+      for k, v in var.certificates :
+      try(v.managed.issuance_config, null) == null ||
+      try(v.managed.dns_authorizations, null) == null
     ])
     error_message = "Both DNS authorizations and issuance cannot be specified."
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.certificates : v.scope == null || contains(
+        ["ALL_REGIONS", "CLIENT_AUTH", "DEFAULT", "EDGE_CACHE"],
+        coalesce(v.scope, "-")
+      )
+    ])
+    error_message = "Invalid certificate scope."
   }
 }
 
@@ -103,4 +114,3 @@ variable "project_id" {
   description = "Project id."
   type        = string
 }
-

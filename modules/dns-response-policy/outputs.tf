@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "id" {
   description = "Fully qualified policy id."
   value       = try(google_dns_response_policy.default[0].id, null)

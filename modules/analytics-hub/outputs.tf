@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "data_exchange_id" {
   description = "Data exchange id."
   value       = google_bigquery_analytics_hub_data_exchange.data_exchange.data_exchange_id

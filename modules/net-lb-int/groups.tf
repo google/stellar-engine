@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description Optional instance group resources.
 
 resource "google_compute_instance_group" "default" {
   for_each    = var.group_configs
-  project     = var.project_id
-  zone        = each.value.zone
-  name        = "${var.name}-${each.key}"
+  project     = local.project_id
+  zone        = lookup(local.ctx.locations, each.value.zone, each.value.zone)
+  name        = coalesce(each.value.name, "${var.name}-${each.key}")
   description = each.value.description
   instances   = each.value.instances
 

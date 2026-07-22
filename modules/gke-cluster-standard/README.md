@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # GKE Standard cluster module
 
 This module offers a way to create and manage Google Kubernetes Engine (GKE) [Standard clusters](https://cloud.google.com/kubernetes-engine/docs/concepts/choose-cluster-mode#why-standard). With its sensible default settings based on best practices and authors' experience as Google Cloud practitioners, the module accommodates for many common use cases out-of-the-box, without having to rely on verbose configuration.
@@ -29,6 +13,7 @@ This module offers a way to create and manage Google Kubernetes Engine (GKE) [St
 - [Regional cluster](#regional-cluster)
 - [Enable Dataplane V2](#enable-dataplane-v2)
 - [Managing GKE logs](#managing-gke-logs)
+- [Upgrade notifications](#upgrade-notifications)
 - [Monitoring configuration](#monitoring-configuration)
 - [Disable GKE logs or metrics collection](#disable-gke-logs-or-metrics-collection)
 - [Cloud DNS](#cloud-dns)
@@ -58,7 +43,10 @@ module "cluster-1" {
   location   = "europe-west1-b"
   # access_config can be omitted if master authorized ranges are not needed
   access_config = {
-    # dns_access = true
+    # defaults to true
+    # dns_access = {
+    #   allow_external_traffic = true
+    # }
     ip_access = {
       authorized_ranges = {
         internal-vms = "10.0.0.0/8"
@@ -93,7 +81,9 @@ module "cluster-1" {
   name       = "cluster-1"
   location   = "europe-west1-b"
   access_config = {
-    dns_access = false
+    dns_access = {
+      allow_external_traffic = false
+    }
     ip_access = {
       authorized_ranges = {
         "corporate proxy" = "8.8.8.8/32"
@@ -130,7 +120,9 @@ module "cluster-1" {
   name       = "cluster-1"
   location   = "europe-west1-b"
   access_config = {
-    dns_access = false
+    dns_access = {
+      allow_external_traffic = false
+    }
     ip_access = {
       authorized_ranges = {
         internal-vms = "10.0.0.0/8"
@@ -236,6 +228,31 @@ module "cluster-1" {
   }
 }
 # tftest modules=1 resources=1 inventory=logging-config-enable-all.yaml
+```
+
+## Upgrade notifications
+
+Upgrade notifications are configured via the `enable_features.upgrade_notifications`. An existing PubSub topic can be defined via its `topic` attribute, or a new one can be created if the attribute is not set. The `event_types` attribute can be used to control which event types are sent. The `kms_key_name` attribute can be used to control which KMS key is used to encrypt the notification messages.
+
+```hcl
+module "cluster-1" {
+  source     = "./fabric/modules/gke-cluster-standard"
+  project_id = "myproject"
+  name       = "cluster-1"
+  location   = "europe-west1-b"
+  vpc_config = {
+    network               = var.vpc.self_link
+    subnetwork            = var.subnet.self_link
+    secondary_range_names = {}
+  }
+  enable_features = {
+    upgrade_notifications = {
+      event_types  = ["SECURITY_BULLETIN_EVENT", "UPGRADE_EVENT"]
+      kms_key_name = "projects/myproject/locations/global/keyRings/mykeyring/cryptoKeys/mykey"
+    }
+  }
+}
+# tftest modules=1 resources=2 inventory=notifications.yaml
 ```
 
 ## Monitoring configuration
@@ -432,7 +449,6 @@ module "cluster-1" {
 
 You can use `var.cluster_autoscaling` block to configure node auto-provisioning for the GKE cluster. The example below configures limits for CPU, memory, GPUs and TPUs.
 
-
 ```hcl
 module "cluster-1" {
   source     = "./fabric/modules/gke-cluster-standard"
@@ -480,9 +496,6 @@ module "cluster-1" {
   project_id = "myproject"
   name       = "cluster-1"
   location   = "europe-west1"
-  access_config = {
-    dns_access = true
-  }
   vpc_config = {
     network    = var.vpc.self_link
     subnetwork = var.subnet.self_link
@@ -502,29 +515,30 @@ module "cluster-1" {
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [location](variables.tf#L269) | Cluster zone or region. | <code>string</code> | ✓ |  |
-| [name](variables.tf#L384) | Cluster name. | <code>string</code> | ✓ |  |
-| [project_id](variables.tf#L435) | Cluster project id. | <code>string</code> | ✓ |  |
-| [vpc_config](variables.tf#L446) | VPC-level configuration. | <code title="object&#40;&#123;&#10;  disable_default_snat &#61; optional&#40;bool&#41;&#10;  network              &#61; string&#10;  subnetwork           &#61; string&#10;  secondary_range_blocks &#61; optional&#40;object&#40;&#123;&#10;    pods     &#61; string&#10;    services &#61; string&#10;  &#125;&#41;&#41;&#10;  secondary_range_names &#61; optional&#40;object&#40;&#123;&#10;    pods     &#61; optional&#40;string&#41;&#10;    services &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;  additional_ranges &#61; optional&#40;list&#40;string&#41;&#41;&#10;  stack_type        &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [access_config](variables.tf#L17) | Control plane endpoint and nodes access configurations. | <code title="object&#40;&#123;&#10;  dns_access &#61; optional&#40;bool, true&#41;&#10;  ip_access &#61; optional&#40;object&#40;&#123;&#10;    authorized_ranges                              &#61; optional&#40;map&#40;string&#41;&#41;&#10;    disable_public_endpoint                        &#61; optional&#40;bool&#41;&#10;    gcp_public_cidrs_access_enabled                &#61; optional&#40;bool&#41;&#10;    private_endpoint_authorized_ranges_enforcement &#61; optional&#40;bool&#41;&#10;    private_endpoint_config &#61; optional&#40;object&#40;&#123;&#10;      endpoint_subnetwork &#61; optional&#40;string&#41;&#10;      global_access       &#61; optional&#40;bool, true&#41;&#10;    &#125;&#41;&#41;&#10;  &#125;&#41;&#41;&#10;  master_ipv4_cidr_block &#61; optional&#40;string&#41;&#10;  private_nodes          &#61; optional&#40;bool, true&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [backup_configs](variables.tf#L45) | Configuration for Backup for GKE. | <code title="object&#40;&#123;&#10;  enable_backup_agent &#61; optional&#40;bool, false&#41;&#10;  backup_plans &#61; optional&#40;map&#40;object&#40;&#123;&#10;    region                            &#61; string&#10;    applications                      &#61; optional&#40;map&#40;list&#40;string&#41;&#41;&#41;&#10;    encryption_key                    &#61; optional&#40;string&#41;&#10;    include_secrets                   &#61; optional&#40;bool, true&#41;&#10;    include_volume_data               &#61; optional&#40;bool, true&#41;&#10;    labels                            &#61; optional&#40;map&#40;string&#41;&#41;&#10;    namespaces                        &#61; optional&#40;list&#40;string&#41;&#41;&#10;    schedule                          &#61; optional&#40;string&#41;&#10;    retention_policy_days             &#61; optional&#40;number&#41;&#10;    retention_policy_lock             &#61; optional&#40;bool, false&#41;&#10;    retention_policy_delete_lock_days &#61; optional&#40;number&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [cluster_autoscaling](variables.tf#L67) | Enable and configure limits for Node Auto-Provisioning with Cluster Autoscaler. | <code title="object&#40;&#123;&#10;  enabled             &#61; optional&#40;bool, true&#41;&#10;  autoscaling_profile &#61; optional&#40;string, &#34;BALANCED&#34;&#41;&#10;  auto_provisioning_defaults &#61; optional&#40;object&#40;&#123;&#10;    boot_disk_kms_key &#61; optional&#40;string&#41;&#10;    disk_size         &#61; optional&#40;number&#41;&#10;    disk_type         &#61; optional&#40;string, &#34;pd-standard&#34;&#41;&#10;    image_type        &#61; optional&#40;string&#41;&#10;    oauth_scopes      &#61; optional&#40;list&#40;string&#41;&#41;&#10;    service_account   &#61; optional&#40;string&#41;&#10;    management &#61; optional&#40;object&#40;&#123;&#10;      auto_repair  &#61; optional&#40;bool, true&#41;&#10;      auto_upgrade &#61; optional&#40;bool, true&#41;&#10;    &#125;&#41;&#41;&#10;    shielded_instance_config &#61; optional&#40;object&#40;&#123;&#10;      integrity_monitoring &#61; optional&#40;bool, true&#41;&#10;      secure_boot          &#61; optional&#40;bool, false&#41;&#10;    &#125;&#41;&#41;&#10;    upgrade_settings &#61; optional&#40;object&#40;&#123;&#10;      blue_green &#61; optional&#40;object&#40;&#123;&#10;        node_pool_soak_duration &#61; optional&#40;string&#41;&#10;        standard_rollout_policy &#61; optional&#40;object&#40;&#123;&#10;          batch_percentage    &#61; optional&#40;number&#41;&#10;          batch_node_count    &#61; optional&#40;number&#41;&#10;          batch_soak_duration &#61; optional&#40;string&#41;&#10;        &#125;&#41;&#41;&#10;      &#125;&#41;&#41;&#10;      surge &#61; optional&#40;object&#40;&#123;&#10;        max         &#61; optional&#40;number&#41;&#10;        unavailable &#61; optional&#40;number&#41;&#10;      &#125;&#41;&#41;&#10;    &#125;&#41;&#41;&#10;  &#125;&#41;&#41;&#10;  auto_provisioning_locations &#61; optional&#40;list&#40;string&#41;&#41;&#10;  cpu_limits &#61; optional&#40;object&#40;&#123;&#10;    min &#61; optional&#40;number, 0&#41;&#10;    max &#61; number&#10;  &#125;&#41;&#41;&#10;  mem_limits &#61; optional&#40;object&#40;&#123;&#10;    min &#61; optional&#40;number, 0&#41;&#10;    max &#61; number&#10;  &#125;&#41;&#41;&#10;  accelerator_resources &#61; optional&#40;list&#40;object&#40;&#123;&#10;    resource_type &#61; string&#10;    min           &#61; optional&#40;number, 0&#41;&#10;    max           &#61; number&#10;  &#125;&#41;&#41;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [default_nodepool](variables.tf#L147) | Enable default nodepool. | <code title="object&#40;&#123;&#10;  remove_pool        &#61; optional&#40;bool, true&#41;&#10;  initial_node_count &#61; optional&#40;number, 1&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [deletion_protection](variables.tf#L165) | Whether or not to allow Terraform to destroy the cluster. Unless this field is set to false in Terraform state, a terraform destroy or terraform apply that would delete the cluster will fail. | <code>bool</code> |  | <code>true</code> |
-| [description](variables.tf#L172) | Cluster description. | <code>string</code> |  | <code>null</code> |
-| [enable_addons](variables.tf#L178) | Addons enabled in the cluster (true means enabled). | <code title="object&#40;&#123;&#10;  cloudrun                       &#61; optional&#40;bool, false&#41;&#10;  config_connector               &#61; optional&#40;bool, false&#41;&#10;  dns_cache                      &#61; optional&#40;bool, true&#41;&#10;  gce_persistent_disk_csi_driver &#61; optional&#40;bool, true&#41;&#10;  gcp_filestore_csi_driver       &#61; optional&#40;bool, true&#41;&#10;  gcs_fuse_csi_driver            &#61; optional&#40;bool, true&#41;&#10;  horizontal_pod_autoscaling     &#61; optional&#40;bool, true&#41;&#10;  http_load_balancing            &#61; optional&#40;bool, true&#41;&#10;  istio &#61; optional&#40;object&#40;&#123;&#10;    enable_tls &#61; bool&#10;  &#125;&#41;&#41;&#10;  kalm           &#61; optional&#40;bool, false&#41;&#10;  network_policy &#61; optional&#40;bool, false&#41;&#10;  stateful_ha    &#61; optional&#40;bool, false&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [enable_features](variables.tf#L200) | Enable cluster-level features. Certain features allow configuration. | <code title="object&#40;&#123;&#10;  beta_apis                         &#61; optional&#40;list&#40;string&#41;&#41;&#10;  binary_authorization              &#61; optional&#40;bool, false&#41;&#10;  cilium_clusterwide_network_policy &#61; optional&#40;bool, false&#41;&#10;  cost_management                   &#61; optional&#40;bool, true&#41;&#10;  dns &#61; optional&#40;object&#40;&#123;&#10;    additive_vpc_scope_dns_domain &#61; optional&#40;string&#41;&#10;    provider                      &#61; optional&#40;string&#41;&#10;    scope                         &#61; optional&#40;string&#41;&#10;    domain                        &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;  multi_networking &#61; optional&#40;bool, false&#41;&#10;  database_encryption &#61; optional&#40;object&#40;&#123;&#10;    state    &#61; string&#10;    key_name &#61; string&#10;  &#125;&#41;&#41;&#10;  dataplane_v2          &#61; optional&#40;bool, true&#41;&#10;  fqdn_network_policy   &#61; optional&#40;bool, true&#41;&#10;  gateway_api           &#61; optional&#40;bool, false&#41;&#10;  groups_for_rbac       &#61; optional&#40;string&#41;&#10;  image_streaming       &#61; optional&#40;bool, false&#41;&#10;  intranode_visibility  &#61; optional&#40;bool, false&#41;&#10;  l4_ilb_subsetting     &#61; optional&#40;bool, false&#41;&#10;  mesh_certificates     &#61; optional&#40;bool&#41;&#10;  pod_security_policy   &#61; optional&#40;bool, false&#41;&#10;  secret_manager_config &#61; optional&#40;bool&#41;&#10;  security_posture_config &#61; optional&#40;object&#40;&#123;&#10;    mode               &#61; string&#10;    vulnerability_mode &#61; string&#10;  &#125;&#41;&#41;&#10;  resource_usage_export &#61; optional&#40;object&#40;&#123;&#10;    dataset                              &#61; string&#10;    enable_network_egress_metering       &#61; optional&#40;bool&#41;&#10;    enable_resource_consumption_metering &#61; optional&#40;bool&#41;&#10;  &#125;&#41;&#41;&#10;  service_external_ips &#61; optional&#40;bool, true&#41;&#10;  shielded_nodes       &#61; optional&#40;bool, false&#41;&#10;  tpu                  &#61; optional&#40;bool, false&#41;&#10;  upgrade_notifications &#61; optional&#40;object&#40;&#123;&#10;    topic_id &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;  vertical_pod_autoscaling &#61; optional&#40;bool, false&#41;&#10;  workload_identity        &#61; optional&#40;bool, true&#41;&#10;  enterprise_cluster       &#61; optional&#40;bool&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [issue_client_certificate](variables.tf#L256) | Enable issuing client certificate. | <code>bool</code> |  | <code>false</code> |
-| [labels](variables.tf#L262) | Cluster resource labels. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [logging_config](variables.tf#L274) | Logging configuration. | <code title="object&#40;&#123;&#10;  enable_system_logs             &#61; optional&#40;bool, true&#41;&#10;  enable_workloads_logs          &#61; optional&#40;bool, false&#41;&#10;  enable_api_server_logs         &#61; optional&#40;bool, false&#41;&#10;  enable_scheduler_logs          &#61; optional&#40;bool, false&#41;&#10;  enable_controller_manager_logs &#61; optional&#40;bool, false&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [maintenance_config](variables.tf#L295) | Maintenance window configuration. | <code title="object&#40;&#123;&#10;  daily_window_start_time &#61; optional&#40;string&#41;&#10;  recurring_window &#61; optional&#40;object&#40;&#123;&#10;    start_time &#61; string&#10;    end_time   &#61; string&#10;    recurrence &#61; string&#10;  &#125;&#41;&#41;&#10;  maintenance_exclusions &#61; optional&#40;list&#40;object&#40;&#123;&#10;    name       &#61; string&#10;    start_time &#61; string&#10;    end_time   &#61; string&#10;    scope      &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code title="&#123;&#10;  daily_window_start_time &#61; &#34;03:00&#34;&#10;  recurring_window        &#61; null&#10;  maintenance_exclusion   &#61; &#91;&#93;&#10;&#125;">&#123;&#8230;&#125;</code> |
-| [max_pods_per_node](variables.tf#L318) | Maximum number of pods per node in this cluster. | <code>number</code> |  | <code>110</code> |
-| [min_master_version](variables.tf#L324) | Minimum version of the master, defaults to the version of the most recent official release. | <code>string</code> |  | <code>null</code> |
-| [monitoring_config](variables.tf#L330) | Monitoring configuration. Google Cloud Managed Service for Prometheus is enabled by default. | <code title="object&#40;&#123;&#10;  enable_system_metrics &#61; optional&#40;bool, true&#41;&#10;  enable_api_server_metrics         &#61; optional&#40;bool, false&#41;&#10;  enable_controller_manager_metrics &#61; optional&#40;bool, false&#41;&#10;  enable_scheduler_metrics          &#61; optional&#40;bool, false&#41;&#10;  enable_daemonset_metrics   &#61; optional&#40;bool, false&#41;&#10;  enable_deployment_metrics  &#61; optional&#40;bool, false&#41;&#10;  enable_hpa_metrics         &#61; optional&#40;bool, false&#41;&#10;  enable_pod_metrics         &#61; optional&#40;bool, false&#41;&#10;  enable_statefulset_metrics &#61; optional&#40;bool, false&#41;&#10;  enable_storage_metrics     &#61; optional&#40;bool, false&#41;&#10;  enable_cadvisor_metrics    &#61; optional&#40;bool, false&#41;&#10;  enable_managed_prometheus &#61; optional&#40;bool, true&#41;&#10;  advanced_datapath_observability &#61; optional&#40;object&#40;&#123;&#10;    enable_metrics &#61; bool&#10;    enable_relay   &#61; bool&#10;  &#125;&#41;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [node_config](variables.tf#L389) | Node-level configuration. | <code title="object&#40;&#123;&#10;  boot_disk_kms_key             &#61; optional&#40;string&#41;&#10;  k8s_labels                    &#61; optional&#40;map&#40;string&#41;&#41;&#10;  labels                        &#61; optional&#40;map&#40;string&#41;&#41;&#10;  service_account               &#61; optional&#40;string&#41;&#10;  tags                          &#61; optional&#40;list&#40;string&#41;&#41;&#10;  workload_metadata_config_mode &#61; optional&#40;string&#41;&#10;  kubelet_readonly_port_enabled &#61; optional&#40;bool, true&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [node_locations](variables.tf#L411) | Zones in which the cluster's nodes are located. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
-| [node_pool_auto_config](variables.tf#L418) | Node pool configs that apply to auto-provisioned node pools in autopilot clusters and node auto-provisioning-enabled clusters. | <code title="object&#40;&#123;&#10;  cgroup_mode                   &#61; optional&#40;string&#41;&#10;  kubelet_readonly_port_enabled &#61; optional&#40;bool, true&#41;&#10;  network_tags                  &#61; optional&#40;list&#40;string&#41;, &#91;&#93;&#41;&#10;  resource_manager_tags         &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [release_channel](variables.tf#L440) | Release channel for GKE upgrades. | <code>string</code> |  | <code>null</code> |
+| [location](variables.tf#L304) | Cluster zone or region. | <code>string</code> | ✓ |  |
+| [name](variables.tf#L419) | Cluster name. | <code>string</code> | ✓ |  |
+| [project_id](variables.tf#L471) | Cluster project id. | <code>string</code> | ✓ |  |
+| [vpc_config](variables.tf#L482) | VPC-level configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [access_config](variables.tf#L17) | Control plane endpoint and nodes access configurations. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [backup_configs](variables.tf#L49) | Configuration for Backup for GKE. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [cluster_autoscaling](variables.tf#L72) | Enable and configure limits for Node Auto-Provisioning with Cluster Autoscaler. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [default_nodepool](variables.tf#L152) | Enable default nodepool. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [deletion_protection](variables.tf#L170) | Whether or not to allow Terraform to destroy the cluster. Unless this field is set to false in Terraform state, a terraform destroy or terraform apply that would delete the cluster will fail. | <code>bool</code> |  | <code>true</code> |
+| [description](variables.tf#L177) | Cluster description. | <code>string</code> |  | <code>null</code> |
+| [enable_addons](variables.tf#L183) | Addons enabled in the cluster (true means enabled). | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [enable_features](variables.tf#L205) | Enable cluster-level features. Certain features allow configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [fleet_project](variables.tf#L285) | The name of the fleet host project where this cluster will be registered. | <code>string</code> |  | <code>null</code> |
+| [issue_client_certificate](variables.tf#L291) | Enable issuing client certificate. | <code>bool</code> |  | <code>false</code> |
+| [labels](variables.tf#L297) | Cluster resource labels. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [logging_config](variables.tf#L309) | Logging configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [maintenance_config](variables.tf#L330) | Maintenance window configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [max_pods_per_node](variables.tf#L353) | Maximum number of pods per node in this cluster. | <code>number</code> |  | <code>110</code> |
+| [min_master_version](variables.tf#L359) | Minimum version of the master, defaults to the version of the most recent official release. | <code>string</code> |  | <code>null</code> |
+| [monitoring_config](variables.tf#L365) | Monitoring configuration. Google Cloud Managed Service for Prometheus is enabled by default. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [node_config](variables.tf#L424) | Node-level configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [node_locations](variables.tf#L447) | Zones in which the cluster's nodes are located. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
+| [node_pool_auto_config](variables.tf#L454) | Node pool configs that apply to auto-provisioned node pools in autopilot clusters and node auto-provisioning-enabled clusters. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [release_channel](variables.tf#L476) | Release channel for GKE upgrades. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs
 

@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Google Cloud DNS Response Policy
 
 This module allows management of a [Google Cloud DNS policy and its rules](https://cloud.google.com/dns/docs/zones/manage-response-policies). The policy can already exist and be referenced by name by setting the `policy_create` variable to `false`.
@@ -25,6 +9,7 @@ The module also allows setting rules via a factory. An example is given below.
   - [Manage policy and override resolution for specific names](#manage-policy-and-override-resolution-for-specific-names)
   - [Use existing policy and override resolution via wildcard with exceptions](#use-existing-policy-and-override-resolution-via-wildcard-with-exceptions)
   - [Define policy rules via a factory file](#define-policy-rules-via-a-factory-file)
+  - [Context](#context)
 - [Variables](#variables)
 - [Outputs](#outputs)
 - [Fixtures](#fixtures)
@@ -156,19 +141,61 @@ restricted:
         - 199.36.153.7
 # tftest-file id=rules-file path=config/rules.yaml
 ```
+
+### Context
+
+The module supports the contexts interpolation. For example:
+
+```hcl
+module "dns-policy" {
+  source     = "./fabric/modules/dns-response-policy"
+  project_id = "$project_ids:test-project"
+  name       = "googleapis"
+  networks = {
+    landing = "$networks:landing"
+  }
+  rules = {
+    model-armor = {
+      dns_name = "$dns_names:rep-model-armor"
+      local_data = {
+        A = {
+          name    = "$dns_names:rep-model-armor"
+          rrdatas = ["$addresses:psc-address-rep"]
+        }
+      }
+    }
+  }
+  context = {
+    addresses = {
+      psc-address-rep = "10.24.32.25"
+    }
+    dns_names = {
+      rep-model-armor = "modelarmor.europe-west1.rep.googleapis.com."
+    }
+    networks = {
+      landing = "projects/my-project/global/networks/shared-vpc"
+    }
+    project_ids = {
+      test-project = "my-project"
+    }
+  }
+}
+# tftest
+```
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [name](variables.tf#L39) | Policy name. | <code>string</code> | ✓ |  |
-| [project_id](variables.tf#L58) | Project id for the zone. | <code>string</code> | ✓ |  |
+| [name](variables.tf#L51) | Policy name. | <code>string</code> | ✓ |  |
+| [project_id](variables.tf#L70) | Project id for the zone. | <code>string</code> | ✓ |  |
 | [clusters](variables.tf#L17) | Map of GKE clusters to which this policy is applied in name => id format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [description](variables.tf#L24) | Policy description. | <code>string</code> |  | <code>&#34;Terraform managed.&#34;</code> |
-| [factories_config](variables.tf#L30) | Path to folder containing rules data files for the optional factory. | <code title="object&#40;&#123;&#10;  rules &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [networks](variables.tf#L44) | Map of VPC self links to which this policy is applied in name => self link format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [policy_create](variables.tf#L51) | Set to false to use the existing policy matching name and only manage rules. | <code>bool</code> |  | <code>true</code> |
-| [rules](variables.tf#L63) | Map of policy rules in name => rule format. Local data takes precedence over behavior and is in the form record type => attributes. | <code title="map&#40;object&#40;&#123;&#10;  dns_name &#61; string&#10;  behavior &#61; optional&#40;string, &#34;bypassResponsePolicy&#34;&#41;&#10;  local_data &#61; optional&#40;map&#40;object&#40;&#123;&#10;    ttl     &#61; optional&#40;number&#41;&#10;    rrdatas &#61; optional&#40;list&#40;string&#41;, &#91;&#93;&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [context](variables.tf#L24) | Context-specific interpolations. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [description](variables.tf#L36) | Policy description. | <code>string</code> |  | <code>&#34;Terraform managed.&#34;</code> |
+| [factories_config](variables.tf#L42) | Path to folder containing rules data files for the optional factory. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [networks](variables.tf#L56) | Map of VPC self links to which this policy is applied in name => self link format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [policy_create](variables.tf#L63) | Set to false to use the existing policy matching name and only manage rules. | <code>bool</code> |  | <code>true</code> |
+| [rules](variables.tf#L75) | Map of policy rules in name => rule format. Local data takes precedence over behavior and is in the form record type => attributes. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 

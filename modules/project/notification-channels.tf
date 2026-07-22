@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   _channels_factory_data_raw = merge([
     for k in local.observability_factory_data_raw :
@@ -44,8 +45,16 @@ resource "google_monitoring_notification_channel" "channels" {
   description  = each.value.description
   display_name = each.value.display_name
   enabled      = each.value.enabled
-  labels       = each.value.labels
-  user_labels  = each.value.user_labels
+  labels = each.value.labels == null ? null : {
+    for k, v in each.value.labels :
+    # allow interpolation of email addresses and pubsub topics
+    k => try(
+      local.ctx.email_addresses[v],
+      local.ctx.pubsub_topics[v],
+      v
+    )
+  }
+  user_labels = each.value.user_labels
   dynamic "sensitive_labels" {
     for_each = each.value.sensitive_labels[*]
     content {
@@ -55,5 +64,3 @@ resource "google_monitoring_notification_channel" "channels" {
     }
   }
 }
-
-

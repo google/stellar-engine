@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Generic cloud-init generator for Container Optimized OS
 
 This helper module manages a `cloud-config` configuration that can start a container on [Container Optimized OS](https://cloud.google.com/container-optimized-os/docs) (COS). Either a complete `cloud-config` template can be provided via the `cloud_config` variable with optional template variables via the `config_variables`, or a generic `cloud-config` can be generated based on typical parameters needed to start a container.
@@ -67,7 +51,6 @@ module "cos-envoy" {
 # tftest modules=0 resources=0
 ```
 <!-- BEGIN TFDOC -->
-
 ## Variables
 
 | name | description | type | required | default |
@@ -79,18 +62,17 @@ module "cos-envoy" {
 | [config_variables](variables.tf#L35) | Additional variables used to render the template passed via `cloud_config`. | <code>map&#40;any&#41;</code> |  | <code>&#123;&#125;</code> |
 | [container_args](variables.tf#L41) | Arguments for container. | <code>string</code> |  | <code>&#34;&#34;</code> |
 | [container_name](variables.tf#L52) | Name of the container to be run. | <code>string</code> |  | <code>&#34;container&#34;</code> |
-| [container_volumes](variables.tf#L58) | List of volumes. | <code title="list&#40;object&#40;&#123;&#10;  host      &#61; string,&#10;  container &#61; string&#10;&#125;&#41;&#41;">list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#91;&#93;</code> |
+| [container_volumes](variables.tf#L58) | List of volumes. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#91;&#93;</code> |
 | [docker_args](variables.tf#L67) | Extra arguments to be passed for docker. | <code>string</code> |  | <code>null</code> |
-| [file_defaults](variables.tf#L73) | Default owner and permissions for files. | <code title="object&#40;&#123;&#10;  owner       &#61; string&#10;  permissions &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code title="&#123;&#10;  owner       &#61; &#34;root&#34;&#10;  permissions &#61; &#34;0644&#34;&#10;&#125;">&#123;&#8230;&#125;</code> |
-| [files](variables.tf#L85) | Map of extra files to create on the instance, path as key. Owner and permissions will use defaults if null. | <code title="map&#40;object&#40;&#123;&#10;  content     &#61; string&#10;  owner       &#61; string&#10;  permissions &#61; string&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [file_defaults](variables.tf#L73) | Default owner and permissions for files. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [files](variables.tf#L85) | Map of extra files to create on the instance, path as key. Owner and permissions will use defaults if null. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [run_as_first_user](variables.tf#L95) | Run as the first user if users are specified. | <code>bool</code> |  | <code>true</code> |
 | [run_commands](variables.tf#L101) | List of cloud-init `runcmd`s. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
-| [users](variables.tf#L107) | List of usernames to be created. If provided, first user will be used to run the container. | <code title="list&#40;object&#40;&#123;&#10;  username &#61; string,&#10;  uid      &#61; number,&#10;&#125;&#41;&#41;">list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code title="&#91;&#10;&#93;">&#91;&#8230;&#93;</code> |
+| [users](variables.tf#L107) | List of usernames to be created. If provided, first user will be used to run the container. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#91;&#8230;&#93;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
 | [cloud_config](outputs.tf#L17) | Rendered cloud-config file to be passed as user-data instance metadata. |  |
-
 <!-- END TFDOC -->

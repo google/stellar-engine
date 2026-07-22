@@ -1,25 +1,13 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Google Cloud Dataform Repository module
 
 This module allows managing a dataform repository, allows adding IAM permissions. Also enables attaching a remote repository.
 
-## TODO
-[] Add validation rules to variable.
+<!-- BEGIN TOC -->
+- [Examples](#examples)
+  - [Simple dataform repository with access configuration](#simple-dataform-repository-with-access-configuration)
+  - [Repository with an attached remote repository](#repository-with-an-attached-remote-repository)
+- [Variables](#variables)
+<!-- END TOC -->
 
 ## Examples
 
@@ -50,11 +38,9 @@ module "secret" {
   project_id = "fast-bi-fabric"
   secrets = {
     my-secret = {
-    }
-  }
-  versions = {
-    my-secret = {
-      v1 = { enabled = true, data = "MYTOKEN" }
+      versions = {
+        v1 = { data = "MYTOKEN" }
+      }
     }
   }
 }
@@ -67,10 +53,10 @@ module "dataform" {
   remote_repository_settings = {
     url         = "my-url"
     secret_name = "my-secret"
-    token       = module.secret.version_ids["my-secret:v1"]
+    token       = module.secret.version_ids["my-secret/v1"]
   }
 }
-# tftest modules=2 resources=3
+# tftest modules=2 resources=3 skip-tofu
 ```
 <!-- BEGIN TFDOC -->
 ## Variables
@@ -81,8 +67,8 @@ module "dataform" {
 | [project_id](variables.tf#L59) | Id of the project where resources will be created. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L64) | The repository's region. | <code>string</code> | ✓ |  |
 | [iam](variables.tf#L17) | IAM bindings in {ROLE => [MEMBERS]} format. Mutually exclusive with the access_* variables used for basic roles. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [iam_bindings](variables.tf#L24) | Authoritative IAM bindings in {KEY => {role = ROLE, members = [], condition = {}}}. Keys are arbitrary. | <code title="map&#40;object&#40;&#123;&#10;  members &#61; list&#40;string&#41;&#10;  role    &#61; string&#10;  condition &#61; optional&#40;object&#40;&#123;&#10;    expression  &#61; string&#10;    title       &#61; string&#10;    description &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [iam_bindings_additive](variables.tf#L39) | Keyring individual additive IAM bindings. Keys are arbitrary. | <code title="map&#40;object&#40;&#123;&#10;  member &#61; string&#10;  role   &#61; string&#10;  condition &#61; optional&#40;object&#40;&#123;&#10;    expression  &#61; string&#10;    title       &#61; string&#10;    description &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [remote_repository_settings](variables.tf#L69) | Remote settings required to attach the repository to a remote repository. | <code title="object&#40;&#123;&#10;  url            &#61; optional&#40;string&#41;&#10;  branch         &#61; optional&#40;string, &#34;main&#34;&#41;&#10;  secret_name    &#61; optional&#40;string&#41;&#10;  secret_version &#61; optional&#40;string, &#34;v1&#34;&#41;&#10;  token          &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [iam_bindings](variables.tf#L24) | Authoritative IAM bindings in {KEY => {role = ROLE, members = [], condition = {}}}. Keys are arbitrary. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [iam_bindings_additive](variables.tf#L39) | Keyring individual additive IAM bindings. Keys are arbitrary. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [remote_repository_settings](variables.tf#L69) | Remote settings required to attach the repository to a remote repository. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [service_account](variables.tf#L81) | Service account used to execute the dataform workflow. | <code>string</code> |  | <code>&#34;&#34;</code> |
 <!-- END TFDOC -->

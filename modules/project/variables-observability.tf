@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "alerts" {
   description = "Monitoring alerts."
   type = map(object({
@@ -24,7 +25,7 @@ variable "alerts" {
     user_labels           = optional(map(string))
     alert_strategy = optional(object({
       auto_close           = optional(string)
-      notification_prompts = optional(string)
+      notification_prompts = optional(list(string))
       notification_rate_limit = optional(object({
         period = optional(string)
       }))
@@ -38,12 +39,12 @@ variable "alerts" {
       condition_absent = optional(object({
         duration = string
         filter   = optional(string)
-        aggregations = optional(object({
+        aggregations = optional(list(object({
           per_series_aligner   = optional(string)
           group_by_fields      = optional(list(string))
           cross_series_reducer = optional(string)
           alignment_period     = optional(string)
-        }))
+        })))
         trigger = optional(object({
           count   = optional(number)
           percent = optional(number)
@@ -78,18 +79,18 @@ variable "alerts" {
         evaluation_missing_data = optional(string)
         filter                  = optional(string)
         threshold_value         = optional(number)
-        aggregations = optional(object({
+        aggregations = optional(list(object({
           per_series_aligner   = optional(string)
           group_by_fields      = optional(list(string))
           cross_series_reducer = optional(string)
           alignment_period     = optional(string)
-        }))
-        denominator_aggregations = optional(object({
+        })))
+        denominator_aggregations = optional(list(object({
           per_series_aligner   = optional(string)
           group_by_fields      = optional(list(string))
           cross_series_reducer = optional(string)
           alignment_period     = optional(string)
-        }))
+        })))
         forecast_options = optional(object({
           forecast_horizon = string
         }))
@@ -126,9 +127,9 @@ variable "log_scopes" {
 variable "logging_data_access" {
   description = "Control activation of data access logs. The special 'allServices' key denotes configuration for all services."
   type = map(object({
-    ADMIN_READ = optional(object({ exempted_members = optional(list(string)) })),
-    DATA_READ  = optional(object({ exempted_members = optional(list(string)) })),
-    DATA_WRITE = optional(object({ exempted_members = optional(list(string)) }))
+    ADMIN_READ = optional(object({ exempted_members = optional(list(string), []) })),
+    DATA_READ  = optional(object({ exempted_members = optional(list(string), []) })),
+    DATA_WRITE = optional(object({ exempted_members = optional(list(string), []) }))
   }))
   default  = {}
   nullable = false

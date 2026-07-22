@@ -13,10 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "address" {
   description = "Optional IP address used for the forwarding rule."
   type        = string
   default     = null
+}
+
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    addresses   = optional(map(string), {})
+    locations   = optional(map(string), {})
+    networks    = optional(map(string), {})
+    project_ids = optional(map(string), {})
+    subnets     = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
 }
 
 variable "description" {
@@ -28,6 +42,8 @@ variable "description" {
 variable "group_configs" {
   description = "Optional unmanaged groups to create. Can be referenced in backends via key or outputs."
   type = map(object({
+    name        = optional(string)
+    description = optional(string, "Terraform managed.")
     zone        = string
     instances   = optional(list(string))
     named_ports = optional(map(number), {})
@@ -37,8 +53,18 @@ variable "group_configs" {
   nullable = false
 }
 
+variable "http_proxy_config" {
+  description = "HTTP proxy configuration."
+  type = object({
+    name        = optional(string)
+    description = optional(string, "Terraform managed.")
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "https_proxy_config" {
-  description = "HTTPS proxy configuration."
+  description = "HTTPS proxy connfiguration."
   type = object({
     name                             = optional(string)
     description                      = optional(string, "Terraform managed.")
@@ -221,8 +247,11 @@ variable "ssl_certificates" {
 }
 
 
-variable "vpc" {
+variable "vpc_config" {
   description = "VPC-level configuration."
-  type        = string
-  nullable    = false
+  type = object({
+    network = string
+  })
+  nullable = false
 }
+

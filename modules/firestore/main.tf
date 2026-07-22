@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   firestore_database_name = var.database_create ? google_firestore_database.firestore_database[0].name : var.database.name
 }

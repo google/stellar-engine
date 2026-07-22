@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "description" {
   description = "Resource description for data exchange."
   default     = null

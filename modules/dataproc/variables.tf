@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "dataproc_config" {
   description = "Dataproc cluster config."
   type = object({

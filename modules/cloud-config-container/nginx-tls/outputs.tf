@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "cloud_config" {
   description = "Rendered cloud-config file to be passed as user-data instance metadata."
   value = templatefile("${path.module}/assets/cloud-config.yaml", {

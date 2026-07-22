@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "attachment" {
   description = "VLAN Attachment resource."
   value       = google_compute_interconnect_attachment.default

@@ -1,31 +1,13 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Google Service Account Module
 
 This module allows simplified creation and management of one a service account and its IAM bindings.
 
 Note that outputs have no dependencies on IAM bindings to prevent resource cycles.
 
-## TOC
-
 <!-- BEGIN TOC -->
-- [TOC](#toc)
 - [Simple Example](#simple-example)
 - [IAM](#iam)
+- [Reusing Existing Service Accounts](#reusing-existing-service-accounts)
 - [Tag Bindings](#tag-bindings)
 - [Files](#files)
 - [Variables](#variables)
@@ -101,6 +83,40 @@ module "service-account-with-tags" {
 # tftest modules=1 resources=3 inventory=iam.yaml
 ```
 
+## Reusing Existing Service Accounts
+
+Like other modules in this repository, this module allows reusing existing service accounts where only IAM or tag bindings management is needed, via the `service_account_reuse` variable.
+
+When reusing service accounts, the `name` variable can be set to the fully fledged service account email. In such cases the `project_id` variable can be ignored as the project id is derived from the email.
+
+The `service_account_reuse.use_data_source` flag also allows to skip the data source used to fetch the service account unique id (numeric), which is only used when setting tag bindings. If those are needed while still skipping the data source, populate the additional attributes `service_account_reuse.attributes`.
+
+```hcl
+module "service-account" {
+  source = "./fabric/modules/iam-service-account"
+  name   = "test-0@myproject.iam.gserviceaccount.com"
+  context = {
+    folder_ids = {
+      test = "folders/1234567890"
+    }
+  }
+  iam_billing_roles = {
+    "ABCDE-12345-ABCDE" = [
+      "roles/billing.user"
+    ]
+  }
+  iam_folder_roles = {
+    "$folder_ids:test" = [
+      "roles/resourcemanager.folderAdmin"
+    ]
+  }
+  service_account_reuse = {
+    use_data_source = false
+  }
+}
+# tftest modules=1 resources=2 inventory=reuse-0.yaml
+```
+
 ## Tag Bindings
 
 Use the `tag_bindings` variable to attach tags to the service account. Provide `project_number` to prevent potential permadiffs with the tag binding resource.
@@ -135,16 +151,15 @@ module "service-account-with-tags" {
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [name](variables.tf#L55) | Name of the service account to create. | <code>string</code> | ✓ |  |
-| [project_id](variables.tf#L70) | Project id where service account will be created. | <code>string</code> | ✓ |  |
-| [context](variables.tf#L17) | External context used in replacements. | <code title="object&#40;&#123;&#10;  condition_vars      &#61; optional&#40;map&#40;map&#40;string&#41;&#41;, &#123;&#125;&#41;&#10;  custom_roles        &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;  folder_ids          &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;  iam_principals      &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;  project_ids         &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;  service_account_ids &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;  storage_buckets     &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;  tag_values          &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [create_ignore_already_exists](variables.tf#L33) | If set to true, skip service account creation if a service account with the same email already exists. | <code>bool</code> |  | <code>null</code> |
-| [description](variables.tf#L43) | Optional description. | <code>string</code> |  | <code>null</code> |
-| [display_name](variables.tf#L49) | Display name of the service account to create. | <code>string</code> |  | <code>&#34;Terraform-managed.&#34;</code> |
+| [name](variables.tf#L62) | Name of the service account to create. | <code>string</code> | ✓ |  |
+| [context](variables.tf#L17) | External context used in replacements. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [create_ignore_already_exists](variables.tf#L37) | If set to true, skip service account creation if a service account with the same email already exists. | <code>bool</code> |  | <code>null</code> |
+| [description](variables.tf#L48) | Optional description. | <code>string</code> |  | <code>null</code> |
+| [display_name](variables.tf#L55) | Display name of the service account to create. | <code>string</code> |  | <code>&#34;Terraform-managed.&#34;</code> |
 | [iam](variables-iam.tf#L17) | IAM bindings in {ROLE => [MEMBERS]} format. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam_billing_roles](variables-iam.tf#L24) | Billing account roles granted to this service account, by billing account id. Non-authoritative. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [iam_bindings](variables-iam.tf#L31) | Authoritative IAM bindings in {KEY => {role = ROLE, members = [], condition = {}}}. Keys are arbitrary. | <code title="map&#40;object&#40;&#123;&#10;  members &#61; list&#40;string&#41;&#10;  role    &#61; string&#10;  condition &#61; optional&#40;object&#40;&#123;&#10;    expression  &#61; string&#10;    title       &#61; string&#10;    description &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [iam_bindings_additive](variables-iam.tf#L46) | Individual additive IAM bindings. Keys are arbitrary. | <code title="map&#40;object&#40;&#123;&#10;  member &#61; string&#10;  role   &#61; string&#10;  condition &#61; optional&#40;object&#40;&#123;&#10;    expression  &#61; string&#10;    title       &#61; string&#10;    description &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [iam_bindings](variables-iam.tf#L31) | Authoritative IAM bindings in {KEY => {role = ROLE, members = [], condition = {}}}. Keys are arbitrary. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [iam_bindings_additive](variables-iam.tf#L46) | Individual additive IAM bindings. Keys are arbitrary. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam_by_principals](variables-iam.tf#L68) | Authoritative IAM binding in {PRINCIPAL => [ROLES]} format. Principals need to be statically defined to avoid errors. Merged internally with the `iam` variable. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam_by_principals_additive](variables-iam.tf#L61) | Additive IAM binding in {PRINCIPAL => [ROLES]} format. Principals need to be statically defined to avoid errors. Merged internally with the `iam_bindings_additive` variable. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam_folder_roles](variables-iam.tf#L75) | Folder roles granted to this service account, by folder id. Non-authoritative. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
@@ -152,10 +167,11 @@ module "service-account-with-tags" {
 | [iam_project_roles](variables-iam.tf#L89) | Project roles granted to this service account, by project id. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam_sa_roles](variables-iam.tf#L96) | Service account roles granted to this service account, by service account name. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam_storage_roles](variables-iam.tf#L103) | Storage roles granted to this service account, by bucket name. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [prefix](variables.tf#L60) | Prefix applied to service account names. | <code>string</code> |  | <code>null</code> |
-| [project_number](variables.tf#L75) | Project number of var.project_id. Set this to avoid permadiffs when creating tag bindings. | <code>string</code> |  | <code>null</code> |
-| [service_account_create](variables.tf#L81) | Create service account. When set to false, uses a data source to reference an existing service account. | <code>bool</code> |  | <code>true</code> |
-| [tag_bindings](variables.tf#L88) | Tag bindings for this service accounts, in key => tag value id format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [prefix](variables.tf#L68) | Prefix applied to service account names. | <code>string</code> |  | <code>null</code> |
+| [project_id](variables.tf#L79) | Project id where service account will be created. This can be left null when reusing service accounts. | <code>string</code> |  | <code>null</code> |
+| [project_number](variables.tf#L93) | Project number of var.project_id. Set this to avoid permadiffs when creating tag bindings. This can be left null when reusing service accounts and tags are not used. | <code>string</code> |  | <code>null</code> |
+| [service_account_reuse](variables.tf#L100) | Reuse existing service account if not null. Data source can be forced disabled if tag bindings are not used, or unique id is set. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [tag_bindings](variables.tf#L116) | Tag bindings for this service accounts, in key => tag value id format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 
@@ -164,6 +180,7 @@ module "service-account-with-tags" {
 | [email](outputs.tf#L17) | Service account email. |  |
 | [iam_email](outputs.tf#L25) | IAM-format service account email. |  |
 | [id](outputs.tf#L33) | Fully qualified service account id. |  |
-| [name](outputs.tf#L41) | Service account name. |  |
+| [name](outputs.tf#L41) | Service account email (mirrors email output for symmetry when chaining create and reuse). |  |
 | [service_account](outputs.tf#L49) | Service account resource. |  |
+| [unique_id](outputs.tf#L54) | Fully qualified service account id. |  |
 <!-- END TFDOC -->

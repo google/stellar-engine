@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "spanner_database_ids" {
   description = "Spanner database ids."
   value       = { for k, v in google_spanner_database.spanner_databases : k => v.id }

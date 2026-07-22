@@ -13,15 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description Health check variable.
 
 variable "health_check_configs" {
   description = "Optional auto-created health check configurations, use the output self-link to set it in the auto healing policy. Refer to examples for usage."
   type = map(object({
+    name                = optional(string)
     check_interval_sec  = optional(number)
     description         = optional(string, "Terraform managed.")
     enable_logging      = optional(bool, false)
     healthy_threshold   = optional(number)
+    is_regional         = optional(bool, false)
     project_id          = optional(string)
     timeout_sec         = optional(number)
     unhealthy_threshold = optional(number)

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "cloud_config" {
   description = "Cloud config template path. If null default will be used."
   type        = string

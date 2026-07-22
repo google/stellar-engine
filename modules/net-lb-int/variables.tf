@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "backend_service_config" {
   description = "Backend service level configuration."
   type = object({
@@ -28,8 +29,20 @@ variable "backend_service_config" {
       drop_traffic_if_unhealthy = optional(bool)
       ratio                     = optional(number)
     }))
-    log_sample_rate  = optional(number)
+    log_config = optional(object({
+      enable          = optional(bool)
+      sample_rate     = optional(number)
+      optional_mode   = optional(string)
+      optional_fields = optional(list(string))
+    }))
+    network_pass_through_lb_traffic_policy = optional(object({
+      zonal_affinity = object({
+        spillover       = optional(string, "ZONAL_AFFINITY_DISABLED")
+        spillover_ratio = optional(number)
+      })
+    }))
     name             = optional(string)
+    description      = optional(string, "Terraform managed.")
     protocol         = optional(string, "UNSPECIFIED")
     session_affinity = optional(string)
     timeout_sec      = optional(number)
@@ -46,6 +59,27 @@ variable "backend_service_config" {
     )
     error_message = "Invalid session affinity value."
   }
+  validation {
+    condition = (
+      try(var.backend_service_config.network_pass_through_lb_traffic_policy, null) == null
+      || contains(
+        ["ZONAL_AFFINITY_DISABLED", "ZONAL_AFFINITY_SPILL_CROSS_ZONE", "ZONAL_AFFINITY_STAY_WITHIN_ZONE"],
+        coalesce(var.backend_service_config.network_pass_through_lb_traffic_policy.zonal_affinity.spillover, "ZONAL_AFFINITY_DISABLED")
+      )
+    )
+    error_message = "network_pass_through_lb_traffic_policy.zonal_affinity.spillover must be one of ZONAL_AFFINITY_DISABLED, ZONAL_AFFINITY_SPILL_CROSS_ZONE, or ZONAL_AFFINITY_STAY_WITHIN_ZONE."
+  }
+  validation {
+    condition = (
+      try(var.backend_service_config.network_pass_through_lb_traffic_policy, null) == null
+      || try(var.backend_service_config.network_pass_through_lb_traffic_policy.zonal_affinity.spillover_ratio, null) == null
+      || (
+        var.backend_service_config.network_pass_through_lb_traffic_policy.zonal_affinity.spillover_ratio >= 0 &&
+        var.backend_service_config.network_pass_through_lb_traffic_policy.zonal_affinity.spillover_ratio <= 1
+      )
+    )
+    error_message = "network_pass_through_lb_traffic_policy.zonal_affinity.spillover_ratio must be a number between 0 and 1."
+  }
 }
 
 variable "backends" {
@@ -56,6 +90,19 @@ variable "backends" {
     failover    = optional(bool, false)
   }))
   default  = []
+  nullable = false
+}
+
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    addresses   = optional(map(string), {})
+    locations   = optional(map(string), {})
+    networks    = optional(map(string), {})
+    project_ids = optional(map(string), {})
+    subnets     = optional(map(string), {})
+  })
+  default  = {}
   nullable = false
 }
 
@@ -85,6 +132,7 @@ variable "group_configs" {
   description = "Optional unmanaged groups to create. Can be referenced in backends via outputs."
   type = map(object({
     zone        = string
+    name        = optional(string)
     description = optional(string, "Terraform managed.")
     instances   = optional(list(string))
     named_ports = optional(map(number), {})
@@ -94,7 +142,7 @@ variable "group_configs" {
 }
 
 variable "health_check" {
-  description = "Name of existing health check to use, disables auto-created health check."
+  description = "Name of existing health check to use, disables auto-created health check. Also set `health_check_config = null` when cross-referencing an health check from another load balancer module to avoid a Terraform error."
   type        = string
   default     = null
 }
@@ -106,6 +154,7 @@ variable "health_check_config" {
     description         = optional(string, "Terraform managed.")
     enable_logging      = optional(bool, false)
     healthy_threshold   = optional(number)
+    is_regional         = optional(bool, false)
     name                = optional(string)
     timeout_sec         = optional(number)
     unhealthy_threshold = optional(number)

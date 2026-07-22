@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description Cloud Dataproc module output.
 
 # FIXME: 2024-03-08: broken in provider
@@ -45,4 +46,3 @@ output "name" {
   description = "The name of the cluster."
   value       = google_dataproc_cluster.cluster.name
 }
-

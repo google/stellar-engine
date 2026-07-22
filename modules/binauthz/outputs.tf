@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "attestors" {
   description = "Attestors."
   value       = google_binary_authorization_attestor.attestors

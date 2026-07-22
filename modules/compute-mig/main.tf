@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   health_check = (
     try(var.auto_healing_policies.health_check, null) == null
@@ -34,6 +35,15 @@ resource "google_compute_instance_group_manager" "default" {
   target_pools              = var.target_pools
   wait_for_instances        = try(var.wait_for_instances.enabled, null)
   wait_for_instances_status = try(var.wait_for_instances.status, null)
+
+  dynamic "instance_lifecycle_policy" {
+    for_each = var.instance_lifecycle_policy == null ? [] : [""]
+    content {
+      default_action_on_failure = try(var.instance_lifecycle_policy.default_action_on_failure, null)
+      force_update_on_repair    = try(var.instance_lifecycle_policy.on_repair.force_update, null)
+      on_failed_health_check    = try(var.instance_lifecycle_policy.on_failed_health_check, null)
+    }
+  }
 
   dynamic "all_instances_config" {
     for_each = var.all_instances_config == null ? [] : [""]
@@ -125,6 +135,21 @@ resource "google_compute_region_instance_group_manager" "default" {
   wait_for_instances        = try(var.wait_for_instances.enabled, null)
   wait_for_instances_status = try(var.wait_for_instances.status, null)
 
+  dynamic "instance_lifecycle_policy" {
+    for_each = var.instance_lifecycle_policy == null ? [] : [""]
+    content {
+      default_action_on_failure = try(var.instance_lifecycle_policy.default_action_on_failure, null)
+      force_update_on_repair    = try(var.instance_lifecycle_policy.on_repair.force_update, null)
+      on_failed_health_check    = try(var.instance_lifecycle_policy.on_failed_health_check, null)
+      dynamic "on_repair" {
+        for_each = try(var.instance_lifecycle_policy.on_repair, null) == null ? [] : [""]
+        content {
+          allow_changing_zone = try(var.instance_lifecycle_policy.on_repair.allow_changing_zone, null)
+        }
+      }
+    }
+  }
+
   dynamic "all_instances_config" {
     for_each = var.all_instances_config == null ? [] : [""]
     content {
@@ -195,4 +220,19 @@ resource "google_compute_region_instance_group_manager" "default" {
       }
     }
   }
+
+  dynamic "instance_flexibility_policy" {
+    for_each = length(var.instance_flexibility_policy_selections) > 0 ? [""] : []
+    content {
+      dynamic "instance_selections" {
+        for_each = var.instance_flexibility_policy_selections
+        content {
+          name          = instance_selections.key
+          rank          = instance_selections.value.rank
+          machine_types = instance_selections.value.machine_types
+        }
+      }
+    }
+  }
+
 }

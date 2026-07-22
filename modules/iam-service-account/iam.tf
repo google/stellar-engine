@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description IAM bindings.
 
 locals {
@@ -88,9 +89,11 @@ locals {
 }
 
 resource "google_service_account_iam_binding" "authoritative" {
-  for_each           = local.iam
-  service_account_id = local.service_account.name
-  role               = lookup(local.ctx.custom_roles, each.key, each.key)
+  for_each = local.iam
+  service_account_id = try(
+    local.service_account.name, local.static_id
+  )
+  role = lookup(local.ctx.custom_roles, each.key, each.key)
   members = [
     for v in each.value :
     lookup(local.ctx.iam_principals, v, v)
@@ -98,8 +101,10 @@ resource "google_service_account_iam_binding" "authoritative" {
 }
 
 resource "google_service_account_iam_binding" "bindings" {
-  for_each           = var.iam_bindings
-  service_account_id = local.service_account.name
+  for_each = var.iam_bindings
+  service_account_id = try(
+    local.service_account.name, local.static_id
+  )
   role = lookup(
     local.ctx.custom_roles, each.value.role, each.value.role
   )
@@ -119,8 +124,10 @@ resource "google_service_account_iam_binding" "bindings" {
 }
 
 resource "google_service_account_iam_member" "bindings" {
-  for_each           = local.iam_bindings_additive
-  service_account_id = local.service_account.name
+  for_each = local.iam_bindings_additive
+  service_account_id = try(
+    local.service_account.name, local.static_id
+  )
   role = lookup(
     local.ctx.custom_roles, each.value.role, each.value.role
   )
@@ -139,7 +146,12 @@ resource "google_service_account_iam_member" "bindings" {
   }
 }
 
-resource "google_billing_account_iam_member" "billing-roles" {
+moved {
+  from = google_billing_account_iam_member.billing-roles
+  to   = google_billing_account_iam_member.billing_roles
+}
+
+resource "google_billing_account_iam_member" "billing_roles" {
   for_each = {
     for pair in local.iam_billing_pairs :
     "${pair.entity}-${pair.role}" => pair
@@ -151,7 +163,12 @@ resource "google_billing_account_iam_member" "billing-roles" {
   member = local.iam_email
 }
 
-resource "google_folder_iam_member" "folder-roles" {
+moved {
+  from = google_folder_iam_member.folder-roles
+  to   = google_folder_iam_member.folder_roles
+}
+
+resource "google_folder_iam_member" "folder_roles" {
   for_each = {
     for pair in local.iam_folder_pairs :
     "${pair.entity}-${pair.role}" => pair
@@ -163,7 +180,12 @@ resource "google_folder_iam_member" "folder-roles" {
   member = local.iam_email
 }
 
-resource "google_organization_iam_member" "organization-roles" {
+moved {
+  from = google_organization_iam_member.organization-roles
+  to   = google_organization_iam_member.organization_roles
+}
+
+resource "google_organization_iam_member" "organization_roles" {
   for_each = {
     for pair in local.iam_organization_pairs :
     "${pair.entity}-${pair.role}" => pair
@@ -175,7 +197,12 @@ resource "google_organization_iam_member" "organization-roles" {
   member = local.iam_email
 }
 
-resource "google_project_iam_member" "project-roles" {
+moved {
+  from = google_project_iam_member.project-roles
+  to   = google_project_iam_member.project_roles
+}
+
+resource "google_project_iam_member" "project_roles" {
   for_each = {
     for pair in local.iam_project_pairs :
     "${pair.entity}-${pair.role}" => pair
@@ -201,7 +228,12 @@ resource "google_service_account_iam_member" "additive" {
   member = local.iam_email
 }
 
-resource "google_storage_bucket_iam_member" "bucket-roles" {
+moved {
+  from = google_storage_bucket_iam_member.bucket-roles
+  to   = google_storage_bucket_iam_member.bucket_roles
+}
+
+resource "google_storage_bucket_iam_member" "bucket_roles" {
   for_each = {
     for pair in local.iam_storage_pairs :
     "${pair.entity}-${pair.role}" => pair

@@ -13,15 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "backend_buckets_config" {
   description = "Backend buckets configuration."
   type = map(object({
     bucket_name             = string
+    name                    = optional(string)
     compression_mode        = optional(string)
     custom_response_headers = optional(list(string))
     description             = optional(string)
     edge_security_policy    = optional(string)
     enable_cdn              = optional(bool)
+    project_id              = optional(string)
     cdn_policy = optional(object({
       bypass_cache_on_request_headers = optional(list(string))
       cache_mode                      = optional(string)
@@ -46,6 +49,19 @@ variable "backend_buckets_config" {
   nullable = true
 }
 
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    addresses   = optional(map(string), {})
+    locations   = optional(map(string), {})
+    networks    = optional(map(string), {})
+    project_ids = optional(map(string), {})
+    subnets     = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "description" {
   description = "Optional description used for resources."
   type        = string
@@ -56,7 +72,7 @@ variable "forwarding_rules_config" {
   description = "The optional forwarding rules configuration."
   type = map(object({
     address     = optional(string)
-    description = optional(string)
+    description = optional(string, "Terraform managed.")
     ipv6        = optional(bool, false)
     name        = optional(string)
     ports       = optional(list(number), null)
@@ -67,19 +83,17 @@ variable "forwarding_rules_config" {
   validation {
     condition = alltrue([
       for k, v in var.forwarding_rules_config :
-      v.ports == null || (
-        var.protocol == "HTTPS" && alltrue([
-          for p in coalesce(v.ports, []) : contains([80, 8080], p)
-        ])
-      )
+      v.ports == null || (length(coalesce(v.ports, [])) <= 1)
     ])
-    error_message = "Ports can only be configured when using HTTP. Valid HTTP ports are 80 and 8080."
+    error_message = "Application Load Balancer supports at most one port per forwarding rule."
   }
 }
 
 variable "group_configs" {
   description = "Optional unmanaged groups to create. Can be referenced in backends via key or outputs."
   type = map(object({
+    name        = optional(string)
+    description = optional(string, "Terraform managed.")
     zone        = string
     instances   = optional(list(string))
     named_ports = optional(map(number), {})
@@ -89,11 +103,25 @@ variable "group_configs" {
   nullable = false
 }
 
+variable "http_proxy_config" {
+  description = "HTTP proxy configuration. Only used for non-classic load balancers."
+  type = object({
+    name                   = optional(string)
+    description            = optional(string, "Terraform managed.")
+    http_keepalive_timeout = optional(string)
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "https_proxy_config" {
   description = "HTTPS proxy connfiguration."
   type = object({
+    name                             = optional(string)
+    description                      = optional(string, "Terraform managed.")
     certificate_manager_certificates = optional(list(string))
     certificate_map                  = optional(string)
+    http_keepalive_timeout           = optional(string)
     quic_override                    = optional(string)
     ssl_policy                       = optional(string)
     mtls_policy                      = optional(string) # id of the mTLS policy to use for the target proxy.
@@ -116,6 +144,7 @@ variable "name" {
 variable "neg_configs" {
   description = "Optional network endpoint groups to create. Can be referenced in backends via key or outputs."
   type = map(object({
+    project_id  = optional(string)
     description = optional(string)
     cloudfunction = optional(object({
       region          = string
@@ -129,6 +158,13 @@ variable "neg_configs" {
         tag  = optional(string)
       }))
       target_urlmask = optional(string)
+    }))
+    serverless_deployment = optional(object({
+      region   = string
+      platform = string
+      resource = optional(string)
+      version  = optional(string)
+      url_mask = optional(string)
     }))
     gce = optional(object({
       network    = string
@@ -174,6 +210,7 @@ variable "neg_configs" {
       for k, v in var.neg_configs : (
         (try(v.cloudfunction, null) == null ? 0 : 1) +
         (try(v.cloudrun, null) == null ? 0 : 1) +
+        (try(v.serverless_deployment, null) == null ? 0 : 1) +
         (try(v.gce, null) == null ? 0 : 1) +
         (try(v.hybrid, null) == null ? 0 : 1) +
         (try(v.internet, null) == null ? 0 : 1) +
@@ -201,6 +238,16 @@ variable "neg_configs" {
       )
     ])
     error_message = "Cloud Function NEGs need either target function or target urlmask defined."
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.neg_configs : (
+        v.serverless_deployment == null
+        ? true
+        : v.serverless_deployment.url_mask != null || v.serverless_deployment.resource != null
+      )
+    ])
+    error_message = "Serverless deployment NEGs need either resource or url_mask defined."
   }
 }
 
@@ -231,6 +278,7 @@ variable "ssl_certificates" {
       private_key = string
     })), {})
     managed_configs = optional(map(object({
+      name        = optional(string)
       domains     = list(string)
       description = optional(string)
     })), {})

@@ -1,19 +1,3 @@
-<!--
-Copyright 2026 Google LLC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Data Catalog Module
 
 This module simplifies the creation of [Data Catalog](https://cloud.google.com/data-catalog) Policy Tags. Policy Tags can be used to configure [Bigquery column-level access](https://cloud.google.com/bigquery/docs/best-practices-policy-tags).
@@ -25,6 +9,7 @@ Note: Data Catalog is still in beta, hence this module currently uses the beta p
 - [Examples](#examples)
   - [Simple Taxonomy with policy tags](#simple-taxonomy-with-policy-tags)
   - [Taxonomy with IAM binding](#taxonomy-with-iam-binding)
+  - [Factory](#factory)
 - [Variables](#variables)
 - [Outputs](#outputs)
 - [TODO](#todo)
@@ -92,22 +77,66 @@ module "cmn-dc" {
 }
 # tftest modules=1 resources=7
 ```
+### Factory
+
+```hcl
+module "taxonomy" {
+  source     = "./fabric/modules/data-catalog-policy-tag"
+  project_id = "my-project"
+  name       = "taxonomy"
+  location   = "europe-west1"
+  context = {
+    iam_principals = {
+      user-a = "user:a@example.org"
+      user-b = "user:b@example.org"
+    }
+  }
+  factories_config = {
+    taxonomy = "data-catalog/taxonomy.yaml"
+  }
+}
+# tftest modules=1 resources=6 files=factory
+```
+
+```yaml
+description: taxonomy description
+activated_policy_types:
+  - FINE_GRAINED_ACCESS_CONTROL
+iam:
+  roles/viewer:
+    - $iam_principals:user-a
+tags:
+  tag-a:
+    description: tag a description
+    iam:
+      roles/viewer:
+        - $iam_principals:user-b
+  tag-b:
+    description: tag b description
+    iam_bindings:
+      viewer:
+        role: roles/viewer
+        members:
+          - user:c@example.org
+# tftest-file id=factory path=data-catalog/taxonomy.yaml
+```
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [location](variables.tf#L29) | Data Catalog Taxonomy location. | <code>string</code> | ✓ |  |
-| [name](variables.tf#L34) | Name of this taxonomy. | <code>string</code> | ✓ |  |
-| [project_id](variables.tf#L49) | GCP project id. | <code>string</code> | ✓ |  |
+| [location](variables.tf#L61) | Data Catalog Taxonomy location. | <code>string</code> | ✓ |  |
+| [name](variables.tf#L67) | Name of this taxonomy. | <code>string</code> | ✓ |  |
+| [project_id](variables.tf#L73) | GCP project id. | <code>string</code> | ✓ |  |
 | [activated_policy_types](variables.tf#L17) | A list of policy types that are activated for this taxonomy. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#34;FINE_GRAINED_ACCESS_CONTROL&#34;&#93;</code> |
-| [description](variables.tf#L23) | Description of this taxonomy. | <code>string</code> |  | <code>&#34;Taxonomy - Terraform managed&#34;</code> |
+| [context](variables.tf#L32) | Context-specific interpolations. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [description](variables.tf#L45) | Description of this taxonomy. | <code>string</code> |  | <code>&#34;Taxonomy - Terraform managed&#34;</code> |
+| [factories_config](variables.tf#L52) | Paths to folders and files for the optional factories. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam](variables-iam.tf#L23) | IAM bindings in {ROLE => [MEMBERS]} format. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [iam_bindings](variables-iam.tf#L29) | Authoritative IAM bindings in {KEY => {role = ROLE, members = [], condition = {}}}. Keys are arbitrary. | <code title="map&#40;object&#40;&#123;&#10;  members &#61; list&#40;string&#41;&#10;  role    &#61; string&#10;  condition &#61; optional&#40;object&#40;&#123;&#10;    expression  &#61; string&#10;    title       &#61; string&#10;    description &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [iam_bindings_additive](variables-iam.tf#L44) | Individual additive IAM bindings. Keys are arbitrary. | <code title="map&#40;object&#40;&#123;&#10;  member &#61; string&#10;  role   &#61; string&#10;  condition &#61; optional&#40;object&#40;&#123;&#10;    expression  &#61; string&#10;    title       &#61; string&#10;    description &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [iam_bindings](variables-iam.tf#L29) | Authoritative IAM bindings in {KEY => {role = ROLE, members = [], condition = {}}}. Keys are arbitrary. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [iam_bindings_additive](variables-iam.tf#L44) | Individual additive IAM bindings. Keys are arbitrary. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam_by_principals](variables-iam.tf#L17) | Authoritative IAM binding in {PRINCIPAL => [ROLES]} format. Principals need to be statically defined to avoid cycle errors. Merged internally with the `iam` variable. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [prefix](variables.tf#L39) | Optional prefix used to generate project id and name. | <code>string</code> |  | <code>null</code> |
-| [tags](variables.tf#L54) | List of Data Catalog Policy tags to be created with optional IAM binging configuration in {tag => {ROLE => [MEMBERS]}} format. | <code title="map&#40;object&#40;&#123;&#10;  description &#61; optional&#40;string&#41;&#10;  iam         &#61; optional&#40;map&#40;list&#40;string&#41;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [tags](variables.tf#L79) | List of Data Catalog Policy tags to be created with optional IAM binging configuration in {tag => {ROLE => [MEMBERS]}} format. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 

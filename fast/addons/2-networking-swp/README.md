@@ -1,0 +1,180 @@
+# Secure Web Proxy Add-on
+
+This add-on allows creating an arbitrary number of [Secure Web Proxy (SWP)](https://cloud.google.com/secure-web-proxy/docs/overview), including resources required to enable TLS inspection.
+
+This diagram shows the resources used by this add-on, and their relationships with its networking parent stage.
+
+<p align="center">
+  <img src="diagram.png" alt="SWP add-on diagram">
+</p>
+
+<!-- BEGIN TOC -->
+- [Design overview and choices](#design-overview-and-choices)
+- [How to run this stage](#how-to-run-this-stage)
+  - [Provider and Terraform variables](#provider-and-terraform-variables)
+  - [Impersonating the automation service account](#impersonating-the-automation-service-account)
+  - [Variable configuration](#variable-configuration)
+  - [Running the stage](#running-the-stage)
+- [Files](#files)
+- [Variables](#variables)
+- [Outputs](#outputs)
+<!-- END TOC -->
+
+## Design overview and choices
+
+This add-on is intentionally self-contained to allow directly using it to implement different designs, via a single instance or multiple instances.
+
+All project-level resources in this stage are created in the same project, so that dependencies and IAM configurations are kept as simple as possible, and everything is within the same span of control.
+
+The controlling project is usually one of those already created and managed by the networking stage: the landing host project, or a shared environment project if that exists. Alternatively, a dedicated project can be created and used here provided the necessary IAM and organization policies configurations are also defined.
+
+## How to run this stage
+
+Once the main networking stage has been configured and applied, the following configuration is added the the resource management `fast_addon` variable to create the add-on provider files, and its optional CI/CD resources if those are also required. The add-on name (`networking-swp`) is customizable, in case the add-on needs to be run multiple times to create gateways in different projects.
+
+```hcl
+fast_addon = {
+  networking-swp = {
+    parent_stage = "2-networking"
+    # cicd_config = {
+    #   identity_provider = "github-test"
+    #   repository = {
+    #     name   = "test/swp"
+    #     type   = "github"
+    #     branch = "main"
+    #   }
+    # }
+  }
+}
+```
+
+### Provider and Terraform variables
+
+As all other FAST stages, the [mechanism used to pass variable values and pre-built provider files from one stage to the next](../../stages/0-org-setup/README.md#output-files-and-cross-stage-variables) is also leveraged here.
+
+The commands to link or copy the provider and terraform variable files can be easily derived from the `fast-links.sh` script in the FAST stages folder, passing it a single argument with the local output files folder (if configured) or the GCS output bucket in the automation project (derived from stage 0 outputs). The following example uses local files but GCS behaves identically.
+
+```bash
+../../stages/fast-links.sh ~/fast-config
+# File linking commands for Secure Web Proxy networking add-on
+
+# provider file
+ln -s ~/fast-config/providers/2-networking-swp-providers.tf ./
+
+# input files from other stages
+ln -s ~/fast-config/tfvars/0-globals.auto.tfvars.json ./
+ln -s ~/fast-config/tfvars/0-org-setup.auto.tfvars.json ./
+ln -s ~/fast-config/tfvars/2-networking.auto.tfvars.json ./
+
+# conventional place for stage tfvars (manually created)
+ln -s ~/fast-config/2-networking-swp.auto.tfvars ./
+
+# optional files
+ln -s ~/fast-config/tfvars/2-security.auto.tfvars.json ./
+```
+
+### Impersonating the automation service account
+
+The preconfigured provider file uses impersonation to run with this stage's automation service account's credentials. The `gcp-devops` and `organization-admins` groups have the necessary IAM bindings in place to do that, so make sure the current user is a member of one of those groups.
+
+### Variable configuration
+
+Variables in this stage -- like most other FAST stages -- are broadly divided into three separate sets:
+
+- variables which refer to global values for the whole organization (org id, billing account id, prefix, etc.), which are pre-populated via the `0-globals.auto.tfvars.json` file linked or copied above
+- variables which refer to resources managed by previous stages, which are prepopulated here via the `0-org-setup.auto.tfvars.json`, `2-networking.auto.tfvars.json` files linked or copied above
+- and finally variables that optionally control this stage's behaviour and customizations, and can to be set in a custom `terraform.tfvars` file
+
+The first two sets are defined in the `variables-fast.tf` file, the latter set in the `variables.tf` file. The full list of variables can be found in the [Variables](#variables) table at the bottom of this document.
+
+Note that the `outputs_location` variable is disabled by default, you need to explicitly set it in your `terraform.tfvars` file if you want output files to be generated by this stage. This is a sample `terraform.tfvars` that configures it, refer to the [bootstrap stage documentation](../../stages/0-org-setup/README.md#output-files-and-cross-stage-variables) for more details:
+
+```tfvars
+outputs_location = "~/fast-config"
+```
+
+Once output files are in place, define your addon configuration in a tfvars file. This is an example of configuring this addon, with optional variable attributes filled in for illustration purposes.
+
+Note that project id and networking variables use interpolation from FAST, and refer to the aliased resource names for portability. This is of course optional, and full resource ids can be used instead if needed.
+
+```hcl
+certificate_authority = {
+  ca_configs = {
+    swp = {
+      deletion_protection = false
+      subject = {
+        common_name  = "fast-test-00.joonix.net"
+        organization = "FAST Test 00"
+      }
+    }
+  }
+}
+locations = {
+  pri = "primary"
+}
+outputs_location = "~/fast-config"
+project_id       = "prod-landing"
+swp_configs = {
+  shared = {
+    network_id    = "prod-landing"
+    subnetwork_id = "net"
+  }
+  # any other option supported by the net-swp module can be used here
+}
+tls_inspection_policy = {
+  exclude_public_ca_set = true
+}
+```
+
+### Running the stage
+
+Once provider and variable values are in place and the correct user is configured, the stage can be run:
+
+```bash
+terraform init
+terraform apply
+```
+
+<!-- TFDOC OPTS files:1 show_extra:1 exclude:2-networking-swp-providers.tf -->
+<!-- BEGIN TFDOC -->
+## Files
+
+| name | description | modules | resources |
+|---|---|---|---|
+| [main.tf](./main.tf) | Module-level locals and resources. | <code>net-swp</code> · <code>project</code> |  |
+| [outputs.tf](./outputs.tf) | Module outputs. |  | <code>google_storage_bucket_object</code> · <code>local_file</code> |
+| [tls-inspection.tf](./tls-inspection.tf) | TLS inspection policies and supporting resources. | <code>certificate-authority-service</code> | <code>google_network_security_tls_inspection_policy</code> |
+| [variables-fast.tf](./variables-fast.tf) | FAST stage interface. |  |  |
+| [variables.tf](./variables.tf) | Module variables. |  |  |
+
+## Variables
+
+| name | description | type | required | default | producer |
+|---|---|:---:|:---:|:---:|:---:|
+| [automation](variables-fast.tf#L29) | Automation resources created by the bootstrap stage. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  | <code>0-bootstrap</code> |
+| [certificate_authority](variables.tf#L17) | Optional Certificate Authority Service pool and CA used by SWP. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |  |
+| [project_id](variables.tf#L143) | Project where the resources will be created. | <code>string</code> | ✓ |  |  |
+| [_fast_debug](variables-fast.tf#L20) | Internal FAST variable used for testing and debugging. Do not use. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
+| [enable_services](variables.tf#L95) | Configure project by enabling services required for this add-on. | <code>bool</code> |  | <code>false</code> |  |
+| [factories_config](variables.tf#L102) | SWP factories configuration paths. Keys in the `swp_configs` variable will be appended to derive individual SWP factory paths. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
+| [host_project_ids](variables-fast.tf#L37) | Networking stage host project id aliases. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> | <code>2-networking</code> |
+| [locations](variables.tf#L112) | Regions where the resources will be created. Keys are used as short names appended to resource names. Interpolation with FAST region names is supported. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |  |
+| [name](variables.tf#L119) | Name used for resource names. | <code>string</code> |  | <code>&#34;swp&#34;</code> |  |
+| [outputs_location](variables.tf#L126) | Path where providers and tfvars files for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |  |
+| [policy_rules_contexts](variables.tf#L132) | Replacement contexts for policy rules matcher arguments. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
+| [regions](variables-fast.tf#L45) | Networking stage region aliases. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> | <code>2-networking</code> |
+| [subnet_self_links](variables-fast.tf#L53) | VPC subnetwork self links. | <code>map&#40;map&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> | <code>2-networking</code> |
+| [swp_configs](variables.tf#L149) | Secure Web Proxy configuration, one per region. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |  |
+| [tls_inspection_policy](variables.tf#L179) | TLS inspection policy configuration. If a CA pool is not specified a local one must be created via the `certificate_authority` variable. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |  |
+| [vpc_self_links](variables-fast.tf#L61) | VPC network self links. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> | <code>2-networking</code> |
+
+## Outputs
+
+| name | description | sensitive | consumers |
+|---|---|:---:|---|
+| [cas_pool_ids](outputs.tf#L34) | Certificate Authority Service pool ids. |  |  |
+| [gateway_security_policies](outputs.tf#L39) | The gateway security policy resources. |  |  |
+| [gateways](outputs.tf#L44) | The gateway resources. |  |  |
+| [ids](outputs.tf#L49) | Gateway IDs. |  |  |
+| [service_attachments](outputs.tf#L54) | Service attachment IDs. |  |  |
+<!-- END TFDOC -->

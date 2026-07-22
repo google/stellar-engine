@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "hub" {
   description = "NCC hub resource (only if auto-created)."
   value       = try(google_network_connectivity_hub.hub[0], null)
@@ -28,7 +29,7 @@ output "router" {
   value       = google_compute_router.cr
 }
 
-output "spoke-ra" {
+output "spoke_ra" {
   description = "NCC spoke resource."
-  value       = google_network_connectivity_spoke.spoke-ra
+  value       = google_network_connectivity_spoke.spoke_ra
 }

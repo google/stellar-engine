@@ -13,13 +13,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 locals {
   access_domain  = { for k, v in var.access : k => v if v.type == "domain" }
   access_group   = { for k, v in var.access : k => v if v.type == "group" }
   access_special = { for k, v in var.access : k => v if v.type == "special_group" }
   access_user    = { for k, v in var.access : k => v if v.type == "user" }
   access_view    = { for k, v in var.access : k => v if v.type == "view" }
-
+  authorized_datasets = {
+    for dataset in var.authorized_datasets :
+    "${dataset["project_id"]}_${dataset["dataset_id"]}" => dataset
+  }
+  authorized_routines = {
+    for routine in var.authorized_routines :
+    "${routine["project_id"]}_${routine["dataset_id"]}_${routine["routine_id"]}" => routine
+  }
+  authorized_views = merge(
+    {
+      for access_key, view in local.identities_view :
+      "${view["project_id"]}_${view["dataset_id"]}_${view["table_id"]}" => view
+    },
+    {
+      for view in var.authorized_views :
+      "${view["project_id"]}_${view["dataset_id"]}_${view["table_id"]}" => view
+    }
+  )
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    } if !endswith(k, "_vars")
+  }
+  ctx_p        = "$"
+  ctx_kms_keys = try(local.ctx.kms_keys, {})
   identities_view = {
     for k, v in local.access_view : k => try(
       zipmap(
@@ -29,23 +54,21 @@ locals {
       { project_id = null, dataset_id = null, table_id = null }
     )
   }
-
-  authorized_views = merge(
-    { for access_key, view in local.identities_view : "${view["project_id"]}_${view["dataset_id"]}_${view["table_id"]}" => view },
-  { for view in var.authorized_views : "${view["project_id"]}_${view["dataset_id"]}_${view["table_id"]}" => view })
-  authorized_datasets = { for dataset in var.authorized_datasets : "${dataset["project_id"]}_${dataset["dataset_id"]}" => dataset }
-  authorized_routines = { for routine in var.authorized_routines : "${routine["project_id"]}_${routine["dataset_id"]}_${routine["routine_id"]}" => routine }
-
+  location = lookup(
+    local.ctx.locations, var.location, var.location
+  )
+  project_id = lookup(
+    local.ctx.project_ids, var.project_id, var.project_id
+  )
 }
 
 resource "google_bigquery_dataset" "default" {
-  project       = var.project_id
-  dataset_id    = var.id
-  friendly_name = var.friendly_name
-  description   = var.description
-  labels        = var.labels
-  location      = var.location
-
+  project                         = local.project_id
+  dataset_id                      = var.id
+  friendly_name                   = var.friendly_name
+  description                     = var.description
+  labels                          = var.labels
+  location                        = local.location
   delete_contents_on_destroy      = var.options.delete_contents_on_destroy
   default_collation               = var.options.default_collation
   default_table_expiration_ms     = var.options.default_table_expiration_ms
@@ -60,7 +83,6 @@ resource "google_bigquery_dataset" "default" {
       domain = try(var.access_identities[access.key])
     }
   }
-
   dynamic "access" {
     for_each = var.dataset_access ? local.access_group : {}
     content {
@@ -68,7 +90,6 @@ resource "google_bigquery_dataset" "default" {
       group_by_email = try(var.access_identities[access.key])
     }
   }
-
   dynamic "access" {
     for_each = var.dataset_access ? local.access_special : {}
     content {
@@ -76,7 +97,6 @@ resource "google_bigquery_dataset" "default" {
       special_group = try(var.access_identities[access.key])
     }
   }
-
   dynamic "access" {
     for_each = var.dataset_access ? local.access_user : {}
     content {
@@ -84,46 +104,52 @@ resource "google_bigquery_dataset" "default" {
       user_by_email = try(var.access_identities[access.key])
     }
   }
-
   dynamic "access" {
     for_each = var.dataset_access ? local.authorized_views : {}
     content {
       view {
-        project_id = each.value.project_id
+        project_id = lookup(
+          local.ctx.project_ids, each.value.project_id, each.value.project_id
+        )
         dataset_id = each.value.dataset_id
         table_id   = each.value.table_id
       }
     }
   }
-
   dynamic "access" {
     for_each = var.dataset_access ? local.authorized_datasets : {}
     content {
       dataset {
         dataset {
-          project_id = each.value.project_id
+          project_id = lookup(
+            local.ctx.project_ids, each.value.project_id, each.value.project_id
+          )
           dataset_id = each.value.dataset_id
         }
         target_types = ["VIEWS"]
       }
     }
   }
-
   dynamic "access" {
     for_each = var.dataset_access ? local.authorized_routines : {}
     content {
       routine {
-        project_id = each.value.project_id
+        project_id = lookup(
+          local.ctx.project_ids, each.value.project_id, each.value.project_id
+        )
         dataset_id = each.value.dataset_id
         routine_id = each.value.routine_id
       }
     }
   }
-
   dynamic "default_encryption_configuration" {
     for_each = var.encryption_key == null ? [] : [""]
     content {
-      kms_key_name = var.encryption_key
+      kms_key_name = lookup(
+        local.ctx_kms_keys,
+        var.encryption_key,
+        var.encryption_key
+      )
     }
   }
 }
@@ -131,7 +157,7 @@ resource "google_bigquery_dataset" "default" {
 resource "google_bigquery_dataset_access" "domain" {
   for_each   = var.dataset_access ? {} : local.access_domain
   provider   = google-beta
-  project    = var.project_id
+  project    = local.project_id
   dataset_id = google_bigquery_dataset.default.dataset_id
   role       = each.value.role
   domain     = try(var.access_identities[each.key])
@@ -140,7 +166,7 @@ resource "google_bigquery_dataset_access" "domain" {
 resource "google_bigquery_dataset_access" "group_by_email" {
   for_each       = var.dataset_access ? {} : local.access_group
   provider       = google-beta
-  project        = var.project_id
+  project        = local.project_id
   dataset_id     = google_bigquery_dataset.default.dataset_id
   role           = each.value.role
   group_by_email = try(var.access_identities[each.key])
@@ -149,7 +175,7 @@ resource "google_bigquery_dataset_access" "group_by_email" {
 resource "google_bigquery_dataset_access" "special_group" {
   for_each      = var.dataset_access ? {} : local.access_special
   provider      = google-beta
-  project       = var.project_id
+  project       = local.project_id
   dataset_id    = google_bigquery_dataset.default.dataset_id
   role          = each.value.role
   special_group = try(var.access_identities[each.key])
@@ -158,7 +184,7 @@ resource "google_bigquery_dataset_access" "special_group" {
 resource "google_bigquery_dataset_access" "user_by_email" {
   for_each      = var.dataset_access ? {} : local.access_user
   provider      = google-beta
-  project       = var.project_id
+  project       = local.project_id
   dataset_id    = google_bigquery_dataset.default.dataset_id
   role          = each.value.role
   user_by_email = try(var.access_identities[each.key])
@@ -166,10 +192,12 @@ resource "google_bigquery_dataset_access" "user_by_email" {
 
 resource "google_bigquery_dataset_access" "authorized_views" {
   for_each   = var.dataset_access ? {} : local.authorized_views
-  project    = var.project_id
+  project    = local.project_id
   dataset_id = google_bigquery_dataset.default.dataset_id
   view {
-    project_id = each.value.project_id
+    project_id = lookup(
+      local.ctx.project_ids, each.value.project_id, each.value.project_id
+    )
     dataset_id = each.value.dataset_id
     table_id   = each.value.table_id
   }
@@ -177,11 +205,13 @@ resource "google_bigquery_dataset_access" "authorized_views" {
 
 resource "google_bigquery_dataset_access" "authorized_datasets" {
   for_each   = var.dataset_access ? {} : local.authorized_datasets
-  project    = var.project_id
+  project    = local.project_id
   dataset_id = google_bigquery_dataset.default.dataset_id
   dataset {
     dataset {
-      project_id = each.value.project_id
+      project_id = lookup(
+        local.ctx.project_ids, each.value.project_id, each.value.project_id
+      )
       dataset_id = each.value.dataset_id
     }
     target_types = ["VIEWS"]
@@ -190,27 +220,22 @@ resource "google_bigquery_dataset_access" "authorized_datasets" {
 
 resource "google_bigquery_dataset_access" "authorized_routines" {
   for_each   = var.dataset_access ? {} : local.authorized_routines
-  project    = var.project_id
+  project    = local.project_id
   dataset_id = google_bigquery_dataset.default.dataset_id
   routine {
-    project_id = each.value.project_id
+    project_id = lookup(
+      local.ctx.project_ids, each.value.project_id, each.value.project_id
+    )
     dataset_id = each.value.dataset_id
     routine_id = each.value.routine_id
   }
 }
 
-resource "google_bigquery_dataset_iam_binding" "bindings" {
-  for_each   = var.iam
-  project    = var.project_id
-  dataset_id = google_bigquery_dataset.default.dataset_id
-  role       = each.key
-  members    = each.value
-}
 
 resource "google_bigquery_table" "default" {
   provider                 = google-beta
   for_each                 = var.tables
-  project                  = var.project_id
+  project                  = local.project_id
   dataset_id               = google_bigquery_dataset.default.dataset_id
   table_id                 = each.key
   friendly_name            = each.value.friendly_name
@@ -226,7 +251,11 @@ resource "google_bigquery_table" "default" {
   dynamic "encryption_configuration" {
     for_each = each.value.options.encryption_key != null ? [""] : []
     content {
-      kms_key_name = each.value.options.encryption_key
+      kms_key_name = lookup(
+        local.ctx_kms_keys,
+        each.value.options.encryption_key,
+        each.value.options.encryption_key
+      )
     }
   }
 
@@ -344,15 +373,16 @@ resource "google_bigquery_table" "default" {
 }
 
 resource "google_bigquery_table" "views" {
-  depends_on          = [google_bigquery_table.default]
+  depends_on          = [google_bigquery_table.default, google_bigquery_routine.default]
   for_each            = var.views
-  project             = var.project_id
+  project             = local.project_id
   dataset_id          = google_bigquery_dataset.default.dataset_id
   table_id            = each.key
   friendly_name       = each.value.friendly_name
   description         = each.value.description
   labels              = each.value.labels
   deletion_protection = each.value.deletion_protection
+  schema              = each.value.schema != null ? jsonencode(each.value.schema) : null
 
   view {
     query          = each.value.query
@@ -363,7 +393,7 @@ resource "google_bigquery_table" "views" {
 resource "google_bigquery_table" "materialized_view" {
   depends_on               = [google_bigquery_table.default]
   for_each                 = var.materialized_views
-  project                  = var.project_id
+  project                  = local.project_id
   dataset_id               = google_bigquery_dataset.default.dataset_id
   table_id                 = each.key
   friendly_name            = each.value.friendly_name
@@ -405,7 +435,7 @@ resource "google_bigquery_table" "materialized_view" {
 
 resource "google_bigquery_routine" "default" {
   for_each             = var.routines
-  project              = var.project_id
+  project              = local.project_id
   dataset_id           = google_bigquery_dataset.default.dataset_id
   routine_id           = each.key
   description          = each.value.description
@@ -415,6 +445,7 @@ resource "google_bigquery_routine" "default" {
   imported_libraries   = each.value.imported_libraries
   determinism_level    = each.value.determinism_level
   data_governance_type = each.value.data_governance_type
+  return_type          = each.value.return_type
   return_table_type    = each.value.return_table_type
   dynamic "arguments" {
     for_each = each.value.arguments

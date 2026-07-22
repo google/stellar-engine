@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "catalog" {
   description = "Catalog."
   value       = google_biglake_catalog.catalog
@@ -42,5 +43,3 @@ output "tables" {
   description = "Tables."
   value       = google_biglake_table.tables
 }
-
-

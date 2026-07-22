@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "auto_create_subnetworks" {
   description = "Set to true to create an auto mode subnet, defaults to custom mode."
   type        = bool
@@ -22,10 +23,23 @@ variable "auto_create_subnetworks" {
 variable "context" {
   description = "Context-specific interpolations."
   type = object({
-    regions = optional(map(string), {})
+    addresses      = optional(map(string), {})
+    cidr_ranges    = optional(map(string), {})
+    condition_vars = optional(map(map(string)), {})
+    custom_roles   = optional(map(string), {})
+    iam_principals = optional(map(string), {})
+    locations      = optional(map(string), {})
+    networks       = optional(map(string), {})
+    # legacy context
+    regions     = optional(map(string), {})
+    project_ids = optional(map(string), {})
   })
   default  = {}
   nullable = false
+  validation {
+    condition     = length(var.context.regions) == 0 || length(var.context.locations) == 0
+    error_message = "Only one of locations, regions can be used."
+  }
 }
 
 variable "create_googleapis_routes" {
@@ -69,7 +83,8 @@ variable "dns_policy" {
 variable "factories_config" {
   description = "Paths to data files and folders that enable factory functionality."
   type = object({
-    subnets_folder = optional(string)
+    subnets_folder         = optional(string)
+    internal_ranges_folder = optional(string)
   })
   default = {}
 }
@@ -79,10 +94,73 @@ variable "firewall_policy_enforcement_order" {
   type        = string
   nullable    = false
   default     = "AFTER_CLASSIC_FIREWALL"
-
   validation {
     condition     = var.firewall_policy_enforcement_order == "BEFORE_CLASSIC_FIREWALL" || var.firewall_policy_enforcement_order == "AFTER_CLASSIC_FIREWALL"
     error_message = "Enforcement order must be BEFORE_CLASSIC_FIREWALL or AFTER_CLASSIC_FIREWALL."
+  }
+}
+
+variable "internal_ranges" {
+  description = "Internal range configuration for IPAM operations within the VPC network."
+  type = list(object({
+    name                = string
+    description         = optional(string)
+    ip_cidr_range       = optional(string)
+    labels              = optional(map(string), {})
+    usage               = string
+    peering             = string
+    prefix_length       = optional(number)
+    target_cidr_range   = optional(list(string))
+    exclude_cidr_ranges = optional(list(string))
+    overlaps            = optional(list(string))
+    immutable           = optional(bool)
+    allocation_options = optional(object({
+      allocation_strategy                = optional(string)
+      first_available_ranges_lookup_size = optional(number)
+    }))
+    migration = optional(object({
+      source = string
+      target = string
+    }))
+  }))
+  default  = []
+  nullable = false
+  validation {
+    condition = alltrue([
+      for r in var.internal_ranges :
+      contains(["FOR_VPC", "EXTERNAL_TO_VPC", "FOR_MIGRATION"], r.usage)
+    ])
+    error_message = "Usage must be one of: FOR_VPC, EXTERNAL_TO_VPC, FOR_MIGRATION."
+  }
+  validation {
+    condition = alltrue([
+      for r in var.internal_ranges :
+      contains(["FOR_SELF", "FOR_PEER", "NOT_SHARED"], r.peering)
+    ])
+    error_message = "Peering must be one of: FOR_SELF, FOR_PEER, NOT_SHARED."
+  }
+  validation {
+    condition = alltrue([
+      for r in var.internal_ranges : (
+        r.allocation_options == null ||
+        try(r.allocation_options.allocation_strategy, null) == null ||
+        contains(
+          ["RANDOM", "FIRST_AVAILABLE", "RANDOM_FIRST_N_AVAILABLE", "FIRST_SMALLEST_FITTING"],
+          try(r.allocation_options.allocation_strategy, "")
+        )
+      )
+    ])
+    error_message = "Allocation strategy must be one of: RANDOM, FIRST_AVAILABLE, RANDOM_FIRST_N_AVAILABLE, FIRST_SMALLEST_FITTING."
+  }
+  validation {
+    condition = alltrue([
+      for r in var.internal_ranges :
+      r.overlaps == null || alltrue([
+        for overlap in coalesce(r.overlaps, []) :
+        contains(["OVERLAP_ROUTE_RANGE", "OVERLAP_EXISTING_SUBNET_RANGE"], overlap)
+      ])
+    ])
+    error_message = "Overlaps must contain only: OVERLAP_ROUTE_RANGE, OVERLAP_EXISTING_SUBNET_RANGE."
   }
 }
 
@@ -189,6 +267,7 @@ variable "psa_configs" {
   type = list(object({
     deletion_policy  = optional(string, null)
     ranges           = map(string)
+    labels           = optional(map(string), {})
     export_routes    = optional(bool, false)
     import_routes    = optional(bool, false)
     peered_domains   = optional(list(string), [])
@@ -246,6 +325,48 @@ variable "routing_mode" {
   }
 }
 
+variable "service_connection_policies" {
+  description = "Service connection policies, keyed by name."
+  type = map(object({
+    location      = string
+    service_class = string
+    description   = optional(string)
+    labels        = optional(map(string))
+    psc_config = object({
+      subnetworks                = list(string)
+      limit                      = optional(number)
+      producer_instance_location = optional(string)
+      # maps to allowed_google_producers_resource_hierarchy_level
+      nodes = optional(list(string))
+    })
+  }))
+  nullable = false
+  default  = {}
+  validation {
+    condition = alltrue([
+      for k, v in var.service_connection_policies :
+      v.psc_config.producer_instance_location == null || v.psc_config.producer_instance_location == "CUSTOM_RESOURCE_HIERARCHY_LEVELS"
+    ])
+    error_message = "Producer instance location must be null or CUSTOM_RESOURCE_HIERARCHY_LEVELS."
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.service_connection_policies :
+      v.psc_config.nodes == null || v.psc_config.producer_instance_location == "CUSTOM_RESOURCE_HIERARCHY_LEVELS"
+    ])
+    error_message = "Nodes can only be set if producer instance location is CUSTOM_RESOURCE_HIERARCHY_LEVELS."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.service_connection_policies : [
+        for n in coalesce(v.psc_config.nodes, []) :
+        can(regex("^(projects|folders|organizations)/[a-zA-Z0-9-]+$", n))
+      ]
+    ]))
+    error_message = "Nodes must be in the format 'projects/id', 'folders/id', or 'organizations/id'."
+  }
+}
+
 variable "shared_vpc_host" {
   description = "Enable shared VPC for this project."
   type        = bool
@@ -262,11 +383,12 @@ variable "subnets" {
   description = "Subnet configuration."
   type = list(object({
     name                             = string
-    ip_cidr_range                    = string
+    ip_cidr_range                    = optional(string)
     region                           = string
     description                      = optional(string)
     enable_private_access            = optional(bool, true)
     allow_subnet_cidr_routes_overlap = optional(bool, null)
+    reserved_internal_range          = optional(string)
     flow_logs_config = optional(object({
       aggregation_interval = optional(string)
       filter_expression    = optional(string)
@@ -281,9 +403,12 @@ variable "subnets" {
       # enable_private_access = optional(string)
       ipv6_only = optional(bool, false)
     }))
-    ip_collection       = optional(string, null)
-    secondary_ip_ranges = optional(map(string))
-    iam                 = optional(map(list(string)), {})
+    ip_collection = optional(string, null)
+    secondary_ip_ranges = optional(map(object({
+      ip_cidr_range           = optional(string)
+      reserved_internal_range = optional(string)
+    })))
+    iam = optional(map(list(string)), {})
     iam_bindings = optional(map(object({
       role    = string
       members = list(string)
@@ -305,6 +430,33 @@ variable "subnets" {
   }))
   default  = []
   nullable = false
+  validation {
+    condition = alltrue([
+      for s in var.subnets :
+      (
+        length([
+          for field in [s.ip_cidr_range, s.reserved_internal_range, s.ip_collection] :
+          field if field != null
+        ]) == 1
+        ) || (
+        length([
+          for field in [s.ip_cidr_range, s.reserved_internal_range, s.ip_collection] :
+          field if field != null
+        ]) == 0 && try(s.ipv6.ipv6_only, false) == true
+      )
+    ])
+    error_message = "Each subnet must specify exactly one of ip_cidr_range, reserved_internal_range, or ip_collection, or all three can be null for IPv6-only subnets (ipv6.ipv6_only = true)."
+  }
+  validation {
+    condition = alltrue([
+      for s in var.subnets :
+      s.secondary_ip_ranges == null || alltrue([
+        for range_name, range_config in coalesce(s.secondary_ip_ranges, {}) :
+        (range_config.ip_cidr_range != null) != (range_config.reserved_internal_range != null)
+      ])
+    ])
+    error_message = "Each secondary IP range must specify either ip_cidr_range or reserved_internal_range, but not both."
+  }
 }
 
 variable "subnets_private_nat" {
@@ -360,6 +512,14 @@ variable "subnets_psc" {
     ip_cidr_range = string
     region        = string
     description   = optional(string)
+    flow_logs_config = optional(object({
+      aggregation_interval = optional(string)
+      filter_expression    = optional(string)
+      flow_sampling        = optional(number)
+      metadata             = optional(string)
+      # only if metadata == "CUSTOM_METADATA"
+      metadata_fields = optional(list(string))
+    }))
 
     iam = optional(map(list(string)), {})
     iam_bindings = optional(map(object({

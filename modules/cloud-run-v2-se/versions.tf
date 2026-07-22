@@ -29,9 +29,9 @@ terraform {
     }
   }
   provider_meta "google" {
-    module_name = "google-pso-tool/cloud-foundation-fabric/modules/cloud-run-v2:v38.0.0-tf"
+    module_name = "google/stellar-engine/modules/cloud-run-v2:v38.0.0-tf"
   }
   provider_meta "google-beta" {
-    module_name = "google-pso-tool/cloud-foundation-fabric/modules/cloud-run-v2:v38.0.0-tf"
+    module_name = "google/stellar-engine/modules/cloud-run-v2:v38.0.0-tf"
   }
 }

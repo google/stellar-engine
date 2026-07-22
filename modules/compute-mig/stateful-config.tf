@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 # tfdoc:file:description Instance-level stateful configuration resources.
 
 resource "google_compute_per_instance_config" "default" {

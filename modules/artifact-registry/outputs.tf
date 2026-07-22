@@ -13,6 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+locals {
+  url = (
+    var.universe == null
+    ? join("/", [
+      "${local.location}-${local.format_string}.pkg.dev",
+      local.project_id,
+      var.name
+    ])
+    : join("/", [
+      "${local.format_string}.${var.universe.package_domain}",
+      var.universe.prefix,
+      element(split(":", local.project_id), 1),
+      var.name
+    ])
+  )
+}
+
 output "id" {
   description = "Fully qualified repository id."
   value       = google_artifact_registry_repository.registry.id
@@ -45,11 +63,7 @@ output "repository" {
 
 output "url" {
   description = "Repository URL."
-  value = join("/", [
-    "${var.location}-${local.format_string}.pkg.dev",
-    var.project_id,
-    var.name
-  ])
+  value       = local.url
   depends_on = [
     google_artifact_registry_repository.registry,
     google_artifact_registry_repository_iam_binding.authoritative,

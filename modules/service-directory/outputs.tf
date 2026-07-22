@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "endpoints" {
   description = "Endpoint resources."
   value       = google_service_directory_endpoint.default

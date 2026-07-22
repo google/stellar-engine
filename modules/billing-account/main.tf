@@ -13,8 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+locals {
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    }
+  }
+  ctx_p = "$"
+}
+
 resource "google_billing_project_info" "default" {
   for_each        = toset(var.projects)
   billing_account = var.id
-  project         = each.key
+  project         = lookup(local.ctx.project_ids, each.key, each.key)
 }

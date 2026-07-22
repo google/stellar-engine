@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "bucket" {
   description = "Bucket resource."
   value       = one(google_storage_bucket.bucket)

@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+
 output "bgp_peers" {
   description = "BGP peer resources."
   value = {
@@ -39,6 +41,7 @@ output "id" {
 
 output "md5_keys" {
   description = "BGP tunnels MD5 keys."
+  sensitive   = true
   value = {
     for k, v in var.tunnels :
     k => try(v.bgp_peer.md5_authentication_key, null) == null ? {} : {
@@ -56,6 +59,7 @@ output "name" {
 output "random_secret" {
   description = "Generated secret."
   value       = local.secret
+  sensitive   = true
 }
 
 output "router" {
@@ -75,6 +79,7 @@ output "self_link" {
 
 output "shared_secrets" {
   description = "IPSEC tunnels shared secrets."
+  sensitive   = true
   value = {
     for k, v in var.tunnels
     : k => coalesce(v.shared_secret, local.secret)

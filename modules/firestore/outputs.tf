@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 output "firestore_database" {
   description = "Firestore database."
   value       = var.database_create ? google_firestore_database.firestore_database[0] : null
@@ -46,4 +47,3 @@ output "firestore_indexes" {
   description = "Firestore indexes."
   value       = google_firestore_index.firestore_indexes
 }
-
