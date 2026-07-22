@@ -15,7 +15,7 @@
   image:
     name: bridgecrew/checkov:3.2.474
   before_script:
-    - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@code.cdso.army.mil/".insteadOf "https://code.cdso.army.mil/"
+    - git config --global url."https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.example.com/".insteadOf "https://gitlab.example.com/"
   script:
     - >-
       checkov -o cli -o sarif

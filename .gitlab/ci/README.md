@@ -57,10 +57,10 @@ gcloud auth application-default login
 Create and set up your `config.env` file (use `config.env.sample` for reference). Be sure to include the Workload Identity Federation variables:
 ```env
 # Workload Identity Federation via GitLab
-CI_PROJECT_PATH=google-cloud/army-example-lz
+CI_PROJECT_PATH=google-cloud/enterprise-lz
 # If deployment is for prod this should be main or the equivelent protected branch
 CI_COMMIT_BRANCH=<Branch name you are testing on>
-GITLAB_URL=[https://dev.darkwolf.io](https://dev.darkwolf.io)
+GITLAB_URL=[https://gitlab.example.com](https://gitlab.example.com)
 ```
 
 Update the `tenants.yml` file located in the root directory to reflect the initial tenants you are deploying via `automation/tenant.sh`.
