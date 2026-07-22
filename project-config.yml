@@ -1,0 +1,42 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+projects:
+  # Stage 0
+  - name: centralized-logging-project
+    project_name: "lz-audit-<AW-id>"
+  # Stage 1
+  - name: automation-project
+    project_name: "<PREFIX>-<REGIME>-iac"
+  - name: billing-export-project
+    project_name: "<PREFIX>-<REGIME>-billing"
+  - name: log-export-project
+    project_name: "<PREFIX>-<REGIME>-logging"
+  # Stage 3
+  - name: dev-net-host
+    project_name: "<PREFIX>-<REGIME>-dev-net"
+  - name: test-net-host
+    project_name: "<PREFIX>-<REGIME>-test-net"
+  - name: prod-net-host
+    project_name: "<PREFIX>-<REGIME>-prod-net"
+  - name: vdss-host-project
+    project_name: "<PREFIX>-<REGIME>-vdss-host"
+  # Stage 4
+  - name: dev-sec-project
+    project_name: "<PREFIX>-<REGIME>-d-sec"
+  - name: prod-sec-project
+    project_name: "<PREFIX>-<REGIME>-p-sec"
+  # Stage 5
+  - name: tenant-projects
+    project_name: "<ORG_SUBDOMAIN>-<TENANT_NAME>"

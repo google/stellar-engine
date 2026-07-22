@@ -1,0 +1,34 @@
+#testing purposes API's that already match existing list in the org. 
+allowed_apis:
+  - artifactregistry.googleapis.com
+  - bigquery.googleapis.com
+  - bigquerydatatransfer.googleapis.com
+  - privateca.googleapis.com
+  - cloudbuild.googleapis.com
+  - composer.googleapis.com
+  - datafusion.googleapis.com
+  - dns.googleapis.com
+  - cloudidentity.googleapis.com
+  - cloudkms.googleapis.com
+  - logging.googleapis.com
+  - monitoring.googleapis.com
+  - run.googleapis.com
+  - spanner.googleapis.com
+  - sqladmin.googleapis.com
+  - storage.googleapis.com
+  - cloudtasks.googleapis.com
+  - vision.googleapis.com
+  - workstations.googleapis.com
+  - compute.googleapis.com
+  - dataflow.googleapis.com
+  - dataproc.googleapis.com
+  - eventarc.googleapis.com
+  - gkehub.googleapis.com
+  - container.googleapis.com
+  - iam.googleapis.com
+  - redis.googleapis.com
+  - pubsub.googleapis.com
+  - secretmanager.googleapis.com
+  - dlp.googleapis.com
+  - speech.googleapis.com
+  - datapipelines.googleapis.com
