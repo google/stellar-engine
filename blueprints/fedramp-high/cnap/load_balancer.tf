@@ -176,5 +176,5 @@ module "cnap-0" {
     certificate_ids = [google_compute_region_ssl_certificate.default.id]
   }
 
-  depends_on = [google_cloud_run_v2_service.cloud_run_apps] # google_org_policy_policy.allow_external_lb]
+  depends_on = [google_cloud_run_v2_service.cloud_run_apps] # google_org_policy_policy.allow_external_lb
 }
