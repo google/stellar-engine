@@ -26,7 +26,19 @@ export GCE_PROJECT="$DNS_PROJECT_ID"
 
 # Download the Lego tool (same tool used inside the container)
 echo "Downloading Lego..."
+EXPECTED_SHA256="6ac2bbfc67069a62407389c1ac36590ca70d7adf1f940c4288c11b2d0b628dd7"
 curl -Lo lego.tar.gz https://github.com/go-acme/lego/releases/download/v4.14.0/lego_v4.14.0_linux_amd64.tar.gz
+
+echo "Verifying checksum..."
+if command -v sha256sum >/dev/null 2>&1; then
+  echo "${EXPECTED_SHA256}  lego.tar.gz" | sha256sum -c -
+elif command -v shasum >/dev/null 2>&1; then
+  echo "${EXPECTED_SHA256}  lego.tar.gz" | shasum -a 256 -c -
+else
+  echo "Error: sha256sum/shasum tool missing, cannot verify archive integrity." >&2
+  exit 1
+fi
+
 tar -xzf lego.tar.gz
 chmod +x lego
 

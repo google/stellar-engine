@@ -14,8 +14,12 @@
 
 
 import sys
+import re
 import click
 import google.auth
+import google.auth.transport.requests
+import urllib.request
+import urllib.error
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.api_core.client_options import ClientOptions
@@ -26,6 +30,38 @@ import json
 import yaml
 import os
 import time
+
+def _validate_project_id(project_id):
+    """Validates GCP Project ID format."""
+    project_id = project_id.strip()
+    if not re.match(r'^[a-z][a-z0-9-]{5,29}$', project_id):
+        click.echo("Error: Invalid GCP Project ID format. Must be 6-30 lowercase letters, digits, or hyphens starting with a letter.", err=True)
+        sys.exit(1)
+    return project_id
+
+def _get_access_token(credentials):
+    """Obtains OAuth2 access token directly from credentials without shell subprocess."""
+    if not credentials.valid:
+        credentials.refresh(google.auth.transport.requests.Request())
+    return credentials.token
+
+def _make_patch_request(url, headers, data):
+    """Executes HTTP PATCH request natively in Python using urllib.request."""
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(data).encode('utf-8'),
+        headers=headers,
+        method='PATCH'
+    )
+    try:
+        with urllib.request.urlopen(req) as response:
+            body = response.read().decode('utf-8')
+            return response.status, body, None
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8') if e.fp else ""
+        return e.code, body, str(e)
+    except Exception as e:
+        return 500, "", str(e)
 from data_stores import (
     generate_id,
     validate_data_store,
@@ -70,7 +106,7 @@ def init():
         # Ignore errors if the properties are not set
         pass
     force_reauthentication()
-    project_id = click.prompt('Please enter the GCP Project ID', type=str).strip()
+    project_id = _validate_project_id(click.prompt('Please enter the GCP Project ID', type=str))
     try:
         subprocess.run(['gcloud', 'config', 'set', 'project', project_id], check=True, capture_output=True)
         subprocess.run(['gcloud', 'config', 'set', 'billing/quota_project', project_id], check=True, capture_output=True)
@@ -106,7 +142,7 @@ def onboard():
 
     click.echo(click.style("The Gemini for Government solution is essentially comprised of Gemini Enterprise deployed within a protected / regulated environment via Assured Workloads. The GCP Project that Gemini for Government will be deployed in must already be created and reside within an Assured Workload folder.", fg='yellow'))
     if click.confirm('Have you already created a GCP Project within an Assured Workloads folder (if necessary)?'):
-        project_id = click.prompt('Please enter the GCP Project ID', type=str).strip()
+        project_id = _validate_project_id(click.prompt('Please enter the GCP Project ID', type=str))
     else:
         click.echo(click.style("Please create an Assured Workloads folder and a GCP Project within that folder before continuing.", fg='red'))
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
@@ -1402,10 +1438,7 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
 def configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_id, workforce_provider_id):
     """Configures the identity provider for the default search widget."""
     try:
-        # Get access token
-        token_process = subprocess.run(['gcloud', 'auth', 'print-access-token'], check=True, capture_output=True, text=True)
-        access_token = token_process.stdout.strip()
-
+        access_token = _get_access_token(credentials)
         workforce_identity_pool_provider = f"locations/global/workforcePools/{workforce_pool_id}/providers/{workforce_provider_id}"
         
         url = (
@@ -1425,29 +1458,15 @@ def configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_
                 "workforceIdentityPoolProvider": workforce_identity_pool_provider
             }
         }
-        
-        # Use subprocess to run the curl command
-        curl_command = [
-            'curl', '-X', 'PATCH',
-            '-H', f"Authorization: Bearer {access_token}",
-            '-H', f"x-goog-user-project: {project_id}",
-            '-H', "Content-Type: application/json",
-            '-d', json.dumps(data),
-            url
-        ]
-
 
         # Retry logic for widget config availability
         max_retries = 5
         for attempt in range(max_retries):
-            result = subprocess.run(curl_command, capture_output=True, text=True)
+            status_code, body, err = _make_patch_request(url, headers, data)
             
-            if result.returncode == 0 and "error" not in result.stdout.lower():
+            if status_code < 400 and "error" not in body.lower():
                 click.echo("Successfully configured identity provider for the search widget.")
-
                 break
-            
-
             
             if attempt < max_retries - 1:
                 click.echo("Waiting for widget config to be ready...", nl=False)
@@ -1455,11 +1474,10 @@ def configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_
                 click.echo(nl=True)
         else:
             click.echo(f"An error occurred while configuring the identity provider for the search widget after {max_retries} attempts:")
-            click.echo(result.stderr)
-            click.echo(result.stdout)
+            if err:
+                click.echo(err)
+            click.echo(body)
 
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        click.echo(f"An error occurred: {e}")
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}")
 
@@ -1467,9 +1485,7 @@ def configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_
 def disable_user_event_collection(credentials, project_id, engine_id):
     """Disables user event collection for the default search widget."""
     try:
-        # Get access token
-        token_process = subprocess.run(['gcloud', 'auth', 'print-access-token'], check=True, capture_output=True, text=True)
-        access_token = token_process.stdout.strip()
+        access_token = _get_access_token(credentials)
 
         url = (
             f"https://us-discoveryengine.googleapis.com/v1alpha/projects/{project_id}/locations/us/collections/default_collection/"
@@ -1487,26 +1503,14 @@ def disable_user_event_collection(credentials, project_id, engine_id):
                 "disableUserEventsCollection": True
             }
         }
-        
-        # Use subprocess to run the curl command
-        curl_command = [
-            'curl', '-X', 'PATCH',
-            '-H', f"Authorization: Bearer {access_token}",
-            '-H', f"x-goog-user-project: {project_id}",
-            '-H', "Content-Type: application/json",
-            '-d', json.dumps(data),
-            url
-        ]
-
 
         # Retry logic for widget config availability
         max_retries = 5
         for attempt in range(max_retries):
-            result = subprocess.run(curl_command, capture_output=True, text=True)
+            status_code, body, err = _make_patch_request(url, headers, data)
             
-            if result.returncode == 0 and "error" not in result.stdout.lower():
+            if status_code < 400 and "error" not in body.lower():
                 click.echo("Successfully disabled user event collection.")
-
                 break
             
             if attempt < max_retries - 1:
@@ -1515,11 +1519,10 @@ def disable_user_event_collection(credentials, project_id, engine_id):
                 click.echo(nl=True)
         else:
             click.echo(f"An error occurred while disabling user event collection after {max_retries} attempts:")
-            click.echo(result.stderr)
-            click.echo(result.stdout)
+            if err:
+                click.echo(err)
+            click.echo(body)
 
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        click.echo(f"An error occurred: {e}")
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}")
 
@@ -1567,15 +1570,19 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
     
     # Get access token
     try:
-        token_process = subprocess.run(['gcloud', 'auth', 'print-access-token'], check=True, capture_output=True, text=True)
-        access_token = token_process.stdout.strip()
-    except subprocess.CalledProcessError as e:
+        access_token = _get_access_token(credentials)
+    except Exception as e:
         click.echo(f"Error getting access token not critical, but noted: {e}")
-        pass
         access_token = ""
 
     if access_token:
         url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=customerPolicy,agentConfigs,generationConfig,disableLocationContext,webGroundingType,defaultWebGroundingToggleOff"
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "x-goog-user-project": project_id,
+            "Content-Type": "application/json"
+        }
 
         assistant_patch_body = {
           "displayName":"Default Assistant",
@@ -1593,25 +1600,16 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
           "disableLocationContext": True
         }
 
-        # Use subprocess to run the curl command
-        curl_command = [
-            'curl', '-X', 'PATCH',
-            '-H', f"Authorization: Bearer {access_token}",
-            '-H', f"x-goog-user-project: {project_id}",
-            '-H', "Content-Type: application/json",
-            '-d', json.dumps(assistant_patch_body),
-            url
-        ]
-
         try:
-            result = subprocess.run(curl_command, capture_output=True, text=True)
+            status_code, body, err = _make_patch_request(url, headers, assistant_patch_body)
             
-            if result.returncode == 0 and "error" not in result.stdout.lower():
+            if status_code < 400 and "error" not in body.lower():
                  click.echo(f"Default assistant for engine {engine_id} configured for FedRAMP High.")
             else:
                  click.echo(f"An error occurred while configuring the default assistant for FedRAMP High:")
-                 click.echo(result.stderr)
-                 click.echo(result.stdout)
+                 if err:
+                     click.echo(err)
+                 click.echo(body)
                  # Do not exit
 
         except Exception as e:
@@ -1684,14 +1682,19 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
     
     # Get access token
     try:
-        token_process = subprocess.run(['gcloud', 'auth', 'print-access-token'], check=True, capture_output=True, text=True)
-        access_token = token_process.stdout.strip()
-    except subprocess.CalledProcessError as e:
+        access_token = _get_access_token(credentials)
+    except Exception as e:
         click.echo(f"Error getting access token: {e}")
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
         sys.exit(1)
 
     url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=generationConfig.defaultLanguage,webGroundingType,defaultWebGroundingToggleOff,enableEndUserAgentCreation,disableLocationContext"
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "x-goog-user-project": project_id,
+        "Content-Type": "application/json"
+    }
 
     assistant_patch_body = {
         "generationConfig": {
@@ -1703,25 +1706,16 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
         "disableLocationContext": True
     }
 
-    # Use subprocess to run the curl command
-    curl_command = [
-        'curl', '-X', 'PATCH',
-        '-H', f"Authorization: Bearer {access_token}",
-        '-H', f"x-goog-user-project: {project_id}",
-        '-H', "Content-Type: application/json",
-        '-d', json.dumps(assistant_patch_body),
-        url
-    ]
-
     try:
-        result = subprocess.run(curl_command, capture_output=True, text=True)
+        status_code, body, err = _make_patch_request(url, headers, assistant_patch_body)
         
-        if result.returncode == 0 and "error" not in result.stdout.lower():
+        if status_code < 400 and "error" not in body.lower():
              click.echo(f"Default assistant for engine {engine_id} configured for IL4.")
         else:
              click.echo(f"An error occurred while configuring the default assistant for IL4:")
-             click.echo(result.stderr)
-             click.echo(result.stdout)
+             if err:
+                 click.echo(err)
+             click.echo(body)
              click.echo(click.style("Exiting Onboarding process...", fg="red"))
              sys.exit(1)
 
@@ -1796,14 +1790,19 @@ def configure_gemini_enterprise_for_il5(credentials, project_id, engine_id):
     
     # Get access token
     try:
-        token_process = subprocess.run(['gcloud', 'auth', 'print-access-token'], check=True, capture_output=True, text=True)
-        access_token = token_process.stdout.strip()
-    except subprocess.CalledProcessError as e:
+        access_token = _get_access_token(credentials)
+    except Exception as e:
         click.echo(f"Error getting access token: {e}")
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
         sys.exit(1)
 
     url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=generationConfig.defaultLanguage,webGroundingType,defaultWebGroundingToggleOff,enableEndUserAgentCreation,disableLocationContext"
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "x-goog-user-project": project_id,
+        "Content-Type": "application/json"
+    }
 
     assistant_patch_body = {
         "generationConfig": {
@@ -1815,25 +1814,16 @@ def configure_gemini_enterprise_for_il5(credentials, project_id, engine_id):
         "disableLocationContext": True
     }
 
-    # Use subprocess to run the curl command
-    curl_command = [
-        'curl', '-X', 'PATCH',
-        '-H', f"Authorization: Bearer {access_token}",
-        '-H', f"x-goog-user-project: {project_id}",
-        '-H', "Content-Type: application/json",
-        '-d', json.dumps(assistant_patch_body),
-        url
-    ]
-
     try:
-        result = subprocess.run(curl_command, capture_output=True, text=True)
+        status_code, body, err = _make_patch_request(url, headers, assistant_patch_body)
         
-        if result.returncode == 0 and "error" not in result.stdout.lower():
+        if status_code < 400 and "error" not in body.lower():
              click.echo(f"Default assistant for engine {engine_id} configured for IL5.")
         else:
              click.echo(f"An error occurred while configuring the default assistant for IL5:")
-             click.echo(result.stderr)
-             click.echo(result.stdout)
+             if err:
+                 click.echo(err)
+             click.echo(body)
              click.echo(click.style("Exiting Onboarding process...", fg="red"))
              sys.exit(1)
 

@@ -56,7 +56,7 @@ function kcadm_wrapper() {
 # --- 2. Authenticate ---
 
 echo "--- 🔑 Authenticating CLI ---"
-if ! kcadm_wrapper config credentials --server http://localhost:8080 --realm master --user "$BOOTSTRAP_USER" --password "$BOOTSTRAP_PASS" > /dev/null; then
+if ! printf '%s\n' "$BOOTSTRAP_PASS" | kcadm_wrapper config credentials --server http://localhost:8080 --realm master --user "$BOOTSTRAP_USER" > /dev/null; then
     echo "FATAL: Login failed. Check BOOTSTRAP_PASS in your .env file."
     exit 1
 fi
@@ -102,7 +102,7 @@ for USER_ENTRY in $USER_LIST; do
             -s emailVerified=true \
             -s firstName="Standard" -s lastName="User"
         
-        kcadm_wrapper set-password -r "$REALM_NAME" --username "$U_NAME" --new-password "$U_PASS" --temporary=false
+        printf '%s\n' "$U_PASS" | kcadm_wrapper set-password -r "$REALM_NAME" --username "$U_NAME" --temporary=false
         echo "     Created."
     fi
 done

@@ -1,0 +1,2 @@
+# Ignore actual secret files containing real credentials
+# secrets/*.txt
