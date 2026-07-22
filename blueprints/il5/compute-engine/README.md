@@ -119,4 +119,4 @@ keyrings-keys = {
 ## Verification of a successful deployment?
 
 - Go to the Compute Engine in the GCP Console. Select the VM. Check the Persistent Disk Encryption
-![GCP Compute Engine Instance Persistent Disk Encryption](./images/vm-disk-1.png?raw=true "GCP Compute Engine Instance Persistent Disk Encryption")
+
