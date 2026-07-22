@@ -23,14 +23,14 @@ image_factory:
   # - Use "ABANDON" for Dev/Test (prevents key destruction on teardown).
   # - Use "PREVENT_DESTROY" for Production to lock key versions from accidental destruction.
   kms_deletion_policy: "PREVENT_DESTROY"
-  network: "https://www.googleapis.com/compute/v1/projects/prod-il5-vdss-host/global/networks/vdss-landing-0"
-  subnetwork: "https://www.googleapis.com/compute/v1/projects/prod-il5-vdss-host/regions/us-east4/subnetworks/vdms-default"
+  network: "https://www.googleapis.com/compute/v1/projects/prod-security-host/global/networks/landing-vpc-0"
+  subnetwork: "https://www.googleapis.com/compute/v1/projects/prod-security-host/regions/us-east4/subnetworks/security-default"
 
 scanner_deployment:
   enable: true
   enable_confidential_compute: false
-  network: "https://www.googleapis.com/compute/v1/projects/prod-il5-vdss-host/global/networks/vdss-landing-0"
-  subnetwork: "https://www.googleapis.com/compute/v1/projects/prod-il5-vdss-host/regions/us-east4/subnetworks/vdms-default"
+  network: "https://www.googleapis.com/compute/v1/projects/prod-security-host/global/networks/landing-vpc-0"
+  subnetwork: "https://www.googleapis.com/compute/v1/projects/prod-security-host/regions/us-east4/subnetworks/security-default"
   scanner_configs:
     scanner-1:
       instance_name: "acas-nessus-scanner-01"
@@ -44,8 +44,8 @@ scanner_deployment:
 securitycenter_deployment:
   enable: false
   enable_confidential_compute: false
-  network: "https://www.googleapis.com/compute/v1/projects/prod-il5-vdss-host/global/networks/vdss-landing-0"
-  subnetwork: "https://www.googleapis.com/compute/v1/projects/prod-il5-vdss-host/regions/us-east4/subnetworks/vdms-default"
+  network: "https://www.googleapis.com/compute/v1/projects/prod-security-host/global/networks/landing-vpc-0"
+  subnetwork: "https://www.googleapis.com/compute/v1/projects/prod-security-host/regions/us-east4/subnetworks/security-default"
   boot_disk_size: 100
   data_disk_size: 500
   iap_source_ranges: ["35.235.240.0/20"]

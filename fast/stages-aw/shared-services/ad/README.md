@@ -95,7 +95,7 @@ repadmin /showrepl
 |---|---|:---:|:---:|:---:|
 | [domain_controllers](variables.tf#L19) | Detailed topology map of the target domain controllers. | <code title="map&#40;object&#40;&#123;&#10;  region     &#61; string&#10;  zone       &#61; string&#10;  subnetwork &#61; string&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [gcp_ntp_relay_ip](variables.tf#L28) | The internal IP address of the local GCP NTP Relay server that the DCs will sync time against. | <code>string</code> | ✓ |  |
-| [hub_project_id](variables.tf#L33) | The GCP project ID where Domain Controller resources will be deployed. Must be the project that owns the VPC (the VDSS host project), since Cloud Router, Cloud NAT, and firewall rules cannot cross-project reference networks. | <code>string</code> | ✓ |  |
+| [hub_project_id](variables.tf#L33) | The GCP project ID where Domain Controller resources will be deployed. Must be the project that owns the VPC (the Security Host Project), since Cloud Router, Cloud NAT, and firewall rules cannot cross-project reference networks. | <code>string</code> | ✓ |  |
 | [network](variables.tf#L44) | Self-link of the VPC network to attach Domain Controller VMs to. | <code>string</code> | ✓ |  |
 | [shared_services_project_id](variables.tf#L59) | The GCP project ID where Domain Controller resources will be deployed. | <code>string</code> | ✓ |  |
 | [boot_disk_image](variables.tf#L1) | Boot disk image for Domain Controller VMs. Must be an approved, hardened Windows Server image (e.g., Windows Server 2022 Datacenter) meeting DISA STIG baselines. | <code>string</code> |  | <code>&#34;projects&#47;windows-cloud&#47;global&#47;images&#47;family&#47;windows-2022&#34;</code> |

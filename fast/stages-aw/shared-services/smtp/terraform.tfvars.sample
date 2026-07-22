@@ -17,10 +17,10 @@
 # SMTP Shared Service — sample tfvars
 # Copy to terraform.tfvars and update values for your environment.
 
-hub_project_id = "my-vdss-host-project"
+hub_project_id = "my-security-host-project"
 region         = "us-east4"
-network        = "projects/my-vdss-host-project/global/networks/shared-services"
-subnetwork     = "projects/my-vdss-host-project/regions/us-east4/subnetworks/shared-services-default"
+network        = "projects/my-security-host-project/global/networks/shared-services"
+subnetwork     = "projects/my-security-host-project/regions/us-east4/subnetworks/shared-services-default"
 encryption_key = "projects/my-kms-project/locations/us-east4/keyRings/shared-services/cryptoKeys/smtp"
 
 automation = {

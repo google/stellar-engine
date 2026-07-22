@@ -16,11 +16,11 @@ domain_controllers:
   "0":
     region: "us-east4"
     zone: "us-east4-a"
-    subnetwork: "projects/prod-il5-vdss-host/regions/us-east4/subnetworks/shared-services"
+    subnetwork: "projects/prod-security-host/regions/us-east4/subnetworks/shared-services"
   "1":
     region: "us-east4"
     zone: "us-east4-b"
-    subnetwork: "projects/prod-il5-vdss-host/regions/us-east4/subnetworks/shared-services"
+    subnetwork: "projects/prod-security-host/regions/us-east4/subnetworks/shared-services"
 
 boot_disk_image: "projects/cis-public/global/images/family/cis-win2022-l2"
 
@@ -29,11 +29,11 @@ gcp_ntp_relay_ip: 10.96.0.2
 #   "0":
 #     region: "us-east4"
 #     zone: "us-east4-a"
-#     subnetwork: "projects/xxxx-vdss-host/regions/us-east4/subnetworks/shared-services-default"
+#     subnetwork: "projects/xxxx-security-host/regions/us-east4/subnetworks/shared-services-default"
 #   "1":
 #     region: "us-east4"
 #     zone: "us-east4-b"
-#     subnetwork: "projects/xxxx-vdss-host/regions/us-east4/subnetworks/shared-services-default"
+#     subnetwork: "projects/xxxx-security-host/regions/us-east4/subnetworks/shared-services-default"
 # # boot_disk_image: "projects/windows-cloud/global/images/family/windows-2022"
 # # gcp_ntp_relay_ip: 10.0.0.1
 

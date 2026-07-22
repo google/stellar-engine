@@ -14,33 +14,33 @@
  * limitations under the License.
  */
 
-# Must be the VDSS host project (VPC owner) — Cloud Router, NAT, and
+# Must be the Security Host Project (VPC owner) — Cloud Router, NAT, and
 # firewall rules cannot cross-project reference networks.
-hub_project_id = "xxxx-vdss-host"
+hub_project_id = "xxxx-security-host"
 prefix         = "da1"
 
 region     = "us-east4"
-network    = "projects/xxxx-vdss-host/global/networks/shared-services"
+network    = "projects/xxxx-security-host/global/networks/shared-services"
 domain_controllers = {
   "0" = {
     region     = "us-east4"
     zone       = "us-east4-a"
-    subnetwork = "projects/xxxx-vdss-host/regions/us-east4/subnetworks/shared-services"
+    subnetwork = "projects/xxxx-security-host/regions/us-east4/subnetworks/shared-services"
   },
   "1" = {
     region     = "us-east4"
     zone       = "us-east4-b"
-    subnetwork = "projects/xxxx-vdss-host/regions/us-east4/subnetworks/shared-services"
+    subnetwork = "projects/xxxx-security-host/regions/us-east4/subnetworks/shared-services"
   }
 }
-subnetwork = "projects/xxxx-vdss-host/regions/us-east4/subnetworks/shared-services"
+subnetwork = "projects/xxxx-security-host/regions/us-east4/subnetworks/shared-services"
 
 gcp_ntp_relay_ip     = "10.0.0.2"
 
 # Required for IL5 — constraints/gcp.restrictNonCmekServices enforced.
 # Use the dedicated AD key from stage 3-networking (not the shared "default" key):
 #   gcloud storage cat gs://<outputs-bucket>/tfvars/3-networking.auto.tfvars.json | jq -r '.kms_keys["us-east4"].ad'
-encryption_key = "projects/xxxx-vdss-host/locations/us-east4/keyRings/vdss-keyring-us-east4/cryptoKeys/ad"
+encryption_key = "projects/xxxx-security-host/locations/us-east4/keyRings/security-keyring-us-east4/cryptoKeys/ad"
 
 # Uncomment to customize:
 # boot_disk_image      = "projects/windows-cloud/global/images/family/windows-2022"

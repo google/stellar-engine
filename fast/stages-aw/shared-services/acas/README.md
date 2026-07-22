@@ -54,7 +54,7 @@ The following diagram illustrates the end-to-end operational flow:
 
   [3. VM DEPLOYMENTS]
   ├── Query latest Golden Image families (acas-scanner-golden / acas-sc-golden)
-  └── Terraform provisions private VMs on vdms-default subnet
+  └── Terraform provisions private VMs on security-default subnet
 
   [4. CONNECTIVITY]
   └── Tunnel administrative SSH & Web Console traffic securely via Cloud IAP

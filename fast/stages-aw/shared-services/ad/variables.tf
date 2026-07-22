@@ -47,7 +47,7 @@ variable "gcp_ntp_relay_ip" {
 }
 
 variable "hub_project_id" {
-  description = "The GCP project ID where Domain Controller resources will be deployed. Must be the project that owns the VPC (the VDSS host project), since Cloud Router, Cloud NAT, and firewall rules cannot cross-project reference networks."
+  description = "The GCP project ID where Domain Controller resources will be deployed. Must be the project that owns the VPC (the Security Host Project), since Cloud Router, Cloud NAT, and firewall rules cannot cross-project reference networks."
   type        = string
 }
 

@@ -70,7 +70,7 @@ for ENV_NAME in "${ENV_ARRAY[@]}"; do
 done
 
 # KMS
-gcloud kms keys versions restore 1 --location="${REGIONS}" --keyring='vdss-keyring' --key=default --project="${PREFIX}"-net-vdss-host
-gcloud kms keys versions enable 1 --location="${REGIONS}" --keyring=vdss-keyring --key=default --project="${PREFIX}"-net-vdss-host
-terraform import 'module.kms.google_kms_key_ring.default[0]' projects/"${PREFIX}"-net-vdss-host/locations/"${REGIONS}"/keyRings/vdss-keyring
-terraform import 'module.kms.google_kms_crypto_key.default["default"]' projects/"${PREFIX}"-net-vdss-host/locations/"${REGIONS}"/keyRings/vdss-keyring/cryptoKeys/default
+gcloud kms keys versions restore 1 --location="${REGIONS}" --keyring='security-keyring' --key=default --project="${PREFIX}"-net-security-host
+gcloud kms keys versions enable 1 --location="${REGIONS}" --keyring=security-keyring --key=default --project="${PREFIX}"-net-security-host
+terraform import 'module.kms.google_kms_key_ring.default[0]' projects/"${PREFIX}"-net-security-host/locations/"${REGIONS}"/keyRings/security-keyring
+terraform import 'module.kms.google_kms_crypto_key.default["default"]' projects/"${PREFIX}"-net-security-host/locations/"${REGIONS}"/keyRings/security-keyring/cryptoKeys/default

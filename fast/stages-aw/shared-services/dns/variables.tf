@@ -43,7 +43,7 @@ variable "forwarding_zones" {
 }
 
 variable "host_project_id" {
-  description = "The GCP project ID where DNS zones will be created (the VDSS host project that owns the VPCs)."
+  description = "The GCP project ID where DNS zones will be created (the Security Host Project that owns the VPCs)."
   type        = string
 }
 
@@ -58,7 +58,7 @@ variable "prefix" {
 }
 
 variable "private_zone_domain" {
-  description = "Domain of the existing private DNS zone in the landing VPC (e.g. 'da1-il5-vdss.private.example.internal.'). A peering zone is created so shared-services and tenant-transit VPCs can resolve records in it."
+  description = "Domain of the existing private DNS zone in the landing VPC (e.g. 'security.private.example.internal.'). A peering zone is created so shared-services and tenant-transit VPCs can resolve records in it."
   type        = string
   default     = null
 }

@@ -106,7 +106,7 @@ gcloud storage cat gs://<prefix>-<regime>-prod-iac-core-outputs/tfvars/shared-se
 ```hcl
 module "ntp" {
   source         = "./shared-services/ntp"
-  hub_project_id = "my-vdss-host"
+  hub_project_id = "my-security-host"
   region         = "us-east4"
   network        = module.shared-services-vpc.self_link
   subnetwork     = module.shared-services-vpc.subnet_self_links["us-east4/shared-services-default"]
@@ -121,7 +121,7 @@ module "ntp" {
 |---|---|:---:|:---:|:---:|
 | [automation](variables.tf#L7) | Automation resources created by the bootstrap stage. Used to write NTP relay IPs to the GCS outputs bucket for downstream consumption. | <code title="object&#40;&#123;&#10;  outputs_bucket &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [encryption_key](variables.tf#L32) | KMS key self-link for CMEK disk encryption on NTP relay VMs. Required for IL5 deployments where constraints/gcp.restrictNonCmekServices is enforced. | <code>string</code> | ✓ |  |
-| [hub_project_id](variables.tf#L37) | The GCP project ID where NTP relay resources will be deployed. Must be the project that owns the VPC (the VDSS host project), since Cloud Router, Cloud NAT, and firewall rules cannot cross-project reference networks. | <code>string</code> | ✓ |  |
+| [hub_project_id](variables.tf#L37) | The GCP project ID where NTP relay resources will be deployed. Must be the project that owns the VPC (the Security Host Project), since Cloud Router, Cloud NAT, and firewall rules cannot cross-project reference networks. | <code>string</code> | ✓ |  |
 | [network](variables.tf#L54) | Self-link of the VPC network to attach NTP relay VMs to. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L79) | GCP region for NTP relay VM deployment. | <code>string</code> | ✓ |  |
 | [subnetwork](variables.tf#L84) | Self-link of the subnetwork to attach NTP relay VMs to. | <code>string</code> | ✓ |  |

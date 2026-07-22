@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-host_project_id = "xxxx-vdss-host"
+host_project_id = "xxxx-security-host"
 prefix          = "da1"
 
 automation = {
@@ -22,10 +22,10 @@ automation = {
 }
 
 vpc_self_links = {
-  csp_landing     = "projects/xxxx-vdss-host/global/networks/csp-landing"
-  landing         = "projects/xxxx-vdss-host/global/networks/vdss-landing-0"
-  shared_services = "projects/xxxx-vdss-host/global/networks/shared-services"
-  tenant_transit  = "projects/xxxx-vdss-host/global/networks/tenant-transit"
+  csp_landing     = "projects/xxxx-security-host/global/networks/csp-landing"
+  landing         = "projects/xxxx-security-host/global/networks/landing-vpc-0"
+  shared_services = "projects/xxxx-security-host/global/networks/shared-services"
+  tenant_transit  = "projects/xxxx-security-host/global/networks/tenant-transit"
 }
 
 # Domain-specific forwarding zones — forward to Enterprise DNS resolver in Azure.
@@ -41,7 +41,7 @@ vpc_self_links = {
 #   - Azure-side firewall must allow UDP/TCP 53 from 35.199.192.0/19
 # Peer to the org private zone so shared-services and tenant-transit VPCs
 # can resolve internal records without modifying stage 3-networking.
-private_zone_domain = "da1-il5-vdss.private.example.internal."
+private_zone_domain = "security.private.example.internal."
 
 # Response policy rules for Private Google Access (googleapis.com → PSC endpoint).
 # Use the same rules file as stage 3-networking.

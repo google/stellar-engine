@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-# Must be the VDSS host project (VPC owner) — Cloud Router, NAT, and
+# Must be the Security Host Project (VPC owner) — Cloud Router, NAT, and
 # firewall rules cannot cross-project reference networks.
-hub_project_id = "xxxx-vdss-host"
+hub_project_id = "xxxx-security-host"
 prefix         = "da1"
 
 automation = {
@@ -24,8 +24,8 @@ automation = {
 }
 
 region     = "us-east4"
-network    = "projects/xxxx-vdss-host/global/networks/shared-services"
-subnetwork = "projects/xxxx-vdss-host/regions/us-east4/subnetworks/shared-services-default"
+network    = "projects/xxxx-security-host/global/networks/shared-services"
+subnetwork = "projects/xxxx-security-host/regions/us-east4/subnetworks/shared-services-default"
 
 # IPs only — hostnames break firewall destination_ranges.
 # tick.usno.navy.mil, tock.usno.navy.mil, ntp2.usno.navy.mil
@@ -39,4 +39,4 @@ allowed_client_ranges = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
 # Required for IL5 — constraints/gcp.restrictNonCmekServices enforced.
 # Use the dedicated NTP key from stage 3-networking (not the shared "default" key):
 #   gcloud storage cat gs://<outputs-bucket>/tfvars/3-networking.auto.tfvars.json | jq -r '.kms_keys["us-east4"].ntp'
-encryption_key = "projects/xxxx-vdss-host/locations/us-east4/keyRings/vdss-keyring-us-east4/cryptoKeys/ntp"
+encryption_key = "projects/xxxx-security-host/locations/us-east4/keyRings/security-keyring-us-east4/cryptoKeys/ntp"

@@ -17,7 +17,7 @@
 hub_project_id = "xxxx-shared-services"
 
 # VPC Configuration
-network_name = "vdss-bcap-0"
+network_name = "bcap-vpc-0"
 
 # Primary and Secondary Regions for BCAP Deployment
 region1 = "us-central1"

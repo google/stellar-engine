@@ -50,8 +50,7 @@ EESG (mail.example.com)                ← Enterprise Email Security Gateway
    relay IPs.
 3. **KMS key** for CMEK disk encryption (IL5 requirement) — reference from the
    stage 3-networking keyring.
-4. **Shared-services SA** must have appropriate IAM bindings on the VDSS host
-   project (granted by `3-networking/projects.tf`).
+4. **Shared-services SA** must have appropriate IAM bindings on the Security Host Project (granted by `3-networking/projects.tf`).
 5. **FIPS 140-2** should be enabled at the OS image level for IL5 compliance.
    This is an image-level concern, not module-level (same as NTP).
 
@@ -124,7 +123,7 @@ time and ongoing `dnf-automatic` security updates. This requires Cloud NAT
 ```hcl
 module "smtp" {
   source           = "./shared-services/smtp"
-  hub_project_id   = "my-vdss-host"
+  hub_project_id   = "my-security-host"
   region           = "us-east4"
   network          = module.shared-services-vpc.self_link
   subnetwork       = module.shared-services-vpc.subnet_self_links["us-east4/shared-services-default"]
@@ -141,7 +140,7 @@ module "smtp" {
 | [automation](variables.tf#L7) | Automation resources created by the bootstrap stage. Used to write SMTP relay IPs to the GCS outputs bucket for downstream consumption. | <code title="object&#40;&#123;&#10;  outputs_bucket &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [disa_relay_hosts](variables.tf#L32) | DISA EESG relay IP addresses. Must be IP addresses (not hostnames) as they are also used in firewall destination_ranges. | <code>list&#40;string&#41;</code> | ✓ |  |
 | [encryption_key](variables.tf#L47) | KMS key self-link for CMEK disk encryption on SMTP relay VMs. Required for IL5 deployments where constraints/gcp.restrictNonCmekServices is enforced. | <code>string</code> | ✓ |  |
-| [hub_project_id](variables.tf#L52) | The GCP project ID where SMTP relay resources will be deployed. Must be the project that owns the VPC (the VDSS host project), since Cloud Router, Cloud NAT, and firewall rules cannot cross-project reference networks. | <code>string</code> | ✓ |  |
+| [hub_project_id](variables.tf#L52) | The GCP project ID where SMTP relay resources will be deployed. Must be the project that owns the VPC (the Security Host Project), since Cloud Router, Cloud NAT, and firewall rules cannot cross-project reference networks. | <code>string</code> | ✓ |  |
 | [network](variables.tf#L69) | Self-link of the VPC network to attach SMTP relay VMs to. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L84) | GCP region for SMTP relay VM deployment. | <code>string</code> | ✓ |  |
 | [subnetwork](variables.tf#L101) | Self-link of the subnetwork to attach SMTP relay VMs to. | <code>string</code> | ✓ |  |
