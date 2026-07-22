@@ -11,3 +11,5 @@ COPY . .
 EXPOSE 8080
 
 CMD ["streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]
+# Run as non-root user for security
+USER 10001
