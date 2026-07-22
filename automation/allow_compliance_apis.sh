@@ -16,28 +16,28 @@
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd ) 
 cd "${SCRIPT_DIR}" || exit
 
-compliance_LIST="${SCRIPT_DIR}/allowed_apis.yaml"
-LZ_EXCEPTIONS="${SCRIPT_DIR}/lz_exceptions.yaml"
+COMPLIANCE_APIS_LIST="${SCRIPT_DIR}/allowed_apis.yaml"
+COMPLIANCE_EXCEPTIONS="${SCRIPT_DIR}/compliance_exceptions.yaml"
 PLAN_FILE="tfplan"
 
 echo "-------------------------------------------------------"
-echo "Running compliance IL5 + COA2 API Cross-Check..."
+echo "Running Assured Workloads Compliance API Cross-Check..."
 echo "-------------------------------------------------------"
 
-if [[ ! -f "$compliance_LIST" ]]; then
-    echo "[ERROR] compliance list not found at $compliance_LIST"
+if [[ ! -f "$COMPLIANCE_APIS_LIST" ]]; then
+    echo "[ERROR] Approved APIs list not found at $COMPLIANCE_APIS_LIST"
     exit 1
 fi
 
-if [[ ! -f "$LZ_EXCEPTIONS" ]]; then
-    echo "[ERROR] LZ Exceptions list not found at $LZ_EXCEPTIONS"
+if [[ ! -f "$COMPLIANCE_EXCEPTIONS" ]]; then
+    echo "[ERROR] Compliance Exceptions list not found at $COMPLIANCE_EXCEPTIONS"
     exit 1
 fi
 
-ALLOWED_compliance=$(yq eval '.allowed_apis[]' "$compliance_LIST")
-ALLOWED_COA2=$(yq eval '.COA2[]' "$LZ_EXCEPTIONS")
+ALLOWED_BASELINE=$(yq eval '.allowed_apis[]' "$COMPLIANCE_APIS_LIST")
+ALLOWED_EXCEPTIONS=$(yq eval '.COA2[]' "$COMPLIANCE_EXCEPTIONS")
 
-ALLOWED_APIS=$(echo -e "${ALLOWED_compliance}\n${ALLOWED_COA2}" | sort -u | sed '/^null$/d')
+ALLOWED_APIS=$(echo -e "${ALLOWED_BASELINE}\n${ALLOWED_EXCEPTIONS}" | sort -u | sed '/^null$/d')
 
 cd "${SCRIPT_DIR}/../fast/stages-aw/1-assured-workload" || exit 1
 if [[ ! -f "$PLAN_FILE" ]]; then
@@ -50,17 +50,17 @@ MISSING_APIS=""
 
 for api in $REQUESTED_APIS; do
     if ! echo "$ALLOWED_APIS" | grep -qx "$api"; then
-        echo "[!] VIOLATION: '$api' is NOT in the compliance approved list or COA2 exceptions."
+        echo "[!] VIOLATION: '$api' is NOT in the approved workload APIs list or compliance exceptions."
         MISSING_APIS+="$api "
     fi
 done
 
 if [[ -n "$MISSING_APIS" ]]; then
-    echo -e "\n[ERROR] compliance COMPLIANCE FAILURE"
+    echo -e "\n[ERROR] ASSURED WORKLOADS COMPLIANCE FAILURE"
     echo "The following APIs are requested in code but missing from approved lists:"
     for missing in $MISSING_APIS; do echo "  - $missing"; done
     exit 1
 else
-    echo "compliance/COA2 Cross-Check Passed: All requested services are authorized."
+    echo "Compliance API Cross-Check Passed: All requested services are authorized."
     exit 0
 fi

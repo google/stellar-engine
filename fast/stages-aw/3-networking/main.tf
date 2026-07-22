@@ -30,7 +30,7 @@ locals {
     replace(replace(p.project_name, "<PREFIX>", var.prefix), "<REGIME>", local.formatted_regime)
   }
   allowed_api_data = yamldecode(file("./data/allowed_apis.yaml"))
-  lz_data   = yamldecode(file("./data/lz_exceptions.yaml"))
+  lz_data   = yamldecode(file("./data/compliance_exceptions.yaml"))
 
   coa2_allowed_apis = concat(
     local.allowed_api_data.allowed_apis,

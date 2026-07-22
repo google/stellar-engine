@@ -36,7 +36,7 @@ locals {
   } : {}
 
   allowed_api_data = yamldecode(file("${path.module}/data/allowed_apis.yaml"))
-  lz_data   = yamldecode(file("${path.module}/data/lz_exceptions.yaml"))
+  lz_data   = yamldecode(file("${path.module}/data/compliance_exceptions.yaml"))
   compliance_list = local.allowed_api_data.allowed_apis
   coa2_list = local.lz_data.COA2
 
