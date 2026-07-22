@@ -41,7 +41,7 @@ In this way, the Resource Management service account can effectively act as a Go
 
 One consequence of the above setup is the need to configure IAM bindings that can be assigned via the condition as non-authoritative, since those same roles are effectively under the control of two stages: this one and Resource Management. Using authoritative bindings for these roles (instead of non-authoritative ones) would generate potential conflicts, where each stage could try to overwrite and negate the bindings applied by the other at each `apply` cycle.
 
-A full reference of IAM roles managed by this stage [is available here](./IAM.md).
+A full reference of IAM roles managed by this stage [is available here](#).
 
 ### Google Cloud Organization Policies and Tag-Based Conditions
 
