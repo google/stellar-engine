@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 data "google_compute_network" "vpc_network" {
   name    = var.landing_network
   project = var.project
