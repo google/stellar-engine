@@ -1,0 +1,83 @@
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+# Keycloak Blueprint
+This blueprint deploys a keycloak instance on a GKE cluster and uses a Global External Load Balancer to forward traffic to the cluster. A postgres database is also deployed which you can configure to serve as the database for the keycloak instance.
+
+## Pre-Requisite Steps
+Before deployment two org policies need to be configured to allow for global load balancing. Change the org policies to match the configuration shown below.
+
+![alt text](images/org-policy.png)
+
+![alt text](images/global-load-org-policy.png)
+
+Create a firewall rule for the VPC that the keycloak deployment will be using to allow for GCP health checks. The firewall rule should resemble the image below.
+
+![alt text](images/firewall-rule.png)
+
+## Deployment Steps
+```bash
+cp terraform.tfvars.sample terraform.tfvars
+```
+Fill out the terraform.tfvars with the appropriate values for your own deployment.
+```bash
+terraform init
+```
+```bash
+terraform plan
+```
+```bash
+terraform apply
+```
+
+## Post-Requisite Steps
+Please wait for up to 10 minutes after the deployment to give time for the GKE Gateway, Services, and Routes to be deployed. 
+
+Navigate to the Certificate Manager page in the Google Cloud Console and click "keycloak-cert". Note the DNS authorization details as those will be used to validate the certificate.
+
+![alt text](images/cert-manager.png)
+
+Create a CNAME record wherever your DNS records are kept.
+
+![alt text](images/dns-record.png)
+
+Navigate to the Load Balancer page in the Google Cloud Console and copy the IP address of the GKE load balancer that was created.
+
+![alt text](images/ip-of-lb.png)
+
+Create an A record wherever your DNS records are kept.
+
+![alt text](images/a-record.png)
+
+That is it, everything should be deployed and configured. The default credentials are admin:admin and it is highly recommended to create a new account and delete the admin account as soon as possible.
+<!-- BEGIN TFDOC -->
+## Variables
+
+| name | description | type | required | default |
+|---|---|:---:|:---:|:---:|
+| [domain](variables.tf#L7) | Domain of the keycloak instance. | <code>string</code> | ✓ |  |
+| [kms_key](variables.tf#L12) | Project path to a KMS key. | <code>string</code> | ✓ |  |
+| [network](variables.tf#L17) | Network of the Bastion VM and GKE Cluster. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L22) | Project ID that hosts the VPC that will be used by keycloak. | <code>string</code> | ✓ |  |
+| [pod_range](variables.tf#L33) | GKE pod range name. | <code>string</code> | ✓ |  |
+| [project_id](variables.tf#L38) | ID of the project that keycloak will be deployed in. | <code>string</code> | ✓ |  |
+| [service_range](variables.tf#L49) | GKE service range name. | <code>string</code> | ✓ |  |
+| [subnetwork](variables.tf#L54) | Subnetwork of the Bastion VM and GKE Cluster. | <code>string</code> | ✓ |  |
+| [bucket-name](variables.tf#L1) | Name of the bucket that will hold keycloak yaml files. | <code>string</code> |  | <code>&#34;keycloak-config&#34;</code> |
+| [node_count](variables.tf#L27) | Amount of initial nodes in the nodepool. | <code>number</code> |  | <code>1</code> |
+| [region](variables.tf#L43) | Region to deploy keycloak to. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [zone](variables.tf#L59) | Zone to deploy keycloak to. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
+<!-- END TFDOC -->

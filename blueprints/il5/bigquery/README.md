@@ -1,3 +1,19 @@
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # Google BigQuery (BigQuery) Project
 
 <!-- BEGIN TOC -->
@@ -13,9 +29,9 @@
 <!-- END TOC -->
 
 ## Introduction Google BigQuery (BigQuery)
-Google BigQuery is a fully-managed, serverless data system in which querying data is made possible. Database does not need to be constantly monitored, and users can levarage data and analyze the data.
+Google BigQuery is a fully-managed, serverless data system in which querying data is made possible. Database does not need to be constantly monitored, and users can leverage data and analyze the data.
 1. The Rotation Period ``` rotation_period ``` is set to 90 days indicated by 7776000s seconds,
-2. The Destory Schedulded Duration is ``` destroy_scheduled_duration ``` is set to 30 days indicated by 2592000 seconds.
+2. The Destroy Scheduled Duration is ``` destroy_scheduled_duration ``` is set to 30 days indicated by 2592000 seconds.
 3. The IAM Permissions and Roles ```roles/cloudkms.cryptoKeyEncrypterDecrypter``` is assigned
 
 ## Blueprint
@@ -80,7 +96,7 @@ views = {}
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
 | [core_project_id](variables.tf#L17) | Core project ID. | <code>string</code> | ✓ |  |
-| [dataset_description](variables.tf#L22) | Provides a discription of the deployed BigQuery Dataset. | <code>string</code> | ✓ |  |
+| [dataset_description](variables.tf#L22) | Provides a description of the deployed BigQuery Dataset. | <code>string</code> | ✓ |  |
 | [dataset_id](variables.tf#L27) | This is the dataset id. | <code>string</code> | ✓ |  |
 | [kms_key_name](variables.tf#L32) | The full self-link (projects/../locations/../keyRings/../cryptoKeys/..) of the existing KMS key to use for encryption. | <code>string</code> | ✓ |  |
 | [kms_keyring_name](variables.tf#L37) | KMS Keyring. | <code>string</code> | ✓ |  |

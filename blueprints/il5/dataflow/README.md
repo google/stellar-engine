@@ -1,16 +1,18 @@
-Copyright 2023 Google LLC
+<!--
+Copyright 2026 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-     http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+-->
 
 ## Dataflow
 
@@ -105,7 +107,7 @@ The Apache Beam SDK for Java has a warning about a bug in the latest version as 
 | [main_project_id](variables.tf#L58) | The ID of the project in which to provision resources. | <code>string</code> | ✓ |  |
 | [network_name](variables.tf#L63) | The network name. | <code>string</code> | ✓ |  |
 | [network_project_id](variables.tf#L68) | Project that the Compute Engine VPC is located. | <code>string</code> | ✓ |  |
-| [parameters](variables.tf#L73) | Dataflow Paramaters. | <code>map&#40;string&#41;</code> | ✓ |  |
+| [parameters](variables.tf#L73) | Dataflow Parameters. | <code>map&#40;string&#41;</code> | ✓ |  |
 | [prefix](variables.tf#L78) | This is the prefix for all resources. | <code>string</code> | ✓ |  |
 | [storage_class](variables.tf#L89) | This is the storage class of the storage bucket. | <code>string</code> | ✓ |  |
 | [subnetwork_name](variables.tf#L94) | The subnet name. | <code>string</code> | ✓ |  |

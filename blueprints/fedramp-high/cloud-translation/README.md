@@ -1,8 +1,24 @@
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # Cloud Translation
 
 <!-- BEGIN TOC -->
 - [Introduction to Google Cloud Translation](#introduction-to-google-cloud-translation)
-- [Cloud Translatation Blueprint](#cloud-translatation-blueprint)
+- [Cloud Translation Blueprint](#cloud-translation-blueprint)
 - [Disclaimer](#disclaimer)
 - [Deployment Steps](#deployment-steps)
 - [Verification of a successful deployment](#verification-of-a-successful-deployment)
@@ -14,11 +30,11 @@
 ## Introduction to Google Cloud Translation
 Google Cloud Translation provides a comprehensive set of AI-powered services for breaking down language barriers. Its core Cloud Translation API offers Text, Document, and Batch Translation for converting content in various formats, complemented by Language Detection. For managing complex translation workflows, Translation Hub offers a centralized portal with human-in-the-loop capabilities. Users can also achieve higher accuracy for specialized content by training custom models with AutoML Translation and ensuring consistent terminology across all translations using Glossaries.
 
-## Cloud Translatation Blueprint
+## Cloud Translation Blueprint
 The deployment of a Cloud Translation blueprint delivers scalable translation capabilities, encompassing real-time text conversion alongside asynchronous batch and document processing. It can be built to incorporate the creation of AutoML Translation models to achieve domain-specific accuracy, a process that necessitates dedicated data management and training pipelines. Simultaneously, the establishment of Glossaries provides consistent terminology application across all translation tasks. Integrating Translation Hub establishes a managed portal for human-machine translation workflows, streamlining operational processes. The overall impact ranges from immediate global communication and content localization to optimized security, cost management, and efficient, customized translation pipelines.
 
 ## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workdloads within the Google Cloud Platform (GCP) organization. The Translation API must be enabled in the GCP in order for the workloads to be viewed.
+- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workloads within the Google Cloud Platform (GCP) organization. The Translation API must be enabled in the GCP in order for the workloads to be viewed.
 
 ## Deployment Steps
 1. Copy the contents of the terraform.tfvars.sample file into your own terraform.tfvars file, then update the variables in this file. For reference update the following variables:
@@ -49,7 +65,6 @@ To use the created workflow for batch translations, continue to the following st
 3. Go to workflows, and click on your newly created "translate-workflow".
 4. Click "Execute", then click "Execute" again.
 5. After the workflow executes, look at the output bucket to view your translated documents.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
@@ -57,7 +72,7 @@ To use the created workflow for batch translations, continue to the following st
 |---|---|:---:|:---:|:---:|
 | [main_project_id](variables.tf#L13) | The Google Project ID. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L24) | The Google Cloud region. | <code>string</code> | ✓ |  |
-| [deletion_protection](variables.tf#L1) | Deletion proteciton. | <code>bool</code> |  | <code>true</code> |
+| [deletion_protection](variables.tf#L1) | Deletion protection. | <code>bool</code> |  | <code>true</code> |
 | [file](variables.tf#L7) | File path of the yaml instructions for the workflow. | <code>string</code> |  | <code>&#34;code&#47;example.yaml&#34;</code> |
 | [output_folder](variables.tf#L18) | Name of the folder that will be created in the output bucket to store the translated text. | <code>string</code> |  | <code>&#34;output&#34;</code> |
 | [src_lang](variables.tf#L29) | The source language of the text. | <code>string</code> |  | <code>&#34;es&#34;</code> |

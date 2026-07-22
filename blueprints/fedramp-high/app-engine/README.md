@@ -1,3 +1,19 @@
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # App Engine
 
 <!-- BEGIN TOC -->
@@ -5,7 +21,7 @@
 - [App Engine Blueprint](#app-engine-blueprint)
 - [Disclaimer](#disclaimer)
 - [Deployment Steps](#deployment-steps)
-- [Verification of a succesful deployment](#verification-of-a-succesful-deployment)
+- [Verification of a successful deployment](#verification-of-a-successful-deployment)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
@@ -33,8 +49,8 @@ You should see this README and some terraform files.
 ```terraform apply``` to apply the infrastructure build<br />
 ```terraform destroy``` to destroy the built infrastructure<br />
 
-## Verification of a succesful deployment
-Use the GCP consule to verify if the resources have been created. 
+## Verification of a successful deployment
+Use the GCP console to verify if the resources have been created. 
 
 ```To verify the creation of Instance classes: Go to Instances in your landing project``` <br />
 <!-- BEGIN TFDOC -->

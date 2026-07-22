@@ -1,3 +1,19 @@
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # Google Cloud Armor
 
 <!-- BEGIN TOC -->
@@ -18,7 +34,7 @@ Google Cloud Armor helps you protect your Google Cloud deployments from multiple
 This blueprint demonstrates how to use Google Cloud Armor to create policies and rules that can be applied to backend services. Enforced at the HTTP(S) Load Balancer's edge locations, Google Cloud Armor protects from traffic at the root. The framework of the application is by defining security policies with specific rules, using them to monitor against incoming traffic. There are 4 possible actions allow, deny, redirect or throttle, this provides a level of security before the request attributes reach the application instances. 
 
 ## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workdloads within the Google Cloud Platform (GCP) organization.
+- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
 
 ## Deployment Steps
 

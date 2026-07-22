@@ -1,3 +1,19 @@
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 ## Introduction to BeyondCorp
 BeyondCorp is Google Cloud's zero-trust network security framework, enabling secure access to applications and resources without relying on traditional VPNs.
 
@@ -13,11 +29,11 @@ This blueprint simplifies the deployment and configuration of BeyondCorp resourc
 <mark>Identity-Aware Proxy (IAP) backend:</mark> Configures a Compute Backend Service with IAP enabled (with OAuth2 credentials for authentication).<br />
 <mark>Identity-Aware Proxy (IAP) user:</mark> Grants the specified user access to IAP-secured resources. <span style="color: grey">Roles/iap.httpsResourceAccessor:</span> Allows users to access HTTPS resources protected by IAP.<br/>
 
-For more information, please look at this Google Cloud Communiity [Article](https://www.googlecloudcommunity.com/gc/Community-Blogs/Improve-the-security-of-your-Google-Workspace-Environment/ba-p/714629).
+For more information, please look at this Google Cloud Community [Article](https://www.googlecloudcommunity.com/gc/Community-Blogs/Improve-the-security-of-your-Google-Workspace-Environment/ba-p/714629).
 
 
 ## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workdloads within the Google Cloud Platform (GCP) organization.
+- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
 
 ### Oauth2 Consent Screen
 
@@ -31,12 +47,12 @@ Once it's created, create credentials by going to the API&Services -> Credential
 
 ### Access Policy ID number
 
-To get Access Policy ID number, run the following commmand:
+To get Access Policy ID number, run the following command:
 
 gcloud access-context-manager policies list
 
 The name is the ID.
-## Sucessful Deployment
+## Successful Deployment
 
 Use GCP Console to verify if resources were created
 

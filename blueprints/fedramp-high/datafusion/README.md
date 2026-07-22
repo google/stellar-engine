@@ -1,3 +1,19 @@
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # Data Fusion
 
 <!-- BEGIN TOC -->
@@ -38,7 +54,7 @@ You should see this README and some terraform files.
 
 ### Troubleshooting
 
-If you receive any errors during the `terraform apply`, run the apply two or three more times until a successfull deployment is achieved.
+If you receive any errors during the `terraform apply`, run the apply two or three more times until a successful deployment is achieved.
 
 ## Verification of a successful deployment
 Navigate to [Data Fusion](https://console.cloud.google.com/data-fusion) within the GCP console to verify whether the resources have been created.

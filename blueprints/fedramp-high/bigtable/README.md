@@ -1,3 +1,19 @@
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # Bigtable
 
 <!-- BEGIN TOC -->
@@ -79,19 +95,18 @@ table_info = {
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [bigtable_service_account_id](variables.tf#L7) | The Service Account for Bigtable. | <code>string</code> | ✓ |  |
-| [cluster_id](variables.tf#L12) | The Bigtable cluster ID. | <code>string</code> | ✓ |  |
-| [core_project_id](variables.tf#L17) | Core project ID. | <code>string</code> | ✓ |  |
-| [instance_name](variables.tf#L22) | Provide the name of the Bigtable. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L27) | The Cloud KMS key for encryption. | <code>string</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L32) | KMS Keyring. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L37) | Main project ID. | <code>string</code> | ✓ |  |
-| [auto_delete](variables.tf#L1) | Persistent Disk auto delete options. | <code>bool</code> |  | <code>true</code> |
-| [num_nodes](variables.tf#L42) | Number of nodes in the Bigtable cluster. | <code>number</code> |  | <code>1</code> |
-| [region](variables.tf#L48) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [storage_type](variables.tf#L54) | Either SSD or HDD. | <code>string</code> |  | <code>&#34;SSD&#34;</code> |
-| [table](variables.tf#L60) | Table to create in the bigtable instance. Default is null. | <code title="map&#40;object&#40;&#123;&#10;  split_keys      &#61; optional&#40;list&#40;string&#41;&#41;&#10;  column_families &#61; map&#40;object&#40;&#123;&#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code title="&#123;&#10;  &#34;Test&#34; &#61; &#123;&#10;    column_families &#61; &#123;&#125;&#10;  &#125;&#10;&#125;">&#123;&#8230;&#125;</code> |
-| [zone](variables.tf#L73) | Google Cloud Zone. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
+| [bigtable_service_account_id](variables.tf#L1) | The Service Account for Bigtable. | <code>string</code> | ✓ |  |
+| [cluster_id](variables.tf#L6) | The Bigtable cluster ID. | <code>string</code> | ✓ |  |
+| [core_project_id](variables.tf#L11) | Core project ID. | <code>string</code> | ✓ |  |
+| [instance_name](variables.tf#L16) | Provide the name of the Bigtable. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L21) | The Cloud KMS key for encryption. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L26) | KMS Keyring. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L31) | Main project ID. | <code>string</code> | ✓ |  |
+| [num_nodes](variables.tf#L36) | Number of nodes in the Bigtable cluster. | <code>number</code> |  | <code>1</code> |
+| [region](variables.tf#L42) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [storage_type](variables.tf#L48) | Either SSD or HDD. | <code>string</code> |  | <code>&#34;SSD&#34;</code> |
+| [table](variables.tf#L54) | Table to create in the bigtable instance. Default is null. | <code title="map&#40;object&#40;&#123;&#10;  split_keys      &#61; optional&#40;list&#40;string&#41;&#41;&#10;  column_families &#61; map&#40;object&#40;&#123;&#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code title="&#123;&#10;  &#34;Test&#34; &#61; &#123;&#10;    column_families &#61; &#123;&#125;&#10;  &#125;&#10;&#125;">&#123;&#8230;&#125;</code> |
+| [zone](variables.tf#L67) | Google Cloud Zone. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
 
 ## Outputs
 

@@ -1,3 +1,19 @@
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # Access Control Manager
 
 <!-- BEGIN TOC -->
@@ -24,7 +40,7 @@ These controls help implement zero-trust security, ensuring that access is grant
 # Access Context Manager Blueprint
 This blueprint demonstrates how to deploy Access Context Manager (ACM) on Google Cloud Platform (GCP). Access Context Manager (ACM) in Google Cloud Platform (GCP) is a security service that allows you to define and enforce fine-grained access controls for your resources. This blueprint runs create two different resources:
 
-<mark>Service Perimeters:</mark> A core feature of Access Context Manager, service perimeters provide a way to define and enforce boundaries around GCP services to enhance security and control data access. They help protect sensitive data, restrict access to services (based on definded policies) and prevent data from being exfiltrated to unauthoried networks or regions.
+<mark>Service Perimeters:</mark> A core feature of Access Context Manager, service perimeters provide a way to define and enforce boundaries around GCP services to enhance security and control data access. They help protect sensitive data, restrict access to services (based on defined policies) and prevent data from being exfiltrated to unauthorized networks or regions.
 
 <mark>Access Levels:</mark> Allow you to define and enforce fine-grained access control policies for resources and services; providing an additional layer of security
 
@@ -45,7 +61,7 @@ Determine if there is a policy
 
 Note: Replace `ORGANIZATION_ID` (numeric ID of your organization) and `POLICY_TITLE` (human-readable title for your policy) with the appropriate values in the commands below where:
 
-If no results were returned, then an Access Policy doesn't exist. Please follow the [Create an Organization-Level Access Policy](https://cloud.google.com/access-context-manager/docs/create-access-policy#organization-access-policy) instructions or use the gcloud command below before proceding to the [Deployment Steps](#deployment-steps).
+If no results were returned, then an Access Policy doesn't exist. Please follow the [Create an Organization-Level Access Policy](https://cloud.google.com/access-context-manager/docs/create-access-policy#organization-access-policy) instructions or use the gcloud command below before proceeding to the [Deployment Steps](#deployment-steps).
    * `gcloud access-context-manager policies create --organization="<ORGANIZATION_ID>" --title="<POLICY_TITLE>"`
 
 ## Deployment Steps
