@@ -41,11 +41,11 @@ This blueprint creates the following resources:
 2.  **Two VPC Subnets**
     * Names are defined via `subnet_configs`.
     * Their regions are automatically assigned to `region1` (for `subnet1`) and `region2` (for `subnet2`).
-    * The IP CIDRs are calculated and split into two /25s from the /24 `dod_base_cidr_block` variable.
+    * The IP CIDRs are split into two /25 subnet ranges for high availability.
     * Private Google Access and Flow Logs are enabled by default.
 3.  **Two Cloud Routers**
     * Names are defined via `router_configs` (`router1` is placed in `region1` and `router2` in `region2`).
-    * Each router is attached to the created VPC, uses the `router_google_asn` (16550 for Partner Interconnect), and by default, advertises **both** calculated DoD /25 subnets.
+    * Each router is attached to the created VPC, uses the `router_google_asn` (16550 for Partner Interconnect), and advertises both calculated /25 boundary subnets.
 4.  **Four VLAN Attachments**
     * Defined via the `attachment_configs` variable and configured as `PARTNER` type.
     * The region for each attachment is derived from the region of the router it's linked to via `router_key`.

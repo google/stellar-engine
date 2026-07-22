@@ -29,12 +29,12 @@ dod_base_cidr_block = "x.x.x.0/24"
 # Subnet Configurations
 subnet_configs = {
   "subnet1" = {
-    name        = "bcap-dod-subnet-primary"
-    description = "BCAP DoD Subnet 1 (Region 1)"
+    name        = "bcap-subnet-primary"
+    description = "BCAP Subnet 1 (Region 1)"
   },
   "subnet2" = {
-    name        = "bcap-dod-subnet-secondary"
-    description = "BCAP DoD Subnet 2 (Region 2)"
+    name        = "bcap-subnet-secondary"
+    description = "BCAP Subnet 2 (Region 2)"
   }
 }
 

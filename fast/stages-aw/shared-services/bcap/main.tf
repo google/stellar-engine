@@ -15,8 +15,8 @@
  */
 
 locals {
-  dod_advertised_ip_ranges = {
-    (data.google_compute_subnetwork.subnet.ip_cidr_range) = "DoD-Assigned-Subnet-${var.subnetwork_name}"
+  boundary_advertised_ip_ranges = {
+    (data.google_compute_subnetwork.subnet.ip_cidr_range) = "Boundary-Subnet-${var.subnetwork_name}"
   }
 
   router_configs = var.router_configs
@@ -56,7 +56,7 @@ resource "google_compute_router" "routers" {
     advertise_mode = "CUSTOM"
 
     dynamic "advertised_ip_ranges" {
-      for_each = local.dod_advertised_ip_ranges
+      for_each = local.boundary_advertised_ip_ranges
       content {
         range       = advertised_ip_ranges.key
         description = advertised_ip_ranges.value

@@ -82,9 +82,9 @@ module "ntp-relay" {
   }
 }
 
-resource "google_compute_firewall" "ntp-relay-egress-usno" {
+resource "google_compute_firewall" "ntp-relay-egress-upstream" {
   project   = var.hub_project_id
-  name      = "ntp-relay-egress-usno"
+  name      = "ntp-relay-egress-upstream"
   network   = var.network
   direction = "EGRESS"
   priority  = 500

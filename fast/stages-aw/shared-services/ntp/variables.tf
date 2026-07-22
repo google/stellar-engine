@@ -73,7 +73,7 @@ variable "network" {
 }
 
 variable "ntp_servers" {
-  description = "Upstream NTP server IP addresses to configure on relay VMs. Must be IP addresses (not hostnames) as they are also used in firewall destination_ranges. Defaults to USNO authoritative DoD sources as required by DISA STIG SV-230484."
+  description = "Upstream NTP server IP addresses to configure on relay VMs. Must be IP addresses (not hostnames) as they are also used in firewall destination_ranges."
   type        = list(string)
   default     = ["192.5.41.40", "192.5.41.41", "192.5.41.209"]
   validation {

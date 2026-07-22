@@ -21,16 +21,16 @@ prefix         = "da1"
 
 region     = "us-east4"
 network    = "projects/xxxx-vdss-host/global/networks/shared-services"
-domain_controllers= {
+domain_controllers = {
   "0" = {
     region     = "us-east4"
-    zone       = string
-    subnetwork = string
+    zone       = "us-east4-a"
+    subnetwork = "projects/xxxx-vdss-host/regions/us-east4/subnetworks/shared-services"
   },
   "1" = {
-    region     = string
-    zone       = string
-    subnetwork = string
+    region     = "us-east4"
+    zone       = "us-east4-b"
+    subnetwork = "projects/xxxx-vdss-host/regions/us-east4/subnetworks/shared-services"
   }
 }
 subnetwork = "projects/xxxx-vdss-host/regions/us-east4/subnetworks/shared-services"

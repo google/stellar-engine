@@ -56,7 +56,7 @@ variable "instance_name" {
 }
 
 variable "network" {
-  description = "Self-link of the VPC network to attach Domain Controller VMs to."
+  description = "Self-link of the VPC network to attach SecurityCenter VMs to."
   type        = string
 }
 
@@ -99,7 +99,7 @@ variable "service_account_id" {
 }
 
 variable "subnetwork" {
-  description = "Self-link of the subnetwork to attach Domain Controller VMs to."
+  description = "Self-link of the subnetwork to attach SecurityCenter VMs to."
   type        = string
 }
 
