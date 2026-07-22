@@ -13,10 +13,10 @@ It follows Google's recommended topology for achieving a 99.99% SLA by utilizing
 
 We provide two complete, production-grade examples in the `examples/` directory depending on your deployment model:
 
-### 1. [GCP-Only Deployment](./examples/gcp-only)
+### 1. [GCP-Only Deployment](./options/gcp-only)
 For environments where the Azure resources (Virtual Network Gateway, Public IPs) are already provisioned or managed by a separate team. You must provide the Azure Public IPs manually.
 
-### 2. [GCP & Azure Managed Deployment](./examples/gcp-and-azure)
+### 2. [GCP & Azure Managed Deployment](./options/gcp-and-azure)
 For environments where you want this Terraform module to dynamically discover the Azure Virtual Network Gateway IPs and automatically build the local network gateways and IPsec connections directly in Azure.
 
 <!-- BEGIN_TF_DOCS -->
