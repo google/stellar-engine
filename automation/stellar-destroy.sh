@@ -129,7 +129,7 @@ if promptUser "Prerequisites -"; then
     read -r -p "Enter the project path in gitlab for Workload Identity Federation (leave blank if not using): " CI_PROJECT_PATH
     read -r -p "Enter the branch name in gitlab where Workload Identity Federation will authenticate from (leave blank if not using): " CI_COMMIT_BRANCH
     read -r -p "Enter the GitLab URL if using Workload Identity Federation excluding trailing forward slash (leave blank if not using): " GITLAB_URL
-    read -r -p "Enter the JWKS (JSON Web Key Set) for GitLab-to-GCP authentication. Note: This is only required if operating on the secure Army network: " JWKS_KEY
+    read -r -p "Enter the JWKS (JSON Web Key Set) for GitLab-to-GCP authentication. Note: This is only required if operating on an isolated enterprise network: " JWKS_KEY
 
     echo "--- Configuration Summary ---"
     echo "billing-account: $BILLING_ACCOUNT"

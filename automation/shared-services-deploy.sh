@@ -279,7 +279,7 @@ echo "  Shared Services - DNS Deployment"
 echo "#######################################################"
 echo ""
 echo "This script deploys IL5-compliant DNS forwarding zones that route"
-echo "domain-specific queries to the Army DNS resolver in Azure via VPN."
+echo "domain-specific queries to the enterprise DNS resolver in Azure via VPN."
 echo "Prerequisites: Stages 0-3 and 3-vpn must already be deployed."
 
 if promptUser "Shared Services - DNS -"; then
@@ -324,7 +324,7 @@ EOF
   echo "  1. Forwarding zone info has been published to GCS at:"
   echo "     ${GCS_BUCKET}/tfvars/shared-services-dns.auto.tfvars.json"
   echo "  2. Verify forwarding from a GCP VM:"
-  echo "     dig test.army.mil @35.199.192.0"
+  echo "     dig test.example.com @35.199.192.0"
   echo "  3. Verify internal DNS still works:"
   echo "     dig vm-name.us-east4-a.c.project.internal"
   echo ""

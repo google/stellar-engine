@@ -16,7 +16,7 @@ values:
   google_storage_bucket_object.providers["0-org-setup"]:
     bucket: ft0-prod-iac-core-0-iac-outputs
     cache_control: null
-    content: "/**\n * Copyright 2022 Google LLC\n *\n * Licensed under the Apache\
+    content: "/**\n * Copyright 2026 Google LLC\n *\n * Licensed under the Apache\
       \ License, Version 2.0 (the \"License\");\n * you may not use this file except\
       \ in compliance with the License.\n * You may obtain a copy of the License at\n\
       \ *\n *      http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required\
@@ -48,7 +48,7 @@ values:
   google_storage_bucket_object.providers["0-org-setup-ro"]:
     bucket: ft0-prod-iac-core-0-iac-outputs
     cache_control: null
-    content: "/**\n * Copyright 2022 Google LLC\n *\n * Licensed under the Apache\
+    content: "/**\n * Copyright 2026 Google LLC\n *\n * Licensed under the Apache\
       \ License, Version 2.0 (the \"License\");\n * you may not use this file except\
       \ in compliance with the License.\n * You may obtain a copy of the License at\n\
       \ *\n *      http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required\
@@ -80,7 +80,7 @@ values:
   google_storage_bucket_object.providers["1-vpcsc"]:
     bucket: ft0-prod-iac-core-0-iac-outputs
     cache_control: null
-    content: "/**\n * Copyright 2022 Google LLC\n *\n * Licensed under the Apache\
+    content: "/**\n * Copyright 2026 Google LLC\n *\n * Licensed under the Apache\
       \ License, Version 2.0 (the \"License\");\n * you may not use this file except\
       \ in compliance with the License.\n * You may obtain a copy of the License at\n\
       \ *\n *      http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required\
@@ -113,7 +113,7 @@ values:
   google_storage_bucket_object.providers["2-networking"]:
     bucket: ft0-prod-iac-core-0-iac-outputs
     cache_control: null
-    content: "/**\n * Copyright 2022 Google LLC\n *\n * Licensed under the Apache\
+    content: "/**\n * Copyright 2026 Google LLC\n *\n * Licensed under the Apache\
       \ License, Version 2.0 (the \"License\");\n * you may not use this file except\
       \ in compliance with the License.\n * You may obtain a copy of the License at\n\
       \ *\n *      http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required\
@@ -146,7 +146,7 @@ values:
   google_storage_bucket_object.providers["2-project-factory"]:
     bucket: ft0-prod-iac-core-0-iac-outputs
     cache_control: null
-    content: "/**\n * Copyright 2022 Google LLC\n *\n * Licensed under the Apache\
+    content: "/**\n * Copyright 2026 Google LLC\n *\n * Licensed under the Apache\
       \ License, Version 2.0 (the \"License\");\n * you may not use this file except\
       \ in compliance with the License.\n * You may obtain a copy of the License at\n\
       \ *\n *      http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required\
@@ -179,7 +179,7 @@ values:
   google_storage_bucket_object.providers["2-security"]:
     bucket: ft0-prod-iac-core-0-iac-outputs
     cache_control: null
-    content: "/**\n * Copyright 2022 Google LLC\n *\n * Licensed under the Apache\
+    content: "/**\n * Copyright 2026 Google LLC\n *\n * Licensed under the Apache\
       \ License, Version 2.0 (the \"License\");\n * you may not use this file except\
       \ in compliance with the License.\n * You may obtain a copy of the License at\n\
       \ *\n *      http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required\
@@ -267,7 +267,7 @@ values:
   google_storage_bucket_object.workflows["org-setup"]:
     bucket: ft0-prod-iac-core-0-iac-outputs
     cache_control: null
-    content: "# Copyright 2025 Google LLC\n#\n# Licensed under the Apache License,\
+    content: "# Copyright 2026 Google LLC\n#\n# Licensed under the Apache License,\
       \ Version 2.0 (the \"License\");\n# you may not use this file except in compliance\
       \ with the License.\n# You may obtain a copy of the License at\n#\n#      http://www.apache.org/licenses/LICENSE-2.0\n\
       #\n# Unless required by applicable law or agreed to in writing, software\n#\
@@ -378,7 +378,7 @@ values:
     temporary_hold: null
     timeouts: null
   local_file.providers["0-org-setup"]:
-    content: "/**\n * Copyright 2022 Google LLC\n *\n * Licensed under the Apache\
+    content: "/**\n * Copyright 2026 Google LLC\n *\n * Licensed under the Apache\
       \ License, Version 2.0 (the \"License\");\n * you may not use this file except\
       \ in compliance with the License.\n * You may obtain a copy of the License at\n\
       \ *\n *      http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required\
@@ -398,7 +398,7 @@ values:
     sensitive_content: null
     source: null
   local_file.providers["0-org-setup-ro"]:
-    content: "/**\n * Copyright 2022 Google LLC\n *\n * Licensed under the Apache\
+    content: "/**\n * Copyright 2026 Google LLC\n *\n * Licensed under the Apache\
       \ License, Version 2.0 (the \"License\");\n * you may not use this file except\
       \ in compliance with the License.\n * You may obtain a copy of the License at\n\
       \ *\n *      http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required\
@@ -418,7 +418,7 @@ values:
     sensitive_content: null
     source: null
   local_file.providers["1-vpcsc"]:
-    content: "/**\n * Copyright 2022 Google LLC\n *\n * Licensed under the Apache\
+    content: "/**\n * Copyright 2026 Google LLC\n *\n * Licensed under the Apache\
       \ License, Version 2.0 (the \"License\");\n * you may not use this file except\
       \ in compliance with the License.\n * You may obtain a copy of the License at\n\
       \ *\n *      http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required\
@@ -439,7 +439,7 @@ values:
     sensitive_content: null
     source: null
   local_file.providers["2-networking"]:
-    content: "/**\n * Copyright 2022 Google LLC\n *\n * Licensed under the Apache\
+    content: "/**\n * Copyright 2026 Google LLC\n *\n * Licensed under the Apache\
       \ License, Version 2.0 (the \"License\");\n * you may not use this file except\
       \ in compliance with the License.\n * You may obtain a copy of the License at\n\
       \ *\n *      http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required\
@@ -460,7 +460,7 @@ values:
     sensitive_content: null
     source: null
   local_file.providers["2-project-factory"]:
-    content: "/**\n * Copyright 2022 Google LLC\n *\n * Licensed under the Apache\
+    content: "/**\n * Copyright 2026 Google LLC\n *\n * Licensed under the Apache\
       \ License, Version 2.0 (the \"License\");\n * you may not use this file except\
       \ in compliance with the License.\n * You may obtain a copy of the License at\n\
       \ *\n *      http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required\
@@ -481,7 +481,7 @@ values:
     sensitive_content: null
     source: null
   local_file.providers["2-security"]:
-    content: "/**\n * Copyright 2022 Google LLC\n *\n * Licensed under the Apache\
+    content: "/**\n * Copyright 2026 Google LLC\n *\n * Licensed under the Apache\
       \ License, Version 2.0 (the \"License\");\n * you may not use this file except\
       \ in compliance with the License.\n * You may obtain a copy of the License at\n\
       \ *\n *      http://www.apache.org/licenses/LICENSE-2.0\n *\n * Unless required\
@@ -515,7 +515,7 @@ values:
     sensitive_content: null
     source: null
   local_file.workflows["org-setup"]:
-    content: "# Copyright 2025 Google LLC\n#\n# Licensed under the Apache License,\
+    content: "# Copyright 2026 Google LLC\n#\n# Licensed under the Apache License,\
       \ Version 2.0 (the \"License\");\n# you may not use this file except in compliance\
       \ with the License.\n# You may obtain a copy of the License at\n#\n#      http://www.apache.org/licenses/LICENSE-2.0\n\
       #\n# Unless required by applicable law or agreed to in writing, software\n#\
