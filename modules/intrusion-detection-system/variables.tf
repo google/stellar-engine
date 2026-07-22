@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 variable "project_id" {
   description = "Id of the project you will like to use."
   type        = string
