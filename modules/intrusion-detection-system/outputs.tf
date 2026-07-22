@@ -13,9 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-
 output "ids_endpoint_severity" {
   description = "IDS Endpoint severity"
   value       = google_cloud_ids_endpoint.ids_endpoint.severity
