@@ -4,7 +4,7 @@ set -e
 
 # --- 1. CONFIGURATION ---
 DOMAIN="keycloak.landingzone.example.com" # full domain for your keycloak deployment
-EMAIL="steve.schmidt@darkwolfsolutions.com" # email of user with DNS Admin permissions
+EMAIL="admin@example.com" # email of user with DNS Admin permissions
 DNS_PROJECT_ID="dino-runner-dns"
 
 if [[ -z "$DOMAIN" || -z "$EMAIL" || -z "$DNS_PROJECT_ID" ]]; then

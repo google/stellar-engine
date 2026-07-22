@@ -2,11 +2,11 @@ domain_controllers:
   "0":
     region: "us-east4"
     zone: "us-east4-a"
-    subnetwork: "projects/carmy-prod-il5-vdss-host/regions/us-east4/subnetworks/shared-services"
+    subnetwork: "projects/prod-il5-vdss-host/regions/us-east4/subnetworks/shared-services"
   "1":
     region: "us-east4"
     zone: "us-east4-b"
-    subnetwork: "projects/carmy-prod-il5-vdss-host/regions/us-east4/subnetworks/shared-services"
+    subnetwork: "projects/prod-il5-vdss-host/regions/us-east4/subnetworks/shared-services"
 
 boot_disk_image: "projects/cis-public/global/images/family/cis-win2022-l2"
 

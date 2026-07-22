@@ -12,7 +12,7 @@ variable "dns_policy_rules_file" {
 }
 
 variable "forwarding_zones" {
-  description = "DNS forwarding zones keyed by name. Each zone forwards queries for the specified domain to the given forwarder IPs via the cross-cloud VPN tunnel. Use domain-specific zones (e.g. 'mil.', 'army.mil.') — root domain '.' breaks Compute Engine internal DNS."
+  description = "DNS forwarding zones keyed by name. Each zone forwards queries for the specified domain to the given forwarder IPs via the cross-cloud VPN tunnel. Use domain-specific zones (e.g. 'mil.', 'Enterprise.mil.') — root domain '.' breaks Compute Engine internal DNS."
   type = map(object({
     domain     = string
     forwarders = map(string)
@@ -22,7 +22,7 @@ variable "forwarding_zones" {
     condition = alltrue([
       for k, v in var.forwarding_zones : v.domain != "."
     ])
-    error_message = "Root domain '.' forwarding zones break Compute Engine internal DNS. Use domain-specific zones instead (e.g. 'mil.', 'army.mil.')."
+    error_message = "Root domain '.' forwarding zones break Compute Engine internal DNS. Use domain-specific zones instead (e.g. 'mil.', 'Enterprise.mil.')."
   }
 }
 

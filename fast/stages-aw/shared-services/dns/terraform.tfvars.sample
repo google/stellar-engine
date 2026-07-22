@@ -12,9 +12,9 @@ vpc_self_links = {
   tenant_transit  = "projects/xxxx-vdss-host/global/networks/tenant-transit"
 }
 
-# Domain-specific forwarding zones — forward to Army DNS resolver in Azure.
+# Domain-specific forwarding zones — forward to Enterprise DNS resolver in Azure.
 # Do NOT use "." (root domain) — it breaks Compute Engine internal DNS.
-# Get the Army DNS resolver IP from Brian Cunningham.
+# Get the Enterprise DNS resolver IP from your network administrator.
 #
 # Prerequisites:
 #   - Azure VPN tunnel must be UP (3-vpn stage)
