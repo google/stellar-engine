@@ -42,7 +42,7 @@ it easy to copy and paste.
 The deployment process is broken up into stages. During each stage, certain
 variables are required to be added to the **`terraform.tfvars`** file. Upon
 completion of a stage, the Terraform code will write out a **``<stage-name>`-tfvar.auto.tfvars.json`** file to the Google Cloud Storage
-(GCS) bucket created in the initial **0-bootstrap stage**. Subsequent stages
+(GCS) bucket created in the initial **0-organization-bootstrap stage**. Subsequent stages
 will use the **gcloud** command line interface (CLI) to copy the files into the
 new stage folder, as well as a provider file that impersonates a stage-specific
 service account.
@@ -61,7 +61,7 @@ takes approximately 1 hour.
 
 To make using this deployment guide easier, the variables described below need to be populated into specific `terraform.tfvars` files in the repository.
 
-**Most of these variables are configured in the Stage 0 Bootstrap `terraform.tfvars` file (a sample can be found at [`fast/stages-aw/0-bootstrap/terraform.tfvars.sample`](../fast/stages-aw/0-bootstrap/terraform.tfvars.sample)), except for the Tenant names, which are configured in Stage 1 (a sample can be found at [`fast/stages-aw/1-resman/terraform.tfvars.sample`](../fast/stages-aw/1-resman/terraform.tfvars.sample)).**
+**Most of these variables are configured in the Stage 0 Bootstrap `terraform.tfvars` file (a sample can be found at [`fast/stages-aw/0-organization-bootstrap/terraform.tfvars.sample`](../fast/stages-aw/0-organization-bootstrap/terraform.tfvars.sample)), except for the Tenant names, which are configured in Stage 1 (a sample can be found at [`fast/stages-aw/2-resman/terraform.tfvars.sample`](../fast/stages-aw/2-resman/terraform.tfvars.sample)).**
 
 | <strong>VARIABLE</strong>             | <strong>TFVARS LOCATION</strong> | <strong>DESCRIPTION</strong>                                                                                                                                                                                                                                                                                   |
 | :------------------------------------ | :------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -134,7 +134,7 @@ permissions.**
       automated by running the following script:
       - **Warning: You will lose all current permissions for your user
         besides Super User**
-      - **./setIam.sh \<your-email-address\> `<organization_id>`** from within the fast/stages-aw/0-bootstrap folder
+      - **./setIam.sh \<your-email-address\> `<organization_id>`** from within the fast/stages-aw/0-organization-bootstrap folder
 
 - Navigate to the [Super Admin](https://admin.google.com/ac/roles) roles
   section in Google Workspace to ensure that the deploying user is a Super
@@ -158,7 +158,7 @@ permissions.**
   - gcp-security-admins@`<domain>`
 - We need to enable these Google Cloud Services by running the following
   script:
-    - fast/stages-aw/0-bootstrap/enableServices.sh
+    - fast/stages-aw/0-organization-bootstrap/enableServices.sh
       - If you run into issues with the above command, you can simply run the following deprecated command (on MacOS, works on other *nix variants)
         - `echo "iam cloudkms pubsub serviceusage cloudresourcemanager bigquery assuredworkloads cloudbilling logging iamcredentials orgpolicy" | xargs -n1 -I {} gcloud services enable "{}.googleapis.com”`
 - [Enable Access
@@ -186,15 +186,15 @@ state.
 
 - Enable [billing](https://console.cloud.google.com/billing/projects) for your
   bootstrap project if it is not enabled
-- Change directory into **fast/stages-aw/0-bootstrap**
+- Change directory into **fast/stages-aw/0-organization-bootstrap**
 - Copy file **terraform.tfvars.sample** to **terraform.tfvars**
   - `cp terraform.tfvars.sample terraform.tfvars`
-- Copy file **providers.tf.tmp** to **0-bootstrap-providers.tf**
-  - `cp providers.tf.tmp 0-bootstrap-providers.tf`
+- Copy file **providers.tf.tmp** to **0-organization-bootstrap-providers.tf**
+  - `cp providers.tf.tmp 0-organization-bootstrap-providers.tf`
 - Update information in **terraform.tfvars** as follows below, the variables
   from the above sections are already included
 
-**`fast/stages-aw/0-bootstrap/terraform.tfvars`**
+**`fast/stages-aw/0-organization-bootstrap/terraform.tfvars`**
 
 ```hcl
 # use `gcloud beta billing accounts list`
@@ -256,7 +256,7 @@ alert_email = "`<alert_email>`"
 - Export the prefix as an environment variable to simplify subsequent commands:
   - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' terraform.tfvars)`
   - **Note:** If you open a new terminal or change directories during the deployment, you can re-run this command from the repository root to restore the variable:
-    - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
+    - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-organization-bootstrap/terraform.tfvars)`
 - Run `terraform init`
 - Run `terraform apply -var bootstrap_user=$(gcloud config list --format 'value(core.account)')`
   - Type `yes` when prompted
@@ -278,7 +278,7 @@ alert_email = "`<alert_email>`"
 - Switch project to your new project
   - `gcloud config set project ${FAST_PREFIX}-prod-iac-core-0`
 - Copy the new providers local
-  - `gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/0-bootstrap-providers.tf ./`
+  - `gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/0-organization-bootstrap-providers.tf ./`
 - Migrate the state from local to remote using
   - `terraform init --migrate-state`
   - Type `yes` when prompted
@@ -294,20 +294,20 @@ alert_email = "`<alert_email>`"
 In this stage, we begin to build out the different folders, projects, and
 service accounts that will be used at the organization level for subsequent
 stages. In order to build out the environment, you will have to update the
-**terraform.tfvars** file in **fast/stages-aw/1-resman** to include a tenants
+**terraform.tfvars** file in **fast/stages-aw/2-resman** to include a tenants
 variable as seen below.
 
 ### Steps
 
 - **Note:** If you are using an environment variable for the prefix, make sure it is set:
-  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
+  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-organization-bootstrap/terraform.tfvars)`
 - **Note:** If you are using an external billing account, you have to add the
   Billing Account Administrator for the following service account to the external billing account:
   - **`<prefix>`-prod-resman-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
   
 - **Note:** If you are using an external billing account  where the resman service account cannot be granted billing permissions, 
 you can use a **billing override** to run the project creation/billing links under your personal credentials. 
-To do this, define the `billing_override` variable in your **fast/stages-aw/1-resman/terraform.tfvars**:
+To do this, define the `billing_override` variable in your **fast/stages-aw/2-resman/terraform.tfvars**:
 
   ```hcl
   billing_override = {
@@ -330,13 +330,13 @@ To do this, define the `billing_override` variable in your **fast/stages-aw/1-re
   - Select a permission for the principal(s) from Select a role as “Billing
     Account Administrator”.
   - When done, click Save.
-- Change directory into **fast/stages-aw/1-resman**
+- Change directory into **fast/stages-aw/2-resman**
 - Copy file **terraform.tfvars.sample** to **terraform.tfvars**
   - `cp terraform.tfvars.sample terraform.tfvars`
 - Update information in **terraform.tfvars** as follows
   - Note: Change “tenant_name(s)” below
 
-**`fast/stages-aw/1-resman/terraform.tfvars`**
+**`fast/stages-aw/2-resman/terraform.tfvars`**
 
 ```hcl
 tenants = {
@@ -376,9 +376,9 @@ envs_folders = {
 
 - Copy the tfvars files from GCS
 ```
-gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/1-resman-providers.tf ./ &&
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/2-resman-providers.tf ./ &&
 gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ &&
-gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-organization-bootstrap.auto.tfvars.json ./
 ```
 - Run `terraform init`
 - Run `terraform apply`
@@ -391,14 +391,14 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap
 ### Steps
 
 - **Note:** If you are using an environment variable for the prefix, make sure it is set:
-  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
+  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-organization-bootstrap/terraform.tfvars)`
 - **Note:** If you are using an external billing account, you have to add the
   Billing Account Administrator for the following service account to the external billing account:
   - **`<prefix>`-prod-resman-net-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
 
 - **Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
 you can use a **billing override** to run the project creation/billing links under your personal credentials. 
-To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/terraform.tfvars** file
+To do this, define the `billing_override` variable in **fast/stages-aw/2-resman/terraform.tfvars** file
 
   ```hcl
   billing_override = {
@@ -426,8 +426,8 @@ To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/
 ```bash
 gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./ && \
 gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ && \
-gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ && \
-gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-organization-bootstrap.auto.tfvars.json ./ && \
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/2-resman.auto.tfvars.json ./
 ```
 - Copy the sample `terraform.tfvars` file and configure your network settings:
   - `cp terraform.tfvars.sample terraform.tfvars`
@@ -449,14 +449,14 @@ a VM code and register them. For more instructions, see the README in the the
 ### Steps
 
 - **Note:** If you are using an environment variable for the prefix, make sure it is set:
-  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
+  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-organization-bootstrap/terraform.tfvars)`
 - **Note:** If you are using an external billing account, you have to add the
   Billing Account Administrator for the following service account to the external billing account:
   - **`<prefix>`-prod-resman-net-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
 
 - **Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
 you can use a **billing override** to run the project creation/billing links under your personal credentials. 
-To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/terraform.tfvars** file
+To do this, define the `billing_override` variable in **fast/stages-aw/2-resman/terraform.tfvars** file
 
   ```hcl
   billing_override = {
@@ -484,8 +484,8 @@ To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/
 ```bash
 gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./ && \
 gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ && \
-gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ && \
-gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-organization-bootstrap.auto.tfvars.json ./ && \
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/2-resman.auto.tfvars.json ./
 ```
 - Copy the sample `terraform.tfvars` file and configure your network settings:
   - `cp terraform.tfvars.sample terraform.tfvars`
@@ -539,14 +539,14 @@ are responsible for the audit project.
 ### Steps
 
 - **Note:** If you are using an environment variable for the prefix, make sure it is set:
-  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
+  - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-organization-bootstrap/terraform.tfvars)`
 - **Note:** If you are using an external billing account, you have to add the
   Billing Account Administrator for the following service account to the external billing account:**
   - `<prefix>`-security-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com
   
 - **Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
 you can use a **billing override** to run the project creation/billing links under your personal credentials. 
-To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/terraform.tfvars** file
+To do this, define the `billing_override` variable in **fast/stages-aw/2-resman/terraform.tfvars** file
 
   ```hcl
   billing_override = {
@@ -574,8 +574,8 @@ To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/
 ```
 gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/3-security-providers.tf ./ &&
 gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./ &&
-gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ &&
-gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-organization-bootstrap.auto.tfvars.json ./ &&
+gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/2-resman.auto.tfvars.json ./
 ```
 - Run `terraform init`
 - Run `terraform apply`
@@ -622,8 +622,8 @@ Perform the following steps when adding or removing tenants projects for an exis
 - Change directory into fast/stages-aw/3-security
 - `./sa_lockdown.sh --enable`
 
-#### Apply FAST Stage: 01-resman
-- Change directory into fast/stages-aw/1-resman
+#### Apply FAST Stage: 02-resman
+- Change directory into fast/stages-aw/2-resman
 - Update information in terraform.tfvars to your new requirements
 - Run terraform init
 - Run terraform apply
@@ -633,8 +633,8 @@ Perform the following steps when adding or removing tenants projects for an exis
 - Change directory into appropriate network folder for your Stellar Engine deployment:
   - fast/stages-aw/2-networking-a-fedramp-high
   - fast/stages-aw/2-networking-b-il5-ngfw
-- Copy the 1-resman 1-resman tfvars file from the GCS bucket
-  - `gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./`
+- Copy the 2-resman 2-resman tfvars file from the GCS bucket
+  - `gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/2-resman.auto.tfvars.json ./`
 - Run terraform init
 - Run terraform apply
   - Type yes when prompted
