@@ -1,3 +1,19 @@
+<!--
+Copyright 2026 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # Google Cloud Organization Bootstrap
 
 The purpose of this stage is to enable critical Google Cloud Organization level functionalities that depend on broad administrative permissions, and prepare the prerequisites needed to enable automation in this and future stages. As multiple Stellar Engine Landing Zone (stellar-engine) instances can be deployed to a single Google Cloud Organization, the bootstrap phase has be separated into an Organization level and an Assured Workload level. This allows for the Organization level bootstrap to only need to be run once per Google Cloud Organization and for the Assured Workload level bootstrap to be ran as many times as needed.
