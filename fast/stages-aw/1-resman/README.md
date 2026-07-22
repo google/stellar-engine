@@ -31,7 +31,7 @@ The preconfigured provider file uses impersonation to run with this stage's auto
 
 ### Lightweight multitenancy
 
-If the organization needs to support tenants without the full complexity and separation offered by our [full multitenant support](../../stages-multitenant/), this stage offers a simplified setup which is suitable for cases where tenants have less autonomy, and don't need to implement FAST stages inside their reserved partition.
+If the organization needs to support tenants without the full complexity and separation offered by our [full multitenant support](../5-tenants/), this stage offers a simplified setup which is suitable for cases where tenants have less autonomy, and don't need to implement FAST stages inside their reserved partition.
 
 This mode is activated by defining tenants in the `tenants` variable, while IAM configurations that apply to every tenant can be optionally set in the `tenants_config` variable.
 
@@ -214,7 +214,7 @@ This allows to centralize the minimum set of resources to delegate control of ea
 
 The `folder_iam` variable can be used to manage authoritative bindings for all top-level Google Cloud Folders. For additional control, IAM roles can be easily edited in the relevant `branch-xxx.tf` file, following the best practice outlined in the [bootstrap stage](../0-bootstrap#customizations) documentation of separating user-level and service-account level IAM policies throuth the IAM-related variables (`iam`, `iam_bindings`, `iam_bindings_additive`) of the relevant modules.
 
-A full reference of IAM roles managed by this stage [is available here](./IAM.md).
+A full reference of IAM roles managed by this stage [is available here](#).
 
 ### Additional Google Cloud Folders
 
