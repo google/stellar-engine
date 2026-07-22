@@ -7216,7 +7216,7 @@ values:
   ? module.organization[0].google_scc_management_organization_security_health_analytics_custom_module.scc_organization_custom_module["cloudkmsAllowedAlgorithms"]
   : custom_config:
     - custom_output: []
-      description: Detect if the the algorithm for Cloud KMS keys is not configured
+      description: Detect if the algorithm for Cloud KMS keys is not configured
         correctly
       predicate:
       - description: null

@@ -40,7 +40,7 @@ This blueprint demonstrates how to deploy a cloud IDS service into a network pro
 <mark>IDS endpoint:</mark>  Creates a Cloud IDS (Intrusion Detection System) endpoint.<br />
 <mark>Cloud IDS packet mirroring:</mark>  Configures a packet mirroring policy to send traffic to the IDS endpoint for analysis.<br />
 
-For more information, please look at the the Cloud IDS [Overview](https://cloud.google.com/intrusion-detection-system/docs/overview).
+For more information, please look at the Cloud IDS [Overview](https://cloud.google.com/intrusion-detection-system/docs/overview).
 
 ## Disclaimer
 - The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.

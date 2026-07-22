@@ -79,7 +79,7 @@ module "peering" {
 |---|---|:---:|:---:|:---:|
 | [local_network](variables.tf#L17) | Resource link of the network to add a peering to. | <code>string</code> | ✓ |  |
 | [peer_network](variables.tf#L38) | Resource link of the peer network. | <code>string</code> | ✓ |  |
-| [name](variables.tf#L22) | Optional names for the the peering resources. If not set, peering names will be generated based on the network names. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [name](variables.tf#L22) | Optional names for the peering resources. If not set, peering names will be generated based on the network names. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [peer_create_peering](variables.tf#L32) | Create the peering on the remote side. If false, only the peering from this network to the remote network is created. | <code>bool</code> |  | <code>true</code> |
 | [prefix](variables.tf#L43) | Optional name prefix for the network peerings. | <code>string</code> |  | <code>null</code> |
 | [routes_config](variables.tf#L53) | Control import/export for local and remote peer. Remote configuration is only used when creating remote peering. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |

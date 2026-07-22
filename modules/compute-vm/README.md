@@ -767,7 +767,7 @@ module "template-confidential-example" {
 
 #### External keys
 
-This example shows how to control disk encryption via the the `encryption` variable, in this case the self link to a KMS CryptoKey that will be used to encrypt boot and attached disk. Managing the key with the `../kms` module is of course possible, but is not shown here.
+This example shows how to control disk encryption via the `encryption` variable, in this case the self link to a KMS CryptoKey that will be used to encrypt boot and attached disk. Managing the key with the `../kms` module is of course possible, but is not shown here.
 
 ```hcl
 module "project" {

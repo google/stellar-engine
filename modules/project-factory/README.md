@@ -53,7 +53,7 @@ The code is meant to be executed by a high level service account with powerful p
 
 The hierarchy supports up to four levels of folders, which are defined via filesystem directories each including a `.config.yaml` files detailing their attributes.
 
-The filesystem tree containing folder definitions is configured via the `factories_config.folders` variable, which sets the the path containing the YAML definitions for folders. It's also possible to configure the hierarchy via the `folders` variable, which is internally merged in with the factory definitions.
+The filesystem tree containing folder definitions is configured via the `factories_config.folders` variable, which sets the path containing the YAML definitions for folders. It's also possible to configure the hierarchy via the `folders` variable, which is internally merged in with the factory definitions.
 
 Parent ids for top-level folders can either be set explicitly (e.g. `folders/12345678`), or via [context interpolation](#context-based-interpolation) by referring to keys in the `context.folder_ids` variable. The special `default` key in the substitutions folder variable is used if present and no folder id/key has been specified in the YAML.
 

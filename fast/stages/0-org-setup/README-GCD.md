@@ -95,7 +95,7 @@ GCD requires a manual bootstrap project because organization policy services are
     ```bash
     gcloud config set project <TEMP_PROJECT_ID>
     ```
-2. **Enable APIs:** Enable the the following services within this project.
+2. **Enable APIs:** Enable the following services within this project.
 
     ```bash
     gcloud services enable \

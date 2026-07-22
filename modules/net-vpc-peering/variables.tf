@@ -20,7 +20,7 @@ variable "local_network" {
 }
 
 variable "name" {
-  description = "Optional names for the the peering resources. If not set, peering names will be generated based on the network names."
+  description = "Optional names for the peering resources. If not set, peering names will be generated based on the network names."
   type = object({
     local = optional(string)
     peer  = optional(string)

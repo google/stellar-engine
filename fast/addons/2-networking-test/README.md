@@ -24,7 +24,7 @@ A simple factory is also provided, so that YAML configurations can be used inste
 
 ## How to run this stage
 
-Once the main networking stage has been configured and applied, the following configuration is added the the resource management `fast_addon` variable to create the add-on provider files, and its optional CI/CD resources if those are also required. The add-on name (`networking-test`) is customizable, in case the add-on needs to be run multiple times to create gateways in different projects.
+Once the main networking stage has been configured and applied, the following configuration is added the resource management `fast_addon` variable to create the add-on provider files, and its optional CI/CD resources if those are also required. The add-on name (`networking-test`) is customizable, in case the add-on needs to be run multiple times to create gateways in different projects.
 
 ```hcl
 fast_addon = {

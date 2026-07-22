@@ -83,7 +83,7 @@ In order to support full NGFW capabilities, including IDS/IPS and TLS break-and-
 
 ### Multi-regional deployment
 
-The stage can optionally deploy the the infrastructure into one or two regions. Due to current restrictions for the IL5 overlay, the two available regions are us-east4 and us-central1 (nam4). By default just us-east4. Regional resources include NVAs (templates, MIGs, LBs) and test VMs.
+The stage can optionally deploy the infrastructure into one or two regions. Due to current restrictions for the IL5 overlay, the two available regions are us-east4 and us-central1 (nam4). By default just us-east4. Regional resources include NVAs (templates, MIGs, LBs) and test VMs.
 As part of your design, you should weigh the additional maintenance cost of operating in two regions against your availability requirements to decide what is best for your deployment.
 
 ### VPC design

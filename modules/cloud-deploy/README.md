@@ -237,7 +237,7 @@ module "cloud_deploy" {
 
 ## Multi Target with Serial and Parallel deployment
 
-Cloud Deploy allows deploying to targets in a serial and parallel order. By defining a multi-target target configuration using `multi_target_target_ids` cloud deploy would execute the deployments in parallel. `require_approval` should only be applied to the multi-target target configuration and not the the child targets. As the child targets would execute within the multi-target target configuration, they are excluded from being directly assigned in the serial sequence of the delivery pipeline, using `exclude_from_pipeline = true`.
+Cloud Deploy allows deploying to targets in a serial and parallel order. By defining a multi-target target configuration using `multi_target_target_ids` cloud deploy would execute the deployments in parallel. `require_approval` should only be applied to the multi-target target configuration and not the child targets. As the child targets would execute within the multi-target target configuration, they are excluded from being directly assigned in the serial sequence of the delivery pipeline, using `exclude_from_pipeline = true`.
 
 ```hcl
 module "cloud_deploy" {

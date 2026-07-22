@@ -44,7 +44,7 @@ As shown in the diagram below, the repository will now contain two long-lived br
 
 ### FAST Release Process:
 
-This case is highlighted in green in the the diagram above. The process is as follows:
+This case is highlighted in green in the diagram above. The process is as follows:
 
 1. Merge `master` into `fast-dev`. This ensures that the latest module and documentation changes are included in the FAST release.
 1. Create a PR from `fast-dev` to master. This allows for a final review of all changes included in the release and ensures that all tests pass against the release candidate.
@@ -53,7 +53,7 @@ This case is highlighted in green in the the diagram above. The process is as fo
 
 ### FAST Pre-release Process: (Red box in diagram)
 
-This case is highlighted in red in the the diagram above. The process is as follows:
+This case is highlighted in red in the diagram above. The process is as follows:
 
 1. Merge `master` into `fast-dev`. This ensures that the latest module and documentation changes are included in the FAST release.
 1. Create a new pre-release from `fast-dev` in GitHub as explained in the [Contributing guide](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/master/CONTRIBUTING.md#cutting-a-new-release)

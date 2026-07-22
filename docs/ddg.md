@@ -459,7 +459,7 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/2-resman.au
 This step deploys a pair of Palo Alto vm-series Next-Generation Firewalls
 (NGFWs) into the network account. They use the Bring Your Own License (BYOL)
 deployment image and will require you to use the Palo Alto web console to upload
-a VM code and register them. For more instructions, see the README in the the
+a VM code and register them. For more instructions, see the README in the
 **2-networking-b-il5-ngfw** stage folder.
 
 ### Steps
