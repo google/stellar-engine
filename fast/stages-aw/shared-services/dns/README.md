@@ -1,14 +1,14 @@
 # Shared Services — DNS
 
 This module deploys IL5-compliant DNS forwarding for cross-cloud name resolution.
-Domain-specific forwarding zones send queries to the Army DNS resolver in Azure
+Domain-specific forwarding zones send queries to the Enterprise DNS resolver in Azure
 via the cross-cloud VPN tunnel. DNS peering zones chain resolution across VPCs
 within Cloud DNS's 3-VPC / 1-transitive-hop limit.
 
 ## Architecture
 
 ```
-Spoke VPCs ──DNS peering──▶ Landing VPC ──DNS peering──▶ CSP Landing VPC ──forwarding──▶ Army DNS (Azure)
+Spoke VPCs ──DNS peering──▶ Landing VPC ──DNS peering──▶ CSP Landing VPC ──forwarding──▶ Enterprise DNS (Azure)
 (shared-services,                                              (VPN tunnel)
  tenant-transit)
 ```
@@ -17,7 +17,7 @@ Spoke VPCs ──DNS peering──▶ Landing VPC ──DNS peering──▶ CSP
 
 1. Response policy catches `*.googleapis.com` → PSC endpoint (stage 3-networking)
 2. Private zone catches org domain → internal records (stage 3-networking)
-3. Forwarding zones catch configured domains (e.g. `mil.`, `gov.`) → Army DNS
+3. Forwarding zones catch configured domains (e.g. `mil.`, `gov.`) → Enterprise DNS
 4. Compute Engine internal DNS resolves `*.internal` → VM IPs (preserved)
 5. Google public DNS resolves everything else
 
@@ -35,7 +35,7 @@ reach it via DNS peering zones (a control-plane feature, no data-plane transit).
 
 ## Prerequisites
 
-1. **Army DNS resolver IP** — get from Brian Cunningham
+1. **Enterprise DNS resolver IP** — get from Brian Cunningham
 2. **Azure VPN tunnel** must be UP (`3-vpn/` stage)
 3. **BGP advertisement** — Cloud Router must advertise `35.199.192.0/19` to Azure
    (`3-vpn/gcp_common.tf`). This is the source IP range Cloud DNS uses for
@@ -58,7 +58,7 @@ After apply, forwarding zone info is published to GCS at
 
 ```bash
 # From a GCP VM in the landing VPC:
-dig test.army.mil @35.199.192.0              # forwarded → Army DNS
+dig test.example.internal @35.199.192.0              # forwarded → Enterprise DNS
 dig vm-name.us-east4-a.c.project.internal    # internal DNS preserved
 dig storage.googleapis.com @35.199.192.0     # googleapis → PSC endpoint
 ```
@@ -96,7 +96,7 @@ module "dns" {
 | [host_project_id](variables.tf#L29) | The GCP project ID where DNS zones will be created (the VDSS host project that owns the VPCs). | <code>string</code> | ✓ |  |
 | [vpc_self_links](variables.tf#L50) | VPC self-links used for DNS zone authorization and peering. | <code title="object&#40;&#123;&#10;  csp_landing     &#61; string&#10;  landing         &#61; string&#10;  shared_services &#61; string&#10;  tenant_transit  &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [dns_policy_rules_file](variables.tf#L8) | Path to the YAML file containing DNS response policy rules for Private Google Access (googleapis.com, gcr.io, etc.). If set, a response policy is created for the shared-services VPC. | <code>string</code> |  | <code>null</code> |
-| [forwarding_zones](variables.tf#L14) | DNS forwarding zones keyed by name. Each zone forwards queries for the specified domain to the given forwarder IPs via the cross-cloud VPN tunnel. Use domain-specific zones (e.g. 'mil.', 'army.mil.') — root domain '.' breaks Compute Engine internal DNS. | <code title="map&#40;object&#40;&#123;&#10;  domain     &#61; string&#10;  forwarders &#61; map&#40;string&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [forwarding_zones](variables.tf#L14) | DNS forwarding zones keyed by name. Each zone forwards queries for the specified domain to the given forwarder IPs via the cross-cloud VPN tunnel. Use domain-specific zones (e.g. 'mil.', 'Enterprise.mil.') — root domain '.' breaks Compute Engine internal DNS. | <code title="map&#40;object&#40;&#123;&#10;  domain     &#61; string&#10;  forwarders &#61; map&#40;string&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [prefix](variables.tf#L34) | Prefix applied to resource names for org-level naming consistency (e.g. 'da1'). Set to null to disable prefixing. | <code>string</code> |  | <code>null</code> |
 | [private_zone_domain](variables.tf#L44) | Domain of the existing private DNS zone in the landing VPC (e.g. 'da1-il5-vdss.private.example.internal.'). A peering zone is created so shared-services and tenant-transit VPCs can resolve records in it. | <code>string</code> |  | <code>null</code> |
 

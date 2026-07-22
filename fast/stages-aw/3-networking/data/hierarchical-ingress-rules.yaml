@@ -8,7 +8,7 @@ allow-iap-to-nva:
   action: "allow"
   direction: "INGRESS"
   target_service_accounts:
-    - "ngfw-compute@carmy-prod-il5-vdss-host.iam.gserviceaccount.com"
+    - "ngfw-compute@prod-il5-vdss-host.iam.gserviceaccount.com"
   match:
     source_ranges:
       - iap
@@ -24,7 +24,7 @@ allow-hc-to-nva:
   action: "allow"
   direction: "INGRESS"
   target_service_accounts:
-    - "ngfw-compute@carmy-prod-il5-vdss-host.iam.gserviceaccount.com"
+    - "ngfw-compute@prod-il5-vdss-host.iam.gserviceaccount.com"
   match:
     source_ranges:
       - healthchecks
@@ -40,7 +40,7 @@ allow-internal-to-nva:
   action: "allow"
   direction: "INGRESS"
   target_service_accounts:
-    - "ngfw-compute@carmy-prod-il5-vdss-host.iam.gserviceaccount.com"
+    - "ngfw-compute@prod-il5-vdss-host.iam.gserviceaccount.com"
   match:
     source_ranges:
       - "10.0.0.0/8"
