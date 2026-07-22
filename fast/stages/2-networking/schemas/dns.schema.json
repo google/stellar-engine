@@ -1,0 +1,269 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DNS Zone configuration",
+  "description": "Schema for DNS zone YAML configuration files.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "description": "Project ID for the DNS zone."
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description for the DNS zone."
+    },
+    "force_destroy": {
+      "type": "boolean",
+      "description": "Whether to force deletion of the zone."
+    },
+    "domain": {
+      "type": "string",
+      "description": "Domain name for the zone (e.g. 'example.com.')."
+    },
+    "iam": {
+      "$ref": "#/$defs/iam"
+    },
+    "recordsets": {
+      "$ref": "#/$defs/recordsets"
+    },
+    "private": {
+      "$ref": "#/$defs/private_zone"
+    },
+    "peering": {
+      "$ref": "#/$defs/peering_zone"
+    },
+    "forwarding": {
+      "$ref": "#/$defs/forwarding_zone"
+    },
+    "public": {
+      "$ref": "#/$defs/public_zone"
+    },
+    "delegations": {
+      "type": "array",
+      "description": "List of child zone keys (e.g. 'net-dev-0/pvt-dev-zone') whose NS and DS records are auto-created in this parent zone.",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "project_id"
+  ],
+  "oneOf": [
+    {
+      "title": "Private Zone",
+      "required": [
+        "private"
+      ],
+      "properties": {
+        "peering": {
+          "not": {}
+        },
+        "forwarding": {
+          "not": {}
+        },
+        "public": {
+          "not": {}
+        }
+      }
+    },
+    {
+      "title": "Peering Zone",
+      "required": [
+        "peering"
+      ],
+      "properties": {
+        "private": {
+          "not": {}
+        },
+        "forwarding": {
+          "not": {}
+        },
+        "public": {
+          "not": {}
+        }
+      }
+    },
+    {
+      "title": "Forwarding Zone",
+      "required": [
+        "forwarding"
+      ],
+      "properties": {
+        "private": {
+          "not": {}
+        },
+        "peering": {
+          "not": {}
+        },
+        "public": {
+          "not": {}
+        }
+      }
+    },
+    {
+      "title": "Public Zone",
+      "required": [
+        "public"
+      ],
+      "properties": {
+        "private": {
+          "not": {}
+        },
+        "peering": {
+          "not": {}
+        },
+        "forwarding": {
+          "not": {}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "iam": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(?:roles/|\\$custom_roles:|organizations/[0-9]+/roles/|([a-z0-9.]+:)?projects/[a-z0-9-]+/roles/)": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:||\\$iam_principals:[a-z0-9_-]+)"
+          }
+        }
+      }
+    },
+    "recordsets": {
+      "type": "object",
+      "description": "Map of DNS recordsets.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "records"
+        ]
+      }
+    },
+    "private_zone": {
+      "description": "Private zone specific configuration.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "service_directory_namespace": {
+          "type": "string"
+        },
+        "client_networks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "client_networks"
+      ]
+    },
+    "peering_zone": {
+      "description": "Peering zone specific configuration.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "peer_network": {
+          "type": "string"
+        },
+        "client_networks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "peer_network",
+        "client_networks"
+      ]
+    },
+    "forwarding_zone": {
+      "description": "Forwarding zone specific configuration.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "forwarders": {
+          "type": "object",
+          "patternProperties": {
+            "^.*$": {
+              "type": "string"
+            }
+          }
+        },
+        "client_networks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "client_networks"
+      ]
+    },
+    "public_zone": {
+      "description": "Public zone specific configuration.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enable_logging": {
+          "type": "boolean"
+        },
+        "dnssec_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "state": {
+              "type": "string"
+            },
+            "non_existence": {
+              "type": "string",
+              "enum": [
+                "nsec",
+                "nsec3"
+              ]
+            },
+            "key_signing_key": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "algorithm": {
+                  "type": "string"
+                },
+                "key_length": {
+                  "type": "number"
+                }
+              }
+            },
+            "zone_signing_key": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "algorithm": {
+                  "type": "string"
+                },
+                "key_length": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,316 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# yaml-language-server: $schema=../../../../schemas/project.schema.json
+
+# TODO: data access logs configuration
+name: prod-iac-core-0
+iam_by_principals:
+  $iam_principals:gcp-organization-admins:
+    - roles/iam.serviceAccountTokenCreator
+    - roles/iam.workloadIdentityPoolAdmin
+  $iam_principals:service_accounts/iac-0/iac-org-ro:
+    - roles/browser
+    - roles/cloudbuild.builds.viewer
+    - roles/iam.serviceAccountViewer
+    - roles/iam.workloadIdentityPoolViewer
+    - roles/bigquery.jobUser
+    - roles/bigquery.dataViewer
+    - roles/compute.viewer
+    - roles/container.viewer
+    - roles/logging.viewer
+    - roles/monitoring.viewer
+    - roles/pubsub.viewer
+    - roles/securitycentermanagement.viewer
+    - roles/storage.objectViewer
+    - $custom_roles:storage_viewer
+    - $custom_roles:cloudkms_viewer
+  $iam_principals:service_accounts/iac-0/iac-org-rw:
+    - roles/cloudbuild.builds.editor
+    - roles/iam.serviceAccountAdmin
+    - roles/iam.workloadIdentityPoolAdmin
+    - roles/accesscontextmanager.policyAdmin
+    - roles/bigquery.admin
+    - roles/billing.projectManager
+    - roles/cloudasset.owner
+    - roles/cloudkms.admin
+    - roles/compute.admin
+    - roles/container.admin
+    - roles/datacatalog.admin
+    - roles/iam.roleAdmin
+    - roles/logging.admin
+    - roles/monitoring.admin
+    - roles/pubsub.admin
+    - roles/resourcemanager.projectIamAdmin
+    - roles/securitycentermanagement.admin
+    - roles/servicenetworking.networksAdmin
+    - roles/serviceusage.serviceUsageAdmin
+    - roles/storage.admin
+  $iam_principals:service_accounts/iac-0/iac-networking-rw:
+    - roles/serviceusage.serviceUsageConsumer
+  $iam_principals:service_accounts/iac-0/iac-networking-ro:
+    - roles/serviceusage.serviceUsageConsumer
+  $iam_principals:service_accounts/iac-0/iac-pf-rw:
+    - roles/serviceusage.serviceUsageConsumer
+  $iam_principals:service_accounts/iac-0/iac-pf-ro:
+    - roles/serviceusage.serviceUsageConsumer
+  $iam_principals:service_accounts/iac-0/iac-security-rw:
+    - roles/serviceusage.serviceUsageConsumer
+  $iam_principals:service_accounts/iac-0/iac-security-ro:
+    - roles/serviceusage.serviceUsageConsumer
+iam:
+  # reset default role on new project
+  roles/owner: []
+services:
+  - accesscontextmanager.googleapis.com
+# uncomment if you want to use Assured Workloads
+#  - assuredworkloads.googleapis.com
+  - bigquery.googleapis.com
+  - bigqueryreservation.googleapis.com
+  - bigquerystorage.googleapis.com
+  - billingbudgets.googleapis.com
+  - cloudasset.googleapis.com
+  - cloudbilling.googleapis.com
+  - cloudbuild.googleapis.com
+  - cloudkms.googleapis.com
+  - cloudquotas.googleapis.com
+  - cloudresourcemanager.googleapis.com
+  - compute.googleapis.com
+  - container.googleapis.com
+  - datacatalog.googleapis.com
+  - essentialcontacts.googleapis.com
+  - iam.googleapis.com
+  - iamcredentials.googleapis.com
+  - logging.googleapis.com
+  - monitoring.googleapis.com
+  - networksecurity.googleapis.com
+  - orgpolicy.googleapis.com
+  - pubsub.googleapis.com
+  - securitycentermanagement.googleapis.com
+  - servicenetworking.googleapis.com
+  - serviceusage.googleapis.com
+  - storage-component.googleapis.com
+  - storage.googleapis.com
+  - sts.googleapis.com
+kms:
+  keyrings:
+    ew1:
+      location: europe-west1
+      keys:
+        storage:
+          rotation_period: 7776000s
+log_buckets:
+  _Default:
+    retention: 90
+    location: europe-west1
+service_encryption_key_ids:
+  storage.googleapis.com:
+    - $kms_keys:iac-0/ew1/storage
+org_policies:
+  gcp.restrictCmekCryptoKeyProjects:
+    rules:
+      - allow:
+          all: true
+  iam.workloadIdentityPoolProviders:
+    rules:
+      - allow:
+          values:
+            - https://token.actions.githubusercontent.com
+            - https://gitlab.com
+            - https://app.terraform.io
+buckets:
+  # Terraform state bucket for this stage
+  iac-org-state:
+    description: Terraform state for the org-level automation.
+    versioning: true
+    encryption_key: $kms_keys:iac-0/ew1/storage
+    lifecycle_rules:
+      nearline-30:
+        action:
+          type: SetStorageClass
+          storage_class: NEARLINE
+        condition:
+          age: 30
+          matches_storage_class:
+            - STANDARD
+      coldline-90:
+        action:
+          type: SetStorageClass
+          storage_class: COLDLINE
+        condition:
+          age: 90
+          matches_storage_class:
+            - NEARLINE
+      archive-365:
+        action:
+          type: SetStorageClass
+          storage_class: ARCHIVE
+        condition:
+          age: 365
+          matches_storage_class:
+            - COLDLINE
+    iam:
+      roles/storage.admin:
+        - $iam_principals:service_accounts/iac-0/iac-org-rw
+      $custom_roles:storage_viewer:
+        - $iam_principals:service_accounts/iac-0/iac-org-ro
+  # Terraform state bucket for additional FAST stages
+  iac-stage-state:
+    description: Terraform state for stage automation.
+    versioning: true
+    encryption_key: $kms_keys:iac-0/ew1/storage
+    lifecycle_rules:
+      nearline-30:
+        action:
+          type: SetStorageClass
+          storage_class: NEARLINE
+        condition:
+          age: 30
+          matches_storage_class:
+            - STANDARD
+      coldline-90:
+        action:
+          type: SetStorageClass
+          storage_class: COLDLINE
+        condition:
+          age: 90
+          matches_storage_class:
+            - NEARLINE
+      archive-365:
+        action:
+          type: SetStorageClass
+          storage_class: ARCHIVE
+        condition:
+          age: 365
+          matches_storage_class:
+            - COLDLINE
+    managed_folders:
+      1-vpcsc:
+        iam:
+          roles/storage.admin:
+            - $iam_principals:service_accounts/iac-0/iac-vpcsc-rw
+          $custom_roles:storage_viewer:
+            - $iam_principals:service_accounts/iac-0/iac-vpcsc-ro
+      2-networking:
+        iam:
+          roles/storage.admin:
+            - $iam_principals:service_accounts/iac-0/iac-networking-rw
+          $custom_roles:storage_viewer:
+            - $iam_principals:service_accounts/iac-0/iac-networking-ro
+      2-security:
+        iam:
+          roles/storage.admin:
+            - $iam_principals:service_accounts/iac-0/iac-security-rw
+          $custom_roles:storage_viewer:
+            - $iam_principals:service_accounts/iac-0/iac-security-ro
+      2-project-factory:
+        iam:
+          roles/storage.admin:
+            - $iam_principals:service_accounts/iac-0/iac-pf-rw
+          $custom_roles:storage_viewer:
+            - $iam_principals:service_accounts/iac-0/iac-pf-ro
+  # Terraform state bucket for FAST outputs
+  iac-outputs:
+    description: Terraform state for the org-level automation.
+    versioning: true
+    encryption_key: $kms_keys:iac-0/ew1/storage
+    lifecycle_rules:
+      nearline-30:
+        action:
+          type: SetStorageClass
+          storage_class: NEARLINE
+        condition:
+          age: 30
+          matches_storage_class:
+            - STANDARD
+      coldline-90:
+        action:
+          type: SetStorageClass
+          storage_class: COLDLINE
+        condition:
+          age: 90
+          matches_storage_class:
+            - NEARLINE
+      archive-365:
+        action:
+          type: SetStorageClass
+          storage_class: ARCHIVE
+        condition:
+          age: 365
+          matches_storage_class:
+            - COLDLINE
+    iam:
+      roles/storage.admin:
+        - $iam_principals:service_accounts/iac-0/iac-org-rw
+        - $iam_principals:service_accounts/iac-0/iac-networking-rw
+        - $iam_principals:service_accounts/iac-0/iac-security-rw
+        - $iam_principals:service_accounts/iac-0/iac-pf-rw
+        - $iam_principals:service_accounts/iac-0/iac-vpcsc-rw
+      $custom_roles:storage_viewer:
+        - $iam_principals:service_accounts/iac-0/iac-org-ro
+        - $iam_principals:service_accounts/iac-0/iac-networking-ro
+        - $iam_principals:service_accounts/iac-0/iac-security-ro
+        - $iam_principals:service_accounts/iac-0/iac-pf-ro
+        - $iam_principals:service_accounts/iac-0/iac-vpcsc-ro
+        - $iam_principals:service_accounts/iac-0/iac-org-cicd-rw
+        - $iam_principals:service_accounts/iac-0/iac-org-cicd-ro
+service_accounts:
+  # IaC service accounts for this stage
+  iac-org-ro:
+    display_name: IaC service account for org setup (read-only).
+  iac-org-rw:
+    display_name: IaC service account for org setup (read-write).
+  # CI/CD service accounts for this stage
+  iac-org-cicd-ro:
+    display_name: IaC service account for org setup CI/CD (read-only).
+    iam_sa_roles:
+      $service_account_ids:iac-0/iac-org-ro:
+        - roles/iam.workloadIdentityUser
+        - roles/iam.serviceAccountTokenCreator
+  iac-org-cicd-rw:
+    display_name: IaC service account for org setup CI/CD (read-write).
+    iam_sa_roles:
+      $service_account_ids:iac-0/iac-org-rw:
+        - roles/iam.workloadIdentityUser
+        - roles/iam.serviceAccountTokenCreator
+  # IaC service accounts for vpc-sc stage
+  iac-vpcsc-ro:
+    display_name: IaC service account for VPC service controls (read-only).
+  iac-vpcsc-rw:
+    display_name: IaC service account for VPC service controls (read-write).
+  # IaC service accounts for networking stage
+  iac-networking-ro:
+    display_name: IaC service account for networking (read-only).
+  iac-networking-rw:
+    display_name: IaC service account for networking (read-write).
+  # IaC service accounts for security stage
+  iac-security-ro:
+    display_name: IaC service account for security (read-only).
+  iac-security-rw:
+    display_name: IaC service account for security (read-write).
+  # IaC service accounts for project factory stage
+  iac-pf-ro:
+    display_name: IaC service account for project factory (read-only).
+  iac-pf-rw:
+    display_name: IaC service account for project factory (read-write).
+# workload_identity_pools:
+#   default:
+#     display_name: Default pool for CI/CD.
+#     providers:
+#       github-default:
+#         display_name: GitHub (my org).
+#         attribute_condition: attribute.repository_owner=="myorg"
+#         identity_provider:
+#           oidc:
+#             template: github

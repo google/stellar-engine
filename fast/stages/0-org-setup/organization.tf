@@ -1,0 +1,194 @@
+/**
+ * Copyright 2026 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+locals {
+  ctx_condition_vars = {
+    custom_roles = merge(
+      local.ctx.custom_roles,
+      module.organization[0].custom_role_id
+    )
+    organization = {
+      id          = local.organization_id
+      customer_id = local.organization.customer_id
+      domain      = local.organization.domain
+    }
+    tag_keys = merge(
+      local.ctx.tag_keys,
+      local.org_tag_keys
+    )
+    tag_values = merge(
+      local.ctx.tag_values,
+      local.org_tag_values
+    )
+  }
+  # prepare organization data
+  organization = merge(
+    # initialize required attributes
+    { customer_id = null, domain = null, id = null },
+    # merge defaults
+    lookup(local.defaults, "organization", {}),
+    # merge attributes defined in yaml
+    try(yamldecode(file("${local.paths.organization}/.config.yaml")), {})
+  )
+  # interpolate organization id if required
+  organization_id = (
+    local.organization.id == "$defaults:organization/id"
+    ? try(local.defaults.organization.id, local.organization.id)
+    : local.organization.id
+  )
+  # define domain principal if organization domain is set
+  org_iam_principals = local.organization.domain == null ? {} : {
+    domain = "domain:${local.organization.domain}"
+  }
+  org_access_levels = {
+    for k, v in module.organization[0].access_levels : k => v.id
+  }
+  org_logging_identities = merge(
+    module.organization[0].logging_identities.kms == null ? {} : {
+      "organization/logging/kms" = module.organization[0].logging_identities.kms
+    },
+    module.organization[0].logging_identities.logging == null ? {} : {
+      "organization/logging/sinks" = module.organization[0].logging_identities.logging
+    }
+  )
+  org_tag_keys = {
+    for k, v in module.organization[0].tag_keys : k => v.id
+  }
+  org_tag_values = {
+    for k, v in module.organization[0].tag_values : k => v.id
+  }
+  org_tag_vars = {
+    for k, v in module.organization[0].tag_keys :
+    k => v.namespaced_name if try(v.allowed_values_regex, "") != ""
+  }
+}
+
+module "organization" {
+  source           = "../../../modules/organization"
+  count            = local.organization_id != null ? 1 : 0
+  organization_id  = "organizations/${local.organization_id}"
+  access_policy    = try(local.organization.access_policy, null)
+  logging_settings = lookup(local.organization, "logging", null)
+  context = {
+    condition_vars = {
+      organization = {
+        id = local.organization_id
+      }
+    }
+    email_addresses = local.ctx.email_addresses
+    locations       = local.ctx.locations
+  }
+  contacts              = lookup(local.organization, "contacts", {})
+  service_agents_config = lookup(local.organization, "service_agents_config", {})
+  factories_config = {
+    access_levels          = "${local.paths.organization}/access-levels"
+    custom_roles           = "${local.paths.organization}/custom-roles"
+    tags                   = "${local.paths.organization}/tags"
+    scc_sha_custom_modules = "${local.paths.organization}/scc-sha-custom-modules"
+  }
+  tags_config = {
+    ignore_iam = true
+  }
+  workforce_identity_pools = try(
+    local.organization.workforce_identity_pools, null
+  )
+}
+
+module "organization-iam" {
+  source          = "../../../modules/organization"
+  count           = local.organization.id != null ? 1 : 0
+  organization_id = module.organization[0].id
+  asset_feeds     = lookup(local.organization, "asset_feeds", {})
+  context = merge(local.ctx, {
+    access_levels = merge(
+      try(local.ctx.access_levels, {}),
+      local.org_access_levels
+    )
+    condition_vars = merge(
+      local.ctx_condition_vars,
+      { folder_ids = module.factory.folder_ids },
+      { project_ids = module.factory.project_ids },
+      { iam_principals = local.ctx.iam_principals },
+    )
+    custom_roles = merge(
+      local.ctx.custom_roles,
+      module.organization[0].custom_role_id
+    )
+    iam_principals = merge(
+      local.ctx.iam_principals,
+      module.factory.iam_principals,
+      {
+        for k, v in module.organization[0].service_agents :
+        "service_agents/${k}" => v.iam_email
+      }
+    )
+    log_buckets = module.factory.log_buckets
+    project_ids = merge(
+      local.ctx.project_ids, module.factory.project_ids
+    )
+    pubsub_topics   = module.factory.pubsub_topics
+    storage_buckets = module.factory.storage_buckets
+    tag_keys = merge(
+      local.ctx.tag_keys,
+      local.org_tag_keys
+    )
+    tag_values = merge(
+      local.ctx.tag_values,
+      local.org_tag_values
+    )
+    tag_vars = merge(local.ctx.tag_vars, {
+      organization = merge(
+        try(local.ctx.tag_vars.organization, {}),
+        local.org_tag_vars
+      )
+    })
+  })
+  factories_config = {
+    org_policy_custom_constraints = "${local.paths.organization}/custom-constraints"
+    org_policies                  = "${local.paths.organization}/org-policies"
+    tags                          = "${local.paths.organization}/tags"
+  }
+  iam = lookup(
+    local.organization, "iam", {}
+  )
+  iam_by_principals = lookup(
+    local.organization, "iam_by_principals", {}
+  )
+  iam_by_principals_conditional = lookup(
+    local.organization, "iam_by_principals_conditional", {}
+  )
+  iam_bindings = lookup(
+    local.organization, "iam_bindings", {}
+  )
+  iam_bindings_additive = lookup(
+    local.organization, "iam_bindings_additive", {}
+  )
+  iam_by_principals_additive = lookup(
+    local.organization, "iam_by_principals_additive", {}
+  )
+  logging_data_access = try(local.organization.data_access_logs, {})
+  logging_sinks       = try(local.organization.logging.sinks, {})
+  pam_entitlements    = try(local.organization.pam_entitlements, {})
+  context_aware_access_bindings = lookup(
+    local.organization, "context_aware_access_bindings", {}
+  )
+  tags_config = {
+    force_context_ids = true
+  }
+  iam_deny_policies = lookup(
+    local.organization, "iam_deny_policies", {}
+  )
+}

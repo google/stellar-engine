@@ -1,0 +1,58 @@
+/**
+ * Copyright 2026 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+# tfdoc:file:description Firewall policies factory.
+
+locals {
+  _firewall_policies_files = local.paths.firewall_policies == null ? [] : fileset(
+    local.paths.firewall_policies, "**/*.yaml"
+  )
+  _firewall_policies_data = {
+    for f in local._firewall_policies_files : replace(f, ".yaml", "") => yamldecode(
+      file("${local.paths.firewall_policies}/${f}")
+    )
+  }
+  firewall_policies = {
+    for k, v in local._firewall_policies_data : try(v.name, k) => merge(v, {
+      parent        = v.parent_id
+      attachments   = try(v.attachments, {})
+      ingress_rules = try(v.ingress_rules, {})
+      egress_rules  = try(v.egress_rules, {})
+    })
+  }
+}
+
+moved {
+  from = module.firewall_policies
+  to   = module.firewall-policies
+}
+
+module "firewall-policies" {
+  source        = "../../../modules/net-firewall-policy"
+  for_each      = local.firewall_policies
+  attachments   = each.value.attachments
+  name          = each.key
+  parent_id     = each.value.parent
+  region        = try(each.value.region, null)
+  egress_rules  = each.value.egress_rules
+  ingress_rules = each.value.ingress_rules
+  context = {
+    folder_ids       = local.ctx_folders
+    cidr_ranges_sets = local.ctx.cidr_ranges_sets
+    tag_values       = local.ctx.tag_values
+    locations        = local.ctx.locations
+  }
+}

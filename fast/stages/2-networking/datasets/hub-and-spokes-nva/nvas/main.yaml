@@ -1,0 +1,70 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# yaml-language-server: $schema=../../../schemas/nva.schema.json
+
+project_id: $project_ids:net-core-0
+name: main
+region: europe-west1
+
+auto_instance_config:
+  image: projects/cos-cloud/global/images/family/cos-stable
+  instance_type: e2-standard-4
+  tags:
+    - nva
+    - test
+  nics:
+    - network: $networks:dmz
+      subnet: $subnets:dmz/europe-west1/dmz-default
+      routes:
+        - 10.74.0.0/16
+      masquerade:
+        # This enables SNAT to CloudNAT for internet egress, and sets the
+        # default route via this NIC.
+        true
+    - network: $networks:hub
+      subnet: $subnets:hub/europe-west1/hub-default
+      routes:
+        - 10.71.0.0/16
+    - network: $networks:prod
+      subnet: $subnets:prod/europe-west1/prod-default
+      routes:
+        - 10.72.0.0/16
+    - network: $networks:dev
+      subnet: $subnets:dev/europe-west1/dev-default
+      routes:
+        - 10.73.0.0/16
+
+ilb_config:
+  health_check:
+    tcp:
+      port: 22
+  instance_groups:
+    # Keyed by zone
+    b:
+      auto_create_instances: 1
+      attach_instances: {}
+        # - name1: self-link
+        # - name2: self-link
+    c:
+      auto_create_instances: 2
+  forwarding_rules:
+    - network: $networks:dmz
+      subnet: $subnets:dmz/europe-west1/dmz-default
+    - network: $networks:hub
+      subnet: $subnets:hub/europe-west1/hub-default
+    - network: $networks:prod
+      subnet: $subnets:prod/europe-west1/prod-default
+    - network: $networks:dev
+      subnet: $subnets:dev/europe-west1/dev-default
