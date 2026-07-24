@@ -1363,7 +1363,7 @@ prompt_gemini_apps() {
                 echo -e "${BLUE}--- Model Armor ---${NC}"
                 echo -e "${YELLOW}Model Armor enhances the security and safety of your AI applications by proactively screening the prompts and responses given by the Gemini Enterprise assistant.${NC}"
                 echo ""
-                echo -e "Please review the configuration in: ${BLUE}blueprints/fedramp-high/gemini-enterprise/gemini-stage-0/model_armor.yaml${NC}"
+                echo -e "Please review the configuration in: ${BLUE}blueprints/fedramp-high/gemini-enterprise/gemini-stage-0/model_armor.tf${NC}"
                 echo -e "For more information on configuring Model Armor templatees, visit: ${BLUE}https://docs.cloud.google.com/model-armor/manage-templates#create-ma-template${NC}"
                 echo ""
                 read -p "Press Enter to acknowledge and continue..."
