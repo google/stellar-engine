@@ -24,9 +24,6 @@ locals {
 
   # Document Processing (digital_parsing_config or ocr_parsing_config)
   discovery_engine_parsing_mode = "digital_parsing_config"
-
-  # Load features directly from the local YAML config
-  engine_features = yamldecode(file("data/engine_features.yaml"))["features"]
 }
 
 # ---------------------------------------------------------------------------- #
