@@ -257,13 +257,29 @@ resource "google_discovery_engine_search_engine" "gemini_enterprise_search_engin
   }
 
   # Merge base features with app-specific overrides
-  features = merge(
-    local.engine_features,
-    {
-      "disable-agent-sharing"                = each.value.enable_agent_sharing ? "FEATURE_STATE_OFF" : "FEATURE_STATE_ON"
-      "agent-sharing-without-admin-approval" = each.value.enable_agent_sharing_without_approval ? "FEATURE_STATE_ON" : "FEATURE_STATE_OFF"
-    }
-  )
+  features = {
+    "agent-gallery"                        = "FEATURE_STATE_ON",
+    "agent-sharing-without-admin-approval" = each.value.enable_agent_sharing_without_approval ? "FEATURE_STATE_OFF" : "FEATURE_STATE_ON"
+    "bi-directional-audio"                 = "FEATURE_STATE_OFF",
+    "disable-image-generation"             = "FEATURE_STATE_ON",
+    "disable-video-generation"             = "FEATURE_STATE_ON",
+    "disable-onedrive-upload"              = "FEATURE_STATE_ON",
+    "disable-talk-to-content"              = "FEATURE_STATE_OFF",
+    "disable-google-drive-upload"          = "FEATURE_STATE_ON",
+    "disable-welcome-emails"               = "FEATURE_STATE_OFF",
+    "disable-agent-sharing"                = each.value.enable_agent_sharing ? "FEATURE_STATE_OFF" : "FEATURE_STATE_ON",
+    "enable-end-user-sharing-with-groups"  = "FEATURE_STATE_OFF",
+    "feedback"                             = "FEATURE_STATE_OFF",
+    "model-selector"                       = "FEATURE_STATE_ON",
+    "no-code-agent-builder"                = "FEATURE_STATE_ON",
+    "notebook-lm"                          = "FEATURE_STATE_OFF",
+    "people-search"                        = "FEATURE_STATE_OFF",
+    "people-search-org-chart"              = "FEATURE_STATE_OFF",
+    "personalization-memory"               = "FEATURE_STATE_OFF",
+    "personalization-suggested-highlights" = "FEATURE_STATE_OFF",
+    "prompt-gallery"                       = "FEATURE_STATE_OFF",
+    "session-sharing"                      = "FEATURE_STATE_OFF",
+  }
   provider = google-beta
 
   depends_on = [
