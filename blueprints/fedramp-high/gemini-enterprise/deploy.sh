@@ -2451,7 +2451,7 @@ EOF
     # Add Allowed IPs
     echo "allowed_ip_ranges = ${ALLOWED_IPS}" >> gemini-stage-0/terraform.tfvars
 
-    # Write gemini_apps to terraform.tfvars.json
+    # Write gemini_apps to terraform.tfvars
     if [[ "$APPS_OBJ" != "{}" && -n "$APPS_OBJ" ]]; then
          echo "gemini_apps = ${APPS_OBJ}" >> gemini-stage-0/terraform.tfvars
     fi
@@ -2695,7 +2695,7 @@ configure_gemini_apps() {
          return 0
     fi
 
-    # Write the variables to terraform.tfvars.json
+    # Write the variables to terraform.tfvars
     echo "gemini_apps = ${APPS_OBJ}" >> gemini-stage-0/terraform.tfvars
 
     export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"
@@ -2715,9 +2715,6 @@ configure_gemini_apps() {
     fi
     
     VAR_FILES=(-var-file="terraform.tfvars")
-    if [[ -f "terraform.tfvars.json" ]]; then
-        VAR_FILES+=(-var-file="terraform.tfvars.json")
-    fi
     
     if ! terraform apply "${VAR_FILES[@]}" -auto-approve; then
          echo -e "${RED}Error: Failed to apply Application Configurations via Terraform. Aborting.${NC}"
