@@ -110,6 +110,7 @@ module "log-export-logbucket" {
   location      = local.locations.logging
   log_analytics = { enable = true }
   kms_key_name  = try(var.logging_kms_key, module.logging-kms.keys["log-sink"])
+  retention     = var.logging_bucket_retention
   # org-level logging settings ready before we create any logging buckets
   depends_on = [module.organization-logging]
 }

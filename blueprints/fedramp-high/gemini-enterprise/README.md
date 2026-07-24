@@ -36,7 +36,7 @@ The primary goal is to provide a turnkey ("Push Button") solution for setting up
 
 The blueprint establishes a robust infrastructure including:
 
-**1. Core Infrastructure & Applications (`gemini-stage-0`)**
+**1. Core Infrastructure & Gemini Applications (`gemini-stage-0`)**
 - **Networking:**
   - **VPC & Subnets:** `google_compute_network` and `google_compute_subnetwork` for private and proxy-only subnets (Greenfield) or data source attachment to Shared VPC (Brownfield).
   - **IP Addressing:** `google_compute_address` for reserved internal/external Load Balancer IP.
@@ -954,6 +954,10 @@ These outputs are used by the "gem4gov" CLI tool and the `gemini-stage-1` bluepr
 ### Purpose of `gem4gov`
 
 The `gem4gov` CLI tool is a helper utility designed to manage post-deployment data ingestion and manual configuration updates for Gemini Enterprise within regulated environments. 
+
+Unlike older versions of this blueprint where `gem4gov` was responsible for creating the Search Engines and onboarding the project, **all applications, engines, and data store mappings are now managed natively in HCL inside the `gemini-stage-0` Terraform module.**
+
+`gem4gov` is now used primarily as a lifecycle utility tool to support data ingestion and configuration auditing.
 
 ### Key `gem4gov` Functions:
 

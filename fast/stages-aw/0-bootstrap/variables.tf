@@ -209,7 +209,7 @@ variable "locations" {
 # for additional logging filter examples
 
 variable "log_sinks" {
-  description = "Org-level log sinks, in name => {type, filter} format. Valid types: 'logging' (routes to Cloud Logging bucket with 30-day default retention), 'pubsub' (routes to Pub/Sub topic with 7-day default retention; requires an active consumer to avoid log loss), 'storage' (routes to GCS bucket), 'bigquery' (routes to BigQuery dataset)."
+  description = "Org-level log sinks, in name => {type, filter} format. Valid types: 'logging' (routes to Cloud Logging bucket with 365-day default retention), 'pubsub' (routes to Pub/Sub topic with 7-day default retention; requires an active consumer to avoid log loss), 'storage' (routes to GCS bucket), 'bigquery' (routes to BigQuery dataset)."
   type = map(object({
     filter = string
     type   = string
@@ -248,6 +248,12 @@ variable "logging_kms_key" {
   description = "value of the KMS key used for logging."
   type        = string
   default     = null
+}
+
+variable "logging_bucket_retention" {
+  description = "Retention period (in days) for the Cloud Logging buckets created for organization log exports."
+  type        = number
+  default     = 365
 }
 
 variable "org_policies_config" {
