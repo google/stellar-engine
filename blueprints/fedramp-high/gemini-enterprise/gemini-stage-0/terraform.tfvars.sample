@@ -96,3 +96,15 @@ use_shared_vpc = false
 # shared_vpc_network_name = "shared-vpc-network"
 # shared_vpc_subnet_name = "landing-default"
 # shared_vpc_proxy_subnet_name = "landing-proxy"
+
+gemini_apps = {
+  "g4g-gem-ent-app-<random_suffix>": {
+    "display_name": "gemini app display name",
+    "company_name": "company name",
+    "gcs_data_store_keys": ["gcs-data-store-name"],
+    "bq_data_store_keys": ["bigquery-data-store-name"],
+    "enable_agent_sharing": false,
+    "enable_agent_sharing_without_approval": false,
+    "enable_audit_logs": false
+  }
+}

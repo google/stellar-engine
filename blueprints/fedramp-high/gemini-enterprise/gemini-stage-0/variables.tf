@@ -331,3 +331,18 @@ variable "enable_analytics" {
   type        = bool
   default     = false
 }
+
+variable "gemini_apps" {
+  description = "A map of Gemini Enterprise Search Application configurations."
+  type = map(object({
+    display_name                          = string
+    company_name                          = string
+    gcs_data_store_keys                   = optional(list(string), [])
+    bq_data_store_keys                    = optional(list(string), [])
+    external_data_store_ids               = optional(list(string), [])
+    enable_agent_sharing                  = optional(bool, false)
+    enable_agent_sharing_without_approval = optional(bool, true)
+    enable_audit_logs                     = optional(bool, false)
+  }))
+  default = {}
+}

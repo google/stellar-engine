@@ -22,7 +22,7 @@
 
 ## 1. Executive Overview
 
-This blueprint deploys a secure and compliant environment for hosting Gemini Enterprise on Google Cloud Platform, specifically tailored for FedRAMP High requirements. It leverages the Vertex AI Search and Discovery Engine APIs. The deployment is divided into two main Terraform stages (`gemini-stage-0` and `gemini-stage-1`) and interacts with the `gem4gov` CLI tool.
+This blueprint deploys a secure and compliant environment for hosting Gemini Enterprise on Google Cloud Platform, specifically tailored for FedRAMP High requirements. It leverages the Vertex AI Search and Discovery Engine APIs. The deployment is divided into two main Terraform stages (`gemini-stage-0` and `gemini-stage-1`).
 
 **This blueprint supports both EXTERNAL and INTERNAL load balancer deployments, configurable via the `deployment_type` variable in `gemini-stage-0/terraform.tfvars`.**
 
@@ -36,12 +36,15 @@ The primary goal is to provide a turnkey ("Push Button") solution for setting up
 
 The blueprint establishes a robust infrastructure including:
 
-**1. Core Infrastructure (`gemini-stage-0`)**
+**1. Core Infrastructure & Gemini Applications (`gemini-stage-0`)**
 - **Networking:**
   - **VPC & Subnets:** `google_compute_network` and `google_compute_subnetwork` for private and proxy-only subnets (Greenfield) or data source attachment to Shared VPC (Brownfield).
   - **IP Addressing:** `google_compute_address` for reserved internal/external Load Balancer IP.
   - **Network Endpoints:** `google_compute_region_network_endpoint_group` and `google_compute_region_network_endpoint` mapping to the Discovery Engine FQDN (`vertexaisearch.cloud.google.com`).
   - **HTTP Redirect (External LB):** `google_compute_region_url_map`, `google_compute_region_target_http_proxy`, and `google_compute_forwarding_rule` to ensure all HTTP traffic upgrades to HTTPS.
+- **Gemini Search Applications:**
+  - **Engines:** Creates and configures the core Search Engine resources natively in HCL based on the `gemini_apps` map variable.
+  - **Data Stores & Widgets:** Configures and attaches Cloud Storage and BigQuery data stores natively, and generates the corresponding widgets.
 - **Security & Access Control:**
   - **Cloud Armor (WAF):** `google_compute_region_security_policy` with predefined OWASP rules and US-only geo-fencing.
   - **Access Context Manager:** `google_access_context_manager_access_level` defining conditions like Time of Day, IP Restrictions, Expiration Dates, and leniency tiers for Chrome Enterprise Premium device identity.
@@ -51,19 +54,15 @@ The blueprint establishes a robust infrastructure including:
   - **Discovery Engine Settings:** `google_discovery_engine_cmek_config` and `google_discovery_engine_acl_config`.
   - **Data Sources:** `google_storage_bucket` (GCS) and `google_bigquery_dataset` (BQ) acting as safe data hubs.
 
-**2. Gemini Enterprise (`gem4gov-cli`):**
-- **Gemini Application:** Creates and configures the core Search Engine resource.
-- **Data Stores:** Configures and attaches Cloud Storage and BigQuery data stores to the Gemini Enterprise application.
-
-**3. Application Frontend (`gemini-stage-1`)**
-- **Gemini Application:** Creates the core Discovery Engine Application.
-- **Data Stores:** Configures and attaches Cloud Storage and BigQuery data stores to the Gemini application.
+**2. Application Frontend & Routing (`gemini-stage-1`)**
 - **Load Balancing:**
   - **Backend Service:** `google_compute_region_backend_service` pointing to the Stage 0 NEG.
   - **HTTPS Routing:** `google_compute_region_url_map` and `google_compute_region_target_https_proxy` (utilizing the managed/unmanaged SSL certificate).
+  - **Path-Based Routing:** URL map path-matching rules map each `/app-key` in the incoming URL map to the corresponding widget ID output from Stage 0, performing a URL rewrite to `/us/home/cid/{widget_id}`.
   - **Forwarding Rule:** `google_compute_forwarding_rule` to accept external/internal HTTPS traffic.
 - **Identity-Aware Proxy (IAP):**
   - **IAP Access Control:** `google_iap_web_region_backend_service_iam_member` binding the specific Admin/User Groups (or Workforce Identity Principals) to the Backend Service, enforcing the zero-trust boundary.
+
 
 ### Deployment Automation (`deploy.sh`)
 
@@ -953,33 +952,18 @@ These outputs are used by the "gem4gov" CLI tool and the `gemini-stage-1` bluepr
 
 ### Purpose of `gem4gov`
 
-The `gem4gov` CLI tool is designed to automate and streamline the setup and configuration of Google Cloud components necessary for onboarding government customers to Gemini Enterprise, particularly within regulated environments like FedRAMP High and IL4/IL5.
+The `gem4gov` CLI tool is a helper utility designed to manage post-deployment data ingestion and manual configuration updates for Gemini Enterprise within regulated environments. 
 
-After the foundational infrastructure is provisioned by the `gemini-stage-0` and `gemini-stage-1` Terraform modules, `gem4gov` takes over to perform the application-level setup within the Google Cloud project.
+Unlike older versions of this blueprint where `gem4gov` was responsible for creating the Search Engines and onboarding the project, **all applications, engines, and data store mappings are now managed natively in HCL inside the `gemini-stage-0` Terraform module.**
 
-### How `gem4gov` Interacts After `gemini-stage-0` and `gemini-stage-1`
-
-1.  **Environment Preparation:** `gemini-stage-0` and `gemini-stage-1` create the core resources like networking, service accounts, and the load balancer frontend.
-2.  **CLI Execution:** The user runs `gem4gov onboard`.
-3.  **Interactive Configuration:** The CLI guides the user through a series of prompts to:
-    - **Authenticate:** Ensures the user is logged in with `gcloud` and has the necessary permissions.
-    - **Validate Project & APIs:** Confirms the project is set up correctly and required APIs (Vertex AI, Discovery Engine, KMS, etc.) are enabled.
-    - **Identity Provider:** Configures either Google Identity or a third-party IdP via Workforce Identity Federation for user access and ACLs.
-    - **CMEK Setup:** Registers a Customer-Managed Encryption Key (KMS key in the 'us' multi-region) with Discovery Engine to protect data at rest.
-    - **Data Store Creation/Selection:** Allows the user to connect existing Discovery Engine data stores or create new ones from GCS or BigQuery, including schema transformation for BigQuery.
-    - **Engine Creation:** Provisions the Gemini Enterprise search engine, linking the selected data stores.
-    - **Compliance Configuration:** Adjusts engine and assistant settings to disable features not yet authorized for the selected regulatory boundary (e.g., FedRAMP High), such as disabling certain grounding sources, analytics, and knowledge graph features.
-4.  **Output:** Provides the user with essential IDs (Project, Data Store, Engine, Widget Config) and URLs to access the configured Gemini Enterprise instance.
+`gem4gov` is now used primarily as a lifecycle utility tool to support data ingestion and configuration auditing.
 
 ### Key `gem4gov` Functions:
 
-- **Authentication & Role Checks:** Verifies user credentials and IAM roles.
-- **API Enablement:** Checks and enables required Google Cloud APIs.
-- **Identity Provider Configuration:** Sets up `aclConfig` for Discovery Engine.
-- **CMEK Configuration:** Updates `cmekConfig` for Discovery Engine.
-- **Data Store Management:** Lists, validates, and creates Discovery Engine data stores (for GCS and BigQuery), including schema handling and data import initiation.
-- **Engine Management:** Creates and configures the Discovery Engine (Search Engine).
-- **FedRAMP/IL\* Configuration:** Patches Discovery Engine and Assistant resources to disable non-compliant features.
+- **Document Ingestion (`gem4gov datastore import`)**: Bulk imports documents from Cloud Storage (GCS) or BigQuery into your existing Discovery Engine data stores.
+- **Auditing Compliance (`gem4gov app update-compliance`)**: Manually enforces and verifies compliance constraints on existing applications.
+- **Updating Identity Provider (`gem4gov app update-idp`)**: Manually alters Workforce Identity Federation configurations on specific search widgets.
+
 
 ### Prerequisites
 
@@ -1061,55 +1045,6 @@ gem4gov init
 3.  Prompts for the **GCP Project ID**.
 4.  Sets the project as the default for `gcloud` and Application Default Credentials (ADC).
 
-#### `gem4gov onboard`
-
-Initiates the interactive onboarding process.
-
-```bash
-gem4gov onboard
-```
-
-**Step-by-Step Guide:**
-
-1.  **Compliance Regime Selection**: Choose the regulatory boundary (`FedRAMP High`, `IL4`, or `None`).
-2.  **Project Confirmation**: Confirm the GCP Project ID and ensure it resides in the appropriate Assured Workloads folder.
-3.  **IAM Role Check**: Verifies required IAM roles.
-4.  **API Check**: Verifies and enables required APIs.
-5.  **Identity Provider Setup**:
-    *   **Google Identity**: For Google Workspace users.
-    *   **Third-Party (Workforce Identity)**: Requires `Workforce Pool ID` and `Provider ID`.
-6.  **CMEK Configuration**:
-    *   Checks for existing CMEK in `us` region.
-    *   Options: Use existing key, create new key (instructions provided), or continue without CMEK (not recommended for production).
-    *   **Note**: Grants `cloudkms.cryptoKeyEncrypterDecrypter` to Discovery Engine and Storage service accounts.
-7.  **Application Type Selection**:
-    *   **Default**: Chat only.
-    *   **Search Engine**: Chat + 1 Data Store.
-    *   **Blended Search**: Chat + 2+ Data Stores.
-8.  **Data Store Configuration** (if applicable):
-    *   **Existing**: Provide IDs of existing data stores.
-    *   **New**: Create new **Cloud Storage** or **BigQuery** data stores.
-        *   **GCS**: Requires Bucket Name and optional Path Prefix.
-        *   **BigQuery**: Requires Dataset, Table, and Schema Mapping (Title, Description, etc.).
-9.  **Engine Creation**: Creates the Gemini Enterprise application (Engine).
-10. **Compliance Configuration**: Automatically disables features not authorized for the selected compliance regime (e.g., Image Gen, Personalization).
-11. **Completion**: Outputs IDs and URLs for the created resources.
-
-#### `gem4gov app create`
-
-Creates a Gemini Enterprise application non-interactively (mostly).
-**Note:** You can also trigger this command via the `deploy.sh` script (Option 4).
-
-```bash
-gem4gov app create --project-id <PROJECT_ID> [OPTIONS]
-```
-
-**Options:**
-*   `--project-id`: (Required) GCP Project ID.
-*   `--data-stores`: Comma-separated list of existing Data Store IDs.
-*   `--workforce-pool-id`: Workforce Identity Pool ID (if using 3rd party IdP).
-*   `--workforce-provider-id`: Workforce Identity Provider ID (if using 3rd party IdP).
-*   `--compliance-regime`: `FEDRAMP_HIGH`, `IL4`, or `NONE`.
 
 #### `gem4gov app update-compliance`
 
@@ -1166,75 +1101,54 @@ gem4gov datastore import --project-id <PROJECT_ID> --source-type <SOURCE_TYPE> [
 
 ## 8. Stage 1: Application Frontend
 
-This Terraform module (gemini-stage-1) provisions the network frontend components required to expose the Gemini Enterprise application created by the `gem4gov` CLI, building upon the foundation established in the `gemini-stage-0` module.
+This Terraform module (`gemini-stage-1`) provisions the network frontend components required to expose the Gemini Enterprise applications, building upon the foundations and application widget outputs established in the `gemini-stage-0` module.
 
 ### Purpose of gemini-stage-1
 
-- **Load Balancer Frontend:** Configures the Regional External Application Load Balancer frontend, including IP address and SSL certificate attachment.
-- **Regional NEG Backend:** Defines a Regional Network Endpoint Group (NEG) of type `INTERNET_FQDN_PORT` to point to the Gemini Enterprise service endpoint.
-- **Routing Rules with URL Rewrite:** Configures URL map rules for the load balancer. These rules will direct traffic to the NEG and, crucially, perform a **URL rewrite** to include the `gemini_config_id` (obtained from the `gem4gov` CLI output) in the path, like `/us/home/cid/{gemini_config_id}`.
-- **Utilize gem4gov Output:** This stage consumes the `gemini_config_id` generated by the `gem4gov` tool as a key part of the URL rewrite configuration.
+- **Load Balancer Frontend:** Configures the Regional External/Internal Application Load Balancer frontend, including IP address and SSL certificate attachment.
+- **Regional NEG Backend:** Defines a Regional Network Endpoint Group (NEG) of type `INTERNET_FQDN_PORT` pointing to the Discovery Engine service endpoint (`vertexaisearch.cloud.google.com`).
+- **Dynamic Path-Based Routing:** Automatically parses the map of widget IDs exported from the Stage 0 remote state outputs. It configures URL map routing rules mapping each `/<app-key>` path prefix (e.g. `/app1`) to perform a **URL rewrite** translating the path to `/us/home/cid/{widget_id}` for that application.
+- **Zero-Trust Boundary:** Enforces Identity-Aware Proxy (IAP) access control policies on the load balancer backend, using client context constraints.
 
-### Relationship with gemini-stage-0 and gem4gov
+### Relationship with gemini-stage-0
 
-- **gemini-stage-0:** This initial stage laid the groundwork, provisioning core infrastructure via Terraform. This includes:
-
-  - Networking foundations (VPC, Subnets).
-  - Service Agents and IAM permissions.
-  - CMEK keys and configuration.
-  - Initial Data Store setup in Discovery Engine.
-  - ACL configurations.
-  - Reserving a static IP address for the load balancer.
-
-- **gem4gov CLI:** While the `gem4gov` CLI _can_ perform many of the setup tasks covered in `gemini-stage-0` (like API enablement, IdP config, CMEK, Data Store creation), in this blueprint, its primary role _after_ `gemini-stage-0` is to create the Gemini Enterprise **Application (Engine)**. Running `gem4gov onboard` will guide you through this process, ultimately providing a **`config_id`** (referred to as `gemini_config_id` in the variables of this blueprint).
-
-- **gemini-stage-1:** This stage takes the `gemini_config_id` from `gem4gov` and the name of your manually uploaded SSL certificate as inputs to configure the load balancer frontend.
+- **gemini-stage-0:** Provisions the core infrastructure VPC, Subnets, CMEK, IAM, Search Engines, Data Stores, and Widgets. It outputs:
+  - `gemini_apps_widget_ids`: A map of the deployed application keys to their corresponding Search Widget Config IDs.
+  - `gemini_enterprise_ip`: The static IP address reserved for the load balancer.
+- **gemini-stage-1:** Consumes the outputs from Stage 0 to set up load balancing and construct dynamic routing rules for all applications without requiring manual configuration IDs.
 
 ### Prerequisites & Manual Steps Before Applying gemini-stage-1
 
-1.  **Complete gemini-stage-0:** Ensure the `gemini-stage-0` Terraform module has been successfully applied.
+1.  **Complete gemini-stage-0:** Ensure the `gemini-stage-0` Terraform module has been successfully applied and has provisioned the search applications.
 
-2.  **Run `gem4gov onboard`:**
+2.  **Domain and SSL Certificate:**
+    - **DNS Configuration:** Ensure you have pointed an 'A' record for your desired domain (e.g., `gemini.yourdomain.com`) to the static IP address (`gemini_enterprise_ip`) output by Stage 0.
+    - **Upload SSL Certificate:**
+      - Upload your SSL certificate to Google Cloud Certificate Manager in the target project. For regional load balancers using self-managed certificates, upload it via the `gcloud` CLI:
+        ```bash
+        gcloud compute ssl-certificates create YOUR_CERTIFICATE_NAME \
+          --certificate=PATH_TO_YOUR_CERTIFICATE_FILE \
+          --private-key=PATH_TO_YOUR_PRIVATE_KEY_FILE \
+          --region=YOUR_REGION
+        ```
+      - Ensure the certificate name matches what you provide to Stage 1.
 
-    - Install and run the `gem4gov` CLI tool (see instructions below).
-    - Follow the prompts. Since `gemini-stage-0` handled most infrastructure, you will mainly be focused on the **Engine Creation** steps.
-    - Note the **`Gemini Enterprise Widget Config ID`** provided in the output. This is your `gemini_config_id`.
-
-3.  **Domain and SSL Certificate:**
-
-    - **DNS Configuration:** You should have already pointed an 'A' record for your desired subdomain (e.g., `gemini.yourdomain.com`) to the static IP address (`gemini-enterprise-ip`) created in `gemini-stage-0`.
-    - **Obtain/Upload SSL Certificate:**
-      - Acquire an SSL certificate for your subdomain.
-      - Upload the SSL certificate to Google Cloud Certificate Manager in the same project where `gemini-stage-0` was deployed. Regional Self-Managed SSL certificates (to be used with a regional load balancer) can **only** be uploaded via `gcloud` command. The certificate will be visible in Certificate Manager as a "Classic certificate".
-        - Run the following command:
-          ```bash
-          gcloud compute ssl-certificates create YOUR_CERTIFICATE_NAME \
-            --certificate=PATH_TO_YOUR_CERTIFICATE_FILE \
-            --private-key=PATH_TO_YOUR_PRIVATE_KEY_FILE \
-            --region=YOUR_REGION
-          ```
-          Replace `YOUR_CERTIFICATE_NAME`, `PATH_TO_YOUR_CERTIFICATE_FILE`, `PATH_TO_YOUR_PRIVATE_KEY_FILE`, and `YOUR_REGION` accordingly.
-        - **Note:** The current Terraform configuration in `load_balancer.tf` uses the `google_compute_region_ssl_certificate` data source, which is compatible with certificates created via this `gcloud` command.
-        - For more information on self-managed certificates, see the [Google Cloud documentation](https://docs.cloud.google.com/load-balancing/docs/ssl-certificates/self-managed-certs#createresource).
-        - If you create a certificate directly through the Certificate Manager API (non-classic), you would need to adjust the data source in `load_balancer.tf` to `google_certificate_manager_certificates`.
-
-4.  **Update `terraform.tfvars` for gemini-stage-1:**
-    - **Recommended:** Run `./deploy.sh` and select **Option 2**. The script will:
-      - Detect your Stage 0 configuration.
-      - Automatically retrieve `project_id`, `region`, and `domain` from the Stage 0 remote state.
-      - Prompt you only for the `gemini_config_id` and `ssl_certificate_name`.
+3.  **Update `terraform.tfvars` for gemini-stage-1:**
+    - **Recommended:** Run `./deploy.sh` and select **Option 3 (Deploy Stage 1)**. The script will:
+      - Detect your Stage 0 remote state configuration.
+      - Automatically retrieve `project_id`, `region`, and `domain`.
+      - Prompt you only for the `ssl_certificate_name`.
       - Generate the `gemini-stage-1/terraform.tfvars` file for you.
     - **Manual:** Create or update the `terraform.tfvars` file in the `gemini-stage-1` directory with the following:
-    ```hcl
-    stage_0_state_bucket = "YOUR_STAGE_0_STATE_BUCKET" # From Stage 0 outputs
-    gemini_enterprise_domain = "gemini.yourdomain.com"
-    gemini_config_id = "OUTPUT_FROM_GEM4GOV_CLI" # Widget Config ID from gem4gov output
-    ssl_certificate_name = "YOUR_CERTIFICATE_MANAGER_NAME" # Name of the uploaded cert
-    ```
+      ```hcl
+      stage_0_state_bucket     = "YOUR_STAGE_0_STATE_BUCKET"
+      gemini_enterprise_domain = "gemini.yourdomain.com"
+      ssl_certificate_name     = "YOUR_CERTIFICATE_MANAGER_NAME"
+      ```
 
 ### Inputs
 
-Refer to `variables.tf` for all required input variables. Key inputs from manual steps include `gemini_config_id` and `ssl_certificate_name`.
+Refer to `variables.tf` for all required input variables. The key inputs are `stage_0_state_bucket`, `gemini_enterprise_domain`, and `ssl_certificate_name`.
 
 ### Outputs
 
