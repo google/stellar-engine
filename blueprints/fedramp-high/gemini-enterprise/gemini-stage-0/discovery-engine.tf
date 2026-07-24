@@ -256,7 +256,7 @@ resource "google_discovery_engine_search_engine" "gemini_enterprise_search_engin
   # Merge base features with app-specific overrides
   features = {
     "agent-gallery"                        = "FEATURE_STATE_ON",
-    "agent-sharing-without-admin-approval" = each.value.enable_agent_sharing_without_approval ? "FEATURE_STATE_OFF" : "FEATURE_STATE_ON"
+    "agent-sharing-without-admin-approval" = each.value.enable_agent_sharing_without_approval ? "FEATURE_STATE_ON" : "FEATURE_STATE_OFF"
     "bi-directional-audio"                 = "FEATURE_STATE_OFF",
     "disable-image-generation"             = "FEATURE_STATE_ON",
     "disable-video-generation"             = "FEATURE_STATE_ON",
