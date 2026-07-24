@@ -2466,8 +2466,8 @@ deploy_stage_0() {
     echo -e "${BLUE}--- Deploying Stage 0 ---${NC}"
     
     cd gemini-stage-0
-    rm -f backend.tf˝
-    rm -rf .terraform˝
+    rm -f backend.tf
+    rm -rf .terraform
     
     echo "Initializing Terraform..."
     if ! terraform init -migrate-state -backend-config="bucket=${BUCKET_NAME}" -backend-config="prefix=terraform/state/stage-0"; then
@@ -2479,8 +2479,7 @@ deploy_stage_0() {
     
     echo ""
     echo "Applying Terraform..."
-    VAR_FILES=(-var-file="terraform.tfvars")
-    if ! terraform apply "${VAR_FILES[@]}"; then
+    if ! terraform apply -var-file="terraform.tfvars"; then
         echo -e "${RED}Terraform Apply failed! Please try resolving the error and running the Step again.${NC}"
         cd ..
         pause
@@ -2714,9 +2713,7 @@ configure_gemini_apps() {
         return 1
     fi
     
-    VAR_FILES=(-var-file="terraform.tfvars")
-    
-    if ! terraform apply "${VAR_FILES[@]}" -auto-approve; then
+    if ! terraform apply -var-file="terraform.tfvars" -auto-approve; then
          echo -e "${RED}Error: Failed to apply Application Configurations via Terraform. Aborting.${NC}"
          cd ..
          pause
