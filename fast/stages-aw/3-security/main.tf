@@ -47,7 +47,6 @@ locals {
       if contains(v.locations, loc)
     }
   }
-  kms_protection_level = var.assured_workloads.regime == "FEDRAMP_MODERATE" ? "SOFTWARE" : "HSM"
   project_services = [
     "cloudkms.googleapis.com",
     "secretmanager.googleapis.com",

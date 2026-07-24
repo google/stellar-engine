@@ -240,6 +240,12 @@ variable "groups" {
   default  = {}
 }
 
+variable "kms_protection_level" {
+  description = "KMS protection level."
+  type        = string
+  nullable    = true
+}
+
 variable "regions" {
   # tfdoc:variable:source 0-bootstrap
   description = "Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars."

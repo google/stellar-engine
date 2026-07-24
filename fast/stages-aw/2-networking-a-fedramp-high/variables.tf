@@ -236,6 +236,12 @@ variable "groups" {
   default     = null
 }
 
+variable "kms_protection_level" {
+  description = "KMS protection level."
+  type        = string
+  nullable    = true
+}
+
 variable "regime_mapping" {
   description = "Compliance regime shorthand mapping."
   type        = any

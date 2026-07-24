@@ -192,6 +192,12 @@ variable "iam_by_principals" {
   nullable    = false
 }
 
+variable "kms_protection_level" {
+  description = "KMS protection level."
+  type        = string
+  nullable    = true
+}
+
 variable "locations" {
   description = "Optional locations for GCS, BigQuery, and logging buckets created here."
   type = object({

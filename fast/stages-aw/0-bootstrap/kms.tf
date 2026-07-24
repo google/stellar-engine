@@ -15,7 +15,7 @@
 locals {
   version_template = {
     algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
-    protection_level = var.assured_workloads.regime == "FEDRAMP_MODERATE" ? "SOFTWARE" : "HSM"
+    protection_level = var.kms_protection_level
   }
 }
 module "logging-kms" {
