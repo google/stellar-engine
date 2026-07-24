@@ -155,3 +155,14 @@ output "gemini_apps_audit_logs" {
   value       = { for k, v in var.gemini_apps : google_discovery_engine_search_engine.gemini_enterprise_search_engine[k].engine_id => coalesce(v.enable_audit_logs, false) }
   description = "A map of Engine IDs to their enable_audit_logs configuration."
 }
+
+output "gemini_apps_model_armor" {
+  value       = { for k, v in var.gemini_apps : google_discovery_engine_search_engine.gemini_enterprise_search_engine[k].engine_id => coalesce(v.enable_model_armor, false) }
+  description = "A map of Engine IDs to their enable_model_armor configuration."
+}
+
+output "model_armor_template_name" {
+  value       = local.create_model_armor ? google_model_armor_template.model_armor_template[0].name : null
+  description = "The name of the Model Armor template resource."
+}
+

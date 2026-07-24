@@ -343,6 +343,7 @@ variable "gemini_apps" {
     enable_agent_sharing                  = optional(bool, false)
     enable_agent_sharing_without_approval = optional(bool, true)
     enable_audit_logs                     = optional(bool, false)
+    enable_model_armor                    = optional(bool, false)
   }))
   default = {}
 }
