@@ -265,6 +265,92 @@ promptUser() {
     done
 }
 
+destroy_networking() {
+  missing_files=()
+  [[ ! -f "0-globals.auto.tfvars.json" ]] && missing_files+=("0-globals.auto.tfvars.json")
+  [[ ! -f "2-networking-providers.tf" ]] && missing_files+=("2-networking-providers.tf")
+
+  if [[ ${#missing_files[@]} -gt 0 ]]; then
+      log_warn "The following config files are missing: ${missing_files[*]}"
+      if promptUser "Attempt to pull from GCS?"; then
+          gcloud storage cp "gs://${PREFIX}-prod-iac-core-outputs-0/providers/2-networking-providers.tf" ./ 2>/dev/null || log_warn "Failed to pull providers"
+          gcloud storage cp "gs://${PREFIX}-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json" ./ 2>/dev/null || log_warn "Failed to pull globals"
+          gcloud storage cp "gs://${PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json" ./ 2>/dev/null || log_warn "Failed to pull bootstrap vars"
+          gcloud storage cp "gs://${PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json" ./ 2>/dev/null || log_warn "Failed to pull resman vars"
+      fi
+  fi
+
+  if promptUser "Would you like to run terraform destroy?"; then
+    # Ensure backend is initialized before destroy
+    log_info "Initializing Terraform for Stage 2..."
+    terraform init -reconfigure
+    destroy_success=false
+    max_attempts=3
+    attempt=1
+
+    while [[ $attempt -le $max_attempts ]] && [[ "$destroy_success" == "false" ]]; do
+      log_info "Terraform destroy attempt $attempt/$max_attempts"
+
+      if terraform destroy -auto-approve; then
+        destroy_success=true
+        log_info "Terraform destroy completed successfully"
+      else
+        if [[ $attempt -lt $max_attempts ]]; then
+          log_warn "Terraform destroy failed, checking for common issues..."
+
+          # Check for peering errors (common during network destruction)
+          if terraform show 2>/dev/null | grep -q "peering\|network" || [[ -f .terraform.tfstate.backup ]]; then
+            log_warn "Likely network peering timing issues, waiting for resources to settle..."
+            log_info "Waiting 60 seconds for network resource deletion..."; sleep 60
+            ((attempt++))
+          else
+            log_warn "Terraform destroy failed with non-peering error"
+            if promptUser "Would you like to retry destroy (attempt $((attempt+1))/$max_attempts)?"; then
+              ((attempt++))
+            else
+              break
+            fi
+          fi
+        else
+          log_error "Terraform destroy failed after $max_attempts attempts"
+          if promptUser "Would you like to try one more manual attempt?"; then
+            terraform destroy -auto-approve && destroy_success=true
+          fi
+          break
+        fi
+      fi
+    done
+
+    if [[ "$destroy_success" == "false" ]]; then
+      log_error "Unable to complete terraform destroy. Manual cleanup may be required."
+    fi
+  fi
+
+  if promptUser "Would you like to delete your .terraform dir and related files?"; then
+    # Comprehensive terraform cleanup for stage 2
+    if [[ -d ".terraform" ]]; then
+      rm -rf .terraform
+      log_info "Deleted .terraform directory"
+    else
+      log_warn ".terraform directory does not exist"
+    fi
+
+    # Remove terraform lock file
+    if [[ -f ".terraform.lock.hcl" ]]; then
+      rm -f .terraform.lock.hcl
+      log_info "Deleted .terraform.lock.hcl"
+    else
+      log_warn ".terraform.lock.hcl does not exist"
+    fi
+
+    # Remove any backup state files
+    if [[ -f "terraform.tfstate.backup" ]]; then
+      rm -f terraform.tfstate.backup
+      log_info "Deleted terraform.tfstate.backup"
+    fi
+  fi
+}
+
 ########### DANGER: DESTRUCTIVE OPERATIONS ############
 log_warn "=== WARNING: DESTRUCTIVE SCRIPT ==="
 log_warn "This script will DELETE your ENTIRE environment!"
@@ -565,8 +651,8 @@ fi
 if [[ "${skip_stage_2:-}" != "true" ]] && promptUser "Stage 2 - Networking"; then
   # Choose networking paradigm
   echo "Please type \"1\", \"2\", or \"3\" below that corresponds to the network paradigm you want: "
-  echo "1) IL2/FedRAMP Moderate"
-  echo "2) FedRAMP High"
+  echo "1) IL2"
+  echo "2) FedRAMP High/Moderate"
   echo "3) IL4/IL5"
   read -r choice
 
@@ -577,178 +663,12 @@ if [[ "${skip_stage_2:-}" != "true" ]] && promptUser "Stage 2 - Networking"; the
   ########### FedRAMP High ###########
   elif [ "$choice" == 2 ]; then
     cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-a-fedramp-high || exit
-
-    # Pull config if missing
-    missing_files=()
-    [[ ! -f "0-globals.auto.tfvars.json" ]] && missing_files+=("0-globals.auto.tfvars.json")
-    [[ ! -f "2-networking-providers.tf" ]] && missing_files+=("2-networking-providers.tf")
-
-    if [[ ${#missing_files[@]} -gt 0 ]]; then
-        log_warn "The following config files are missing: ${missing_files[*]}"
-        if promptUser "Attempt to pull from GCS?"; then
-            gcloud storage cp "gs://${PREFIX}-prod-iac-core-outputs-0/providers/2-networking-providers.tf" ./ 2>/dev/null || log_warn "Failed to pull providers"
-            gcloud storage cp "gs://${PREFIX}-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json" ./ 2>/dev/null || log_warn "Failed to pull globals"
-            gcloud storage cp "gs://${PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json" ./ 2>/dev/null || log_warn "Failed to pull bootstrap vars"
-            gcloud storage cp "gs://${PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json" ./ 2>/dev/null || log_warn "Failed to pull resman vars"
-        fi
-    fi
-
-    if promptUser "Would you like to run terraform destroy?"; then
-      # Ensure backend is initialized before destroy
-      log_info "Initializing Terraform for Stage 2..."
-      terraform init -reconfigure
-      destroy_success=false
-      max_attempts=3
-      attempt=1
-
-      while [[ $attempt -le $max_attempts ]] && [[ "$destroy_success" == "false" ]]; do
-        log_info "Terraform destroy attempt $attempt/$max_attempts"
-
-        if terraform destroy -auto-approve; then
-          destroy_success=true
-          log_info "Terraform destroy completed successfully"
-        else
-          if [[ $attempt -lt $max_attempts ]]; then
-            log_warn "Terraform destroy failed, checking for common issues..."
-
-            # Check for peering errors (common during network destruction)
-            if terraform show 2>/dev/null | grep -q "peering\|network" || [[ -f .terraform.tfstate.backup ]]; then
-              log_warn "Likely network peering timing issues, waiting for resources to settle..."
-              log_info "Waiting 60 seconds for network resource deletion..."; sleep 60
-              ((attempt++))
-            else
-              log_warn "Terraform destroy failed with non-peering error"
-              if promptUser "Would you like to retry destroy (attempt $((attempt+1))/$max_attempts)?"; then
-                ((attempt++))
-              else
-                break
-              fi
-            fi
-          else
-            log_error "Terraform destroy failed after $max_attempts attempts"
-            if promptUser "Would you like to try one more manual attempt?"; then
-              terraform destroy -auto-approve && destroy_success=true
-            fi
-            break
-          fi
-        fi
-      done
-
-      if [[ "$destroy_success" == "false" ]]; then
-        log_error "Unable to complete terraform destroy. Manual cleanup may be required."
-      fi
-    fi
-
-    if promptUser "Would you like to delete your .terraform dir and related files?"; then
-      # Comprehensive terraform cleanup for stage 2 - FedRAMP High
-      if [[ -d ".terraform" ]]; then
-        rm -rf .terraform
-        log_info "Deleted .terraform directory"
-      else
-        log_warn ".terraform directory does not exist"
-      fi
-
-      # Remove terraform lock file
-      if [[ -f ".terraform.lock.hcl" ]]; then
-        rm -f .terraform.lock.hcl
-        log_info "Deleted .terraform.lock.hcl"
-      else
-        log_warn ".terraform.lock.hcl does not exist"
-      fi
-
-      # Remove any backup state files
-      if [[ -f "terraform.tfstate.backup" ]]; then
-        rm -f terraform.tfstate.backup
-        log_info "Deleted terraform.tfstate.backup"
-      fi
-    fi
+    destroy_networking
 
   ########### IL4/IL5 ###########
   elif [ "$choice" == 3 ]; then
     cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-b-il5-ngfw || exit
-
-    # Pull config if missing
-    missing_files=()
-    [[ ! -f "0-globals.auto.tfvars.json" ]] && missing_files+=("0-globals.auto.tfvars.json")
-    [[ ! -f "2-networking-providers.tf" ]] && missing_files+=("2-networking-providers.tf")
-
-    if [[ ${#missing_files[@]} -gt 0 ]]; then
-        log_warn "The following config files are missing: ${missing_files[*]}"
-        if promptUser "Attempt to pull from GCS?"; then
-            gcloud storage cp "gs://${PREFIX}-prod-iac-core-outputs-0/providers/2-networking-providers.tf" ./ 2>/dev/null || log_warn "Failed to pull providers"
-            gcloud storage cp "gs://${PREFIX}-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json" ./ 2>/dev/null || log_warn "Failed to pull globals"
-            gcloud storage cp "gs://${PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json" ./ 2>/dev/null || log_warn "Failed to pull bootstrap vars"
-            gcloud storage cp "gs://${PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json" ./ 2>/dev/null || log_warn "Failed to pull resman vars"
-        fi
-    fi
-
-    if promptUser "Would you like to run terraform destroy?"; then
-      destroy_success=false
-      max_attempts=3
-      attempt=1
-
-      while [[ $attempt -le $max_attempts ]] && [[ "$destroy_success" == "false" ]]; do
-        log_info "Terraform destroy attempt $attempt/$max_attempts"
-
-        if terraform destroy; then
-          destroy_success=true
-          log_info "Terraform destroy completed successfully"
-        else
-          if [[ $attempt -lt $max_attempts ]]; then
-            log_warn "Terraform destroy failed, checking for common issues..."
-
-            # Check for peering errors (common during network destruction)
-            if terraform show 2>/dev/null | grep -q "peering\|network" || [[ -f .terraform.tfstate.backup ]]; then
-              log_warn "Likely network peering timing issues, waiting for resources to settle..."
-              log_info "Waiting 60 seconds for network resource deletion..."; sleep 60
-              ((attempt++))
-            else
-              log_warn "Terraform destroy failed with non-peering error"
-              if promptUser "Would you like to retry destroy (attempt $((attempt+1))/$max_attempts)?"; then
-                ((attempt++))
-              else
-                break
-              fi
-            fi
-          else
-            log_error "Terraform destroy failed after $max_attempts attempts"
-            if promptUser "Would you like to try one more manual attempt?"; then
-              terraform destroy && destroy_success=true
-            fi
-            break
-          fi
-        fi
-      done
-
-      if [[ "$destroy_success" == "false" ]]; then
-        log_error "Unable to complete terraform destroy. Manual cleanup may be required."
-      fi
-    fi
-
-    if promptUser "Would you like to delete your .terraform dir and related files?"; then
-      # Comprehensive terraform cleanup for stage 2 - IL4/IL5
-      if [[ -d ".terraform" ]]; then
-        rm -rf .terraform
-        log_info "Deleted .terraform directory"
-      else
-        log_warn ".terraform directory does not exist"
-      fi
-
-      # Remove terraform lock file
-      if [[ -f ".terraform.lock.hcl" ]]; then
-        rm -f .terraform.lock.hcl
-        log_info "Deleted .terraform.lock.hcl"
-      else
-        log_warn ".terraform.lock.hcl does not exist"
-      fi
-
-      # Remove any backup state files
-      if [[ -f "terraform.tfstate.backup" ]]; then
-        rm -f terraform.tfstate.backup
-        log_info "Deleted terraform.tfstate.backup"
-      fi
-    fi
-  fi
+    destroy_networking
   
   if promptUser "Would you like to remove billing account admin permissions for the ${PREFIX}-prod-resman-net-0@${PREFIX}-prod-iac-core-0.iam.gserviceaccount.com?"; then
     if ! gcloud billing accounts remove-iam-policy-binding "${BILLING_ACCOUNT}" --member=serviceAccount:"${PREFIX}"-prod-resman-net-0@"${PREFIX}"-prod-iac-core-0.iam.gserviceaccount.com --role=roles/billing.admin; then

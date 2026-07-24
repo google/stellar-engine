@@ -22,7 +22,7 @@ The target audience for Stellar Engine is organizations and teams that operate i
 
 Stellar Engine offers several significant benefits, particularly for organizations operating in regulated environments or requiring high levels of compliance and security. Here are the key advantages based on the summary:
 
-- **Pre-Built Compliance Mappings:** The inclusion of documentation mapping NIST 800-53r5 controls for FRH, IL4, and IL5 simplifies the process of achieving compliance. This allows organizations to fast-track their ATO processes by leveraging pre-validated configurations.  <br />
+- **Pre-Built Compliance Mappings:** The inclusion of documentation mapping NIST 800-53r5 controls for FRH, FRM, IL4, and IL5 simplifies the process of achieving compliance. This allows organizations to fast-track their ATO processes by leveraging pre-validated configurations.  <br />
 IaC for Compliance: By embedding compliance requirements into IaC, Stellar Engine ensures that key controls are implemented consistently and automatically.   <br />
 - **Consistency and Scalability:** Utilizing IaC enables repeatable and reliable deployment of landing zones, ensuring that infrastructure adheres to best practices and compliance standards.  <br />
 - **Flexibility:** While tailored for Assured Workload overlays, Stellar Engine serves as a foundation for other compliance regimes, making it adaptable to various regulatory requirements.  <br />

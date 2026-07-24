@@ -73,3 +73,15 @@ compute.restrictVpcPeering:
       values:
         - under:organizations/${organization_id}
         - under:folders/832634261155 # https://autonomousthingz-life.medium.com/google-cloud-organisation-policies-get-the-restrict-vpc-peering-usage-organisation-policy-d87dce84a5e7
+
+%{ if !contains(["FEDRAMP_MODERATE"], regime) ~}
+# This list constraint defines the type of protocol forwarding rule objects
+# with target instance that a user can create.
+# COULD HAVE
+compute.restrictProtocolForwardingCreationForTypes:
+  rules:
+    - allow:
+        values:
+          - INTERNAL
+%{ endif ~}
+

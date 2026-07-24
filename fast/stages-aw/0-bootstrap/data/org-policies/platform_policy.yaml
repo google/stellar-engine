@@ -36,31 +36,6 @@ gcp.disableCloudLogging:
   rules:
   - enforce: false
 
-# This list constraint defines the set of locations where location-based Google
-# Cloud resources can be created. By default, resources can be created in any
-# location. Policies for this constraint can specify multi-regions such as asia
-# and europe, regions such as us-east1 or europe-west1 as allowed or denied
-# locations. Allowing or denying a multi-region does not imply that all included
-# sub-locations should also be allowed or denied. For example, if the policy
-# denies the us multi-region (which refers to multi-region resources, like some
-# storage services), resources can still be created in the regional location
-# us-east1. On the other hand, the in:us-locations group contains all locations
-# within the us region, and can be used to block every region. We recommend
-# using value groups to define your policy. You can specify value groups,
-# collections of locations that are curated by Google to provide a simple way
-# to define your resource locations. To use value groups in your organization
-# policy, prefix your entries with the string in:, followed by the value group.
-# For example, to create resources that will only be physically located within
-# the US, set in:us-locations in the list of allowed values.If the
-# suggested_value field is used in a location policy, it should be a region.
-# If the value specified is a region, a UI for a zonal resource may pre-populate
-# any zone in that region.
-# SHOULD HAVE
-gcp.resourceLocations:
-  rules:
-  - allow:
-      values:
-        - in:us-locations
 
 # This constraint defines the set of Google Cloud resource services that can be
 # used within an organization, folder, or project, such as compute.googleapis.com

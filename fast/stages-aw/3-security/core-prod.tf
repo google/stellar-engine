@@ -55,7 +55,7 @@ module "prod-sec-kms" {
     name     = "prod-${each.key}"
     version_template = {
       algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
-      protection_level = "HSM"
+      protection_level = local.kms_protection_level
     }
   }
   keys = local.kms_locations_keys[each.key]

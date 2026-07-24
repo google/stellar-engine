@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+locals {
+  protection_level = var.assured_workloads.regime == "FEDRAMP_MODERATE" ? "SOFTWARE" : "HSM"
+}
+
 module "tenant-project-keys" {
   source     = "../../../modules/kms"
   project_id = module.tenant-self-iac-projects[each.key].project_id
@@ -35,7 +39,7 @@ module "tenant-project-keys" {
       rotation_period = "7776000s" # CIS Compliance Benchmark 1.10
       version_template = {
         algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
-        protection_level = "HSM"
+        protection_level = local.protection_level
       }
     },
     default = {
@@ -45,7 +49,7 @@ module "tenant-project-keys" {
       rotation_period = "7776000s"
       version_template = {
         algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
-        protection_level = "HSM"
+        protection_level = local.protection_level
       }
     }
   }

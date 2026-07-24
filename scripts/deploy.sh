@@ -116,6 +116,92 @@ validate_env_vars() {
     return 0
 }
 
+deploy_networking() {
+  if handle_prompt_if "Would you like to pull the remote tfvars files created in Stages 0 and 1?"; then
+    gcloud storage cp gs://"${PREFIX}"-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./
+    gcloud storage cp gs://"${PREFIX}"-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./
+    gcloud storage cp gs://"${PREFIX}"-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./
+    gcloud storage cp gs://"${PREFIX}"-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+  fi
+
+  handle_prompt "Would you like to perform the terraform init?" "terraform init" || true
+
+  # Check for existing projects to import
+  if gcloud projects describe "${PREFIX}-net-vdss-host" >/dev/null 2>&1; then
+    log_info "Project ${PREFIX}-net-vdss-host already exists."
+    if handle_prompt_if "Would you like to import it into Terraform state?"; then
+      if terraform state list | grep -q "module.vdss-host-project.google_project.project\[0\]"; then
+          log_info "Removing module.vdss-host-project.google_project.project[0] from state to force re-import..."
+          terraform state rm module.vdss-host-project.google_project.project[0] || true
+      fi
+      log_info "Importing ${PREFIX}-net-vdss-host..."
+      terraform import module.vdss-host-project.google_project.project[0] "${PREFIX}-net-vdss-host" || true
+    fi
+  fi
+
+  # Check for existing VPCs
+  for vpc in "vdss-dmz-0" "vdss-landing-0"; do
+    if gcloud compute networks describe "$vpc" --project="${PREFIX}-net-vdss-host" >/dev/null 2>&1; then
+        log_info "VPC $vpc already exists."
+        if handle_prompt_if "Would you like to import $vpc?"; then
+          # Map VPC name to module name
+          module_name="dmz-vpc"
+          if [[ "$vpc" == "vdss-landing-0" ]]; then module_name="vdss-vpc"; fi
+          
+          if terraform state list | grep -q "module.${module_name}.google_compute_network.network\[0\]"; then
+              log_info "Removing module.${module_name}.google_compute_network.network[0] from state to force re-import..."
+              terraform state rm "module.${module_name}.google_compute_network.network[0]" || true
+          fi
+          terraform import module.${module_name}.google_compute_network.network[0] "${PREFIX}-net-vdss-host/${vpc}" || true
+        fi
+    fi
+  done
+
+  if handle_prompt_if "Would you like to perform the terraform apply?"; then
+    apply_success=false
+    max_attempts=3
+    attempt=1
+
+    while [[ $attempt -le $max_attempts ]] && [[ "$apply_success" == "false" ]]; do
+      log_info "Terraform apply attempt $attempt/$max_attempts"
+
+      if terraform apply -auto-approve; then
+        apply_success=true
+        log_info "Terraform apply completed successfully"
+      else
+        if [[ $attempt -lt $max_attempts ]]; then
+          # Check if it's a peering error (common timing issue)
+          if terraform show 2>/dev/null | grep -q "peering\|network" || [[ -f .terraform.tfstate.backup ]]; then
+            log_warn "Terraform apply failed, likely due to network peering timing issues"
+            log_info "Waiting 60 seconds for network operations to settle..."
+            sleep 60
+            ((attempt++))
+          else
+            log_warn "Terraform apply failed with non-peering error"
+            echo 'If you receive an error relating to a service account not existing, please click "Settings" in gcs within the project, and it will generate the service account for you.'
+            if handle_prompt_if "Would you like to retry the apply (attempt $((attempt+1))/$max_attempts)?"; then
+              ((attempt++))
+            else
+              break
+            fi
+          fi
+        else
+          log_error "Terraform apply failed after $max_attempts attempts"
+          if handle_prompt_if "Would you like to try one more manual attempt?"; then
+            terraform apply -auto-approve && apply_success=true
+          fi
+          break
+        fi
+      fi
+    done
+
+    if [[ "$apply_success" == "false" ]]; then
+      log_error "Unable to complete terraform apply. You may need to investigate manually."
+      exit 1
+    fi
+  fi
+}
+
 ############ Prerequisites ############
 log_info "Welcome to the Stellar Engine automated deployment!"
 log_info "This is designed for the initial deployment."
@@ -591,7 +677,7 @@ fast_features = {
 }
 
 assured_workloads = {
-  regime   = "${COMPLIANCE_REGIME}" # "IL4, IL5, FEDRAMP_HIGH, etc... if you wish to not use assured_workloads, set this value to COMPLIANCE_REGIME_UNSPECIFIED"
+  regime   = "${COMPLIANCE_REGIME}" # "IL4, IL5, FEDRAMP_HIGH, FEDRAMP_MODERATE, etc... if you wish to not use assured_workloads, set this value to COMPLIANCE_REGIME_UNSPECIFIED"
   location = "${REGION}" # Uses the same region as other resources for consistency - change to match your regions.primary if different
 }
 
@@ -965,169 +1051,26 @@ if promptUser "Stage 2 - Networking -"; then
   cd "${SCRIPT_DIR}"/../fast/stages-aw/1-resman || exit
 
   echo "Please type \"1\", \"2\", or \"3\" below that corresponds to the network paradigm you want: "
-  echo "1) IL2/FedRAMP Moderate"
-  echo "2) FedRAMP High"
+  echo "1) IL2"
+  echo "2) FedRAMP High/Moderate"
   echo "3) IL4/IL5"
   read -r choice
 
-  ########### IL2/FedRAMP Moderate ###########
+  ########### IL2 ###########
   if [ "$choice" == 1 ]; then
     echo "This stage is still under development. Goodbye!"
 
-  ########### FedRAMP High ###########
+  ########### FedRAMP High/Moderate ###########
   elif [ "$choice" == 2 ]; then
-    echo "You have selected FedRAMP High"
+    echo "You have selected FedRAMP High/Moderate"
     cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-a-fedramp-high || exit
-
-    if handle_prompt_if "Would you like to pull the remote tfvars files created in Stages 0 and 1?"; then
-      gcloud storage cp gs://"${PREFIX}"-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./
-      gcloud storage cp gs://"${PREFIX}"-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./
-      gcloud storage cp gs://"${PREFIX}"-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./
-      gcloud storage cp gs://"${PREFIX}"-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
-    fi
-
-    handle_prompt "Would you like to perform the terraform init?" "terraform init" || true
-
-    # Check for existing projects to import
-    if gcloud projects describe "${PREFIX}-net-vdss-host" >/dev/null 2>&1; then
-      log_info "Project ${PREFIX}-net-vdss-host already exists."
-      if handle_prompt_if "Would you like to import it into Terraform state?"; then
-        if terraform state list | grep -q "module.vdss-host-project.google_project.project\[0\]"; then
-            log_info "Removing module.vdss-host-project.google_project.project[0] from state to force re-import..."
-            terraform state rm module.vdss-host-project.google_project.project[0] || true
-        fi
-        log_info "Importing ${PREFIX}-net-vdss-host..."
-        terraform import module.vdss-host-project.google_project.project[0] "${PREFIX}-net-vdss-host" || true
-      fi
-    fi
-
-    # Check for existing VPCs
-    for vpc in "vdss-dmz-0" "vdss-landing-0"; do
-      if gcloud compute networks describe "$vpc" --project="${PREFIX}-net-vdss-host" >/dev/null 2>&1; then
-         log_info "VPC $vpc already exists."
-         if handle_prompt_if "Would you like to import $vpc?"; then
-            # Map VPC name to module name
-            module_name="dmz-vpc"
-            if [[ "$vpc" == "vdss-landing-0" ]]; then module_name="vdss-vpc"; fi
-            
-            if terraform state list | grep -q "module.${module_name}.google_compute_network.network\[0\]"; then
-                log_info "Removing module.${module_name}.google_compute_network.network[0] from state to force re-import..."
-                terraform state rm "module.${module_name}.google_compute_network.network[0]" || true
-            fi
-            terraform import module.${module_name}.google_compute_network.network[0] "${PREFIX}-net-vdss-host/${vpc}" || true
-         fi
-      fi
-    done
-
-    if handle_prompt_if "Would you like to perform the terraform apply?"; then
-      apply_success=false
-      max_attempts=3
-      attempt=1
-
-      while [[ $attempt -le $max_attempts ]] && [[ "$apply_success" == "false" ]]; do
-        log_info "Terraform apply attempt $attempt/$max_attempts"
-
-        if terraform apply -auto-approve; then
-          apply_success=true
-          log_info "Terraform apply completed successfully"
-        else
-          if [[ $attempt -lt $max_attempts ]]; then
-            # Check if it's a peering error (common timing issue)
-            if terraform show 2>/dev/null | grep -q "peering\|network" || [[ -f .terraform.tfstate.backup ]]; then
-              log_warn "Terraform apply failed, likely due to network peering timing issues"
-              log_info "Waiting 60 seconds for network operations to settle..."
-              sleep 60
-              ((attempt++))
-            else
-              log_warn "Terraform apply failed with non-peering error"
-              # Potential Service Account/KMS bugs
-              echo 'If you receive an error relating to a service account not existing, please click "Settings" in gcs within the project, and it will generate the service account for you.'
-              if handle_prompt_if "Would you like to retry the apply (attempt $((attempt+1))/$max_attempts)?"; then
-                ((attempt++))
-              else
-                break
-              fi
-            fi
-          else
-            log_error "Terraform apply failed after $max_attempts attempts"
-            if handle_prompt_if "Would you like to try one more manual attempt?"; then
-              terraform apply -auto-approve && apply_success=true
-            fi
-            break
-          fi
-        fi
-      done
-
-      if [[ "$apply_success" == "false" ]]; then
-        log_error "Unable to complete terraform apply. You may need to investigate manually."
-        exit 1
-      fi
-    fi
+    deploy_networking
 
   ########### IL4/IL5 ###########
   elif [ "$choice" == 3 ]; then
     echo "You have selected IL5"
     cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-b-il5-ngfw || exit
-
-    # cmd=("./pre-redeploy.sh")
-    # handle_prompt "If this is a redeployment (<30 days), would you like to run the redeploy script?" "${cmd[@]}"
-
-    if handle_prompt_if "Would you like to pull the remote tfvars files created in Stages 0 and 1?"; then
-      gcloud storage cp gs://"${PREFIX}"-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./
-      gcloud storage cp gs://"${PREFIX}"-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./
-      gcloud storage cp gs://"${PREFIX}"-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./
-      gcloud storage cp gs://"${PREFIX}"-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
-    fi
-
-    handle_prompt "Would you like to perform the terraform init?" "terraform init" || true
-
-    cmd=("terraform apply -auto-approve -target google_project_iam_custom_role.ngfw-custom-role")
-    handle_prompt "Would you like to perform the targeted terraform apply?" "${cmd[@]}" || true
-
-    if handle_prompt_if "Would you like to perform the full terraform apply?"; then
-      apply_success=false
-      max_attempts=3
-      attempt=1
-
-      while [[ $attempt -le $max_attempts ]] && [[ "$apply_success" == "false" ]]; do
-        log_info "Terraform apply attempt $attempt/$max_attempts"
-
-        if terraform apply -auto-approve; then
-          apply_success=true
-          log_info "Terraform apply completed successfully"
-        else
-          if [[ $attempt -lt $max_attempts ]]; then
-            # Check if it's a peering error (common timing issue)
-            if terraform show 2>/dev/null | grep -q "peering\|network" || [[ -f .terraform.tfstate.backup ]]; then
-              log_warn "Terraform apply failed, likely due to network peering timing issues"
-              log_info "Waiting 60 seconds for network operations to settle..."
-              sleep 60
-              ((attempt++))
-            else
-              log_warn "Terraform apply failed with non-peering error"
-              # Potential Service Account/KMS bugs
-              echo 'If you receive an error relating to a service account not existing, please click "Settings" in gcs within the project, and it will generate the service account for you.'
-              if handle_prompt_if "Would you like to retry the apply (attempt $((attempt+1))/$max_attempts)?"; then
-                ((attempt++))
-              else
-                break
-              fi
-            fi
-          else
-            log_error "Terraform apply failed after $max_attempts attempts"
-            if handle_prompt_if "Would you like to try one more manual attempt?"; then
-              terraform apply -auto-approve && apply_success=true
-            fi
-            break
-          fi
-        fi
-      done
-
-      if [[ "$apply_success" == "false" ]]; then
-        log_error "Unable to complete terraform apply. You may need to investigate manually."
-        exit 1
-      fi
-    fi
+    deploy_networking
   fi
 
   echo "Congratulations, you have completed Stage 2!"

@@ -202,9 +202,14 @@ variable "billing_override" {
 }
 
 variable "assured_workloads" {
-  description = "Assured Workloads configuration."
-  type        = any
-  default     = null
+  description = "Configuration for Assured Workloads."
+  type = object({
+    regime   = optional(string)
+    location = optional(string)
+    folder   = optional(string)
+  })
+  nullable = false
+  default  = {}
 }
 
 variable "common_services_folder" {
