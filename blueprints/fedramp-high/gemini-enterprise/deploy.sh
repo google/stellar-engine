@@ -2474,11 +2474,9 @@ EOF
     # Add Allowed IPs
     echo "allowed_ip_ranges = ${ALLOWED_IPS}" >> gemini-stage-0/terraform.tfvars
 
-    # Write gemini_apps to terraform.tfvars.json
+    # Write gemini_apps to terraform.tfvars
     if [[ "$APPS_OBJ" != "{}" && -n "$APPS_OBJ" ]]; then
-         echo "{\"gemini_apps\": ${APPS_OBJ}}" > gemini-stage-0/terraform.tfvars.json
-    else
-         rm -f gemini-stage-0/terraform.tfvars.json
+         echo "gemini_apps = ${APPS_OBJ}" >> gemini-stage-0/terraform.tfvars
     fi
 
     echo -e "${GREEN}Configuration generated in gemini-stage-0/terraform.tfvars${NC}"
@@ -2504,11 +2502,7 @@ deploy_stage_0() {
     
     echo ""
     echo "Applying Terraform..."
-    VAR_FILES=(-var-file="terraform.tfvars")
-    if [[ -f "terraform.tfvars.json" ]]; then
-        VAR_FILES+=(-var-file="terraform.tfvars.json")
-    fi
-    if ! terraform apply "${VAR_FILES[@]}"; then
+    if ! terraform apply -var-file="terraform.tfvars"; then
         echo -e "${RED}Terraform Apply failed! Please try resolving the error and running the Step again.${NC}"
         cd ..
         pause
@@ -2733,8 +2727,8 @@ configure_gemini_apps() {
          return 0
     fi
 
-    # Write the variables to terraform.tfvars.json
-    echo "{\"gemini_apps\": ${APPS_OBJ}}" > gemini-stage-0/terraform.tfvars.json
+    # Write the variables to terraform.tfvars
+    echo "gemini_apps = ${APPS_OBJ}" >> gemini-stage-0/terraform.tfvars
 
     export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"
     export GOOGLE_CLOUD_QUOTA_PROJECT="${PROJECT_ID}"
@@ -2752,12 +2746,7 @@ configure_gemini_apps() {
         return 1
     fi
     
-    VAR_FILES=(-var-file="terraform.tfvars")
-    if [[ -f "terraform.tfvars.json" ]]; then
-        VAR_FILES+=(-var-file="terraform.tfvars.json")
-    fi
-    
-    if ! terraform apply "${VAR_FILES[@]}" -auto-approve; then
+    if ! terraform apply -var-file="terraform.tfvars" -auto-approve; then
          echo -e "${RED}Error: Failed to apply Application Configurations via Terraform. Aborting.${NC}"
          cd ..
          pause
