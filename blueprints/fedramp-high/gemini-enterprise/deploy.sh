@@ -1534,7 +1534,8 @@ configure_stage_0() {
         read -p "Do you want to attempt to enable Discovery Engine and Certificate Manager APIs? [y/N]: " ENABLE_APIS_NOW
         if [[ "$ENABLE_APIS_NOW" =~ ^[Yy]$ ]]; then
             echo "Attempting to enable APIs..."
-            if ! gcloud services enable discoveryengine.googleapis.com certificatemanager.googleapis.com --project "${PROJECT_ID}"; then
+            # ADDED THE TWO APIS TO THE END OF THIS LINE:
+            if ! gcloud services enable discoveryengine.googleapis.com certificatemanager.googleapis.com cloudidentity.googleapis.com aiplatform.googleapis.com --project "${PROJECT_ID}"; then
                 echo -e "${RED}WARNING: Failed to enable Discovery Engine or Certificate Manager APIs.${NC}"
                 echo -e "${RED}This is expected if the APIs are not in your allowlist and you have not created an exception.${NC}"
             fi
@@ -1543,7 +1544,8 @@ configure_stage_0() {
         fi
     else
         echo -e "${GREEN}Enabling Discovery Engine and Certificate Manager APIs automatically...${NC}"
-        if ! gcloud services enable discoveryengine.googleapis.com certificatemanager.googleapis.com --project "${PROJECT_ID}"; then
+        # ADDED THE TWO APIS TO THE END OF THIS LINE:
+        if ! gcloud services enable discoveryengine.googleapis.com certificatemanager.googleapis.com cloudidentity.googleapis.com aiplatform.googleapis.com --project "${PROJECT_ID}"; then
             echo -e "${RED}WARNING: Failed to enable Discovery Engine or Certificate Manager APIs.${NC}"
             echo -e "${RED}Please ensure you have permissions to enable these APIs or they are allowed by your Org Policy.${NC}"
         fi
