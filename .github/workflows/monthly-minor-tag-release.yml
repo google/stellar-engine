@@ -1,0 +1,68 @@
+name: Last Friday Monthly Auto-Tagging
+
+on:
+  schedule:
+    # Runs at 00:00 UTC every Friday
+    - cron: '0 0 * * 5'
+  workflow_dispatch: # Allows manual trigger for testing
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-tag:
+    runs-on: ubuntu-latest
+    steps:
+      # Step 1: Check if today is indeed the LAST Friday of the month
+      - name: Verify if Last Friday of the Month
+        id: date-check
+        run: |
+          # Get current month (e.g., "07" for July)
+          CURRENT_MONTH=$(date +%m)
+          # Get month of 7 days from now (e.g., "08" for August)
+          FUTURE_MONTH=$(date -d "+7 days" +%m)
+
+          if [ "$CURRENT_MONTH" = "$FUTURE_MONTH" ]; then
+            echo "Today is Friday, but NOT the last Friday of this month. Skipping execution."
+            # Set a step output to skip subsequent tasks
+            echo "run_tagging=false" >> $GITHUB_OUTPUT
+          else
+            echo "Today is the last Friday of the month! Proceeding..."
+            echo "run_tagging=true" >> $GITHUB_OUTPUT
+          fi
+
+      # Step 2: Checkout code (only if it's the last Friday)
+      - name: Checkout code
+        if: steps:date-check:outputs:run_tagging == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Step 3: Run the tagging logic (only if it's the last Friday)
+      - name: Calculate and Push New Tag
+        if: steps:date-check:outputs:run_tagging == 'true'
+        run: |
+          git fetch --tags
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
+          echo "Latest tag found: $LATEST_TAG"
+
+          if [ "$LATEST_TAG" != "v1.0.0" ]; then
+            COMMITS_SINCE_LAST_TAG=$(git log ${LATEST_TAG}..HEAD --oneline)
+            if [ -z "$COMMITS_SINCE_LAST_TAG" ]; then
+              echo "No new commits found since $LATEST_TAG. Skipping tag creation."
+              exit 0
+            fi
+          fi
+
+          VERSION_NUM=${LATEST_TAG#v}
+          IFS='.' read -r major minor patch <<< "$VERSION_NUM"
+
+          NEW_MINOR=$((minor + 1))
+          NEW_TAG="v$major.$NEW_MINOR.0"
+          echo "Targeting new tag: $NEW_TAG"
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"
