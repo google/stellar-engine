@@ -3,7 +3,7 @@
 This stage deploys the networking infrastructure recommended with an Assured Workload FedRAMP High environment.
 
 <p align="center">
-  <img src="images/src/Stellar-Engine-Network-FedRAMP-High.png" alt="Networking diagram">
+  <img src="images/Stellar-Engine-Network-FedRAMP-High.png" alt="Networking diagram">
 </p>
 
 <!-- BEGIN TOC -->
