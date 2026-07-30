@@ -7,8 +7,8 @@ Stellar Engine is a fork of the Google Cloud Foundation Fabric (CFF) repository,
 This repository provides **end-to-end blueprints** and a **suite of Terraform modules** for Google Cloud, which support different use cases:
 
 - Google Cloud Organization [landing zone blueprint](./fast/) used to bootstrap real-world cloud foundations
-- Reference [blueprints](./blueprints/) used to deep dive into network patterns or product features
-- C comprehensive source of lean [modules](./modules/) that lend themselves well to changes
+- Reference [blueprints](./blueprints/) used to securely deep dive into network patterns or product features
+- Comprehensive source of lean [modules](./modules/) that lend themselves well to changes
 
 ## Target Audience and Benefits
 
@@ -108,10 +108,11 @@ Whether you are aiming to clear federal compliance hurdles, unblock a customer d
 
 The project launched in the summer of 2022 when the Technical Delivery team within Google grew tired of repeatedly manual-building secure, compliant landing zones for federal customers. To establish a repeatable baseline, we built a specialized compliance-focused fork of Cloud Foundation Fabric. In March 2024, a comprehensive gap analysis shifted the project's strategic focus toward generating actual ATO documentation, transforming it into the accelerator it is today.
 
-### What are the primary features? 
+### What are the core features? 
 
 The framework includes hierarchical staged orchestration divided into bootstrap, resource management, networking, and security stages. It supports FedRAMP Moderate, FedRAMP High, and DoD Impact Level 5 compliance configurations by default. Additionally, it provides pre-packaged templates for System Security Plans, Technical Design Documents, and Security Controls Traceability Matrices mapped to NIST SP 800-53r5 controls, alongside pre-integrated security partner configurations like Palo Alto Networks firewalls.
-What are the primary use cases? 
+
+### What are the primary use cases? 
 
 The main use cases are bootstrapping secure, tenant-isolated landing zones in hours instead of months, fast-tracking authorizations to operate by mapping infrastructure to NIST security controls, deploying boundary traffic inspection, and providing a standardized, repeatable baseline for professional services and partner deliveries to minimize deployment risk.
 
@@ -122,7 +123,8 @@ Cloud Foundation Fabric (CFF) is a general-purpose, global set of HashiCorp Terr
 Stellar Engine is a specialized, tactical framework built specifically for highly regulated public sector environments. Stellar Engine is maintained by Google Public Sector (GPS). 
 
 While merging massive NIST-mapped documentation generation and aggressive security constraints into the core of Cloud Foundation Fabric would overcomplicate it for the average commercial user, we are actively working on building a relationship to understand where there are opportunities for supporting one another.
-Which customers should use Cloud Foundation Fabric instead of Stellar Engine?
+
+### Which customers should use Cloud Foundation Fabric instead of Stellar Engine?
 
 Standard Cloud Foundation Fabric is ideal for customers who do not have rigorous compliance benchmarks like FedRAMP or IL5, or for highly mature organizations that already possess massive, custom Infrastructure as Code codebases, large internal platform teams, and their own compliance pipelines. If they do not fall into those rare categories, Stellar Engine is the recommended path.
 
@@ -130,7 +132,7 @@ Standard Cloud Foundation Fabric is ideal for customers who do not have rigorous
 
 The roadmap is hosted on [GitHub](https://github.com/orgs/google/projects/171) along with the [backlog](https://github.com/orgs/google/projects/171/views/1).
 
-## Is Stellar Scanner still supported? 
+### Is Stellar Scanner still supported? 
 
 Stellar Scanner is no longer supported. The team is currently evaluating modern internal and external security scanners to eventually integrate automated checks directly into the modern Stellar Engine framework and development lifecycle.
 
