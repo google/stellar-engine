@@ -33,14 +33,14 @@ jobs:
 
       # Step 2: Checkout code (only if it's the last Friday)
       - name: Checkout code
-        if: steps:date-check:outputs:run_tagging == 'true'
+        if: steps.date-check.outputs.run_tagging == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
       # Step 3: Run the tagging logic (only if it's the last Friday)
       - name: Calculate and Push New Tag
-        if: steps:date-check:outputs:run_tagging == 'true'
+        if: steps.date-check.outputs.run_tagging == 'true'
         run: |
           git fetch --tags
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")
