@@ -37,4 +37,18 @@ locals {
   # naming: environment used in most resource names
   prefix               = join("-", compact([var.prefix, "prod"]))
   kms_protection_level = coalesce(var.kms_protection_level, var.assured_workloads.regime == "FEDRAMP_MODERATE" ? "SOFTWARE" : "HSM")
+  assured_workloads_folder = (
+    var.assured_workloads.regime != "COMPLIANCE_REGIME_UNSPECIFIED"
+    ? format("folders/%s", try(
+      coalesce(
+        one([
+          for r in try(google_assured_workloads_workload.primary[0].resources, []) :
+          tostring(r.resource_id) if r.resource_type == "CONSUMER_FOLDER"
+        ]),
+        try(tostring(google_assured_workloads_workload.primary[0].resources[0].resource_id), null)
+      ),
+      ""
+    ))
+    : try(module.no-compliance-folder[0].id, null)
+  )
 }
