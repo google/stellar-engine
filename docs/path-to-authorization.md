@@ -180,18 +180,18 @@ Continuously **monitor** control implementation and risks to the system
 
 **Additional Artifacts for an ATO:**
 
-- Privacy Impact Assessment
-  (PIA)
-- PII Confidentiality Impact Level
-  (PCIL)
-- System of Records Notice
-  (SORN)
-- Hardware
-  List
-- Software
-  List
-- Ports, Protocols, and Services Management
-  (PPSM)
+- [Privacy Impact Assessment
+  (PIA)](./artifacts/PIA-PCIL-SORN/)
+- [PII Confidentiality Impact Level
+  (PCIL)](./artifacts/PIA-PCIL-SORN/)
+- [System of Records Notice
+  (SORN)](./artifacts/PIA-PCIL-SORN/)
+- [Hardware
+  List](./artifacts/hw-sw-list/)
+- [Software
+  List](./artifacts/hw-sw-list/)
+- [Ports, Protocols, and Services Management
+  (PPSM)](./artifacts/ppsms/)
 
 **Things to Consider:**
 
