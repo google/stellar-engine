@@ -102,7 +102,7 @@ Internal connectivity (e.g. between the landing landing VPC and the spokes) is r
 
 This is an options summary
 
-- [VPC Peering](https://cloud.google.com/vpc/docs/vpc-peering) (used here to connect the landing landing VPC with the spokes, also used by 02-networking-vpn)
+- [VPC Peering](https://cloud.google.com/vpc/docs/vpc-peering) (used here to connect the landing landing VPC with the spokes)
   - Pros: no additional costs, full bandwidth with no configurations, no extra latency
   - Cons: no transitivity (e.g. to GKE masters, Cloud SQL, etc.), no selective exchange of routes, several quotas and limits shared between VPCs in a peering group
 - [Multi-NIC appliances](https://cloud.google.com/architecture/best-practices-vpc-design#multi-nic) (used here to connect the landing landing and dmz VPCs) and multi-NIC appliances with NCC/BGP support implemented here
