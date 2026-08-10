@@ -18,7 +18,7 @@ The diagram shows the high-level design and it should be used as a reference thr
 The final number of subnets, and their IP addressing will depend on the user-specific requirements. It can be easily changed via variables or external data files, without any need to edit the code.
 
 <p align="center">
-  <img src="diagram.svg" alt="Networking diagram">
+  <img src="images/Stellar-Engine-Network-IL-5.png" alt="Networking diagram">
 </p>
 
 # Table of Contents

@@ -17,12 +17,16 @@ import google.auth
 from googleapiclient.discovery import build
 import subprocess
 
-required_roles = [
-    'roles/discoveryengine.admin',
-    'roles/aiplatform.admin',
-    'roles/serviceusage.serviceUsageAdmin',
-    'roles/storage.admin',
-    'roles/bigquery.admin'
+# Representative permissions from each required role.
+# testIamPermissions checks effective permissions, so Owner, custom roles,
+# and group-inherited bindings all pass correctly — unlike getIamPolicy
+# which only matches direct user: bindings by role name.
+required_permissions = [
+    'discoveryengine.engines.create',
+    'aiplatform.datasets.create',
+    'serviceusage.services.enable',
+    'storage.buckets.create',
+    'bigquery.datasets.create',
 ]
 
 def get_credentials():
@@ -55,21 +59,23 @@ def get_user_email(credentials):
         exit()
 
 def check_roles(credentials, project_id):
-    """Checks if the user has the required roles."""
+    """Checks if the user has the required permissions using testIamPermissions.
+
+    Uses testIamPermissions rather than getIamPolicy so that effective
+    permissions granted via roles/owner, custom roles, or group membership
+    are correctly recognised. getIamPolicy only matched direct user: bindings
+    by role name, causing false "missing roles" warnings for those cases.
+    """
     service = build('cloudresourcemanager', 'v1', credentials=credentials)
-    policy = service.projects().getIamPolicy(resource=project_id).execute()
-    user_email = get_user_email(credentials)
-    user_roles = []
-    for binding in policy.get('bindings', []):
-        if user_email in [member.split(':', 1)[1] for member in binding.get('members', []) if ':' in member]:
-            user_roles.append(binding['role'])
+    body = {'permissions': required_permissions}
+    response = service.projects().testIamPermissions(resource=project_id, body=body).execute()
+    granted = response.get('permissions', [])
+    missing = [p for p in required_permissions if p not in granted]
 
-    missing_roles = [role for role in required_roles if role not in user_roles]
-
-    if missing_roles:
-        click.echo("You are missing the following required roles:")
-        for role in missing_roles:
-            click.echo(f"- {role}")
+    if missing:
+        click.echo("You are missing the following required permissions:")
+        for p in missing:
+            click.echo(f"- {p}")
         return False
     click.echo("Role validation successful.")
     return True

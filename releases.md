@@ -1,6 +1,6 @@
 # Release Strategy and Documentation
 
-This document outlines the versioning scheme, release classification, and release automation process for the `stellar-engine` repository.
+This document outlines the versioning scheme, release classification, and release automation process for the [stellar-engine](https://github.com/google/stellar-engine/) repository.
 
 ## Release Classification and Versioning Scheme
 
@@ -31,7 +31,6 @@ Patch releases (e.g., `vX.Y.Z`) cover critical bug fixes, security patches, and 
 * Definition: Critical bug fixes, security patches, or urgent non-breaking adjustments.
 * Process: Executed on an ad-hoc basis, where the release is updated and tagged manually.
 
-
 ## Release Cadence and Automation Summary
 
 | Release Type | Trigger / Cadence | Execution | State Manipulation / Redeploy Required? |
@@ -39,7 +38,6 @@ Patch releases (e.g., `vX.Y.Z`) cover critical bug fixes, security patches, and 
 | Major (`vX.0.0`) | As needed | Manual | Yes |
 | Minor (`vX.Y.0`) | Monthly | Automated (from `main`) | No |
 | Patch (`vX.Y.Z`) | Ad-hoc / As needed | Manual | No |
-
 
 ## Contributor Guidelines and Release Workflow
 
