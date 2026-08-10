@@ -104,9 +104,9 @@ module "bastion-vm" {
 
   attached_disks = [
     {
-      auto_delete       = true
-      size              = 10
-      name              = var.disk_name
+      auto_delete = true
+      size        = 10
+      name        = var.disk_name
       snapshot_schedule = ["daily-backup"]
       initialize_params = {
         image = var.image
