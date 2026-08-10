@@ -179,7 +179,7 @@ These features are optional and only enabled if the relevant variables have been
 
 ## How to Run This Stage
 
-For detailed information on prerequisites and steps to deploy this stage, please see the latest [Detailed Deployment Guide (DDG)](../../../docs/ddg.md) If you do not have access, you will have to request it.
+For detailed information on prerequisites and steps to deploy this stage, please see the latest [Detailed Deployment Guide (DDG)](/docs/ddg.md) If you do not have access, you will have to request it.
 
 ## Customizations
 
