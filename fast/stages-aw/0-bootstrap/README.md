@@ -171,7 +171,7 @@ This stage also implements initial support for two interrelated features
 
 Workload Identity Federation support allows configuring external providers independently from CI/CD, and offers predefined attributes for a few well known ones (more can be easily added by editing the `identity-providers.tf` file). Once providers have been configured their names are passed to the following stages via interface outputs, and can be leveraged to set up access or impersonation in IAM bindings.
 
-CI/CD support is fully implemented for GitHub, Gitlab, and Cloud Source Repositories / Cloud Build. For GitHub, we also offer a separate supporting setup to quickly create/configure repositories.
+CI/CD support is fully implemented for GitHub, Gitlab, and Cloud Source Repositories / Cloud Build.
 
 For details on how to configure both features, refer to the Customizations sections below on [Workload Identity Federation](#workload-identity-federation) and [CI/CD repositories](#cicd-repositories).
 
