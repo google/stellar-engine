@@ -100,7 +100,7 @@ essentialcontacts.managed.allowedContactDomains:
   - enforce: true
 
 
-%{ if !contains(["FEDRAMP_MODERATE", "FRM"], regime) ~}
+%{ if !contains(["FEDRAMP_MODERATE"], regime) ~}
 # Policy: compute.managed.restrictProtocolForwardingCreationForTypes
 # Description: Restricts the creation of protocol forwarding.
 # You might need to adjust rules based on your exact requirements,
