@@ -57,5 +57,4 @@ All script executions are logged to the `logs/` directory, organized by script n
 2.  **Deploy**: Run `./deploy.sh` and follow the prompts.
 3.  **Destroy**: Run `./destroy.sh` when you need to tear down the environment.
 
----
 **Disclaimer**: These tools perform powerful operations on your Google Cloud environment. Always verify your configuration and backups before running destructive commands.
