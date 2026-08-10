@@ -355,8 +355,8 @@ module "cf-http" {
 
 ## Fixtures
 
-- [cloudbuild-custom-pool.tf](../../tests/fixtures/cloudbuild-custom-pool.tf)
-- [functions-default-sa-iam-grants.tf](../../tests/fixtures/functions-default-sa-iam-grants.tf)
-- [pubsub.tf](../../tests/fixtures/pubsub.tf)
-- [secret-credentials.tf](../../tests/fixtures/secret-credentials.tf)
+- cloudbuild-custom-pool.tf
+- functions-default-sa-iam-grants.tf
+- pubsub.tf
+- secret-credentials.tf
 <!-- END TFDOC -->

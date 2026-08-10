@@ -80,7 +80,7 @@ based on the impact analysis
 - [Categorize](https://csrc.nist.gov/pubs/sp/800/60/v1/r1/final) each system
   based on the impact to the organization if the confidentiality,
   availability, or integrity were to become compromised.
-  - [Categorization References](/docs/artifacts/categorization-references/)
+  - Categorization References
   - [System Security Plan
     Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
 
@@ -180,18 +180,18 @@ Continuously **monitor** control implementation and risks to the system
 
 **Additional Artifacts for an ATO:**
 
-- [Privacy Impact Assessment
-  (PIA)](/docs/artifacts/PIA-PCIL-SORN/)
-- [PII Confidentiality Impact Level
-  (PCIL)](/docs/artifacts/PIA-PCIL-SORN/)
-- [System of Records Notice
-  (SORN)](/docs/artifacts/PIA-PCIL-SORN/)
-- [Hardware
-  List](/docs/artifacts/hw-sw-list/)
-- [Software
-  List](/docs/artifacts/hw-sw-list/)
-- [Ports, Protocols, and Services Management
-  (PPSM)](/docs/artifacts/ppsms/)
+- Privacy Impact Assessment
+  (PIA)
+- PII Confidentiality Impact Level
+  (PCIL)
+- System of Records Notice
+  (SORN)
+- Hardware
+  List
+- Software
+  List
+- Ports, Protocols, and Services Management
+  (PPSM)
 
 **Things to Consider:**
 

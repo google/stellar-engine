@@ -320,5 +320,5 @@ module "processing-dp-cluster" {
 
 ## Fixtures
 
-- [gke-cluster-standard.tf](../../tests/fixtures/gke-cluster-standard.tf)
+- gke-cluster-standard.tf
 <!-- END TFDOC -->

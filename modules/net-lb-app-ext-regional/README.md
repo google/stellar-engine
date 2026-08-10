@@ -826,6 +826,6 @@ For deploying changes to load balancer configuration please refer to [net-lb-app
 
 ## Fixtures
 
-- [compute-vm-group-bc.tf](../../tests/fixtures/compute-vm-group-bc.tf)
-- [ssl-certificate.tf](../../tests/fixtures/ssl-certificate.tf)
+- compute-vm-group-bc.tf
+- ssl-certificate.tf
 <!-- END TFDOC -->

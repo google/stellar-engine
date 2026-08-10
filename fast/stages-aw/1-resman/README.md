@@ -23,7 +23,7 @@ The design of this stage ensures that all parts of a Stellar Engine deployment r
 
 ## How to Run This Stage
 
-For detailed information on prerequisites and steps to deploy this stage, please see the latest [Detailed Deployment Guide (DDG)](/docs/ddg.md) If you do not have access, you will have to request it.
+For detailed information on prerequisites and steps to deploy this stage, please see the latest [Detailed Deployment Guide (DDG)](../../../docs/ddg.md) If you do not have access, you will have to request it.
 
 ### Impersonating the Automation Service Account
 
@@ -31,7 +31,7 @@ The preconfigured provider file uses impersonation to run with this stage's auto
 
 ### Lightweight multitenancy
 
-If the organization needs to support tenants without the full complexity and separation offered by our [full multitenant support](../../stages-multitenant/), this stage offers a simplified setup which is suitable for cases where tenants have less autonomy, and don't need to implement FAST stages inside their reserved partition.
+If the organization needs to support tenants without the full complexity and separation offered by our full multitenant support, this stage offers a simplified setup which is suitable for cases where tenants have less autonomy, and don't need to implement FAST stages inside their reserved partition.
 
 This mode is activated by defining tenants in the `tenants` variable, while IAM configurations that apply to every tenant can be optionally set in the `tenants_config` variable.
 

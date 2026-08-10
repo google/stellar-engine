@@ -211,6 +211,6 @@ module "public-dns" {
 
 ## Fixtures
 
-- [compute-mig.tf](../../tests/fixtures/compute-mig.tf)
-- [net-lb-app-int-cross-region.tf](../../tests/fixtures/net-lb-app-int-cross-region.tf)
+- compute-mig.tf
+- net-lb-app-int-cross-region.tf
 <!-- END TFDOC -->

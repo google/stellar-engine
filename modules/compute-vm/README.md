@@ -969,6 +969,6 @@ module "sole-tenancy" {
 
 ## Fixtures
 
-- [iam-service-account.tf](../../tests/fixtures/iam-service-account.tf)
-- [net-vpc-ipv6.tf](../../tests/fixtures/net-vpc-ipv6.tf)
+- iam-service-account.tf
+- net-vpc-ipv6.tf
 <!-- END TFDOC -->

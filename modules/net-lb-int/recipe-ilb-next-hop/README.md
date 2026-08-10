@@ -4,7 +4,7 @@ This recipe shows how to bootstraps a minimal infrastructure for testing [ILB as
 
 The following diagram shows the resources created by this blueprint
 
-![High-level diagram](diagram.png "High-level diagram")
+!High-level diagram
 
 Two ILBs are configured on the primary and secondary interfaces of gateway VMs with active health checks, but only a single one is used as next hop by default to simplify testing. The second (right-side) VPC has default routes that point to the gateway VMs, to also use the right-side ILB as next hop set the `ilb_right_enable` variable to `true`.
 
