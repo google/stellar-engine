@@ -45,7 +45,7 @@ The suite of modules in this repository is designed for rapid composition and re
 
 All modules share a similar interface where each module tries to stay close to the underlying provider resources, support IAM together with resource creation and modification, offer the option of creating multiple resources where it makes sense (e.g. not for projects), and be completely free of side-effects (e.g. no external commands).
 
-A well-defined naming standard is used across Stellar Engine to ensure adherence to Google Cloud's best practices, naming requirements, and naming collision avoidance for global resources. The Google Cloud naming standard documentation is here and will be used before the Stellar Engine deployment begins by choosing a naming standard that will flow through the Google Cloud infrastructure state.
+A well-defined naming standard is used across Stellar Engine to ensure adherence to Google Cloud's best practices, naming requirements, and naming collision avoidance for global resources. The Google Cloud naming standard documentation is [here](./docs/naming-convention.md) and will be used before the Stellar Engine deployment begins by choosing a naming standard that will flow through the Google Cloud infrastructure state.
 
 The current modules support most of the core foundational and networking components used to design end-to-end infrastructure, with more modules in active development for specialized compute, security, and data scenarios.
 
