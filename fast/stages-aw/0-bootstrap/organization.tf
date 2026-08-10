@@ -115,6 +115,7 @@ locals {
         customer_id : var.organization.customer_id
         drs_tag_name : local.drs_tag_name
         allowed_domains : var.org_policies_config.constraints.allowed_policy_member_domains
+        regime : var.assured_workloads.regime
       }))
     ]
   )...)

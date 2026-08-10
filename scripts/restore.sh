@@ -36,16 +36,16 @@ gcloud alpha billing projects link "${PREFIX}"-net-vdss-host --billing-account "
 if promptUser "Stage 2 - Networking"; then
   # Choose networking paradigm
   echo "Please type \"1\", \"2\", or \"3\" below that corresponds to the network paradigm you want: "
-  echo "1) IL2/FedRAMP Moderate"
-  echo "2) FedRAMP High"
+  echo "1) IL2"
+  echo "2) FedRAMP High/Moderate"
   echo "3) IL4/IL5"
   read -r choice
 
-  ########### IL2/FedRAMP Moderate ###########
+  ########### IL2 ###########
   if [ "$choice" == 1 ]; then
     echo "This stage is still under development."
 
-  ########### FedRAMP High ###########
+  ########### FedRAMP High/Moderate ###########
   elif [ "$choice" == 2 ]; then
     cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-a-fedramp-high || exit
 

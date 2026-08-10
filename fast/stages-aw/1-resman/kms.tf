@@ -35,7 +35,7 @@ module "tenant-project-keys" {
       rotation_period = "7776000s" # CIS Compliance Benchmark 1.10
       version_template = {
         algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
-        protection_level = "HSM"
+        protection_level = var.kms_protection_level
       }
     },
     default = {
@@ -45,7 +45,7 @@ module "tenant-project-keys" {
       rotation_period = "7776000s"
       version_template = {
         algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
-        protection_level = "HSM"
+        protection_level = var.kms_protection_level
       }
     }
   }

@@ -33,9 +33,10 @@ To destroy a previous FAST deployment follow the instructions detailed in [clean
 
 ## Networking (2)
 
-- [IL5 Compliant](2-networking-b-il5-ngfw/README.md)
-- [FedRAMP High Compliant](2-networking-a-fedramp-high/README.md)
-  Manages centralized network resources in a separate stage, and is typically owned by the networking team. This stage implements a hub-and-spoke design, and includes connectivity via VPN to on-premises, and YAML-based factories for firewall rules (hierarchical and VPC-level) and subnets. Currently, two networking options (IL5 and FedRAMP High Compliant) are available, with a third lightweight networking option currently being developed, with recommended usage in IL2 and FedRAMP Moderate environments.
+- [FedRAMP High/Moderate Compliant](2-networking-a-fedramp-high/README.md)
+- [IL5/IL4 Compliant](2-networking-b-il5-ngfw/README.md)
+
+Manages centralized network resources in a separate stage, and is typically owned by the networking team. This stage implements a hub-and-spoke design, and includes connectivity via VPN to on-premises, and YAML-based factories for firewall rules (hierarchical and VPC-level) and subnets. Currently, two networking options (IL5 and FedRAMP High Compliant) are available, with a third lightweight networking option currently being developed, with recommended usage in IL2 and FedRAMP Moderate environments.
 
 ## Security (3)
 

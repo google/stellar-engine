@@ -163,6 +163,11 @@ output "custom_roles" {
   value       = module.organization.custom_role_id
 }
 
+output "kms_protection_level" {
+  description = "KMS protection level."
+  value       = var.kms_protection_level
+}
+
 output "outputs_bucket" {
   description = "GCS bucket where generated output files are stored."
   value       = module.automation-tf-output-gcs.name

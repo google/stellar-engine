@@ -110,6 +110,12 @@ variable "kms_keys" {
   nullable = false
 }
 
+variable "kms_protection_level" {
+  description = "KMS protection level."
+  type        = string
+  nullable    = true
+}
+
 variable "logging" {
   # tfdoc:variable:source 0-bootstrap
   description = "Log writer identities for organization / folders."

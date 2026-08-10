@@ -35,5 +35,6 @@ locals {
     kms     = var.regions.primary
   }
   # naming: environment used in most resource names
-  prefix = join("-", compact([var.prefix, "prod"]))
+  prefix               = join("-", compact([var.prefix, "prod"]))
+  kms_protection_level = coalesce(var.kms_protection_level, var.assured_workloads.regime == "FEDRAMP_MODERATE" ? "SOFTWARE" : "HSM")
 }
