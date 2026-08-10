@@ -24,7 +24,7 @@ This runbook provides a structured, actionable process for Security Operators an
 * Familiarity with the Stellar framework's GitOps repository to revert unauthorized Infrastructure as Code (IaC) changes.
 
 ## 3. Scope
-This runbook applies to all environments deployed using Stellar, including FedRAMP High and IL5 landing zones, where CMEK is mandated for data at rest. It covers:
+This runbook applies to all environments deployed using Stellar, including FedRAMP High, FedRAMP Moderate, and IL5 landing zones, where CMEK is mandated for data at rest. It covers:
 * Compromise of Cloud KMS symmetric or asymmetric keys.
 * Malicious or accidental scheduling of key destruction.
 * Loss of access due to improper IAM bindings on keys or key rings.
@@ -39,7 +39,7 @@ Monitor for the following indicators of compromise or loss:
 * **Cloud Logging:** Administrative actions on `cloudkms.googleapis.com`.
 * **Security Command Center (SCC):** Alerts for anomalous KMS activity, excessive administrative actions, or policy violations.
 * **Service Disruption (Availability Impact):** Automated alerts for widespread HTTP 500s, applications failing to start, or Cloud Storage/BigQuery returning `Permission Denied` or `FAILED_PRECONDITION` (Key Disabled) errors.
-* **Key Access Justifications (KAJ):** For IL5/FedRAMP environments, unusual justification codes logged during key access.
+* **Key Access Justifications (KAJ):** For IL5/FedRAMP High/Moderate environments, unusual justification codes logged during key access.
 
 ### 4.2 Initial Assessment & Log Extraction
 1. **Locate the Log Entry:** Find the specific KMS log entry causing the alert.

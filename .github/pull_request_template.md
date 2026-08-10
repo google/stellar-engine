@@ -14,6 +14,7 @@ Fixes # (GitHub issue id)
     *   [ ] US Region Restricted (e.g., Access Policy constraint)
     *   [ ] FedRAMP Moderate
     *   [ ] FedRAMP High
+    *   [ ] FedRAMP Moderate
     *   [ ] DoD IL4
     *   [ ] DoD IL5
     *   [ ] General / All
@@ -32,7 +33,7 @@ Fixes # (GitHub issue id)
 
 ### Security
 - [ ] My change adheres to GCP security best practices and the principle of least privilege.
-- [ ] I have ensured compliance with the targeted regime (FedRAMP High, IL5, etc.).
+- [ ] I have ensured compliance with the targeted regime (FedRAMP Moderate, FedRAMP High, IL5, etc.).
 
 ### Testing
 - [ ] I have tested my changes locally.

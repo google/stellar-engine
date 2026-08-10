@@ -23,7 +23,7 @@ This runbook provides a structured process for Security Operators and Incident R
 * `roles/accesscontextmanager.policyAdmin` (via Break-Glass/Emergency Access) to modify perimeters if immediate containment is required.
 
 ## 3. Scope
-This runbook applies to all environments deployed using the Stellar framework (including FedRAMP High and IL5 landing zones) where VPC-SC is used to protect sensitive data and mitigate data exfiltration risks.
+This runbook applies to all environments deployed using the Stellar framework (including FedRAMP High, FedRAMP Moderate, and IL5 landing zones) where VPC-SC is used to protect sensitive data and mitigate data exfiltration risks.
 
 ---
 

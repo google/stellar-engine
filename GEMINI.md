@@ -4,7 +4,7 @@
 
 Stellar Engine is a fork of the Google Cloud Foundation Fabric (CFF), providing Infrastructure as Code (IaC) to help Google Cloud Platform
 (GCP) customers create secure and compliant landing zones. It has a strong focus on environments requiring Assured Workload overlays, such
-as FedRAMP High, IL4, and IL5, and includes documentation mapping NIST 800-53r5 controls to accelerate Authorization to Operate (ATO)
+as FedRAMP Moderate, FedRAMP High, IL4, and IL5, and includes documentation mapping NIST 800-53r5 controls to accelerate Authorization to Operate (ATO)
 processes.
 
 **Key Technologies:** Terraform, Google Cloud Platform (GCP)
@@ -35,7 +35,7 @@ outputs, and any dependencies.
 Consistency in naming variables, resources, modules, and files is crucial.
 
 5.  **Security:** Adhere to GCP security best practices and the principle of least privilege in all configurations. Ensure compliance with
-the targeted regime (FedRAMP High, IL5, etc.).
+the targeted regime (FedRAMP Moderate, FedRAMP High, IL5, etc.).
 
 ## Key Codebase Resources
 

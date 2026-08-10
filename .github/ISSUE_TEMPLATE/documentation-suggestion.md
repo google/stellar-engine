@@ -20,4 +20,4 @@ Where should this documentation live? e.g., existing file in `docs/`, a new file
 Please provide a draft or outline of the content you would like to add.
 
 ## Compliance Context (if applicable)
-Does this documentation relate to a specific compliance regime (FedRAMP High, IL5) or NIST control?
+Does this documentation relate to a specific compliance regime (FedRAMP Moderate, FedRAMP High, IL5) or NIST control?

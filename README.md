@@ -14,7 +14,7 @@ This repository provides **end-to-end blueprints** and a **suite of Terraform mo
 
 The target audience for Stellar Engine is organizations and teams that operate in regulated industries or require robust compliance and security frameworks. Below are a few examples of these such users:
 
-- **Government Agencies:** Agencies and contractors, such as those that work with FRH, IL4, and IL5 environments.  <br />
+- **Government Agencies:** Agencies and contractors, such as those that work with FRM, FRH, IL4, and IL5 environments.  <br />
 - **Regulated Industries:** Regulated industries often face overlapping compliance and security requirements; Stellar Engine can simplify that.  <br />
 - **Educational and Research Institutions:** Universities and research organizations working on government-funded projects that require secure and compliant cloud environments.  <br />
 
@@ -64,7 +64,7 @@ In addition to the IaC, Stellar Engine provides supporting documentation that ma
 
 ## Detailed Deployment Guide
 
-The Stellar Engine Cloud Foundation Fabric Detailed Deployment Guide (DDG) outlines a structured process for deploying a secure, compliant infrastructure on GCP using IaC. Designed to support compliance with standards such as FRH, IL4, and IL5, the guide enables organizations to create a foundational "landing zone" with Assured Workload overlays. It includes mappings of NIST 800-53r5 controls to streamline achieving ATO. The deployment process is divided into stages, each focusing on specific components like resource management, networking, and security configuration.
+The Stellar Engine Cloud Foundation Fabric Detailed Deployment Guide (DDG) outlines a structured process for deploying a secure, compliant infrastructure on GCP using IaC. Designed to support compliance with standards such as FRM, FRH, IL4, and IL5, the guide enables organizations to create a foundational "landing zone" with Assured Workload overlays. It includes mappings of NIST 800-53r5 controls to streamline achieving ATO. The deployment process is divided into stages, each focusing on specific components like resource management, networking, and security configuration.
 
 Key stages include Stage 0 (Bootstrap), which initializes the infrastructure, creates core Google Cloud Projects, and sets up service accounts; Stage 1 (Resource Management), which organizes Google Cloud Folders and Google Cloud Projects for tenants; and Stage 2 (Network Creation), which configures networking, including advanced setups like Palo Alto NGFWs for IL5 environments. The final stage, Stage 3 (Security and Audit Account Configuration), establishes security protocols, including Customer Managed Encryption Keys (CMEK) requirements and logging for audit purposes. Each stage requires detailed configuration of Terraform variables and adherence to prerequisites like IAM roles, service account setups, and enabling Google Cloud services.
 
@@ -82,7 +82,7 @@ For more information, please look at the [TDD](./docs/tdd.md).
 
 ## Security Best Practices Guide
 
-The Stellar Engine Security Best Practices Guide (SBPG) outlines a robust framework for deploying secure and compliant GCP infrastructure. Designed for organizations requiring adherence to FRH and IL5 standards, it employs IaC principles via Terraform. The Stellar Engine facilitates the automated creation of a baseline GCP environment, supporting modular deployment of both Google and approved third-party services. Its hierarchical architecture ensures effective organization, leveraging role-based access control (RBAC), strict IAM policies, and a hub-and-spoke VPC networking design for isolation and scalability.
+The Stellar Engine Security Best Practices Guide (SBPG) outlines a robust framework for deploying secure and compliant GCP infrastructure. Designed for organizations requiring adherence to FRM, FRH, and IL5 standards, it employs IaC principles via Terraform. The Stellar Engine facilitates the automated creation of a baseline GCP environment, supporting modular deployment of both Google and approved third-party services. Its hierarchical architecture ensures effective organization, leveraging role-based access control (RBAC), strict IAM policies, and a hub-and-spoke VPC networking design for isolation and scalability.
 
 The document emphasizes best practices in identity and access management, security monitoring, and compliance. IAM configurations focus on the principle of least privilege, with automation enabling minimal human interaction during setup. Security features include encryption-at-rest, TLS enforcement, and centralized logging and monitoring through audit logs, VPC flow logs, and other diagnostics. The system supports Assured Workloads, providing region-specific data residency and compliance settings to meet regulatory requirements.
 
