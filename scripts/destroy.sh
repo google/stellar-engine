@@ -656,11 +656,11 @@ if [[ "${skip_stage_2:-}" != "true" ]] && promptUser "Stage 2 - Networking"; the
   echo "3) IL4/IL5"
   read -r choice
 
-  ########### IL2/FedRAMP Moderate ###########
+  ########### IL2 ###########
   if [ "$choice" == 1 ]; then
     echo "This stage is still under development."
 
-  ########### FedRAMP High ###########
+  ########### FedRAMP High/Moderate ###########
   elif [ "$choice" == 2 ]; then
     cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-a-fedramp-high || exit
     destroy_networking
@@ -669,6 +669,7 @@ if [[ "${skip_stage_2:-}" != "true" ]] && promptUser "Stage 2 - Networking"; the
   elif [ "$choice" == 3 ]; then
     cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-b-il5-ngfw || exit
     destroy_networking
+  fi
   
   if promptUser "Would you like to remove billing account admin permissions for the ${PREFIX}-prod-resman-net-0@${PREFIX}-prod-iac-core-0.iam.gserviceaccount.com?"; then
     if ! gcloud billing accounts remove-iam-policy-binding "${BILLING_ACCOUNT}" --member=serviceAccount:"${PREFIX}"-prod-resman-net-0@"${PREFIX}"-prod-iac-core-0.iam.gserviceaccount.com --role=roles/billing.admin; then
