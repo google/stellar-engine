@@ -29,7 +29,15 @@ variable "backend_service_configs" {
     protocol                        = optional(string)
     security_policy                 = optional(string)
     session_affinity                = optional(string)
-    timeout_sec                     = optional(number)
+    strong_session_affinity_cookie = optional(object({
+      name = optional(string)
+      path = optional(string, "/")
+      ttl = optional(object({
+        seconds = number
+        nanos   = optional(number)
+      }))
+    }))
+    timeout_sec = optional(number)
     backends = list(object({
       # group renamed to backend
       backend         = string
@@ -125,12 +133,23 @@ variable "backend_service_configs" {
       for backend_service in values(var.backend_service_configs) : contains(
         [
           "NONE", "CLIENT_IP", "CLIENT_IP_NO_DESTINATION",
-          "CLIENT_IP_PORT_PROTO", "CLIENT_IP_PROTO"
+          "CLIENT_IP_PORT_PROTO", "CLIENT_IP_PROTO",
+          "GENERATED_COOKIE", "HTTP_COOKIE", "HEADER_FIELD",
+          "STRONG_COOKIE_AFFINITY"
         ],
         coalesce(backend_service.session_affinity, "NONE")
       )
     ])
     error_message = "Invalid session affinity value."
+  }
+  validation {
+    condition = alltrue([
+      for backend_service in values(var.backend_service_configs) : (
+        coalesce(backend_service.session_affinity, "NONE") != "STRONG_COOKIE_AFFINITY"
+        || backend_service.strong_session_affinity_cookie != null
+      )
+    ])
+    error_message = "strong_session_affinity_cookie is required when session_affinity is STRONG_COOKIE_AFFINITY."
   }
   validation {
     condition = alltrue(flatten([

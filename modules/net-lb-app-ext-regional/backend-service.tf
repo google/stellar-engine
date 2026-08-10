@@ -193,6 +193,29 @@ resource "google_compute_region_backend_service" "default" {
     }
   }
 
+  dynamic "strong_session_affinity_cookie" {
+    for_each = (
+      each.value.strong_session_affinity_cookie == null
+      ? []
+      : [each.value.strong_session_affinity_cookie]
+    )
+    content {
+      name = strong_session_affinity_cookie.value.name
+      path = strong_session_affinity_cookie.value.path
+      dynamic "ttl" {
+        for_each = (
+          strong_session_affinity_cookie.value.ttl == null
+          ? []
+          : [strong_session_affinity_cookie.value.ttl]
+        )
+        content {
+          seconds = ttl.value.seconds
+          nanos   = ttl.value.nanos
+        }
+      }
+    }
+  }
+
   dynamic "iap" {
     for_each = each.value.iap_config == null ? [] : [each.value.iap_config]
     content {
