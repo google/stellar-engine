@@ -53,7 +53,7 @@ For more information and usage examples see each module's README file, as well a
 
 ## End-to-End Blueprints
 
-Stellar Engine currently offers blueprints that are compliant with [FRH](https://github.com/google/stellar-engine/tree/main/blueprints/fedramp-high) and [IL5](https://github.com/google/stellar-engine/tree/main/blueprints/il5) baselines. </br>
+Stellar Engine currently offers blueprints that are compliant with [FRM](https://github.com/google/stellar-engine/tree/main/blueprints/fedramp-moderate), [FRH](https://github.com/google/stellar-engine/tree/main/blueprints/fedramp-high), and [IL5](https://github.com/google/stellar-engine/tree/main/blueprints/il5) baselines. </br>
 These blueprints range from full end-to-end services like a Cloud Native Access Point (CNAP), to ad-hoc services that are designed to be molded to users' individual use cases.
 
 For more information, please look at each blueprint's README file.
