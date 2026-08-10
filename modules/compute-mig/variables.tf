@@ -174,6 +174,15 @@ variable "health_check_config" {
   }
 }
 
+variable "instance_lifecycle_policy" {
+  description = "Instance lifecycle policy for repairs and failures."
+  type = object({
+    force_update_on_repair    = optional(string) # YES, NO
+    default_action_on_failure = optional(string) # DO_NOTHING, REPAIR
+  })
+  default = null
+}
+
 variable "instance_template" {
   description = "Instance template for the default version."
   type        = string
