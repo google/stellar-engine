@@ -1531,20 +1531,20 @@ configure_stage_0() {
         echo ""
         echo -e "${RED}WARNING: Discovery Engine API is not currently included in the Assured Workloads Service Usage Allowlist Org Policy for IL5.${NC}"
         echo -e "${RED}Gemini for Government can only be used by creating an exception and adding discoveryengine.googleapis.com to the allowlist.${NC}"
-        read -p "Do you want to attempt to enable Discovery Engine and Certificate Manager APIs? [y/N]: " ENABLE_APIS_NOW
+        read -p "Do you want to attempt to enable the required APIs (Discovery Engine, Cert Manager, Cloud Identity, AI Platform)? [y/N]: " ENABLE_APIS_NOW
         if [[ "$ENABLE_APIS_NOW" =~ ^[Yy]$ ]]; then
             echo "Attempting to enable APIs..."
-            if ! gcloud services enable discoveryengine.googleapis.com certificatemanager.googleapis.com --project "${PROJECT_ID}"; then
-                echo -e "${RED}WARNING: Failed to enable Discovery Engine or Certificate Manager APIs.${NC}"
+            if ! gcloud services enable discoveryengine.googleapis.com certificatemanager.googleapis.com cloudidentity.googleapis.com aiplatform.googleapis.com --project "${PROJECT_ID}"; then
+                echo -e "${RED}WARNING: Failed to enable one or more requested APIs.${NC}"
                 echo -e "${RED}This is expected if the APIs are not in your allowlist and you have not created an exception.${NC}"
             fi
         else
             echo -e "${YELLOW}Skipping API enablement. You may need to enable them manually after configuring exceptions.${NC}"
         fi
     else
-        echo -e "${GREEN}Enabling Discovery Engine and Certificate Manager APIs automatically...${NC}"
-        if ! gcloud services enable discoveryengine.googleapis.com certificatemanager.googleapis.com --project "${PROJECT_ID}"; then
-            echo -e "${RED}WARNING: Failed to enable Discovery Engine or Certificate Manager APIs.${NC}"
+        echo -e "${GREEN}Enabling Discovery Engine, Certificate Manager, Cloud Identity, and AI Platform APIs automatically...${NC}"
+        if ! gcloud services enable discoveryengine.googleapis.com certificatemanager.googleapis.com cloudidentity.googleapis.com aiplatform.googleapis.com --project "${PROJECT_ID}"; then
+            echo -e "${RED}WARNING: Failed to enable one or more requested APIs.${NC}"
             echo -e "${RED}Please ensure you have permissions to enable these APIs or they are allowed by your Org Policy.${NC}"
         fi
     fi
