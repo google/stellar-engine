@@ -2,7 +2,7 @@
 
 This module allows simplified creation and management of one a service account and its IAM bindings.
 
-The Service Account `key` can be generated with `openssl` library and only the public part uploaded to the Service Account, for more refer to the [Onprem SA Key Management](../../blueprints/cloud-operations/onprem-sa-key-management/) example.
+The Service Account `key` can be generated with `openssl` library and only the public part uploaded to the Service Account, for more refer to the Onprem SA Key Management example.
 
 Note that outputs have no dependencies on IAM bindings to prevent resource cycles.
 

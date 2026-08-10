@@ -17,7 +17,7 @@ To achieve this, we rely on specific GCP functionality like [delegated role gran
 
 Refer to each stage's documentation for a detailed description of its purpose, the architectural choices made in its design, and how it can be configured and wired together to terraform a whole GCP organization. The following is a brief overview of each stage.
 
-To destroy a previous FAST deployment follow the instructions detailed in [cleanup](CLEANUP.md).
+To destroy a previous FAST deployment follow the instructions detailed in cleanup.
 
 ## Fast Stages Diagram
 
@@ -33,10 +33,10 @@ To destroy a previous FAST deployment follow the instructions detailed in [clean
 
 ## Networking (2)
 
-- [FedRAMP High/Moderate Compliant](2-networking-a-fedramp-high/README.md)
+- [FedRAMP High/Moderate Compliant](/fast/stages-aw/2-networking-a-fedramp/README.md)
 - [IL5/IL4 Compliant](2-networking-b-il5-ngfw/README.md)
 
-Manages centralized network resources in a separate stage, and is typically owned by the networking team. This stage implements a hub-and-spoke design, and includes connectivity via VPN to on-premises, and YAML-based factories for firewall rules (hierarchical and VPC-level) and subnets. Currently, two networking options (IL5 and FedRAMP High Compliant) are available, with a third lightweight networking option currently being developed, with recommended usage in IL2 and FedRAMP Moderate environments.
+Manages centralized network resources in a separate stage, and is typically owned by the networking team. This stage implements a hub-and-spoke design, and includes connectivity via VPN to on-premises, and YAML-based factories for firewall rules (hierarchical and VPC-level) and subnets. Currently, two networking options (IL5/IL4 and FedRAMP High/Moderate Compliant) are available.
 
 ## Security (3)
 

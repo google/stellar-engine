@@ -581,10 +581,10 @@ module "cloud_run" {
 
 ## Fixtures
 
-- [cloudsql-instance.tf](../../tests/fixtures/cloudsql-instance.tf)
-- [iam-service-account.tf](../../tests/fixtures/iam-service-account.tf)
-- [pubsub.tf](../../tests/fixtures/pubsub.tf)
-- [secret-credentials.tf](../../tests/fixtures/secret-credentials.tf)
-- [shared-vpc.tf](../../tests/fixtures/shared-vpc.tf)
-- [vpc-connector.tf](../../tests/fixtures/vpc-connector.tf)
+- cloudsql-instance.tf
+- iam-service-account.tf
+- pubsub.tf
+- secret-credentials.tf
+- shared-vpc.tf
+- vpc-connector.tf
 <!-- END TFDOC -->

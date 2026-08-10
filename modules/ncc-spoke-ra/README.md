@@ -163,5 +163,5 @@ module "spoke-ra" {
 
 ## Fixtures
 
-- [compute-vm-nva.tf](../../tests/fixtures/compute-vm-nva.tf)
+- compute-vm-nva.tf
 <!-- END TFDOC -->

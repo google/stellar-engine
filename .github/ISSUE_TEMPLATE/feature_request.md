@@ -22,6 +22,7 @@ A clear and concise description of what you want to happen.
     *   [ ] US Region Restricted (e.g., Access Policy constraint)
     *   [ ] FedRAMP Medium
     *   [ ] FedRAMP High
+    *   [ ] FedRAMP Moderate
     *   [ ] DoD IL4
     *   [ ] DoD IL5
     *   [ ] All / General

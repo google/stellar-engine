@@ -544,7 +544,7 @@ module "example-va-b-ew12" {
 
 ### IPSec for Dedicated Interconnect
 
-Refer to the [HA VPN over Interconnect Blueprint](../../blueprints/networking/ha-vpn-over-interconnect/) for an all-encompassing example.
+Refer to the HA VPN over Interconnect Blueprint for an all-encompassing example.
 
 ```hcl
 resource "google_compute_router" "encrypted-interconnect-underlay-router-ew8" {

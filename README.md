@@ -1,6 +1,6 @@
 ## Introduction
 
-Stellar Engine is a fork of the Google Cloud Foundation Fabric (CFF) repository, aimed at providing Infrastructure as Code (IaC) for Google Cloud Platform (GCP) customers who need to create a landing zone environment with the Assured Workload overlays. In addition to the IaC, there is [documentation available](./docs/path-to-authorization.md) for both FedRAMP High (FRH), Department of Defense (DoD) Impact Level 4 (IL4) and DoD Impact Level (IL5) compliance regimes that provide a mapping of National Institute of Standards and Technology (NIST) 800-53r5 controls to enable projects that leverage the Stellar Engine codebase to accelerate the speed at which an Authorization to Operate (ATO) can be attained.
+Stellar Engine is a fork of the Google Cloud Foundation Fabric (CFF) repository, aimed at providing Infrastructure as Code (IaC) for Google Cloud Platform (GCP) customers who need to create a landing zone environment with the Assured Workload overlays. In addition to the IaC, there is [documentation available](/docs/path-to-authorization.md) for FedRAMP High (FRH), FedRAMP Moderate (FRM), Department of Defense (DoD) Impact Level 4 (IL4) and DoD Impact Level (IL5) compliance regimes that provide a mapping of National Institute of Standards and Technology (NIST) 800-53r5 controls to enable projects that leverage the Stellar Engine codebase to accelerate the speed at which an Authorization to Operate (ATO) can be attained.
 
 ## Getting Started
 
@@ -14,7 +14,7 @@ This repository provides **end-to-end blueprints** and a **suite of Terraform mo
 
 The target audience for Stellar Engine is organizations and teams that operate in regulated industries or require robust compliance and security frameworks. Below are a few examples of these such users:
 
-- **Government Agencies:** Agencies and contractors, such as those that work with FRH, IL4, and IL5 environments.  <br />
+- **Government Agencies:** Agencies and contractors, such as those that work with FRM, FRH, IL4, and IL5 environments.  <br />
 - **Regulated Industries:** Regulated industries often face overlapping compliance and security requirements; Stellar Engine can simplify that.  <br />
 - **Educational and Research Institutions:** Universities and research organizations working on government-funded projects that require secure and compliant cloud environments.  <br />
 
@@ -45,7 +45,7 @@ The suite of modules in this repository is designed for rapid composition and re
 
 All modules share a similar interface where each module tries to stay close to the underlying provider resources, support IAM together with resource creation and modification, offer the option of creating multiple resources where it makes sense (e.g. not for projects), and be completely free of side-effects (e.g. no external commands).
 
-A well-defined naming standard is used across Stellar Engine to ensure adherence to Google Cloud's best practices, naming requirements, and naming collision avoidance for global resources. The Google Cloud naming standard documentation is [here](./documentation/naming-convention.md) and will be used before the Stellar Engine deployment begins by choosing a naming standard that will flow through the Google Cloud infrastructure state.
+A well-defined naming standard is used across Stellar Engine to ensure adherence to Google Cloud's best practices, naming requirements, and naming collision avoidance for global resources. The Google Cloud naming standard documentation is [here](/docs/naming-convention.md) and will be used before the Stellar Engine deployment begins by choosing a naming standard that will flow through the Google Cloud infrastructure state.
 
 The current modules support most of the core foundational and networking components used to design end-to-end infrastructure, with more modules in active development for specialized compute, security, and data scenarios.
 
@@ -53,18 +53,18 @@ For more information and usage examples see each module's README file, as well a
 
 ## End-to-End Blueprints
 
-Stellar Engine currently offers blueprints that are compliant with [FRH](https://github.com/google/stellar-engine/tree/main/blueprints/fedramp-high) and [IL5](https://github.com/google/stellar-engine/tree/main/blueprints/il5) baselines. </br>
+Stellar Engine currently offers blueprints that are compliant with [FRM](https://github.com/google/stellar-engine/tree/main/blueprints/fedramp-moderate), [FRH](https://github.com/google/stellar-engine/tree/main/blueprints/fedramp-high), and [IL5](https://github.com/google/stellar-engine/tree/main/blueprints/il5) baselines. </br>
 These blueprints range from full end-to-end services like a Cloud Native Access Point (CNAP), to ad-hoc services that are designed to be molded to users' individual use cases.
 
 For more information, please look at each blueprint's README file.
 
 ## Cybersecurity Documentation
 
-In addition to the IaC, Stellar Engine provides supporting documentation that maps NIST 800-53r5 controls for users leveraging the IaC. This documentation is designed to streamline achieving ATO by providing generalized templates. All documentation can be requested [here](https://forms.gle/zdv7Gip4opmdhBqk7). For how to utilize these documents, please see the following [Path to Authorization](./docs/path-to-authorization.md) guide.
+In addition to the IaC, Stellar Engine provides supporting documentation that maps NIST 800-53r5 controls for users leveraging the IaC. This documentation is designed to streamline achieving ATO by providing generalized templates. All documentation can be requested [here](https://forms.gle/zdv7Gip4opmdhBqk7). For how to utilize these documents, please see the following [Path to Authorization](/docs/path-to-authorization.md) guide.
 
 ## Detailed Deployment Guide
 
-The Stellar Engine Cloud Foundation Fabric Detailed Deployment Guide (DDG) outlines a structured process for deploying a secure, compliant infrastructure on GCP using IaC. Designed to support compliance with standards such as FRH, IL4, and IL5, the guide enables organizations to create a foundational "landing zone" with Assured Workload overlays. It includes mappings of NIST 800-53r5 controls to streamline achieving ATO. The deployment process is divided into stages, each focusing on specific components like resource management, networking, and security configuration.
+The Stellar Engine Cloud Foundation Fabric Detailed Deployment Guide (DDG) outlines a structured process for deploying a secure, compliant infrastructure on GCP using IaC. Designed to support compliance with standards such as FRM, FRH, IL4, and IL5, the guide enables organizations to create a foundational "landing zone" with Assured Workload overlays. It includes mappings of NIST 800-53r5 controls to streamline achieving ATO. The deployment process is divided into stages, each focusing on specific components like resource management, networking, and security configuration.
 
 Key stages include Stage 0 (Bootstrap), which initializes the infrastructure, creates core Google Cloud Projects, and sets up service accounts; Stage 1 (Resource Management), which organizes Google Cloud Folders and Google Cloud Projects for tenants; and Stage 2 (Network Creation), which configures networking, including advanced setups like Palo Alto NGFWs for IL5 environments. The final stage, Stage 3 (Security and Audit Account Configuration), establishes security protocols, including Customer Managed Encryption Keys (CMEK) requirements and logging for audit purposes. Each stage requires detailed configuration of Terraform variables and adherence to prerequisites like IAM roles, service account setups, and enabling Google Cloud services.
 
@@ -82,7 +82,7 @@ For more information, please look at the [TDD](./docs/tdd.md).
 
 ## Security Best Practices Guide
 
-The Stellar Engine Security Best Practices Guide (SBPG) outlines a robust framework for deploying secure and compliant GCP infrastructure. Designed for organizations requiring adherence to FRH and IL5 standards, it employs IaC principles via Terraform. The Stellar Engine facilitates the automated creation of a baseline GCP environment, supporting modular deployment of both Google and approved third-party services. Its hierarchical architecture ensures effective organization, leveraging role-based access control (RBAC), strict IAM policies, and a hub-and-spoke VPC networking design for isolation and scalability.
+The Stellar Engine Security Best Practices Guide (SBPG) outlines a robust framework for deploying secure and compliant GCP infrastructure. Designed for organizations requiring adherence to FRM, FRH, and IL5 standards, it employs IaC principles via Terraform. The Stellar Engine facilitates the automated creation of a baseline GCP environment, supporting modular deployment of both Google and approved third-party services. Its hierarchical architecture ensures effective organization, leveraging role-based access control (RBAC), strict IAM policies, and a hub-and-spoke VPC networking design for isolation and scalability.
 
 The document emphasizes best practices in identity and access management, security monitoring, and compliance. IAM configurations focus on the principle of least privilege, with automation enabling minimal human interaction during setup. Security features include encryption-at-rest, TLS enforcement, and centralized logging and monitoring through audit logs, VPC flow logs, and other diagnostics. The system supports Assured Workloads, providing region-specific data residency and compliance settings to meet regulatory requirements.
 

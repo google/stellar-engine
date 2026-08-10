@@ -24,7 +24,7 @@ This runbook provides a structured, actionable process for Security Operators an
 * `roles/compute.storageAdmin` to snapshot disks for forensics.
 
 ## 3. Scope
-This runbook applies to all environments deployed using the Stellar framework, including FedRAMP High and IL5 landing zones. It assumes the use of modern GCP compute paradigms, including Shielded VMs, OS Login, Workload Identity, and immutable infrastructure.
+This runbook applies to all environments deployed using the Stellar framework, including FedRAMP High, FedRAMP Moderate, and IL5 landing zones. It assumes the use of modern GCP compute paradigms, including Shielded VMs, OS Login, Workload Identity, and immutable infrastructure.
 
 ---
 

@@ -20,7 +20,7 @@ environment with the Assured Workload overlays. The project has been confirmed
 to work with (DISA) Impact Level 5 (IL5), Impact Level 4 (IL4), and FedRAMP
 High, but will function as a starting point for any other Assured Workloads
 overlay. In addition to the IaC, there is documentation available for both the
-IL5 and FedRAMP High compliance regimes that provide a mapping of National
+IL5, FedRAMP High, and FedRAMP Moderate compliance regimes that provide a mapping of National
 Institute of Standards and Technology (NIST) 800-53r5 controls to enable
 projects that leverage the Stellar Engine codebase to accelerate the speed at
 which an Authorization to Operate (ATO) can be attained. These responses are
@@ -67,7 +67,7 @@ To make using this deployment guide easier, the variables described below need t
 | :------------------------------------ | :------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | <strong>Billing Account</strong>      | `billing_account.id`             | The billing account to use for the deployment of the environments. <a href='https://console.cloud.google.com/billing'>Console Link</a>                                                                                                                                                                         |
 | <strong>Bootstrap Project ID</strong> | `bootstrap_project`              | The bootstrap project id (created below)                                                                                                                                                                                                                                                                       |
-| <strong>Compliance Regime</strong>    | `assured_workloads.regime`       | The <a href='https://assuredworkloads.googleapis.com/$discovery/rest?version=v1'>compliance regime</a> for this environment, (confirmed working in IL4, IL5, FEDRAMP_HIGH, and COMPLIANCE_REGIME_UNSPECIFIED)                                                                                                  |
+| <strong>Compliance Regime</strong>    | `assured_workloads.regime`       | The <a href='https://assuredworkloads.googleapis.com/$discovery/rest?version=v1'>compliance regime</a> for this environment, (confirmed working in IL4, IL5, FEDRAMP_MODERATE, FEDRAMP_HIGH, and COMPLIANCE_REGIME_UNSPECIFIED)                                                                                                  |
 | <strong>Customer ID</strong>          | `organization.customer_id`       | The Google Workspace Directory Customer ID. <br/>Run <strong>gcloud organizations list</strong> to view.                                                                                                                                                                                                       |
 | <strong>Domain Name</strong>          | `organization.domain`            | The primary Fully Qualified Domain Name (FQDN). Run <strong>gcloud organizations list</strong> to view (make sure you have authorized as per prerequisites below)                                                                                                                                              |
 | <strong>Alert Email</strong>          | `alert_email`                    | The email address used for logging alerts notifications.                                                                                                                                                                                                                                                       |
@@ -207,7 +207,7 @@ billing_account = {
  id = "`<billing_account_id>`" # taken from Google Cloud Console Billing Accounts -> Manage Billing Account
 }
 # region configuration - this will automatically populate locations for GCS, BigQuery, KMS, and logging buckets
-# Default to us-east4 for IL5/FedRAMP compliance - adjust as needed
+# Default to us-east4 for IL5/FedRAMP High/Moderate compliance - adjust as needed
 regions = {
  primary = "`<region>`"
 }
@@ -391,7 +391,7 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap
 
 ## Stage 2 - Network Creation
 
-## FedRAMP High - Stage 2.1 Networking
+## FedRAMP High / Moderate - Stage 2.1 Networking
 
 ### Steps
 

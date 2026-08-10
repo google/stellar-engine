@@ -1,6 +1,6 @@
 # Path to Authorization
 
-_Impact Level 5 (H-H-X) & FedRAMP High_
+_Impact Level 5 (H-H-X), FedRAMP High & FedRAMP Moderate_
 
 **Created Date:**
 
@@ -67,7 +67,7 @@ privacy risks
     managed, and authorized for operation or use.
   - [Impact Level 5 Authorization
     Boundary](https://forms.gle/zdv7Gip4opmdhBqk7)
-  - [FedRAMP High Authorization
+  - [FedRAMP High & Moderate Authorization
     Boundary](https://forms.gle/zdv7Gip4opmdhBqk7)
 - Regularly assess the security and privacy risks at the organization level
   and system level. Update risk assessment results on an on-going basis.
@@ -111,10 +111,10 @@ risk assessment(s)
     frequency in which the controls are monitored?
   - [Security Control Traceability Matrix (SCTM)
     Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
-    (IL5 H-H-X and FedRAMP High Baselines)
+    (IL5 H-H-X, FedRAMP High, and FedRAMP Moderate Baselines)
   - [Policies and Procedures
     Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
-    (IL5 HHX and FedRAMP High Baselines)
+    (IL5 HHX, FedRAMP High, and FedRAMP Moderate Baselines)
 
 [**Step 3;
 Implement**](https://csrc.nist.gov/Projects/risk-management/about-rmf/implement-step):

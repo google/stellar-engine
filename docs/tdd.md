@@ -58,8 +58,7 @@ regulations.
 
 A root folder is created at the top of the organization to hold all projects and
 resources. From the root folder, tenants can be created in either an Assured
-Workloads folder with configurable compliance regime, such as FedRAMP High or
-IL5, based on the needs of the user. Each deployment initially creates a
+Workloads folder with configurable compliance regime, such as FedRAMP High, FedRAMP Moderate, or IL5, based on the needs of the user. Each deployment initially creates a
 development environment with the intention of users migrating to a production
 environment after the development environment has been fully built and tested.
 
@@ -924,8 +923,7 @@ and workloads. They are isolated from each other and communicate with each other
 through the hub VPCHub and Spoke Architecture with Compliance Overlays
 
 Stellar Engine implements a robust Hub and Spoke network architecture,
-specifically tailored to meet rigorous compliance requirements (FedRAMP High and
-IL5). In this model, centralized Hub VPCs host shared networking resources,
+specifically tailored to meet rigorous compliance requirements (FedRAMP High, FedRAMP Moderate, and IL5). In this model, centralized Hub VPCs host shared networking resources,
 connectivity gateways (Cloud VPN, Interconnect), and security appliances, while
 Spoke VPCs host isolated workload environments (e.g., Development, Production).
 
@@ -945,7 +943,7 @@ topology with distinct security appliance strategies:
 
 Supported Implementations:
 
-#### FedRAMP High Pattern (2-networking-a-fedramp-high):
+#### FedRAMP High / Moderate Pattern (2-networking-a-fedramp):
 
 - Topology: VDSS (Landing + DMZ).
 - Perimeter Security: Uses Network Virtual Appliances (NVAs).

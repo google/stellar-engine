@@ -425,5 +425,5 @@ module "nginx-mig" {
 
 ## Fixtures
 
-- [attached-disks.tf](../../tests/fixtures/attached-disks.tf)
+- attached-disks.tf
 <!-- END TFDOC -->

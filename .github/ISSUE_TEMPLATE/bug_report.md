@@ -19,6 +19,7 @@ Please provide details about your deployment to help us reproduce the issue.
     *   [ ] US Region Restricted (e.g., Access Policy constraint)
     *   [ ] FedRAMP Medium
     *   [ ] FedRAMP High
+    *   [ ] FedRAMP Moderate
     *   [ ] DoD IL4
     *   [ ] DoD IL5
     *   [ ] Stand-alone / Custom
