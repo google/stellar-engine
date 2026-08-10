@@ -119,4 +119,3 @@ keyrings-keys = {
 ## Verification of a successful deployment?
 
 - Go to the Compute Engine in the GCP Console. Select the VM. Check the Presistent Disk Encryption
-!GCP Compute Engine Instance Presistent Disk Encryption
