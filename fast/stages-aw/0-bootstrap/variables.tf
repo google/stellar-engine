@@ -314,7 +314,7 @@ variable "regions" {
     primary = string
   })
   nullable = false
-  default  = {
+  default = {
     primary = "us-east4"
   }
 }
