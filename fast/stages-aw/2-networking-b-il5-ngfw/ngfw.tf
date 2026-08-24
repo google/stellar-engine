@@ -112,6 +112,7 @@ module "ngfw-bootstrap-bucket" {
   project_id     = module.vdss-host-project.project_id
   encryption_key = module.kms.keys.default.id
   storage_class  = "REGIONAL"
+  versioning     = true
   name           = "ngfw-bootstrap-${each.value}"
   location       = upper(each.value)
   depends_on     = [module.kms]
