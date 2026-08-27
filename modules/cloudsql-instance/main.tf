@@ -20,8 +20,6 @@ locals {
   is_postgres  = can(regex("^POSTGRES", var.database_version))
   has_replicas = length(var.replicas) > 0
   is_regional  = var.availability_type == "REGIONAL" ? true : false
-  # SQL Admin always returns a disabled psc_config even when PSC is unused.
-  # Own that block in config so Terraform does not plan to delete it.
   psc_enabled = (
     var.network_config.connectivity.psc_allowed_consumer_projects != null
   )
