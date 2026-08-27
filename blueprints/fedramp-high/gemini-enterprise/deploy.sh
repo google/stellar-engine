@@ -1350,6 +1350,7 @@ prompt_gemini_apps() {
             ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="false"
         fi
 
+        ENABLE_MODEL_ARMOR_FLAG="false"
         if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_HIGH" || "$COMPLIANCE_REGIME" == "NONE" ]]; then
             echo ""
             echo -e "${YELLOW}Model Armor Feature:${NC}"
