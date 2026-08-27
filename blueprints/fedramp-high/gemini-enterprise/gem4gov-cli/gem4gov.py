@@ -1543,7 +1543,7 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         "features": engine_features.get('features'),
         "disableAnalytics": True
     }
-    engine_update_mask = "features"
+    engine_update_mask = "features,disableAnalytics"
 
     engine_request = service.projects().locations().collections().engines().patch(
         name=engine_name,
@@ -1659,7 +1659,7 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
         "features": engine_features.get('features'),
         "disableAnalytics": True
     }
-    engine_update_mask = "features"
+    engine_update_mask = "features,disableAnalytics"
 
     engine_request = service.projects().locations().collections().engines().patch(
         name=engine_name,
@@ -1771,7 +1771,7 @@ def configure_gemini_enterprise_for_il5(credentials, project_id, engine_id):
         "features": engine_features.get('features'),
         "disableAnalytics": True
     }
-    engine_update_mask = "features"
+    engine_update_mask = "features,disableAnalytics"
 
     engine_request = service.projects().locations().collections().engines().patch(
         name=engine_name,
