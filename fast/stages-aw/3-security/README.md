@@ -213,6 +213,10 @@ chmod +x delete_gcp_project.sh
 
 Cloud KMS configuration is controlled by `kms_keys`, which configures the actual keys to create, and also allows configuring their IAM bindings, labels, locations and rotation period. When configuring locations for a key, please consider the limitations each cloud product may have.
 
+> [!NOTE]
+> Stage 3 produces **no** KMS keyrings or keys by default since `var.kms_keys` defaults to `{}`. Key provisioning is entirely opt-in. A reference configuration is provided in `terraform.tfvars.sample`.
+> Downstream stages and blueprints can query created key paths via `terraform output kms_keys`, which returns a map of key IDs keyed by `{env}-{name}:{location}` (for example, `dev-default:us-east4` or `prod-default:us-east4`).
+
 The additional `kms_restricted_admins` variable allows granting `roles/cloudkms.admin` to specified principals, restricted via [delegated role grants](https://cloud.google.com/iam/docs/setting-limits-on-granting-roles) so that it only allows granting the roles needed for encryption/decryption on keys. This allows safe delegation of key management to subsequent Terraform stages like the Project Factory, for example to grant usage access on relevant keys to the service agent accounts for compute, storage, etc.
 
 To support these scenarios, key IAM bindings are configured by default to be additive, to enable other stages or Terraform configuration to safely co-manage bindings on the same keys. If this is not desired, follow the comments in the `core-dev.tf` and `core-prod.tf` files to switch to authoritative bindings on keys.
