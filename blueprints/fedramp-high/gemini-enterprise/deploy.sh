@@ -1518,6 +1518,8 @@ configure_stage_0() {
             echo -e "${RED}Proceed at your own risk.${NC}"
             echo ""
             read -p "Press Enter to acknowledge and continue..."
+            COMPLIANCE_REGIME="NONE"
+            REGIME_DISPLAY="None"
             ;;
         *)
             echo -e "${RED}Invalid selection. Defaulting to FedRAMP High.${NC}"
