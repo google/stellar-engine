@@ -525,9 +525,15 @@ discover_infrastructure() {
 
     if [[ "$IS_BROWNFIELD" == "true" ]]; then
         # 1. Extract Environment and Tenant
-        # Format: prefix-env-tenant-main-0
+        # Format: prefix-env-tenant-main-0. The tenant id may itself contain
+        # hyphens (FAST tenants are typically named like "ten-1"), so take
+        # everything between the environment and the "-main-0" suffix rather
+        # than the third hyphen-separated field.
         ENVIRONMENT=$(echo "$PROJECT_ID" | cut -d'-' -f2)
-        TENANT_VAL=$(echo "$PROJECT_ID" | cut -d'-' -f3)
+        TENANT_VAL=$(echo "$PROJECT_ID" | sed -E 's/^[^-]+-[^-]+-(.+)-main-0$/\1/')
+        if [[ "$TENANT_VAL" == "$PROJECT_ID" ]]; then
+            TENANT_VAL=""
+        fi
         
         # Validate extraction (basic check)
         if [[ -z "$ENVIRONMENT" || -z "$TENANT_VAL" ]]; then
@@ -573,7 +579,9 @@ discover_infrastructure() {
         fi
 
         # 3. Check State Bucket
-        POTENTIAL_BUCKET="${PREFIX}-${ENVIRONMENT}-${TENANT}-iac-0"
+        # 1-resman names the tenant state bucket <prefix>-tn-<env>-<tenant>-0
+        # (branch-tenants.tf, module tenant-core-gcs).
+        POTENTIAL_BUCKET="${PREFIX}-tn-${ENVIRONMENT}-${TENANT}-0"
         echo "Checking for Terraform State Bucket: ${POTENTIAL_BUCKET}..."
         if gcloud storage buckets describe "gs://${POTENTIAL_BUCKET}" &>/dev/null; then
             STATE_BUCKET="${POTENTIAL_BUCKET}"
