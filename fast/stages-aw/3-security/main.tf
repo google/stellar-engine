@@ -39,11 +39,26 @@ locals {
     for k, v in var.kms_keys : v.locations
   ]))
   # map { location -> { key_name -> key_details } }
+  # Keys that do not set their own version_template inherit the stage-wide
+  # protection level here. modules/kms only honours version_template per key
+  # (its keyring object is {location, name}), so this is the only place the
+  # stage can apply var.kms_protection_level.
   kms_locations_keys = {
     for loc in local.kms_locations :
     loc => {
       for k, v in var.kms_keys :
-      k => v
+      k => merge(v, {
+        version_template = (
+          v.version_template != null
+          ? v.version_template
+          : var.kms_protection_level == null
+          ? null
+          : {
+            algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
+            protection_level = var.kms_protection_level
+          }
+        )
+      })
       if contains(v.locations, loc)
     }
   }
