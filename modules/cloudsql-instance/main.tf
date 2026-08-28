@@ -20,6 +20,13 @@ locals {
   is_postgres  = can(regex("^POSTGRES", var.database_version))
   has_replicas = length(var.replicas) > 0
   is_regional  = var.availability_type == "REGIONAL" ? true : false
+  psc_enabled = (
+    var.network_config.connectivity.psc_allowed_consumer_projects != null
+  )
+  psc_allowed_consumer_projects = coalesce(
+    var.network_config.connectivity.psc_allowed_consumer_projects,
+    []
+  )
   # enable backup if the user asks for it or if the user is deploying
   # MySQL in HA configuration (regional or with specified replicas)
   enable_backup = (
@@ -94,18 +101,9 @@ resource "google_sql_database_instance" "primary" {
           value = network.value
         }
       }
-      dynamic "psc_config" {
-        for_each = (
-          var.network_config.connectivity.psc_allowed_consumer_projects != null
-          ? [""]
-          : []
-        )
-        content {
-          psc_enabled = true
-          allowed_consumer_projects = (
-            var.network_config.connectivity.psc_allowed_consumer_projects
-          )
-        }
+      psc_config {
+        psc_enabled               = local.psc_enabled
+        allowed_consumer_projects = local.psc_allowed_consumer_projects
       }
     }
 
@@ -258,18 +256,9 @@ resource "google_sql_database_instance" "replicas" {
           value = network.value
         }
       }
-      dynamic "psc_config" {
-        for_each = (
-          var.network_config.connectivity.psc_allowed_consumer_projects != null
-          ? [""]
-          : []
-        )
-        content {
-          psc_enabled = true
-          allowed_consumer_projects = (
-            var.network_config.connectivity.psc_allowed_consumer_projects
-          )
-        }
+      psc_config {
+        psc_enabled               = local.psc_enabled
+        allowed_consumer_projects = local.psc_allowed_consumer_projects
       }
     }
 
