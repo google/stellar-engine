@@ -244,12 +244,6 @@ variable "envs_folders" {
   default     = null
 }
 
-variable "tenant_accounts" {
-  description = "Tenant accounts configuration."
-  type        = any
-  default     = null
-}
-
 variable "org_policy_classification_tags" {
   description = "Org policy classification tags configuration."
   type        = any
