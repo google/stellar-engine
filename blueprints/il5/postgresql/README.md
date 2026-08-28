@@ -35,7 +35,6 @@ google_service_networking_connection.postgres
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [core_project_id](variables.tf#L23) | This is the core project ID. Please set using a terraform.tfvars file. | <code>string</code> | ✓ |  |
 | [database_name](variables.tf#L34) | This is the name of the database. | <code>string</code> | ✓ |  |
 | [firewall_name](variables.tf#L64) | Firewall name. | <code>string</code> | ✓ |  |
 | [firewall_source_range](variables.tf#L69) | Firewall source IP range. | <code>list&#40;any&#41;</code> | ✓ |  |
@@ -43,13 +42,11 @@ google_service_networking_connection.postgres
 | [main_project_id](variables.tf#L173) | This is the project ID. Please set using a terraform.tfvars file. | <code>string</code> | ✓ |  |
 | [network_name](variables.tf#L178) | This is the name of the network. | <code>string</code> | ✓ |  |
 | [network_project_id](variables.tf#L183) | Project that the Compute Engine VPC is located. | <code>string</code> | ✓ |  |
-| [subnetwork_name](variables.tf#L194) | This is the name of the subnetwork. | <code>string</code> | ✓ |  |
 | [allowed_firewall_ports](variables.tf#L17) | Allowed firewall ports. Postgresql used 5432. | <code>list&#40;number&#41;</code> |  | <code>&#91;5432&#93;</code> |
 | [database_instance_tier](variables.tf#L28) | This specifies the kind of machine-type that we will be running it from. | <code>string</code> |  | <code>&#34;db-g1-small&#34;</code> |
 | [database_version](variables.tf#L39) | This is the database type that we are running the cloud sql instance. | <code>string</code> |  | <code>&#34;POSTGRES_13&#34;</code> |
 | [deletion_protection](variables.tf#L45) | Terraform deletion protection. | <code>bool</code> |  | <code>true</code> |
 | [enable_pgaudit](variables.tf#L51) | This extension provides detailed session and object logging to comply with government, financial & ISO standards and provides auditing capabilities to mitigate threats by monitoring security events on the instance. | <code>string</code> |  | <code>&#34;on&#34;</code> |
-| [google_compute_global_address_name](variables.tf#L74) | Global address for VPC name. | <code>string</code> |  | <code>&#34;postgres&#34;</code> |
 | [log_connections](variables.tf#L85) | Enabling the log_connections setting causes each attempted connection to the server to be logged, along with successful completion of client authentication. | <code>string</code> |  | <code>&#34;on&#34;</code> |
 | [log_disconnections](variables.tf#L98) | Enabling the log_disconnections setting logs the end of each session, including the session duration. | <code>string</code> |  | <code>&#34;on&#34;</code> |
 | [log_error_verbosity](variables.tf#L111) | The log_error_verbosity flag controls the verbosity/details of messages logged. | <code>string</code> |  | <code>&#34;default&#34;</code> |
