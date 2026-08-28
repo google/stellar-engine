@@ -17,19 +17,42 @@ limitations under the License.
 1. Copy terraform.tfvars.sample to terraform.tfvars
 1. Updated terraform.tfvars
 
-## Notes
-1. There seems to be a provider bug that will not allow a full terraform delete to complete due to the following error:
+## Deployer Permissions
 
-```
-Unable to remove Service Networking Connection, err: Error waiting for Delete Service Networking Connection: Error code 9, message: Failed to delete connection; Producer services (e.g. CloudSQL, Cloud Memstore, etc.) are still using this connection.
+The service account or identity deploying this blueprint requires the following roles:
+- **Workload Project (`main_project_id`):**
+  - `roles/cloudsql.admin`
+  - `roles/serviceusage.serviceUsageAdmin`
+- **Network Host Project (`network_project_id`):**
+  - `roles/compute.networkUser`
+  - `roles/compute.securityAdmin` (for managing the firewall rule)
+- **KMS Project / Key (`kms_key_name`):**
+  - `roles/cloudkms.cryptoKeyEncrypterDecrypter`
+
+### Impersonated Deployment Configuration
+
+When deploying through service account impersonation, the Terraform `google` and `google-beta` providers must specify `user_project_override = true` and `billing_project` set to the workload project. Without this setting, provider-level quota and API enablement checks resolve against the deploying service account's project rather than the target workload project, leading to false `SERVICE_DISABLED` errors.
+
+Example provider configuration:
+
+```hcl
+provider "google" {
+  project                     = "<workload-project-id>"
+  region                      = "<region>"
+  impersonate_service_account = "<deployer-sa>@<iac-project-id>.iam.gserviceaccount.com"
+  user_project_override       = true
+  billing_project             = "<workload-project-id>"
+}
+
+provider "google-beta" {
+  project                     = "<workload-project-id>"
+  region                      = "<region>"
+  impersonate_service_account = "<deployer-sa>@<iac-project-id>.iam.gserviceaccount.com"
+  user_project_override       = true
+  billing_project             = "<workload-project-id>"
+}
 ```
 
-To ensure proper deletion, please manually delete the peered network that is created, release the allocated ip address, and remove the following three services from the terraform state (terraform state rm <service-name>)
-```
-data.google_compute_network.network
-google_compute_global_address.postgres
-google_service_networking_connection.postgres
-```
 <!-- BEGIN TFDOC -->
 ## Variables
 
