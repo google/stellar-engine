@@ -1063,7 +1063,7 @@ if promptUser "Stage 2 - Networking -"; then
   ########### FedRAMP High/Moderate ###########
   elif [ "$choice" == 2 ]; then
     echo "You have selected FedRAMP High/Moderate"
-    cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-a-fedramp-high || exit
+    cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-a-fedramp || exit
     deploy_networking
 
   ########### IL4/IL5 ###########
