@@ -258,7 +258,7 @@ def onboard():
                 sys.exit(1)
         click.echo(click.style(f"Gemini Enterprise data stores allow end-users to search and ask questions based on a variety of first and third-party datasets. Currently, the only data stores that are available in Gemini for Governement customers are: {supported_data_stores}", fg='yellow'))
         while True:
-            if click.confirm('Do you have an existing data store(s) already created and loaded with data?'):
+            if click.confirm('Do you have an existing data store(s) already created?'):
                 # User specified they have existing data stores
                 data_store_input = click.prompt('Please enter a comma-separated list of data stores that you would like to connect to Gemini Enterprise', type=str).strip()
                 data_store_list = [item.strip() for item in data_store_input.split(',')]
