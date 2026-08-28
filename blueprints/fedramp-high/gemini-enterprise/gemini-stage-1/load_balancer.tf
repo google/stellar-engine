@@ -190,12 +190,16 @@ resource "google_compute_forwarding_rule" "gemini_enterprise_forwarding_rule" {
   target                = google_compute_region_target_https_proxy.gemini_enterprise_https_proxy[0].id
 }
 
-# Data source to get the subnet created in stage-0
+# Data source to get the subnet created in stage-0 or Shared VPC
 data "google_compute_subnetwork" "gemini_enterprise_vpc_subnet" {
   count   = data.terraform_remote_state.stage_0.outputs.deployment_type == "internal" ? 1 : 0
-  project = data.terraform_remote_state.stage_0.outputs.main_project_id
-  name    = "gemini-enterprise-vpc-subnet"
-  region  = data.terraform_remote_state.stage_0.outputs.region
+  project = var.host_project_id != "" ? var.host_project_id : (
+    try(data.terraform_remote_state.stage_0.outputs.use_shared_vpc, false) ? data.terraform_remote_state.stage_0.outputs.network_project_id : data.terraform_remote_state.stage_0.outputs.main_project_id
+  )
+  name = var.subnet_name != "" ? var.subnet_name : (
+    try(data.terraform_remote_state.stage_0.outputs.use_shared_vpc, false) ? data.terraform_remote_state.stage_0.outputs.shared_vpc_subnet_name : "${data.terraform_remote_state.stage_0.outputs.prefix}-vpc-subnet"
+  )
+  region = data.terraform_remote_state.stage_0.outputs.region
 }
 
 # --- IAP Access Roles ---
