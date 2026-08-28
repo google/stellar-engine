@@ -964,7 +964,7 @@ EOF
   fi  # End of state_migrated check
 
   # Import Organization Polcies
-  handle_prompt "Would you like to import recommended org policies?" "${SCRIPT_DIR}/../fast/stages-aw/0-bootstrap/import.sh" || true
+  handle_prompt "Would you like to import recommended org policies?" "${SCRIPT_DIR}/../fast/stages-aw/0-bootstrap/import.sh ${ORGANIZATION_ID}" || true
 
   # Terraform Apply #3 (after state migration, ensuring bootstrap user access)
   cmd=("terraform apply -auto-approve -var bootstrap_user=$(gcloud config list --format 'value(core.account)')")
