@@ -27,7 +27,7 @@ outputs_location = "~/fast-config"
 # Retention period (in days) for organization logging buckets (defaults to 365 days for compliance)
 # logging_bucket_retention = 365
 
-# use something unique and no longer than 9 characters
+# use something unique and no longer than 7 characters
 prefix = "abcd"
 # Default log routing is set to "logging" (Cloud Logging buckets with 30-day default retention)
 # To use long-term storage, change type to "storage" (GCS) or "bigquery"

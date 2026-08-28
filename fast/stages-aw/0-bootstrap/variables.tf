@@ -50,6 +50,15 @@ variable "billing_budget_amount" {
   default = null
 }
 
+variable "billing_override" {
+  description = "Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects."
+  type = object({
+    project         = string
+    billing_project = string
+  })
+  default = null
+}
+
 variable "bootstrap_project" {
   description = "Bootstrap project ID."
   type        = string
@@ -295,7 +304,7 @@ variable "outputs_location" {
 }
 
 variable "prefix" {
-  description = "Prefix used for resources that need unique names. Use 9 characters or less."
+  description = "Prefix used for resources that need unique names. Use 7 characters or less."
   type        = string
   validation {
     condition     = try(length(var.prefix), 0) <= 7
