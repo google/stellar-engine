@@ -34,17 +34,6 @@ variable "compliance_regime" {
   }
 }
 
-variable "kms_project_id" {
-  description = "The Project ID where CMEK keys are stored."
-  type        = string
-}
-
-variable "us_keyring_name" {
-  description = "The name of the US Multi-Region KeyRing (if existing). If empty, one will be created."
-  type        = string
-  default     = ""
-}
-
 variable "domain" {
   description = "FQDN for the load-balancer hosted apps, where the subdomain will be prepended to."
   type        = string

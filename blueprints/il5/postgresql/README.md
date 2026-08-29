@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 ## Requirements
-1. An existing VPC
+1. An existing VPC with Private Service Access (PSA) peering already configured on the target network (`network_name` / `network_project_id`).
 1. Copy terraform.tfvars.sample to terraform.tfvars
 1. Updated terraform.tfvars
 
