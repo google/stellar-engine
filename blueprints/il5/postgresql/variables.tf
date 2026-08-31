@@ -20,11 +20,6 @@ variable "allowed_firewall_ports" {
   default     = [5432]
 }
 
-variable "core_project_id" {
-  description = "This is the core project ID. Please set using a terraform.tfvars file."
-  type        = string
-}
-
 variable "database_instance_tier" {
   description = "This specifies the kind of machine-type that we will be running it from."
   type        = string
@@ -69,12 +64,6 @@ variable "firewall_name" {
 variable "firewall_source_range" {
   description = "Firewall source IP range."
   type        = list(any)
-}
-
-variable "google_compute_global_address_name" {
-  description = "Global address for VPC name."
-  type        = string
-  default     = "postgres"
 }
 
 variable "kms_key_name" {
@@ -189,9 +178,4 @@ variable "region" {
   description = "This is the region that we are going to be running the cloud sql instance from."
   type        = string
   default     = "us-east4"
-}
-
-variable "subnetwork_name" {
-  description = "This is the name of the subnetwork."
-  type        = string
 }
