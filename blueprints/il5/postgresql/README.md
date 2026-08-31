@@ -17,8 +17,42 @@ limitations under the License.
 1. Copy terraform.tfvars.sample to terraform.tfvars
 1. Updated terraform.tfvars
 
-## Notes
-1. This blueprint consumes the shared `cloudsql-instance` module and attaches to an existing Private Service Access (PSA) connection via `psa_config.private_network`. It does not create or manage the underlying IP address reservation or VPC peering connection.
+## Deployer Permissions
+
+The service account or identity deploying this blueprint requires the following roles:
+- **Workload Project (`main_project_id`):**
+  - `roles/cloudsql.admin`
+  - `roles/serviceusage.serviceUsageAdmin`
+- **Network Host Project (`network_project_id`):**
+  - `roles/compute.networkUser`
+  - `roles/compute.securityAdmin` (for managing the firewall rule)
+- **KMS Project / Key (`kms_key_name`):**
+  - `roles/cloudkms.cryptoKeyEncrypterDecrypter`
+
+### Impersonated Deployment Configuration
+
+When deploying through service account impersonation, the Terraform `google` and `google-beta` providers must specify `user_project_override = true` and `billing_project` set to the workload project. Without this setting, provider-level quota and API enablement checks resolve against the deploying service account's project rather than the target workload project, leading to false `SERVICE_DISABLED` errors.
+
+Example provider configuration:
+
+```hcl
+provider "google" {
+  project                     = "<workload-project-id>"
+  region                      = "<region>"
+  impersonate_service_account = "<deployer-sa>@<iac-project-id>.iam.gserviceaccount.com"
+  user_project_override       = true
+  billing_project             = "<workload-project-id>"
+}
+
+provider "google-beta" {
+  project                     = "<workload-project-id>"
+  region                      = "<region>"
+  impersonate_service_account = "<deployer-sa>@<iac-project-id>.iam.gserviceaccount.com"
+  user_project_override       = true
+  billing_project             = "<workload-project-id>"
+}
+```
+
 <!-- BEGIN TFDOC -->
 ## Variables
 

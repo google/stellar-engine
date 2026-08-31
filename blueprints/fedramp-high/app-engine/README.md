@@ -37,6 +37,38 @@ You should see this README and some terraform files.
 Use the GCP consule to verify if the resources have been created. 
 
 ```To verify the creation of Instance classes: Go to Instances in your landing project``` <br />
+
+## Deployer Permissions
+
+The service account or identity deploying this blueprint requires the following roles:
+- **Workload Project (`main_project_id`):**
+  - `roles/appengine.appCreator` or `roles/appengine.appAdmin`
+  - `roles/serviceusage.serviceUsageAdmin`
+
+### Impersonated Deployment Configuration
+
+When deploying through service account impersonation, the Terraform `google` and `google-beta` providers must specify `user_project_override = true` and `billing_project` set to the workload project. Without this setting, provider-level quota and API enablement checks resolve against the deploying service account's project rather than the target workload project, leading to false `SERVICE_DISABLED` errors.
+
+Example provider configuration:
+
+```hcl
+provider "google" {
+  project                     = "<workload-project-id>"
+  region                      = "<region>"
+  impersonate_service_account = "<deployer-sa>@<iac-project-id>.iam.gserviceaccount.com"
+  user_project_override       = true
+  billing_project             = "<workload-project-id>"
+}
+
+provider "google-beta" {
+  project                     = "<workload-project-id>"
+  region                      = "<region>"
+  impersonate_service_account = "<deployer-sa>@<iac-project-id>.iam.gserviceaccount.com"
+  user_project_override       = true
+  billing_project             = "<workload-project-id>"
+}
+```
+
 <!-- BEGIN TFDOC -->
 ## Variables
 

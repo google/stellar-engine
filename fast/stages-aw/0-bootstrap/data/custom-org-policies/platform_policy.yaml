@@ -98,6 +98,7 @@ iam.allowedPolicyMemberDomains:
 essentialcontacts.managed.allowedContactDomains:
   rules:
   - enforce: true
+    parameters: '{"allowedDomains":["@${domain_name}"]}'
 
 
 %{ if !contains(["FEDRAMP_MODERATE"], regime) ~}
