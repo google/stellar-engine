@@ -91,6 +91,19 @@ resource "google_storage_bucket" "gemini_enterprise_gcs_bucket" {
   ]
 }
 
+# Grant Discovery Engine service agent read access to GCS corpus buckets
+resource "google_storage_bucket_iam_member" "corpus_bucket_discovery_engine" {
+  for_each = var.create_data_stores ? { for k, v in var.gcs_data_store_configs : k => v if v.create_bucket } : {}
+
+  bucket = google_storage_bucket.gemini_enterprise_gcs_bucket[each.key].name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-discoveryengine.iam.gserviceaccount.com"
+
+  depends_on = [
+    google_storage_bucket.gemini_enterprise_gcs_bucket
+  ]
+}
+
 # Random suffix for GCS Data Store IDs
 resource "random_string" "gcs_suffix" {
   for_each = var.create_data_stores ? var.gcs_data_store_configs : {}
