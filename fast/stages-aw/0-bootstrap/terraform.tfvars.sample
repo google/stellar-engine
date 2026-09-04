@@ -29,7 +29,8 @@ outputs_location = "~/fast-config"
 
 # use something unique and no longer than 9 characters
 prefix = "abcd"
-# Default log routing is set to "logging" (Cloud Logging buckets with 30-day default retention)
+# Default log routing is set to "logging" (Cloud Logging buckets, retained for
+# logging_bucket_retention days; the default is 365)
 # To use long-term storage, change type to "storage" (GCS) or "bigquery"
 # To route to a SIEM, use "pubsub" (note: requires active subscriber to avoid log loss after 7 days)
 log_sinks = {
