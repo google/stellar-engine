@@ -30,23 +30,41 @@ module "logging-kms" {
     "log-sink" = {
       rotation_period  = "7776000s" # CIS Compliance Benchmark 1.10
       version_template = local.version_template
+      iam_bindings_additive = contains(local.log_types, "logging") ? {
+        "logging" = {
+          member = "serviceAccount:service-${module.log-export-project.number}@gcp-sa-logging.iam.gserviceaccount.com"
+          role   = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+        }
+      } : {}
     }
   }
 
-  iam_bindings_additive = {
-    "pubsub" = {
-      member = "serviceAccount:service-${module.log-export-project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
-      role   = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-    },
-    "bq" = {
-      member = "serviceAccount:bq-${module.log-export-project.number}@bigquery-encryption.iam.gserviceaccount.com"
-      role   = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-    },
-    "gcs" = {
-      member = "serviceAccount:service-${module.log-export-project.number}@gs-project-accounts.iam.gserviceaccount.com"
-      role   = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-    }
-  }
+  iam_bindings_additive = merge(
+    contains(local.log_types, "pubsub") ? {
+      "pubsub" = {
+        member = "serviceAccount:service-${module.log-export-project.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
+        role   = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+      }
+    } : {},
+    contains(local.log_types, "bigquery") ? {
+      "bq" = {
+        member = "serviceAccount:bq-${module.log-export-project.number}@bigquery-encryption.iam.gserviceaccount.com"
+        role   = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+      }
+    } : {},
+    contains(local.log_types, "storage") ? {
+      "gcs" = {
+        member = "serviceAccount:service-${module.log-export-project.number}@gs-project-accounts.iam.gserviceaccount.com"
+        role   = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+      }
+    } : {},
+    contains(local.log_types, "logging") ? {
+      "logging" = {
+        member = "serviceAccount:service-${module.log-export-project.number}@gcp-sa-logging.iam.gserviceaccount.com"
+        role   = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+      }
+    } : {}
+  )
 }
 
 module "gcs-kms" {

@@ -213,9 +213,21 @@ module "no-compliance-folder" {
   name   = "StellarEngine-${var.prefix}"
 }
 
+locals {
+  assured_workload_folder = var.assured_workloads.regime != "COMPLIANCE_REGIME_UNSPECIFIED" ? (
+    try(
+      format("folders/%s", one([
+        for r in google_assured_workloads_workload.primary[0].resources :
+        r.resource_id if r.resource_type == "CONSUMER_FOLDER"
+      ])),
+      "folders/${google_assured_workloads_workload.primary[0].resources[0].resource_id}"
+    )
+  ) : try(module.no-compliance-folder[0].folder.id, null)
+}
+
 module "branch-common-services-folder" {
   source = "../../../modules/folder"
-  parent = var.assured_workloads.regime != "COMPLIANCE_REGIME_UNSPECIFIED" ? "folders/${google_assured_workloads_workload.primary[0].resources[0].resource_id}" : "${module.no-compliance-folder[0].folder.id}"
+  parent = local.assured_workload_folder
   name   = "${lookup(var.regime_mapping, var.assured_workloads.regime, var.assured_workloads.regime)} Common Services"
 }
 
