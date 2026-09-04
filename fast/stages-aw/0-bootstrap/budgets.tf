@@ -17,7 +17,7 @@
 # tfdoc:file:description Billing budgets.
 
 locals {
-    folder_name = var.assured_workloads.regime != "COMPLIANCE_REGIME_UNSPECIFIED" ? "${google_assured_workloads_workload.primary[0].display_name}" : "${module.no-compliance-folder[0].folder.name}"
+  folder_name = var.assured_workloads.regime != "COMPLIANCE_REGIME_UNSPECIFIED" ? "${google_assured_workloads_workload.primary[0].display_name}" : "${module.no-compliance-folder[0].folder.name}"
 }
 
 module "billing-account-budget" {

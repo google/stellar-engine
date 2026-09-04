@@ -22,11 +22,14 @@ locals {
       ? try(google_folder.folder[0].id, null)
       : var.id
     )
-    : format("folders/%s", try(
-        one([for r in google_assured_workloads_workload.folder[0].resources : r.resource_id if r.resource_type == "CONSUMER_FOLDER"]),
-        google_assured_workloads_workload.folder[0].resources[0].resource_id,
-        ""
-      ))
+    : try(
+      format("folders/%s", one([
+        for r in google_assured_workloads_workload.folder[0].resources :
+        r.resource_id if r.resource_type == "CONSUMER_FOLDER"
+      ])),
+      format("folders/%s", google_assured_workloads_workload.folder[0].resources[0].resource_id),
+      ""
+    )
   )
   aw_parent = (
     # Assured Workload only accepls folder as a parent and uses organization as a parent when no value provided.
