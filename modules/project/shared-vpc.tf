@@ -119,7 +119,6 @@ resource "google_project_iam_member" "shared_vpc_host_robots" {
     google_project_service.project_services,
     google_project_service_identity.default,
     google_project_default_service_accounts.default_service_accounts,
-    data.google_bigquery_default_service_account.bq_sa,
     data.google_storage_project_service_account.gcs_sa,
   ]
 }
@@ -143,7 +142,6 @@ resource "google_compute_subnetwork_iam_member" "shared_vpc_host_robots" {
     google_project_service.project_services,
     google_project_service_identity.default,
     google_project_default_service_accounts.default_service_accounts,
-    data.google_bigquery_default_service_account.bq_sa,
     data.google_storage_project_service_account.gcs_sa,
   ]
 }

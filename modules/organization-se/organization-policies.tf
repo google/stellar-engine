@@ -106,7 +106,7 @@ resource "google_org_policy_policy" "default" {
   for_each = toset([
     for k, v in local._org_policies : trimprefix(k, "dry_run:")
   ])
-  name   = var.prefix != "" && strcontains("${each.value}", "custom") ? "${var.organization_id}/policies/${each.value}${var.prefix}" : "${var.organization_id}/policies/${each.value}"
+  name   = var.prefix != "" && strcontains("${each.value}", "custom") ? "${var.organization_id}/policies/${each.value}${replace(var.prefix, "-", "")}" : "${var.organization_id}/policies/${each.value}"
   parent = var.organization_id
   dynamic "spec" {
     for_each = lookup(local.org_policies, each.value, null) != null ? [local.org_policies[each.value]] : []
