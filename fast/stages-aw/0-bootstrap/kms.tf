@@ -57,12 +57,6 @@ module "logging-kms" {
         member = "serviceAccount:service-${module.log-export-project.number}@gs-project-accounts.iam.gserviceaccount.com"
         role   = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
       }
-    } : {},
-    contains(local.log_types, "logging") ? {
-      "logging" = {
-        member = "serviceAccount:service-${module.log-export-project.number}@gcp-sa-logging.iam.gserviceaccount.com"
-        role   = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-      }
     } : {}
   )
 }

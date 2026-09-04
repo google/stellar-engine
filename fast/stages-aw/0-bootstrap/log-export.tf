@@ -87,7 +87,7 @@ module "log-export-dataset" {
   friendly_name  = "Audit logs export."
   location       = local.locations.bq
   encryption_key = coalesce(var.logging_kms_key, module.logging-kms.key_ids["log-sink"])
-
+  depends_on     = [module.logging-kms]
 }
 
 module "log-export-gcs" {
@@ -100,6 +100,7 @@ module "log-export-gcs" {
   storage_class  = local.gcs_storage_class
   force_destroy  = true
   encryption_key = coalesce(var.logging_kms_key, module.logging-kms.key_ids["log-sink"])
+  depends_on     = [module.logging-kms]
 }
 
 module "log-export-logbucket" {
@@ -123,4 +124,5 @@ module "log-export-pubsub" {
   name       = each.key
   regions    = local.locations.pubsub
   kms_key    = coalesce(var.logging_kms_key, module.logging-kms.key_ids["log-sink"])
+  depends_on = [module.logging-kms]
 }
