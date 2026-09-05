@@ -1466,15 +1466,12 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         access_token = ""
 
     if access_token:
-        url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=customerPolicy,agentConfigs,generationConfig,disableLocationContext,webGroundingType,defaultWebGroundingToggleOff"
+        url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=agentConfigs,generationConfig,disableLocationContext,webGroundingType,defaultWebGroundingToggleOff"
 
         assistant_patch_body = {
           "displayName":"Default Assistant",
           "googleSearchGroundingEnabled": False,
           "webGroundingType":"WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
-          "customerPolicy":{
-            "bannedPhrases":[]
-          },
           "generationConfig":{
             "systemInstruction":{
               "additionalSystemInstruction":""
