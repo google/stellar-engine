@@ -13,8 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Assign Organization ID
-ORG=$(gcloud organizations list --format='value(ID)')
+# Assign Organization ID: first argument, then ORGANIZATION_ID from the
+# environment, then gcloud - but only when exactly one organization is
+# visible. A deployer that can see several organizations gets a multi-line
+# list back, which would otherwise be spliced into every policy resource name
+# below.
+ORG="${1:-${ORGANIZATION_ID:-}}"
+if [[ -z "${ORG}" ]]; then
+  mapfile -t orgs < <(gcloud organizations list --format='value(ID)' | sed '/^[[:space:]]*$/d')
+  if [[ ${#orgs[@]} -gt 1 ]]; then
+    echo "Error: more than one organization is visible (${orgs[*]}). Pass the organization ID as the first argument or set ORGANIZATION_ID." >&2
+    exit 1
+  fi
+  ORG="${orgs[0]:-}"
+fi
 if [[ -z "${ORG}" ]]; then
   echo "Error: Failed to get organization ID." >&2
   exit 1
