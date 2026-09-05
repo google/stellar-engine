@@ -47,7 +47,7 @@ if promptUser "Stage 2 - Networking"; then
 
   ########### FedRAMP High/Moderate ###########
   elif [ "$choice" == 2 ]; then
-    cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-a-fedramp-high || exit
+    cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-a-fedramp || exit
 
   ########### IL4/IL5 ###########
   elif [ "$choice" == 3 ]; then

@@ -662,7 +662,7 @@ if [[ "${skip_stage_2:-}" != "true" ]] && promptUser "Stage 2 - Networking"; the
 
   ########### FedRAMP High/Moderate ###########
   elif [ "$choice" == 2 ]; then
-    cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-a-fedramp-high || exit
+    cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-a-fedramp || exit
     destroy_networking
 
   ########### IL4/IL5 ###########
@@ -1920,7 +1920,7 @@ if promptUser "Would you like to perform a final deep clean of all local Terrafo
   STAGES=(
     "${SCRIPT_DIR}/../fast/stages-aw/0-bootstrap"
     "${SCRIPT_DIR}/../fast/stages-aw/1-resman"
-    "${SCRIPT_DIR}/../fast/stages-aw/2-networking-a-fedramp-high"
+    "${SCRIPT_DIR}/../fast/stages-aw/2-networking-a-fedramp"
     "${SCRIPT_DIR}/../fast/stages-aw/2-networking-b-il5-ngfw"
     "${SCRIPT_DIR}/../fast/stages-aw/3-security"
   )
