@@ -40,29 +40,33 @@ user_groups = ["group:gcp-gemini-enterprise-users@customer-domain.com"]
 enable_chrome_enterprise_premium = false
 # KMS Key ID for CMEK encryption (must be in the same location as geolocation)
 kms_key_id = "projects/prefx-main-xxx-x/locations/us/keyRings/prefx-gemini-keyring/cryptoKeys/prefx-gemini-key"
-create_resource_keys = false # Set to true to create a separate key for resources in Greenfield
 
 # Data Stores
 create_data_stores = true
 
-# GCS Data Stores (leave list empty [] if no GCS Data Stores are required)
-gcs_data_store_names = ["company-docs", "knowledge-base", "team-playbooks"]
+# GCS Data Stores (leave map empty {} if no GCS Data Stores are required)
+gcs_data_store_configs = {
+  "company-docs" = {
+    name          = "company-docs"
+    create_bucket = true
+    display_name  = "Company Docs"
+  }
+  "knowledge-base" = {
+    name          = "knowledge-base"
+    create_bucket = true
+    display_name  = "Knowledge Base"
+  }
+}
 
-# BigQuery Data Stores (leave list empty [] if no BigQuery Data Stores are required)
-bq_data_store_configs = [
-  {
-    dataset_id = "internal_wiki"
-    table_id   = "articles_v2"
-  },
-  {
-    dataset_id = "product_data"
-    table_id   = "specs_latest"
-  },
-  {
-    dataset_id = "support_tickets"
-    table_id   = "tickets_archive"
-  },
-]
+# BigQuery Data Stores (leave map empty {} if no BigQuery Data Stores are required)
+bq_data_store_configs = {
+  "internal-wiki" = {
+    dataset_id     = "internal_wiki"
+    table_id       = "articles_v2"
+    create_dataset = true
+    display_name   = "Internal Wiki"
+  }
+}
 
 # Gemini Enterprise Application Load Balancer type ("internal" or "external")
 # By default, "external" follows the CNAP architecture, which utilizes external ingress
