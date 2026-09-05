@@ -1574,7 +1574,7 @@ configure_stage_0() {
                     echo -e "3. Click on the button to ${GREEN}\"Review available updates\"${NC} and apply them."
                     echo ""
                     read -p "Press Enter to acknowledge and continue..."
-                    echo -e "${GREEN}Assured Workload folder ${WORKLOAD_NAME} validated / updated${NC}"
+                    echo -e "${YELLOW}Please verify that you have reviewed and applied any available updates for Assured Workload folder ${WORKLOAD_NAME}.${NC}"
                 fi
             fi
         fi
