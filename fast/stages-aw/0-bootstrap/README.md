@@ -130,7 +130,7 @@ We are intentionally not supporting random prefix/suffixes for names, as that is
 
 What is implemented here is a fairly common convention, composed of tokens ordered by relative importance
 
-- an Google Cloud Organization level static prefix less or equal to 9 characters (e.g. `myco` or `myco-gcp`)
+- an Google Cloud Organization level static prefix less or equal to 7 characters (e.g. `myco` or `myco-gcp`)
 - an environment identifier (e.g. `prod`)
 - a team/owner identifier (e.g. `sec` for Security)
 - a context identifier (e.g. `core` or `kms`)
@@ -380,7 +380,7 @@ The `fast_features` variable consists of 4 toggles
 | [billing_budget_amount](variables.tf#L44) | Budget configuration for the AW folder. Includes amount and optional threshold rules (defaults to 0.5, 0.75, 0.9). If null, no budget will be created. | <code title="object&#40;&#123;&#10;  amount          &#61; number&#10;  threshold_rules &#61; optional&#40;list&#40;number&#41;, &#91;0.5, 0.75, 0.9&#93;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [bootstrap_project](variables.tf#L44) | Bootstrap project ID. | <code>string</code> | ✓ |  |
 | [organization](variables.tf#L260) | Organization details. | <code title="object&#40;&#123;&#10;  id          &#61; number&#10;  domain      &#61; optional&#40;string&#41;&#10;  customer_id &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [prefix](variables.tf#L275) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
+| [prefix](variables.tf#L275) | Prefix used for resources that need unique names. Use 7 characters or less. | <code>string</code> | ✓ |  |
 | [assured_workloads](variables.tf#L21) | Configuration for Assured Workloads. | <code title="object&#40;&#123;&#10;  regime   &#61; string&#10;  location &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code title="&#123;&#10;  regime   &#61; &#34;IL5&#34;&#10;  location &#61; &#34;US&#34;&#10;&#125;">&#123;&#8230;&#125;</code> |
 | [bootstrap_user](variables.tf#L49) | Email of the nominal user running this stage for the first time. | <code>string</code> |  | <code>null</code> |
 | [cicd_repositories](variables.tf#L55) | CI/CD repository configuration. Identity providers reference keys in the `federated_identity_providers` variable. Set to null to disable, or set individual repositories to null if not needed. | <code title="object&#40;&#123;&#10;  bootstrap &#61; optional&#40;object&#40;&#123;&#10;    name              &#61; string&#10;    type              &#61; string&#10;    branch            &#61; optional&#40;string&#41;&#10;    identity_provider &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;  resman &#61; optional&#40;object&#40;&#123;&#10;    name              &#61; string&#10;    type              &#61; string&#10;    branch            &#61; optional&#40;string&#41;&#10;    identity_provider &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
