@@ -22,7 +22,7 @@ import auth
 class TestAuth(unittest.TestCase):
 
   def test_required_permissions_defined(self):
-    self.assertTrue(len(auth.required_permissions) > 0)
+    self.assertGreater(len(auth.required_permissions), 0)
     self.assertIn('discoveryengine.engines.create', auth.required_permissions)
     self.assertIn('aiplatform.datasets.create', auth.required_permissions)
     self.assertIn('serviceusage.services.enable', auth.required_permissions)
