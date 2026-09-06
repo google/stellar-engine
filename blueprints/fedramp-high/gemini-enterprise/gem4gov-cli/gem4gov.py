@@ -14,7 +14,6 @@
 
 import sys
 import click
-import google.auth
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.api_core.client_options import ClientOptions
@@ -294,7 +293,7 @@ def onboard():
                             click.echo(f"Using path prefix: {path_prefix}")
                             create_gcs_data_store(credentials, project_id, data_store_id, display_name)
                             import_gcs_documents(credentials, project_id, data_store_id, gcs_bucket, path_prefix)
-                            click.echo(f"Google Cloud Storage data store created and indexing operation started successfully...")
+                            click.echo("Google Cloud Storage data store created and indexing operation started successfully...")
                             data_store_list.append(data_store_id)
 
                     # Create BigQuery data store
@@ -328,7 +327,7 @@ def onboard():
                                         click.echo(f'Using schema field "{id_field_name}" as the unique document ID.')
                                     else:
                                         id_property['id'] = 'auto'
-                                        click.echo(f'Autogenerating unique document ID.')
+                                        click.echo('Autogenerating unique document ID.')
                                     
                                     click.echo(nl=True)
                                     click.echo(nl=True)
@@ -363,7 +362,7 @@ def onboard():
                                     create_bq_data_store(credentials, project_id, data_store_id, display_name, dataset, table)
                                     create_data_store_schema(credentials, project_id, data_store_id, discovery_engine_schema)
                                     import_bq_documents(credentials, project_id, data_store_id, dataset, table, id_property)
-                                    click.echo(f"BigQuery data store created and indexing operation started successfully...")
+                                    click.echo("BigQuery data store created and indexing operation started successfully...")
                                     data_store_list.append(data_store_id)
 
                                 else:
@@ -779,7 +778,7 @@ def import_documents_helper(credentials, project_id, source_type, data_store_id=
     """Helper to import documents into a selected data store."""
     if not data_store_id:
         click.echo(nl=True)
-        click.echo(click.style(f"Fetching available Gemini Enterprise data stores for import destination...", fg='yellow'))
+        click.echo(click.style("Fetching available Gemini Enterprise data stores for import destination...", fg='yellow'))
         
         # List and select data store
         data_store_id = list_data_stores(credentials, project_id)
@@ -846,8 +845,6 @@ def create_application_logic(credentials, project_id, data_store_list, workforce
     
     if not engine_id:
         click.echo(nl=True)
-        import random
-        import string
         engine_id = 'g4g-gem-ent-app-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
     
     create_engine(credentials, project_id, engine_id, engine_display_name, company_name, data_store_list, enable_audit_logs)
@@ -1044,7 +1041,7 @@ def configure_identity_provider(credentials, project_id, idp_type, workforce_poo
 
     try:
         request.execute()
-        click.echo(f"Identity provider configured successfully.")
+        click.echo("Identity provider configured successfully.")
         if idp_type == '1':
             return "GSUITE"
         elif idp_type == '2':
@@ -1100,12 +1097,12 @@ def validate_kms_key(credentials, kms_key_name):
 
         # Validate the key's location
         if 'us' not in response['name']:
-            click.echo(f"KMS key is not in the 'us' multi-region.")
+            click.echo("KMS key is not in the 'us' multi-region.")
             return False
 
         # Validate that the key is symmetric
         if response['purpose'] != 'ENCRYPT_DECRYPT' or 'GOOGLE_SYMMETRIC_ENCRYPTION' not in response.get('versionTemplate', {}).get('algorithm', ''):
-            click.echo(f"KMS key is not a symmetric key.")
+            click.echo("KMS key is not a symmetric key.")
             return False
 
         click.echo("KMS key validated successfully.")
@@ -1120,7 +1117,7 @@ def grant_kms_permissions(credentials, kms_key_name, project_number):
     """Grants KMS permissions to the necessary service accounts."""
     try:
         service = build('cloudkms', 'v1', credentials=credentials)
-        click.echo(f'Granting Discovery Engine and Cloud Storage Service Accounts the "Cloud KMS CryptoKey Encrypter/Decrypter" IAM role on the provided key.')
+        click.echo('Granting Discovery Engine and Cloud Storage Service Accounts the "Cloud KMS CryptoKey Encrypter/Decrypter" IAM role on the provided key.')
         # Get the current IAM policy
         request = service.projects().locations().keyRings().cryptoKeys().getIamPolicy(resource=kms_key_name)
         policy = request.execute()
@@ -1152,7 +1149,7 @@ def grant_kms_permissions(credentials, kms_key_name, project_number):
         request = service.projects().locations().keyRings().cryptoKeys().setIamPolicy(resource=kms_key_name, body=body)
         request.execute()
 
-        click.echo(f"Successfully granted KMS permissions to Discovery Engine and Cloud Storage Service Accounts.")
+        click.echo("Successfully granted KMS permissions to Discovery Engine and Cloud Storage Service Accounts.")
         return True
 
     except Exception as e:
@@ -1177,7 +1174,7 @@ def configure_cmek(credentials, project_id, kms_key_name):
 
     try:
         request.execute()
-        click.echo(f"CMEK configured successfully.")
+        click.echo("CMEK configured successfully.")
         return True
     
     except Exception as e:
@@ -1245,7 +1242,7 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
         
         # Check if response is an Operation (LRO)
         if 'name' in response and 'operations' in response['name']:
-             click.echo(f"Engine creation initiated. Waiting for Engine to be ready...")
+             click.echo("Engine creation initiated. Waiting for Engine to be ready...")
              
              engine_full_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}"
              
@@ -1268,7 +1265,7 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
              click.echo(nl=True)
         else:
              # If it's not an operation or already done (unlikely for create)
-             click.echo(f"Engine created successfully!")
+             click.echo("Engine created successfully!")
 
     except Exception as e:
         click.echo("Received an API error during creation. Checking if engine was created asynchronously despite the error...")
@@ -1485,7 +1482,7 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
             if result.returncode == 0 and "error" not in result.stdout.lower():
                  click.echo(f"Default assistant for engine {engine_id} configured for FedRAMP High.")
             else:
-                 click.echo(f"An error occurred while configuring the default assistant for FedRAMP High:")
+                 click.echo("An error occurred while configuring the default assistant for FedRAMP High:")
                  click.echo(result.stderr)
                  click.echo(result.stdout)
                  # Do not exit
@@ -1595,7 +1592,7 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
         if result.returncode == 0 and "error" not in result.stdout.lower():
              click.echo(f"Default assistant for engine {engine_id} configured for IL4.")
         else:
-             click.echo(f"An error occurred while configuring the default assistant for IL4:")
+             click.echo("An error occurred while configuring the default assistant for IL4:")
              click.echo(result.stderr)
              click.echo(result.stdout)
              click.echo(click.style("Exiting Onboarding process...", fg="red"))
@@ -1707,7 +1704,7 @@ def configure_gemini_enterprise_for_il5(credentials, project_id, engine_id):
         if result.returncode == 0 and "error" not in result.stdout.lower():
              click.echo(f"Default assistant for engine {engine_id} configured for IL5.")
         else:
-             click.echo(f"An error occurred while configuring the default assistant for IL5:")
+             click.echo("An error occurred while configuring the default assistant for IL5:")
              click.echo(result.stderr)
              click.echo(result.stdout)
              click.echo(click.style("Exiting Onboarding process...", fg="red"))
