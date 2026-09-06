@@ -1261,6 +1261,34 @@ configure_access_policies() {
     echo -e "${GREEN}Access Policy Configuration Complete.${NC}"
 }
 
+strip_gemini_apps_tfvars() {
+    # Remove any existing top-level `gemini_apps = {...}` assignment from a tfvars
+    # file so callers can rewrite it in place. HCL rejects two assignments to the
+    # same argument, and the map is emitted by jq across multiple lines, so this
+    # tracks brace depth to drop the whole block rather than a single line.
+    local file="$1"
+    [[ -f "$file" ]] || return 0
+
+    local tmp
+    tmp=$(mktemp)
+    awk '
+        skip {
+            n = gsub(/{/, "{"); depth += n
+            m = gsub(/}/, "}"); depth -= m
+            if (depth <= 0) skip = 0
+            next
+        }
+        /^[[:space:]]*gemini_apps[[:space:]]*=/ {
+            skip = 1; depth = 0
+            n = gsub(/{/, "{"); depth += n
+            m = gsub(/}/, "}"); depth -= m
+            if (depth <= 0) skip = 0
+            next
+        }
+        { print }
+    ' "$file" > "$tmp" && mv "$tmp" "$file"
+}
+
 prompt_gemini_apps() {
     # Expects global arrays GCS_KEYS and BQ_KEYS to be populated with available keys.
     # Outputs the generated JSON in APPS_OBJ.
@@ -2487,6 +2515,7 @@ EOF
 
     # Write gemini_apps to terraform.tfvars
     if [[ "$APPS_OBJ" != "{}" && -n "$APPS_OBJ" ]]; then
+         strip_gemini_apps_tfvars gemini-stage-0/terraform.tfvars
          echo "gemini_apps = ${APPS_OBJ}" >> gemini-stage-0/terraform.tfvars
     fi
 
@@ -2739,6 +2768,7 @@ configure_gemini_apps() {
     fi
 
     # Write the variables to terraform.tfvars
+    strip_gemini_apps_tfvars gemini-stage-0/terraform.tfvars
     echo "gemini_apps = ${APPS_OBJ}" >> gemini-stage-0/terraform.tfvars
 
     export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"
