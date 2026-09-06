@@ -397,11 +397,11 @@ def onboard():
                 click.echo(click.style("The following data stores are invalid and cannot be connected to the Gemini Enterprise application:", fg="red"))
                 for ds in invalid_data_stores:
                     if ds.get('display_name', None) == None:
-                        click.echo(click.style(f"- {ds["id"]} (Does not exist)", fg="red"))
+                        click.echo(click.style(f"- {ds['id']} (Does not exist)", fg="red"))
                     elif ds.get('kms_key_name', None) == None:
-                        click.echo(click.style(f"- {ds["id"]} (Not CMEK encrypted)", fg="red"))
+                        click.echo(click.style(f"- {ds['id']} (Not CMEK encrypted)", fg="red"))
                     else:
-                        click.echo(click.style(f"- {ds["id"]} (Incompatible)", fg="red"))
+                        click.echo(click.style(f"- {ds['id']} (Incompatible)", fg="red"))
                 data_store_list = []
                 valid_data_stores = []
                 invalid_data_stores = []
@@ -411,7 +411,7 @@ def onboard():
                 # List valid data stores and prompt the user to confirm the list
                 click.echo(click.style("The following data stores have been validated and will be connected to the Gemini Enterprise application:", fg="yellow"))
                 for ds in valid_data_stores:
-                    click.echo(click.style(f"- {ds["id"]} ({ds["display_name"]})", fg="yellow"))
+                    click.echo(click.style(f"- {ds['id']} ({ds['display_name']})", fg="yellow"))
 
                 if click.confirm('Please confirm that you would like to connect the above list of data stores to the Gemini Enterprise application'):
                     break

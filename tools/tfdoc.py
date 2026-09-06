@@ -43,7 +43,6 @@ import glob
 import os
 import re
 import string
-import sys
 import urllib.parse
 
 import click
@@ -472,7 +471,7 @@ def render_tfref(readme, doc):
   'Replace document in module\'s README.md file.'
   result = get_tfref_parts(readme)
   if not result:
-    raise SystemExit(f'Mark not found in README')
+    raise SystemExit('Mark not found in README')
   if doc == result['doc']:
     return readme
   return '\n'.join([

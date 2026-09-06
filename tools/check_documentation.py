@@ -120,7 +120,7 @@ def _check_dir(dir_name, exclude_files=None, files=False, show_extra=False):
         state = state.FAIL_UNSORTED_VARS
         diff = "\n".join([
             f'----- {readme_rel} variables -----',
-            f'variables should be in this order: ',
+            'variables should be in this order: ',
             ', '.join(sorted(variables)),
         ])
 
@@ -128,7 +128,7 @@ def _check_dir(dir_name, exclude_files=None, files=False, show_extra=False):
         state = state.FAIL_UNSORTED_OUTPUTS
         diff = "\n".join([
             f'----- {readme_rel} outputs -----',
-            f'outputs should be in this order: ',
+            'outputs should be in this order: ',
             ', '.join(sorted(outputs)),
         ])
 
