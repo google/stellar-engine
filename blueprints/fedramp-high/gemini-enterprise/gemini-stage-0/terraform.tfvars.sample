@@ -89,8 +89,8 @@ deployment_type = "external"
 # to all traffic outside of business hours
 access_start_hour = 9  # e.g., 9 AM ET
 access_end_hour   = 17 # e.g., 5 PM ET
-access_start_day  = 1  # Monday
-access_end_day    = 5  # Friday
+access_start_day  = 1  # Monday (0=Sun, 6=Sat)
+access_end_day    = 5  # Friday (0=Sun, 6=Sat)
 
 # OPTIONAL: Shared VPC Configuration
 # Set use_shared_vpc to true to use an existing Shared VPC

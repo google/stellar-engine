@@ -902,8 +902,8 @@ The blueprint sets up the following key components:
       - **Customizable Business Hours:** The time-based access control (used in `moderate_device` and `strict_device` policies) can be customized using variables in your `terraform.tfvars` file:
         - `access_start_hour`: Start hour (0-23 ET, default: 9)
         - `access_end_hour`: End hour (0-23 ET, default: 17)
-        - `access_start_day`: Start day (1=Mon, 7=Sun, default: 1)
-        - `access_end_day`: End day (1=Mon, 7=Sun, default: 5)
+        - `access_start_day`: Start day (0=Sun, 6=Sat, default: 1 for Monday)
+        - `access_end_day`: End day (0=Sun, 6=Sat, default: 5 for Friday)
     - **Model Armor:** Template defined in `model_armor.tf` and optionally configured for the FedRAMP High compliance regime to provide an extra layer of security by filtering user prompts and model responses to conform to responsible AI practices.
 
 4.  **Data Stores:** CMEK-encrypted GCS buckets and BigQuery datasets for Vertex AI Search, managed by the `discovery-engine` module.
