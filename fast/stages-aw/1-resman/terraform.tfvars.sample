@@ -1,21 +1,22 @@
 tenants = {
-  tenant_name = { ## change this
-    admin_principal  = "group:gcp-devops@domain"
-    descriptive_name = "tenant_name"
+  ten-1 = { ## Change ten-1 here - 6 or less characters
+    admin_principal  = "group:gcp-devops@<domain>"
+    descriptive_name = "tenant-1" ## Change descriptive_name here
     locations = {
-      gcs = "us-east4"
-      kms = "us-east4"
+      gcs = "<region>"
+      kms = "<region>"
     }
   },
-   tenant_name-2 = { ## change this
-    admin_principal  = "group:gcp-devops@domain"
-    descriptive_name = "tenant_name-2"
+  ten-2 = { ## Change ten-2 here - 6 or less characters
+    admin_principal  = "group:gcp-devops@<domain>"
+    descriptive_name = "tenant-2" ## Change descriptive_name here
     locations = {
-      gcs = "us-east4"
-      kms = "us-east4"
+      gcs = "<region>"
+      kms = "<region>"
     }
   }
 }
+## You can have “n” number of tenants
 
 fast_features = {
   envs = true
@@ -23,12 +24,12 @@ fast_features = {
 
 envs_folders = {
   Prod = {
-    admin = "gcp-organization-admins@domain.com"
+    admin = "gcp-organization-admins@<domain>"
   },
   Int = {
-    admin = "gcp-organization-admins@domain.com"
+    admin = "gcp-organization-admins@<domain>"
   },
   Test = {
-    admin = "gcp-organization-admins@domain.com"
+    admin = "gcp-organization-admins@<domain>"
   }
 }
