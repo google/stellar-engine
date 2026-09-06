@@ -1,4 +1,4 @@
-# Copyright 2026 Google Inc.
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,23 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import setup
+import os
+import sys
 
-setup(
-    name='gem4gov',
-    version='0.1.0',
-    py_modules=['gem4gov', 'data_stores', 'auth'],
-    include_package_data=True,
-    install_requires=[
-        'click',
-        'google-api-python-client',
-        'google-auth',
-        'google-auth-oauthlib',
-        'PyYAML'
-    ],
-    entry_points={
-        'console_scripts': [
-            'gem4gov = gem4gov:cli',
-        ],
-    },
-)
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+GEM4GOV_PATH = os.path.join(REPO_ROOT, 'blueprints', 'fedramp-high', 'gemini-enterprise', 'gem4gov-cli')
+TOOLS_PATH = os.path.join(REPO_ROOT, 'tools')
+
+for p in (REPO_ROOT, GEM4GOV_PATH, TOOLS_PATH):
+  if p not in sys.path:
+    sys.path.insert(0, p)
