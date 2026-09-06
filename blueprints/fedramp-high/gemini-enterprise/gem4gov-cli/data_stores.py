@@ -307,7 +307,7 @@ def create_data_store_schema(credentials, project_id, data_store_id, schema):
     )
 
     try:
-        response = request.execute()
+        request.execute()
         click.echo(f"Default schema for data store {data_store_id} successfully patched")
     except Exception as e:
         click.echo(click.style(f"An error occurred while patching the default schema: {parse_http_error(e)}", fg=(255,165,0)))
