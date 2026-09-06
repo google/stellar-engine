@@ -78,7 +78,7 @@ def init():
         click.echo("Could not set the gcloud project configuration. Please ensure gcloud is installed and configured correctly.")
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
         sys.exit(1)
-    credentials = get_credentials()
+    get_credentials()
     click.echo(f"Successfully set project ID to: {project_id}")
 
 ##############################################################
@@ -1043,7 +1043,7 @@ def configure_identity_provider(credentials, project_id, idp_type, workforce_poo
     )
 
     try:
-        response = request.execute()
+        request.execute()
         click.echo(f"Identity provider configured successfully.")
         if idp_type == '1':
             return "GSUITE"
@@ -1176,7 +1176,7 @@ def configure_cmek(credentials, project_id, kms_key_name):
     )
 
     try:
-        response = request.execute()
+        request.execute()
         click.echo(f"CMEK configured successfully.")
         return True
     
@@ -1253,7 +1253,7 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
                 try:
                     # Poll the Engine resource directly
                     eng_request = service.projects().locations().collections().engines().get(name=engine_full_name)
-                    eng_response = eng_request.execute()
+                    eng_request.execute()
                     
                     # If we get here, the engine exists.
                     click.echo("Engine created successfully!")
@@ -1280,7 +1280,7 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
                 eng_request.execute()
                 click.echo("Engine verified successfully! Proceeding with configuration.")
                 return
-            except Exception as inner_e:
+            except Exception:
                 if attempt < max_retries - 1:
                     click.echo(".", nl=False)
                     time.sleep(5)
@@ -1303,12 +1303,6 @@ def configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_
             f"https://us-discoveryengine.googleapis.com/v1alpha/projects/{project_id}/locations/us/collections/default_collection/"
             f"engines/{engine_id}/widgetConfigs/default_search_widget_config?updateMask=accessSettings"
         )
-        
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "x-goog-user-project": project_id,
-            "Content-Type": "application/json"
-        }
         
         data = {
             "accessSettings": {
@@ -1366,12 +1360,6 @@ def disable_user_event_collection(credentials, project_id, engine_id):
             f"https://us-discoveryengine.googleapis.com/v1alpha/projects/{project_id}/locations/us/collections/default_collection/"
             f"engines/{engine_id}/widgetConfigs/default_search_widget_config?updateMask=uiSettings.disableUserEventsCollection"
         )
-        
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "x-goog-user-project": project_id,
-            "Content-Type": "application/json"
-        }
         
         data = {
             "uiSettings": {
@@ -1444,7 +1432,7 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
     )
 
     try:
-        engine_response = engine_request.execute()
+        engine_request.execute()
         click.echo(f"Engine {engine_id} configured for FedRAMP High.")
     except Exception as e:
         click.echo(f"An error occurred while configuring the engine for FedRAMP High: {e}")
@@ -1557,7 +1545,7 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
     )
 
     try:
-        engine_response = engine_request.execute()
+        engine_request.execute()
         click.echo(f"Engine {engine_id} configured for IL4.")
     except Exception as e:
         click.echo(f"An error occurred while configuring the engine for IL4: {e}")
@@ -1669,7 +1657,7 @@ def configure_gemini_enterprise_for_il5(credentials, project_id, engine_id):
     )
 
     try:
-        engine_response = engine_request.execute()
+        engine_request.execute()
         click.echo(f"Engine {engine_id} configured for IL5.")
     except Exception as e:
         click.echo(f"An error occurred while configuring the engine for IL5: {e}")

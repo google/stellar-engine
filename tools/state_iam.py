@@ -40,7 +40,6 @@ def _org_id(resource_id):
 
 def get_bindings(resources, prefix=None, folders=None):
   'Parse resources and return bindings.'
-  org_ids = {}
   for r in resources:
     m = RESOURCE_TYPE_RE.match(r['type'])
     if not m:
