@@ -19,7 +19,6 @@ from googleapiclient.discovery import build
 from google.api_core.client_options import ClientOptions
 import random
 import string
-import json
 
 def generate_id(prefix):
     """Generates a random 6-character alphanumeric string."""

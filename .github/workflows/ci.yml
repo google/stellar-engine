@@ -8,16 +8,20 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
-  security-events: write
 
 jobs:
   security-scan:
     name: Security Scans
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
 
       - name: Run tfsec
         uses: aquasecurity/tfsec-pr-commenter-action@1015a3975c7f1400ee4d9f423a7786a3df9fcbec
@@ -42,9 +46,13 @@ jobs:
   shell-tests:
     name: Shell Script Tests
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
 
       - name: Run Shell Script Test Suites
         run: |
@@ -53,9 +61,13 @@ jobs:
   python-tests:
     name: Python Unit Tests & Code Quality
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout Repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38

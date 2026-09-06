@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib
 import os
 import sys
 from unittest.mock import MagicMock
@@ -26,68 +27,30 @@ if TOOLS_PATH not in sys.path:
   sys.path.insert(0, TOOLS_PATH)
 
 # Graceful fallback mocks for dependencies if not installed in minimal environments
-if 'click' not in sys.modules:
-  try:
-    import click
-  except ImportError:
-    sys.modules['click'] = MagicMock()
+for mod_name in [
+    'click',
+    'google',
+    'google.auth',
+    'google.api_core',
+    'google.api_core.client_options',
+    'googleapiclient',
+    'googleapiclient.discovery',
+    'googleapiclient.errors',
+    'marko',
+]:
+  if mod_name not in sys.modules:
+    try:
+      importlib.import_module(mod_name)
+    except ImportError:
+      sys.modules[mod_name] = MagicMock()
 
-if 'google' not in sys.modules:
-  try:
-    import google
-  except ImportError:
-    google_mock = MagicMock()
-    sys.modules['google'] = google_mock
-
-if 'google.auth' not in sys.modules:
-  try:
-    import google.auth
-  except ImportError:
-    auth_mock = MagicMock()
-    sys.modules['google.auth'] = auth_mock
-    sys.modules['google'].auth = auth_mock
-
-if 'google.api_core' not in sys.modules:
-  try:
-    import google.api_core
-  except ImportError:
-    api_core_mock = MagicMock()
-    sys.modules['google.api_core'] = api_core_mock
-    sys.modules['google'].api_core = api_core_mock
-
-if 'google.api_core.client_options' not in sys.modules:
-  try:
-    import google.api_core.client_options
-  except ImportError:
-    client_options_mock = MagicMock()
-    sys.modules['google.api_core.client_options'] = client_options_mock
-    sys.modules['google.api_core'].client_options = client_options_mock
-
-if 'googleapiclient' not in sys.modules:
-  try:
-    import googleapiclient
-  except ImportError:
-    gapi_mock = MagicMock()
-    sys.modules['googleapiclient'] = gapi_mock
-
-if 'googleapiclient.discovery' not in sys.modules:
-  try:
-    import googleapiclient.discovery
-  except ImportError:
-    disc_mock = MagicMock()
-    sys.modules['googleapiclient.discovery'] = disc_mock
-    sys.modules['googleapiclient'].discovery = disc_mock
-
-if 'googleapiclient.errors' not in sys.modules:
-  try:
-    import googleapiclient.errors
-  except ImportError:
-    errors_mock = MagicMock()
-    sys.modules['googleapiclient.errors'] = errors_mock
-    sys.modules['googleapiclient'].errors = errors_mock
-
-if 'marko' not in sys.modules:
-  try:
-    import marko
-  except ImportError:
-    sys.modules['marko'] = MagicMock()
+if 'google' in sys.modules and 'google.auth' in sys.modules:
+  setattr(sys.modules['google'], 'auth', sys.modules['google.auth'])
+if 'google' in sys.modules and 'google.api_core' in sys.modules:
+  setattr(sys.modules['google'], 'api_core', sys.modules['google.api_core'])
+if 'google.api_core' in sys.modules and 'google.api_core.client_options' in sys.modules:
+  setattr(sys.modules['google.api_core'], 'client_options', sys.modules['google.api_core.client_options'])
+if 'googleapiclient' in sys.modules and 'googleapiclient.discovery' in sys.modules:
+  setattr(sys.modules['googleapiclient'], 'discovery', sys.modules['googleapiclient.discovery'])
+if 'googleapiclient' in sys.modules and 'googleapiclient.errors' in sys.modules:
+  setattr(sys.modules['googleapiclient'], 'errors', sys.modules['googleapiclient.errors'])
