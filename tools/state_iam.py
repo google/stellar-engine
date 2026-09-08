@@ -40,7 +40,6 @@ def _org_id(resource_id):
 
 def get_bindings(resources, prefix=None, folders=None):
   'Parse resources and return bindings.'
-  org_ids = {}
   for r in resources:
     m = RESOURCE_TYPE_RE.match(r['type'])
     if not m:
@@ -78,10 +77,10 @@ def get_bindings(resources, prefix=None, folders=None):
         if member_domain == 'cloudservices.gserviceaccount.com':
           member_id = "PROJECT_CLOUD_SERVICES"
         # Handle Cloud Service Identity Service Account
-        if re.match("^service-\d{8}", member_id):
+        if re.match(r"^service-\d{8}", member_id):
           member_id = "SERVICE_IDENTITY_" + member_domain.split(".", 1)[0]
         # Handle BQ Cloud Service Identity Service Account
-        if re.match("^bq-\d{8}", member_id):
+        if re.match(r"^bq-\d{8}", member_id):
           member_id = "IDENTITY_" + member_domain.split(".", 1)[0]
           resource_type_output = "Service Identity - " + resource_type
         else:

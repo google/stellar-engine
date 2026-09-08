@@ -28,11 +28,12 @@ resource "google_project_iam_audit_config" "discovery_engine_audit" {
 }
 
 resource "google_bigquery_dataset" "analytics_dataset" {
-  count       = var.enable_analytics ? 1 : 0
-  dataset_id  = "${replace(var.prefix, "-", "_")}_gemini_analytics"
-  project     = var.main_project_id
-  location    = var.geolocation
-  description = "Dataset for Gemini Enterprise Discovery Engine audit logs"
+  count                      = var.enable_analytics ? 1 : 0
+  dataset_id                 = "${replace(var.prefix, "-", "_")}_gemini_analytics"
+  project                    = var.main_project_id
+  location                   = var.geolocation
+  description                = "Dataset for Gemini Enterprise Discovery Engine audit logs"
+  delete_contents_on_destroy = true
 }
 
 resource "google_logging_project_sink" "discovery_engine_sink" {

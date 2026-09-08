@@ -189,6 +189,11 @@ variable "kms_keys" {
   nullable = false
 }
 
+variable "kms_protection_level" {
+  description = "Protection level (HSM or SOFTWARE) applied to every key in kms_keys that does not set its own version_template."
+  type        = string
+  nullable    = true
+}
 variable "logging" {
   # tfdoc:variable:source 0-bootstrap
   description = "Log writer identities for organization / folders."

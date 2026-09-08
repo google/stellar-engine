@@ -1160,9 +1160,9 @@ configure_access_policies() {
         read -p "Restrict incoming traffic based on a specific time schedule (Business Hours)? (y/N): " TIME_CHOICE
         if [[ "$TIME_CHOICE" == "y" || "$TIME_CHOICE" == "Y" ]]; then
             CREATE_TIME_ACCESS="true"
-            read -p "Enter Start Day (1=Mon, 7=Sun) [1]: " ACCESS_START_DAY
+            read -p "Enter Start Day (0=Sun, 6=Sat) [1]: " ACCESS_START_DAY
             ACCESS_START_DAY=${ACCESS_START_DAY:-1}
-            read -p "Enter End Day (1=Mon, 7=Sun) [5]: " ACCESS_END_DAY
+            read -p "Enter End Day (0=Sun, 6=Sat) [5]: " ACCESS_END_DAY
             ACCESS_END_DAY=${ACCESS_END_DAY:-5}
             read -p "Enter Start Hour (0-23) [7]: " ACCESS_START_HOUR
             ACCESS_START_HOUR=${ACCESS_START_HOUR:-7}
@@ -1259,6 +1259,34 @@ configure_access_policies() {
     fi
 
     echo -e "${GREEN}Access Policy Configuration Complete.${NC}"
+}
+
+strip_gemini_apps_tfvars() {
+    # Remove any existing top-level `gemini_apps = {...}` assignment from a tfvars
+    # file so callers can rewrite it in place. HCL rejects two assignments to the
+    # same argument, and the map is emitted by jq across multiple lines, so this
+    # tracks brace depth to drop the whole block rather than a single line.
+    local file="$1"
+    [[ -f "$file" ]] || return 0
+
+    local tmp
+    tmp=$(mktemp)
+    awk '
+        skip {
+            n = gsub(/{/, "{"); depth += n
+            m = gsub(/}/, "}"); depth -= m
+            if (depth <= 0) skip = 0
+            next
+        }
+        /^[[:space:]]*gemini_apps[[:space:]]*=/ {
+            skip = 1; depth = 0
+            n = gsub(/{/, "{"); depth += n
+            m = gsub(/}/, "}"); depth -= m
+            if (depth <= 0) skip = 0
+            next
+        }
+        { print }
+    ' "$file" > "$tmp" && mv "$tmp" "$file"
 }
 
 prompt_gemini_apps() {
@@ -2487,6 +2515,7 @@ EOF
 
     # Write gemini_apps to terraform.tfvars
     if [[ "$APPS_OBJ" != "{}" && -n "$APPS_OBJ" ]]; then
+         strip_gemini_apps_tfvars gemini-stage-0/terraform.tfvars
          echo "gemini_apps = ${APPS_OBJ}" >> gemini-stage-0/terraform.tfvars
     fi
 
@@ -2739,6 +2768,7 @@ configure_gemini_apps() {
     fi
 
     # Write the variables to terraform.tfvars
+    strip_gemini_apps_tfvars gemini-stage-0/terraform.tfvars
     echo "gemini_apps = ${APPS_OBJ}" >> gemini-stage-0/terraform.tfvars
 
     export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"

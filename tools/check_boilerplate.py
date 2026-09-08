@@ -24,7 +24,6 @@ folder paths as arguments, as this tool is designed to be run in CI pipelines
 triggered by pull requests.
 '''
 
-import glob
 import os
 import re
 import sys

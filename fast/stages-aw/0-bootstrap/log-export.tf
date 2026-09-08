@@ -64,7 +64,8 @@ module "log-export-project" {
     "stackdriver.googleapis.com",
     "cloudkms.googleapis.com",
     "pubsub.googleapis.com",
-    "compute.googleapis.com"
+    "compute.googleapis.com",
+    "logging.googleapis.com"
   ]
 }
 
@@ -85,8 +86,8 @@ module "log-export-dataset" {
   id             = "logs"
   friendly_name  = "Audit logs export."
   location       = local.locations.bq
-  encryption_key = try(var.logging_kms_key, module.logging-kms.keys["log-sink"])
-
+  encryption_key = coalesce(var.logging_kms_key, module.logging-kms.key_ids["log-sink"])
+  depends_on     = [module.logging-kms]
 }
 
 module "log-export-gcs" {
@@ -98,7 +99,8 @@ module "log-export-gcs" {
   location       = local.locations.gcs
   storage_class  = local.gcs_storage_class
   force_destroy  = true
-  encryption_key = try(var.logging_kms_key, module.logging-kms.keys["log-sink"])
+  encryption_key = coalesce(var.logging_kms_key, module.logging-kms.key_ids["log-sink"])
+  depends_on     = [module.logging-kms]
 }
 
 module "log-export-logbucket" {
@@ -109,10 +111,10 @@ module "log-export-logbucket" {
   id            = each.key
   location      = local.locations.logging
   log_analytics = { enable = true }
-  kms_key_name  = try(var.logging_kms_key, module.logging-kms.keys["log-sink"])
+  kms_key_name  = coalesce(var.logging_kms_key, module.logging-kms.key_ids["log-sink"])
   retention     = var.logging_bucket_retention
   # org-level logging settings ready before we create any logging buckets
-  depends_on = [module.organization-logging]
+  depends_on = [module.organization-logging, module.logging-kms]
 }
 
 module "log-export-pubsub" {
@@ -121,5 +123,6 @@ module "log-export-pubsub" {
   project_id = module.log-export-project.project_id
   name       = each.key
   regions    = local.locations.pubsub
-  kms_key    = try(var.logging_kms_key, module.logging-kms.keys["log-sink"])
+  kms_key    = coalesce(var.logging_kms_key, module.logging-kms.key_ids["log-sink"])
+  depends_on = [module.logging-kms]
 }

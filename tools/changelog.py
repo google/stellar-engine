@@ -206,7 +206,7 @@ def main(token, changelog='CHANGELOG.md', all_releases=False, release=None,
   else:
     try:
       open(changelog, 'w').write(result)
-    except (IOError, OSError) as e:
+    except (IOError, OSError):
       raise SystemExit('Cannot write to changelog file.')
 
 

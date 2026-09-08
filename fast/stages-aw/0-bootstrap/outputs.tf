@@ -106,7 +106,7 @@ locals {
       project_number    = module.log-export-project.number
       writer_identities = module.organization.sink_writer_identities
     }
-    assured_workloads      = merge(var.assured_workloads, { "folder" = var.assured_workloads.regime != "COMPLIANCE_REGIME_UNSPECIFIED" ? "folders/${google_assured_workloads_workload.primary[0].resources[0].resource_id}" : "${module.no-compliance-folder[0].folder.id}" })
+    assured_workloads      = merge(var.assured_workloads, { "folder" = local.assured_workload_folder })
     common_services_folder = module.branch-common-services-folder.folder.name
     regions                = var.regions
   }
@@ -128,7 +128,7 @@ output "alert_email" {
 
 output "assured_workload" {
   description = "Assured Workload folder for the deployment."
-  value       = var.assured_workloads.regime != "COMPLIANCE_REGIME_UNSPECIFIED" ? "folders/${google_assured_workloads_workload.primary[0].resources[0].resource_id}" : module.no-compliance-folder[0].id
+  value       = local.assured_workload_folder
 }
 
 output "automation" {

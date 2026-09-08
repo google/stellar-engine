@@ -58,6 +58,9 @@ data "google_compute_address" "gemini_enterprise_ip" {
 
 locals {
   load_balancing_scheme = data.terraform_remote_state.stage_0.outputs.deployment_type == "internal" ? "INTERNAL_MANAGED" : "EXTERNAL_MANAGED"
+
+  gemini_apps_widget_ids = data.terraform_remote_state.stage_0.outputs.gemini_apps_widget_ids
+  first_gemini_widget_id = length(local.gemini_apps_widget_ids) > 0 ? local.gemini_apps_widget_ids[keys(local.gemini_apps_widget_ids)[0]] : ""
 }
 
 # This resource defines the URL map with the specified routing rules.
@@ -107,7 +110,7 @@ resource "google_compute_region_url_map" "gemini_enterprise_load_balancer" {
         route_action {
           url_rewrite {
             host_rewrite        = "vertexaisearch.cloud.google.com"
-            path_prefix_rewrite = "/us/home/cid/${data.terraform_remote_state.stage_0.outputs.gemini_apps_widget_ids[keys(data.terraform_remote_state.stage_0.outputs.gemini_apps_widget_ids)[0]]}?hl=en_US"
+            path_prefix_rewrite = "/us/home/cid/${local.first_gemini_widget_id}?hl=en_US"
           }
         }
       }
@@ -140,7 +143,7 @@ resource "google_compute_region_url_map" "gemini_enterprise_load_balancer" {
       default_url_redirect {
         https_redirect         = true
         host_redirect          = "auth.cloud.google"
-        path_redirect          = "/signin/${data.terraform_remote_state.stage_0.outputs.acl_workforce_pool_name}/providers/${data.terraform_remote_state.stage_0.outputs.acl_workforce_provider_id}?continueUrl=https%3A%2F%2Fvertexaisearch.cloud.google%2Fus%2Fhome%2Fcid%2F${data.terraform_remote_state.stage_0.outputs.gemini_apps_widget_ids[keys(data.terraform_remote_state.stage_0.outputs.gemini_apps_widget_ids)[0]]}&hl=en_US"
+        path_redirect          = "/signin/${data.terraform_remote_state.stage_0.outputs.acl_workforce_pool_name}/providers/${data.terraform_remote_state.stage_0.outputs.acl_workforce_provider_id}?continueUrl=https%3A%2F%2Fvertexaisearch.cloud.google%2Fus%2Fhome%2Fcid%2F${local.first_gemini_widget_id}&hl=en_US"
         redirect_response_code = "FOUND"
         strip_query            = false
       }

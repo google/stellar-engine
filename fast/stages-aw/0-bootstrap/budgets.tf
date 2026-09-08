@@ -17,7 +17,7 @@
 # tfdoc:file:description Billing budgets.
 
 locals {
-    folder_name = var.assured_workloads.regime != "COMPLIANCE_REGIME_UNSPECIFIED" ? "${google_assured_workloads_workload.primary[0].display_name}" : "${module.no-compliance-folder[0].folder.name}"
+  folder_name = var.assured_workloads.regime != "COMPLIANCE_REGIME_UNSPECIFIED" ? "${google_assured_workloads_workload.primary[0].display_name}" : "${module.no-compliance-folder[0].folder.name}"
 }
 
 module "billing-account-budget" {
@@ -37,9 +37,7 @@ module "billing-account-budget" {
       ]
       filter = {
         resource_ancestors = [
-          var.assured_workloads.regime != "COMPLIANCE_REGIME_UNSPECIFIED"
-          ? "folders/${google_assured_workloads_workload.primary[0].resources[0].resource_id}"
-          : module.no-compliance-folder[0].folder.id
+          local.assured_workload_folder
         ]
       }
     }

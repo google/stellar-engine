@@ -77,6 +77,7 @@ locals {
       # assignment for these agents is disabled.
       !contains([
         "apigateway", "apigateway-mgmt", "bigqueryspark", "bigquerytardis",
+        "cloudkms",
         "firebase", "krmapihosting", "krmapihosting-dataplane", "logging",
         "networkactions", "prod-bigqueryomni", "scc-notification", "securitycenter",
       ], agent.name)
@@ -112,11 +113,6 @@ data "google_storage_project_service_account" "gcs_sa" {
   depends_on = [google_project_service.project_services]
 }
 
-data "google_bigquery_default_service_account" "bq_sa" {
-  count      = contains(var.services, "bigquery.googleapis.com") ? 1 : 0
-  project    = local.project.project_id
-  depends_on = [google_project_service.project_services]
-}
 
 moved {
   from = google_project_service_identity.jit_si
