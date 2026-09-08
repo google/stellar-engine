@@ -78,6 +78,7 @@ resource "google_compute_address" "gemini_enterprise_ip" {
   region       = var.region
   subnetwork   = var.deployment_type == "internal" ? local.vpc_subnet_id : null
   address_type = local.ip_address_type
+  purpose      = var.deployment_type == "internal" ? "SHARED_LOADBALANCER_VIP" : null
 }
 
 # -----------------------------------------------------------------------------

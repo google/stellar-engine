@@ -1160,9 +1160,9 @@ configure_access_policies() {
         read -p "Restrict incoming traffic based on a specific time schedule (Business Hours)? (y/N): " TIME_CHOICE
         if [[ "$TIME_CHOICE" == "y" || "$TIME_CHOICE" == "Y" ]]; then
             CREATE_TIME_ACCESS="true"
-            read -p "Enter Start Day (1=Mon, 7=Sun) [1]: " ACCESS_START_DAY
+            read -p "Enter Start Day (0=Sun, 6=Sat) [1]: " ACCESS_START_DAY
             ACCESS_START_DAY=${ACCESS_START_DAY:-1}
-            read -p "Enter End Day (1=Mon, 7=Sun) [5]: " ACCESS_END_DAY
+            read -p "Enter End Day (0=Sun, 6=Sat) [5]: " ACCESS_END_DAY
             ACCESS_END_DAY=${ACCESS_END_DAY:-5}
             read -p "Enter Start Hour (0-23) [7]: " ACCESS_START_HOUR
             ACCESS_START_HOUR=${ACCESS_START_HOUR:-7}
