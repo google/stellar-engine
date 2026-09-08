@@ -1,7 +1,6 @@
-# use `gcloud beta billing accounts list`
-# if you have too many accounts, check the Cloud Console :)
+# use `gcloud billing accounts list`
 billing_account = {
-  id = "012345-67890A-BCDEF0"
+  id = "<billing_account_id>" # taken from Google Cloud Console Billing Accounts -> Manage Billing Account
 }
 
 # Optional Billing budget for the Assured Workload folder. If not set, no budget will be created.
@@ -10,16 +9,16 @@ billing_account = {
 # }
 
 # region configuration - this will automatically populate locations for GCS, BigQuery, KMS, and logging buckets
-# Default to us-east4 for IL5/FedRAMP compliance - adjust as needed
+# Default to us-east4 for IL5/FedRAMP High/Moderate compliance - adjust as needed
 regions = {
-  primary = "us-east4"  # Change to your preferred region - this will be used for all bootstrap resources
+  primary = "<region>"
 }
 
 # use `gcloud organizations list`
 organization = {
-  domain      = "example.org"
-  id          = 1234567890
-  customer_id = "C000001"
+  domain      = "<domain>" # DISPLAY_NAME
+  id          = "<organization_id>"
+  customer_id = "<customer_id>"
 }
 
 outputs_location = "~/fast-config"
@@ -27,8 +26,10 @@ outputs_location = "~/fast-config"
 # Retention period (in days) for organization logging buckets (defaults to 365 days for compliance)
 # logging_bucket_retention = 365
 
-# use something unique and no longer than 7 characters
-prefix = "abcd"
+# This variable is prepended to the names of all resources that are created.
+# Use something unique and no longer than 7 characters
+prefix = "<prefix>"
+
 # Default log routing is set to "logging" (Cloud Logging buckets, retained for
 # logging_bucket_retention days; the default is 365)
 # To use long-term storage, change type to "storage" (GCS) or "bigquery"
@@ -57,7 +58,7 @@ log_sinks = {
 org_policies_config = {
   import_defaults = false # No policies to import as of 27 SEP 2024
   constraints = {
-    allowed_policy_member_domains = [] # Additional externally allowed customer_ids
+    allowed_policy_member_domains = [] #Update with additional customer IDs if needed
   }
 }
 
@@ -65,11 +66,12 @@ fast_features = {
   envs = true
 }
 
+# Regime must be in all caps
 assured_workloads = {
-  regime = "compliance-regime" #"IL4, IL5, FEDRAMP_HIGH, etc... if you wish to not use assured_workloads, set this value to COMPLIANCE_REGIME_UNSPECIFIED"
-  location = "us-east4" # Uses the same region as other resources for consistency - change to match your regions.primary if different
+  regime = "<compliance_regime>" #"IL4, IL5, FEDRAMP_HIGH, etc... if you wish to not use assured_workloads, set this value to COMPLIANCE_REGIME_UNSPECIFIED"
+  location = "<region>" # Uses the same region as other resources for consistency - change to match your regions.primary if different
 }
 
-bootstrap_project = "bootstrap-project-name"
+bootstrap_project = "<bootstrap_project_id>"
 
-alert_email = "user@domain.com"
+alert_email = "<alert_email>"
