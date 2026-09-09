@@ -179,7 +179,7 @@ module "automation-tf-output-gcs" {
   location       = local.locations.gcs
   storage_class  = local.gcs_storage_class
   versioning     = true
-  force_destroy  = false
+  force_destroy  = var.force_destroy
   depends_on     = [module.organization, module.gcs-kms]
   encryption_key = module.gcs-kms.keys.gcs.id
 }
@@ -194,7 +194,7 @@ module "automation-tf-bootstrap-gcs" {
   location       = local.locations.gcs
   storage_class  = local.gcs_storage_class
   versioning     = true
-  force_destroy  = false
+  force_destroy  = var.force_destroy
   depends_on     = [module.organization]
   encryption_key = module.gcs-kms.keys.gcs.id
 }
@@ -251,7 +251,7 @@ module "automation-tf-resman-gcs" {
   location      = local.locations.gcs
   storage_class = local.gcs_storage_class
   versioning    = true
-  force_destroy = false
+  force_destroy = var.force_destroy
 
   iam = {
     "roles/storage.objectAdmin"  = [module.automation-tf-resman-sa.iam_email]
