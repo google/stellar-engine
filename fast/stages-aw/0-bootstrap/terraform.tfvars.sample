@@ -75,3 +75,33 @@ assured_workloads = {
 bootstrap_project = "<bootstrap_project_id>"
 
 alert_email = "<alert_email>"
+
+# CI/CD repository configuration example
+# Option A: Secure Source Manager (SSM)
+# cicd_repositories = {
+#   bootstrap = {
+#     name   = "fast-bootstrap"
+#     type   = "ssm"
+#     branch = "main"
+#   }
+#   resman = {
+#     name   = "fast-resman"
+#     type   = "ssm"
+#     branch = "main"
+#   }
+# }
+# Option B: GitHub/GitLab (requires federated_identity_providers)
+# cicd_repositories = {
+#   bootstrap = {
+#     identity_provider = "github"
+#     name              = "my-org/my-bootstrap-repo"
+#     type              = "github"
+#     branch            = "main"
+#   }
+#   resman = {
+#     identity_provider = "github"
+#     name              = "my-org/my-resman-repo"
+#     type              = "github"
+#     branch            = "main"
+#   }
+# }
