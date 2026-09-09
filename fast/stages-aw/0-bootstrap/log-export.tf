@@ -98,7 +98,7 @@ module "log-export-gcs" {
   prefix         = local.prefix
   location       = local.locations.gcs
   storage_class  = local.gcs_storage_class
-  force_destroy  = true
+  force_destroy  = false
   encryption_key = coalesce(var.logging_kms_key, module.logging-kms.key_ids["log-sink"])
   depends_on     = [module.logging-kms]
 }
