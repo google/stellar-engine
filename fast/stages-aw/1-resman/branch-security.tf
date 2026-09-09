@@ -105,7 +105,7 @@ module "branch-security-gcs" {
   location      = var.regions.primary
   storage_class = local.gcs_storage_class
   versioning    = true
-  force_destroy = true
+  force_destroy = false
   iam = {
     "roles/storage.objectAdmin"  = [module.branch-security-sa.iam_email]
     "roles/storage.objectViewer" = [module.branch-security-r-sa.iam_email]

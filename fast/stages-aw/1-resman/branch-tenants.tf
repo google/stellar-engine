@@ -129,7 +129,7 @@ module "tenant-core-gcs" {
   name          = lower("tn-${each.key}-0")
   prefix        = var.prefix
   versioning    = true
-  force_destroy = true
+  force_destroy = false
   location      = local.gcs_locations[each.value.tenant]
   storage_class = (
     length(split("-", local.gcs_locations[each.value.tenant])) < 2
@@ -220,7 +220,7 @@ module "tenant-self-iac-gcs-outputs" {
   name          = "${each.key}-iac-outputs-0"
   prefix        = var.prefix
   versioning    = true
-  force_destroy = true
+  force_destroy = false
   iam = {
     "roles/storage.objectAdmin" = [module.tenant-core-sa[each.key].iam_email]
   }
@@ -242,7 +242,7 @@ module "tenant-self-iac-gcs-states" {
   name           = "${each.key}-iac-0"
   prefix         = var.prefix
   versioning     = true
-  force_destroy  = true
+  force_destroy  = false
   encryption_key = module.tenant-project-keys[each.key].key_ids["gcs"]
   depends_on     = [module.tenant-project-keys, google_kms_crypto_key_iam_member.tenant_kms]
 }
