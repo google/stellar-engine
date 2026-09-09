@@ -15,6 +15,7 @@
  */
 # defaults for variables marked with global tfdoc annotations, can be set via
 # the tfvars file generated in stage 00 and stored in its outputs
+
 variable "alert_email" {
   description = "Email to receive log alerts."
   type        = string
@@ -63,6 +64,15 @@ variable "billing_account" {
     no_iam       = optional(bool, false)
   })
   nullable = false
+}
+
+variable "billing_override" {
+  description = "Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects."
+  type = object({
+    project         = string
+    billing_project = string
+  })
+  default = null
 }
 
 variable "cicd_repositories" {
@@ -225,6 +235,12 @@ variable "folder_iam" {
   default  = {}
 }
 
+variable "force_destroy" {
+  description = "Toggles force_destroy for GCS buckets."
+  type        = bool
+  default     = false
+}
+
 variable "groups" {
   # tfdoc:variable:source 0-bootstrap
   # https://cloud.google.com/docs/enterprise/setup-checklist
@@ -244,15 +260,6 @@ variable "kms_protection_level" {
   description = "KMS protection level."
   type        = string
   nullable    = true
-}
-
-variable "regions" {
-  # tfdoc:variable:source 0-bootstrap
-  description = "Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars."
-  type = object({
-    primary = string
-  })
-  nullable = false
 }
 
 variable "organization" {
@@ -285,6 +292,15 @@ variable "prefix" {
 variable "regime_mapping" {
   description = "Mapping of compliance regime names to short codes."
   type        = map(string)
+}
+
+variable "regions" {
+  # tfdoc:variable:source 0-bootstrap
+  description = "Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars."
+  type = object({
+    primary = string
+  })
+  nullable = false
 }
 
 variable "team_folders" {
@@ -341,13 +357,4 @@ variable "tenants_config" {
   })
   nullable = false
   default  = {}
-}
-
-variable "billing_override" {
-  description = "Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects."
-  type = object({
-    project         = string
-    billing_project = string
-  })
-  default = null
 }
