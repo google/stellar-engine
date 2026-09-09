@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 variable "alert_email" {
   description = "Email to receive log alerts."
   type        = string
@@ -156,6 +157,29 @@ variable "fast_features" {
   nullable = false
 }
 
+variable "federated_identity_providers" {
+  description = "Workload Identity Federation providers."
+  type = map(object({
+    attribute_condition = optional(string)
+    issuer              = string
+    custom_settings = optional(object({
+      issuer_uri = optional(string)
+      audiences  = optional(list(string), [])
+      jwks_json  = optional(string)
+    }), {})
+    attribute_mapping = optional(map(string))
+    audiences         = optional(list(string))
+  }))
+  default  = {}
+  nullable = false
+}
+
+variable "force_destroy" {
+  description = "Toggles force_destroy for GCS buckets."
+  type        = bool
+  default     = false
+}
+
 variable "groups" {
   # https://cloud.google.com/docs/enterprise/setup-checklist
   description = "Group names or IAM-format principals to grant organization-level permissions. If just the name is provided, the 'group:' principal and organization domain are interpolated."
@@ -259,16 +283,16 @@ variable "log_sinks" {
   }
 }
 
-variable "logging_kms_key" {
-  description = "value of the KMS key used for logging."
-  type        = string
-  default     = null
-}
-
 variable "logging_bucket_retention" {
   description = "Retention period (in days) for the Cloud Logging buckets created for organization log exports."
   type        = number
   default     = 365
+}
+
+variable "logging_kms_key" {
+  description = "value of the KMS key used for logging."
+  type        = string
+  default     = null
 }
 
 variable "org_policies_config" {
@@ -323,17 +347,6 @@ variable "project_parent_ids" {
   nullable = false
 }
 
-variable "regions" {
-  description = "Region definitions. Must be specified in terraform.tfvars. Example: us-east4 for FedRAMP High compliance."
-  type = object({
-    primary = string
-  })
-  nullable = false
-  default = {
-    primary = "us-east4"
-  }
-}
-
 variable "regime_mapping" {
   description = "Mapping of compliance regime names to short codes."
   type        = map(string)
@@ -367,24 +380,15 @@ variable "regime_mapping" {
   }
 }
 
-
-
-
-variable "federated_identity_providers" {
-  description = "Workload Identity Federation providers."
-  type = map(object({
-    attribute_condition = optional(string)
-    issuer              = string
-    custom_settings = optional(object({
-      issuer_uri = optional(string)
-      audiences  = optional(list(string), [])
-      jwks_json  = optional(string)
-    }), {})
-    attribute_mapping = optional(map(string))
-    audiences         = optional(list(string))
-  }))
-  default  = {}
+variable "regions" {
+  description = "Region definitions. Must be specified in terraform.tfvars. Example: us-east4 for FedRAMP High compliance."
+  type = object({
+    primary = string
+  })
   nullable = false
+  default = {
+    primary = "us-east4"
+  }
 }
 
 variable "workforce_identity_pool" {
