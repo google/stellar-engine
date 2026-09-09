@@ -113,6 +113,7 @@ module "ngfw-bootstrap-bucket" {
   encryption_key = module.kms.keys.default.id
   storage_class  = "REGIONAL"
   versioning     = true
+  force_destroy  = var.force_destroy
   name           = "ngfw-bootstrap-${each.value}"
   location       = upper(each.value)
   depends_on     = [module.kms]
