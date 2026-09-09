@@ -34,17 +34,6 @@ variable "compliance_regime" {
   }
 }
 
-variable "kms_project_id" {
-  description = "The Project ID where CMEK keys are stored."
-  type        = string
-}
-
-variable "us_keyring_name" {
-  description = "The name of the US Multi-Region KeyRing (if existing). If empty, one will be created."
-  type        = string
-  default     = ""
-}
-
 variable "domain" {
   description = "FQDN for the load-balancer hosted apps, where the subdomain will be prepended to."
   type        = string
@@ -112,15 +101,23 @@ variable "access_end_hour" {
 }
 
 variable "access_start_day" {
-  description = "The day of the week when access starts (1 for Monday, 7 for Sunday)."
+  description = "The day of the week when access starts, evaluated using CEL getDayOfWeek() where 0 is Sunday, 1 is Monday, ..., 6 is Saturday (0-6)."
   type        = number
   default     = 1
+  validation {
+    condition     = var.access_start_day >= 0 && var.access_start_day <= 6
+    error_message = "access_start_day must be an integer between 0 (Sunday) and 6 (Saturday)."
+  }
 }
 
 variable "access_end_day" {
-  description = "The day of the week when access ends (1 for Monday, 7 for Sunday)."
+  description = "The day of the week when access ends, evaluated using CEL getDayOfWeek() where 0 is Sunday, 1 is Monday, ..., 6 is Saturday (0-6)."
   type        = number
   default     = 5
+  validation {
+    condition     = var.access_end_day >= 0 && var.access_end_day <= 6
+    error_message = "access_end_day must be an integer between 0 (Sunday) and 6 (Saturday)."
+  }
 }
 
 variable "access_time_zone" {

@@ -14,7 +14,6 @@
 
 import sys
 import click
-import google.auth
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.api_core.client_options import ClientOptions
@@ -78,7 +77,7 @@ def init():
         click.echo("Could not set the gcloud project configuration. Please ensure gcloud is installed and configured correctly.")
         click.echo(click.style("Exiting Onboarding process...", fg="red"))
         sys.exit(1)
-    credentials = get_credentials()
+    get_credentials()
     click.echo(f"Successfully set project ID to: {project_id}")
 
 ##############################################################
@@ -258,7 +257,7 @@ def onboard():
                 sys.exit(1)
         click.echo(click.style(f"Gemini Enterprise data stores allow end-users to search and ask questions based on a variety of first and third-party datasets. Currently, the only data stores that are available in Gemini for Governement customers are: {supported_data_stores}", fg='yellow'))
         while True:
-            if click.confirm('Do you have an existing data store(s) already created and loaded with data?'):
+            if click.confirm('Do you have an existing data store(s) already created?'):
                 # User specified they have existing data stores
                 data_store_input = click.prompt('Please enter a comma-separated list of data stores that you would like to connect to Gemini Enterprise', type=str).strip()
                 data_store_list = [item.strip() for item in data_store_input.split(',')]
@@ -294,7 +293,7 @@ def onboard():
                             click.echo(f"Using path prefix: {path_prefix}")
                             create_gcs_data_store(credentials, project_id, data_store_id, display_name)
                             import_gcs_documents(credentials, project_id, data_store_id, gcs_bucket, path_prefix)
-                            click.echo(f"Google Cloud Storage data store created and indexing operation started successfully...")
+                            click.echo("Google Cloud Storage data store created and indexing operation started successfully...")
                             data_store_list.append(data_store_id)
 
                     # Create BigQuery data store
@@ -328,7 +327,7 @@ def onboard():
                                         click.echo(f'Using schema field "{id_field_name}" as the unique document ID.')
                                     else:
                                         id_property['id'] = 'auto'
-                                        click.echo(f'Autogenerating unique document ID.')
+                                        click.echo('Autogenerating unique document ID.')
                                     
                                     click.echo(nl=True)
                                     click.echo(nl=True)
@@ -363,7 +362,7 @@ def onboard():
                                     create_bq_data_store(credentials, project_id, data_store_id, display_name, dataset, table)
                                     create_data_store_schema(credentials, project_id, data_store_id, discovery_engine_schema)
                                     import_bq_documents(credentials, project_id, data_store_id, dataset, table, id_property)
-                                    click.echo(f"BigQuery data store created and indexing operation started successfully...")
+                                    click.echo("BigQuery data store created and indexing operation started successfully...")
                                     data_store_list.append(data_store_id)
 
                                 else:
@@ -397,11 +396,11 @@ def onboard():
                 click.echo(click.style("The following data stores are invalid and cannot be connected to the Gemini Enterprise application:", fg="red"))
                 for ds in invalid_data_stores:
                     if ds.get('display_name', None) == None:
-                        click.echo(click.style(f"- {ds["id"]} (Does not exist)", fg="red"))
+                        click.echo(click.style(f"- {ds['id']} (Does not exist)", fg="red"))
                     elif ds.get('kms_key_name', None) == None:
-                        click.echo(click.style(f"- {ds["id"]} (Not CMEK encrypted)", fg="red"))
+                        click.echo(click.style(f"- {ds['id']} (Not CMEK encrypted)", fg="red"))
                     else:
-                        click.echo(click.style(f"- {ds["id"]} (Incompatible)", fg="red"))
+                        click.echo(click.style(f"- {ds['id']} (Incompatible)", fg="red"))
                 data_store_list = []
                 valid_data_stores = []
                 invalid_data_stores = []
@@ -411,7 +410,7 @@ def onboard():
                 # List valid data stores and prompt the user to confirm the list
                 click.echo(click.style("The following data stores have been validated and will be connected to the Gemini Enterprise application:", fg="yellow"))
                 for ds in valid_data_stores:
-                    click.echo(click.style(f"- {ds["id"]} ({ds["display_name"]})", fg="yellow"))
+                    click.echo(click.style(f"- {ds['id']} ({ds['display_name']})", fg="yellow"))
 
                 if click.confirm('Please confirm that you would like to connect the above list of data stores to the Gemini Enterprise application'):
                     break
@@ -771,114 +770,6 @@ def distribute_licenses(billing_account, config_id, target_project_number, locat
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}")
 
-##############################################################
-################       gem4gov license        ################
-##############################################################
-
-@cli.group()
-def license():
-    """Manages Gemini for Government licenses."""
-    pass
-
-@license.command(name='list')
-@click.option('--billing-account', required=True, help='The billing account ID.')
-@click.option('--quota-project', required=False, help='The project ID to use for API quota.')
-@click.option('--format', type=click.Choice(['text', 'json']), default='text', help='The output format.')
-def list_licenses(billing_account, quota_project, format):
-    """Lists available Gemini for Government license configurations for a billing account."""
-    credentials = get_credentials()
-    if quota_project:
-        credentials = credentials.with_quota_project(quota_project)
-        
-    # Use discoveryengine v1alpha as per PDF
-    client_options = ClientOptions(api_endpoint="https://us-discoveryengine.googleapis.com")
-    service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
-    
-    try:
-        request = service.billingAccounts().billingAccountLicenseConfigs().list(
-            parent=f'billingAccounts/{billing_account}'
-        )
-        response = request.execute()
-        
-        configs = response.get('billingAccountLicenseConfigs', [])
-        
-        if format == 'json':
-            click.echo(json.dumps(configs, indent=2))
-            return
-
-        if not configs:
-            click.echo(f"No license configurations found for billing account {billing_account}.")
-            return
-
-        for config in configs:
-            name = config.get('subscriptionDisplayName', config.get('name'))
-            total = config.get('licenseCount', 0)
-            distributions = config.get('licenseConfigDistributions', {})
-            distributed = sum(int(v) for v in distributions.values())
-            available = int(total) - distributed
-            
-            # Extract ID from name: billingAccounts/ID/billingAccountLicenseConfigs/CONFIG_ID
-            config_id = config.get('name').split('/')[-1]
-            
-            click.echo(f"Subscription: {name}")
-            click.echo(f"  ID: {config_id}")
-            click.echo(f"  Total Licenses: {total}")
-            click.echo(f"  Distributed: {distributed}")
-            click.echo(f"  Available: {available}")
-            click.echo("---")
-            
-    except HttpError as e:
-        click.echo(f"An error occurred: {e}")
-    except Exception as e:
-        click.echo(f"An unexpected error occurred: {e}")
-
-@license.command(name='distribute')
-@click.option('--billing-account', required=True, help='The billing account ID.')
-@click.option('--config-id', required=True, help='The billing account license config ID.')
-@click.option('--target-project-number', required=True, help='The target project number.')
-@click.option('--location', default='global', type=click.Choice(['global', 'us', 'eu']), help='The location.')
-@click.option('--count', required=True, type=int, help='The number of licenses to distribute (incremental).')
-@click.option('--license-config-id', help='The existing project-level license config ID (optional).')
-@click.option('--quota-project', required=False, help='The project ID to use for API quota.')
-def distribute_licenses(billing_account, config_id, target_project_number, location, count, license_config_id, quota_project):
-    """Distributes Gemini for Government licenses to a project."""
-    credentials = get_credentials()
-    if quota_project:
-        credentials = credentials.with_quota_project(quota_project)
-    
-    endpoint = "https://discoveryengine.googleapis.com"
-    if location == 'us':
-        endpoint = "https://us-discoveryengine.googleapis.com"
-    elif location == 'eu':
-        endpoint = "https://eu-discoveryengine.googleapis.com"
-        
-    client_options = ClientOptions(api_endpoint=endpoint)
-    # v1alpha is needed for billingAccountLicenseConfigs
-    service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
-    
-    name = f'billingAccounts/{billing_account}/billingAccountLicenseConfigs/{config_id}'
-    
-    body = {
-        "projectNumber": target_project_number,
-        "location": location,
-        "licenseCount": count
-    }
-    if license_config_id:
-        body["licenseConfigId"] = license_config_id
-
-    try:
-        request = service.billingAccounts().billingAccountLicenseConfigs().distributeLicenseConfig(
-            name=name,
-            body=body
-        )
-        response = request.execute()
-        click.echo("Licenses distributed successfully!")
-        click.echo(json.dumps(response, indent=2))
-        
-    except HttpError as e:
-        click.echo(f"An error occurred: {e}")
-    except Exception as e:
-        click.echo(f"An unexpected error occurred: {e}")
 
 
 
@@ -887,7 +778,7 @@ def import_documents_helper(credentials, project_id, source_type, data_store_id=
     """Helper to import documents into a selected data store."""
     if not data_store_id:
         click.echo(nl=True)
-        click.echo(click.style(f"Fetching available Gemini Enterprise data stores for import destination...", fg='yellow'))
+        click.echo(click.style("Fetching available Gemini Enterprise data stores for import destination...", fg='yellow'))
         
         # List and select data store
         data_store_id = list_data_stores(credentials, project_id)
@@ -954,8 +845,6 @@ def create_application_logic(credentials, project_id, data_store_list, workforce
     
     if not engine_id:
         click.echo(nl=True)
-        import random
-        import string
         engine_id = 'g4g-gem-ent-app-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
     
     create_engine(credentials, project_id, engine_id, engine_display_name, company_name, data_store_list, enable_audit_logs)
@@ -1151,8 +1040,8 @@ def configure_identity_provider(credentials, project_id, idp_type, workforce_poo
     )
 
     try:
-        response = request.execute()
-        click.echo(f"Identity provider configured successfully.")
+        request.execute()
+        click.echo("Identity provider configured successfully.")
         if idp_type == '1':
             return "GSUITE"
         elif idp_type == '2':
@@ -1208,12 +1097,12 @@ def validate_kms_key(credentials, kms_key_name):
 
         # Validate the key's location
         if 'us' not in response['name']:
-            click.echo(f"KMS key is not in the 'us' multi-region.")
+            click.echo("KMS key is not in the 'us' multi-region.")
             return False
 
         # Validate that the key is symmetric
         if response['purpose'] != 'ENCRYPT_DECRYPT' or 'GOOGLE_SYMMETRIC_ENCRYPTION' not in response.get('versionTemplate', {}).get('algorithm', ''):
-            click.echo(f"KMS key is not a symmetric key.")
+            click.echo("KMS key is not a symmetric key.")
             return False
 
         click.echo("KMS key validated successfully.")
@@ -1228,7 +1117,7 @@ def grant_kms_permissions(credentials, kms_key_name, project_number):
     """Grants KMS permissions to the necessary service accounts."""
     try:
         service = build('cloudkms', 'v1', credentials=credentials)
-        click.echo(f'Granting Discovery Engine and Cloud Storage Service Accounts the "Cloud KMS CryptoKey Encrypter/Decrypter" IAM role on the provided key.')
+        click.echo('Granting Discovery Engine and Cloud Storage Service Accounts the "Cloud KMS CryptoKey Encrypter/Decrypter" IAM role on the provided key.')
         # Get the current IAM policy
         request = service.projects().locations().keyRings().cryptoKeys().getIamPolicy(resource=kms_key_name)
         policy = request.execute()
@@ -1260,7 +1149,7 @@ def grant_kms_permissions(credentials, kms_key_name, project_number):
         request = service.projects().locations().keyRings().cryptoKeys().setIamPolicy(resource=kms_key_name, body=body)
         request.execute()
 
-        click.echo(f"Successfully granted KMS permissions to Discovery Engine and Cloud Storage Service Accounts.")
+        click.echo("Successfully granted KMS permissions to Discovery Engine and Cloud Storage Service Accounts.")
         return True
 
     except Exception as e:
@@ -1284,8 +1173,8 @@ def configure_cmek(credentials, project_id, kms_key_name):
     )
 
     try:
-        response = request.execute()
-        click.echo(f"CMEK configured successfully.")
+        request.execute()
+        click.echo("CMEK configured successfully.")
         return True
     
     except Exception as e:
@@ -1353,7 +1242,7 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
         
         # Check if response is an Operation (LRO)
         if 'name' in response and 'operations' in response['name']:
-             click.echo(f"Engine creation initiated. Waiting for Engine to be ready...")
+             click.echo("Engine creation initiated. Waiting for Engine to be ready...")
              
              engine_full_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}"
              
@@ -1361,7 +1250,7 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
                 try:
                     # Poll the Engine resource directly
                     eng_request = service.projects().locations().collections().engines().get(name=engine_full_name)
-                    eng_response = eng_request.execute()
+                    eng_request.execute()
                     
                     # If we get here, the engine exists.
                     click.echo("Engine created successfully!")
@@ -1376,7 +1265,7 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
              click.echo(nl=True)
         else:
              # If it's not an operation or already done (unlikely for create)
-             click.echo(f"Engine created successfully!")
+             click.echo("Engine created successfully!")
 
     except Exception as e:
         click.echo("Received an API error during creation. Checking if engine was created asynchronously despite the error...")
@@ -1388,7 +1277,7 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
                 eng_request.execute()
                 click.echo("Engine verified successfully! Proceeding with configuration.")
                 return
-            except Exception as inner_e:
+            except Exception:
                 if attempt < max_retries - 1:
                     click.echo(".", nl=False)
                     time.sleep(5)
@@ -1411,12 +1300,6 @@ def configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_
             f"https://us-discoveryengine.googleapis.com/v1alpha/projects/{project_id}/locations/us/collections/default_collection/"
             f"engines/{engine_id}/widgetConfigs/default_search_widget_config?updateMask=accessSettings"
         )
-        
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "x-goog-user-project": project_id,
-            "Content-Type": "application/json"
-        }
         
         data = {
             "accessSettings": {
@@ -1474,12 +1357,6 @@ def disable_user_event_collection(credentials, project_id, engine_id):
             f"https://us-discoveryengine.googleapis.com/v1alpha/projects/{project_id}/locations/us/collections/default_collection/"
             f"engines/{engine_id}/widgetConfigs/default_search_widget_config?updateMask=uiSettings.disableUserEventsCollection"
         )
-        
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "x-goog-user-project": project_id,
-            "Content-Type": "application/json"
-        }
         
         data = {
             "uiSettings": {
@@ -1543,7 +1420,7 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         "features": engine_features.get('features'),
         "disableAnalytics": True
     }
-    engine_update_mask = "features"
+    engine_update_mask = "features,disableAnalytics"
 
     engine_request = service.projects().locations().collections().engines().patch(
         name=engine_name,
@@ -1552,7 +1429,7 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
     )
 
     try:
-        engine_response = engine_request.execute()
+        engine_request.execute()
         click.echo(f"Engine {engine_id} configured for FedRAMP High.")
     except Exception as e:
         click.echo(f"An error occurred while configuring the engine for FedRAMP High: {e}")
@@ -1574,15 +1451,12 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         access_token = ""
 
     if access_token:
-        url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=customerPolicy,agentConfigs,generationConfig,disableLocationContext,webGroundingType,defaultWebGroundingToggleOff"
+        url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=agentConfigs,generationConfig,disableLocationContext,webGroundingType,defaultWebGroundingToggleOff"
 
         assistant_patch_body = {
           "displayName":"Default Assistant",
           "googleSearchGroundingEnabled": False,
           "webGroundingType":"WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
-          "customerPolicy":{
-            "bannedPhrases":[]
-          },
           "generationConfig":{
             "systemInstruction":{
               "additionalSystemInstruction":""
@@ -1608,7 +1482,7 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
             if result.returncode == 0 and "error" not in result.stdout.lower():
                  click.echo(f"Default assistant for engine {engine_id} configured for FedRAMP High.")
             else:
-                 click.echo(f"An error occurred while configuring the default assistant for FedRAMP High:")
+                 click.echo("An error occurred while configuring the default assistant for FedRAMP High:")
                  click.echo(result.stderr)
                  click.echo(result.stdout)
                  # Do not exit
@@ -1659,7 +1533,7 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
         "features": engine_features.get('features'),
         "disableAnalytics": True
     }
-    engine_update_mask = "features"
+    engine_update_mask = "features,disableAnalytics"
 
     engine_request = service.projects().locations().collections().engines().patch(
         name=engine_name,
@@ -1668,7 +1542,7 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
     )
 
     try:
-        engine_response = engine_request.execute()
+        engine_request.execute()
         click.echo(f"Engine {engine_id} configured for IL4.")
     except Exception as e:
         click.echo(f"An error occurred while configuring the engine for IL4: {e}")
@@ -1718,7 +1592,7 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
         if result.returncode == 0 and "error" not in result.stdout.lower():
              click.echo(f"Default assistant for engine {engine_id} configured for IL4.")
         else:
-             click.echo(f"An error occurred while configuring the default assistant for IL4:")
+             click.echo("An error occurred while configuring the default assistant for IL4:")
              click.echo(result.stderr)
              click.echo(result.stdout)
              click.echo(click.style("Exiting Onboarding process...", fg="red"))
@@ -1771,7 +1645,7 @@ def configure_gemini_enterprise_for_il5(credentials, project_id, engine_id):
         "features": engine_features.get('features'),
         "disableAnalytics": True
     }
-    engine_update_mask = "features"
+    engine_update_mask = "features,disableAnalytics"
 
     engine_request = service.projects().locations().collections().engines().patch(
         name=engine_name,
@@ -1780,7 +1654,7 @@ def configure_gemini_enterprise_for_il5(credentials, project_id, engine_id):
     )
 
     try:
-        engine_response = engine_request.execute()
+        engine_request.execute()
         click.echo(f"Engine {engine_id} configured for IL5.")
     except Exception as e:
         click.echo(f"An error occurred while configuring the engine for IL5: {e}")
@@ -1830,7 +1704,7 @@ def configure_gemini_enterprise_for_il5(credentials, project_id, engine_id):
         if result.returncode == 0 and "error" not in result.stdout.lower():
              click.echo(f"Default assistant for engine {engine_id} configured for IL5.")
         else:
-             click.echo(f"An error occurred while configuring the default assistant for IL5:")
+             click.echo("An error occurred while configuring the default assistant for IL5:")
              click.echo(result.stderr)
              click.echo(result.stdout)
              click.echo(click.style("Exiting Onboarding process...", fg="red"))

@@ -146,7 +146,7 @@ if promptUser "Would you like to also clean up all local Terraform state and con
     STAGES=(
       "${SCRIPT_DIR}/../fast/stages-aw/0-bootstrap"
       "${SCRIPT_DIR}/../fast/stages-aw/1-resman"
-      "${SCRIPT_DIR}/../fast/stages-aw/2-networking-a-fedramp-high"
+      "${SCRIPT_DIR}/../fast/stages-aw/2-networking-a-fedramp"
       "${SCRIPT_DIR}/../fast/stages-aw/2-networking-b-il5-ngfw"
       "${SCRIPT_DIR}/../fast/stages-aw/3-security"
     )

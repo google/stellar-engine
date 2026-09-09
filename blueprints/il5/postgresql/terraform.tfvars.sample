@@ -1,5 +1,4 @@
 main_project_id    = "xxxx-xxxx-xxxx-main-0"
-core_project_id    = "xxxx-xxxx-xxxx-iac-core-0"
 network_project_id = "xxxx-xxxx-net-host"
 
 database_name          = "postgres-name-00"
@@ -8,7 +7,6 @@ database_instance_tier = "db-g1-small"
 region                 = "us-east4"
 
 network_name          = "xxxx-spoke-0"     # Must already exist
-subnetwork_name       = "default-us-east4" # Must already exist
 firewall_source_range = ["192.168.1.0/24"]
 firewall_name         = "allow-postgres"
 

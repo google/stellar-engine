@@ -72,7 +72,7 @@ To make using this deployment guide easier, the variables described below need t
 | <strong>Domain Name</strong>          | `organization.domain`            | The primary Fully Qualified Domain Name (FQDN). Run <strong>gcloud organizations list</strong> to view (make sure you have authorized as per prerequisites below)                                                                                                                                              |
 | <strong>Alert Email</strong>          | `alert_email`                    | The email address used for logging alerts notifications.                                                                                                                                                                                                                                                       |
 | <strong>Organization ID</strong>      | `organization.id`                | The Organization ID for the GCP Organization. Run <strong>gcloud organizations list</strong> to view.                                                                                                                                                                                                          |
-| <strong>Prefix</strong>               | `prefix`                         | This is the prefix appended to the beginning of projects and resources deployed selected by your or your organization. <strong>Full project names must be globally unique and the prefix must use a maximum of 6 characters</strong>. A 409 error will occur if a globally unique project name is not created. |
+| <strong>Prefix</strong>               | `prefix`                         | This is the prefix appended to the beginning of projects and resources deployed selected by your or your organization. <strong>Full project names must be globally unique and the prefix must use a maximum of 7 characters</strong>. A 409 error will occur if a globally unique project name is not created. |
 | <strong>Region</strong>               | `assured_workloads.location`     | This is the (US) based region that we are deploying resources into (Dual regions like “NAM9” or continents are currently not supported)                                                                                                                                                                        |
 | <strong>Tenant Name</strong>          | `tenants` (Stage 1)              | The name for the first tenant that will be deployed via this document. <strong>Full project names must be globally unique and the tenant-name must use a maximum of 6 characters</strong>.                                                                                                                     |
 | <strong>Secondary Region</strong>     | `regions.secondary`              | The secondary region for resource deployment.                                                                                                                                                                                                                                                                  |
@@ -218,7 +218,7 @@ organization = {
  customer_id = "`<customer_id>`"
 }
 outputs_location = "~/fast-config"
-# use something unique and no longer than 6 characters
+# use something unique and no longer than 7 characters
 prefix = "`<prefix>`" # full project names must be globally unique
 log_sinks = {
  audit-logs = {

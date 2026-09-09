@@ -75,7 +75,6 @@ def get_names(dir_name):
 @click.option('--failed-only', is_flag=True, default=False)
 def main(dirs, prefix_length=None, failed_only=False):
   'Parse names in dirs.'
-  import json
   logging.basicConfig(level=logging.INFO)
   names = []
   for dir_name in dirs:

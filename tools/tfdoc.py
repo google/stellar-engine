@@ -43,7 +43,6 @@ import glob
 import os
 import re
 import string
-import sys
 import urllib.parse
 
 import click
@@ -412,7 +411,7 @@ def parse_outputs(basepath, exclude_files=None):
     try:
       with open(name, encoding='utf-8') as file:
         body = file.read()
-    except (IOError, OSError) as e:
+    except (IOError, OSError):
       raise SystemExit(f'Cannot open outputs file {shortname}.')
     for item in _parse(body, enum=OUT_ENUM, re=OUT_RE, template=OUT_TEMPLATE):
       description = ''.join(item['description'])
@@ -425,7 +424,7 @@ def parse_outputs(basepath, exclude_files=None):
 
 def parse_recipes(module_path, module_url):
   'Find and return module recipes.'
-  for dirpath, dirnames, filenames in os.walk(module_path):
+  for dirpath, _, filenames in os.walk(module_path):
     name = os.path.basename(dirpath)
     if name.startswith('recipe-') and 'README.md' in filenames:
       try:
@@ -435,7 +434,7 @@ def parse_recipes(module_path, module_url):
             yield Recipe(f'{module_url}/{name}', match.group(1))
           else:
             raise SystemExit(f'No title for recipe {dirpath}')
-      except (IOError, OSError) as e:
+      except (IOError, OSError):
         raise SystemExit(f'Error opening recipe {dirpath}')
 
 
@@ -451,7 +450,7 @@ def parse_variables(basepath, exclude_files=None):
     try:
       with open(name, encoding='utf-8') as file:
         body = file.read()
-    except (IOError, OSError) as e:
+    except (IOError, OSError):
       raise SystemExit(f'Cannot open variables file {shortname}.')
     for item in _parse(body):
       description = (''.join(item['description'])).replace('|', '\\|')
@@ -472,7 +471,7 @@ def render_tfref(readme, doc):
   'Replace document in module\'s README.md file.'
   result = get_tfref_parts(readme)
   if not result:
-    raise SystemExit(f'Mark not found in README')
+    raise SystemExit('Mark not found in README')
   if doc == result['doc']:
     return readme
   return '\n'.join([

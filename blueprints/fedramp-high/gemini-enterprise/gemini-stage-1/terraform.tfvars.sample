@@ -19,8 +19,5 @@ stage_0_state_bucket = "sedev-gemini-enterprise-tf-state-sedev-test-mike-iac-cor
 # This domain will point to the Load Balancer's IP Address
 gemini_enterprise_domain = "gemini.yourdomain.gov"
 
-# Gemini Enterprise Config ID (Output from Gem4Gov CLI)
-gemini_config_id   = "your_gemini_config_id"
-
 # Google Cloud Self-Managed SSL Cert Name (Pre-uploaded to Google Cloud Certificate Manager)
 ssl_certificate_name = "your-cert-name-here"

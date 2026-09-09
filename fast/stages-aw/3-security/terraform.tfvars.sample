@@ -1,0 +1,21 @@
+# Sample terraform.tfvars for 3-security stage
+
+# KMS Keys Configuration
+# Keys are opt-in: no keyrings or keys are provisioned by default until kms_keys is populated.
+kms_keys = {
+  default = {
+    rotation_period = "7776000s" # 90 days - CIS Benchmark 1.10
+    labels = {
+      environment = "security"
+    }
+    locations = [
+      "us",          # Multi-region
+      "us-east4",    # Primary region
+      "us-central1"  # Secondary region
+    ]
+    version_template = {
+      algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
+      protection_level = "HSM" # FedRAMP / IL4 / IL5 compliance
+    }
+  }
+}

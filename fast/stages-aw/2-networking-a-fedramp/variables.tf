@@ -270,13 +270,26 @@ variable "subnets" {
   })))
   default  = {}
   nullable = false
+  validation {
+    condition = alltrue([
+      for k in keys(var.envs_folders) :
+      try([for s in var.subnets[lower(k)] : s if s.tenant != null][0].region, null) == var.regions.primary
+    ])
+    error_message = "Every environment in envs_folders needs a subnet list under subnets[lower(<env>)] whose first subnet with a non-null tenant is in regions.primary: the NVA landing routes, the connectivity-test addresses and the stage outputs all index that subnet."
+  }
 }
 
 variable "proxy_subnets" {
-  description = "VPC proxy-only subnet CIDRs keyed by environment."
+  description = "VPC proxy-only subnet CIDRs keyed by environment. One entry per key of envs_folders is required: every environment spoke gets a proxy-only subnet in regions.primary."
   type        = map(string)
   default     = {}
   nullable    = false
+  validation {
+    condition = alltrue([
+      for k in keys(var.envs_folders) : contains(keys(var.proxy_subnets), k)
+    ])
+    error_message = "proxy_subnets needs an entry for every key of envs_folders (keys are case-sensitive and match envs_folders, not their lower-cased form): each environment spoke is created with a proxy-only subnet whose CIDR comes from this map."
+  }
 }
 
 variable "dns_policy_rules" {

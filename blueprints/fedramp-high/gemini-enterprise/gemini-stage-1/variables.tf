@@ -50,3 +50,10 @@ variable "host_project_id" {
   type        = string
   default     = ""
 }
+
+variable "subnet_name" {
+  description = "The name of the subnetwork for internal load balancer deployments. If empty, falls back to stage 0 outputs or default."
+  type        = string
+  default     = ""
+}
+

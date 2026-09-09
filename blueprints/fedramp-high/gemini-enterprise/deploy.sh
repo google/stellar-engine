@@ -525,9 +525,15 @@ discover_infrastructure() {
 
     if [[ "$IS_BROWNFIELD" == "true" ]]; then
         # 1. Extract Environment and Tenant
-        # Format: prefix-env-tenant-main-0
+        # Format: prefix-env-tenant-main-0. The tenant id may itself contain
+        # hyphens (FAST tenants are typically named like "ten-1"), so take
+        # everything between the environment and the "-main-0" suffix rather
+        # than the third hyphen-separated field.
         ENVIRONMENT=$(echo "$PROJECT_ID" | cut -d'-' -f2)
-        TENANT_VAL=$(echo "$PROJECT_ID" | cut -d'-' -f3)
+        TENANT_VAL=$(echo "$PROJECT_ID" | sed -E 's/^[^-]+-[^-]+-(.+)-main-0$/\1/')
+        if [[ "$TENANT_VAL" == "$PROJECT_ID" ]]; then
+            TENANT_VAL=""
+        fi
         
         # Validate extraction (basic check)
         if [[ -z "$ENVIRONMENT" || -z "$TENANT_VAL" ]]; then
@@ -573,7 +579,9 @@ discover_infrastructure() {
         fi
 
         # 3. Check State Bucket
-        POTENTIAL_BUCKET="${PREFIX}-${ENVIRONMENT}-${TENANT}-iac-0"
+        # 1-resman names the tenant state bucket <prefix>-tn-<env>-<tenant>-0
+        # (branch-tenants.tf, module tenant-core-gcs).
+        POTENTIAL_BUCKET="${PREFIX}-tn-${ENVIRONMENT}-${TENANT}-0"
         echo "Checking for Terraform State Bucket: ${POTENTIAL_BUCKET}..."
         if gcloud storage buckets describe "gs://${POTENTIAL_BUCKET}" &>/dev/null; then
             STATE_BUCKET="${POTENTIAL_BUCKET}"
@@ -1152,9 +1160,9 @@ configure_access_policies() {
         read -p "Restrict incoming traffic based on a specific time schedule (Business Hours)? (y/N): " TIME_CHOICE
         if [[ "$TIME_CHOICE" == "y" || "$TIME_CHOICE" == "Y" ]]; then
             CREATE_TIME_ACCESS="true"
-            read -p "Enter Start Day (1=Mon, 7=Sun) [1]: " ACCESS_START_DAY
+            read -p "Enter Start Day (0=Sun, 6=Sat) [1]: " ACCESS_START_DAY
             ACCESS_START_DAY=${ACCESS_START_DAY:-1}
-            read -p "Enter End Day (1=Mon, 7=Sun) [5]: " ACCESS_END_DAY
+            read -p "Enter End Day (0=Sun, 6=Sat) [5]: " ACCESS_END_DAY
             ACCESS_END_DAY=${ACCESS_END_DAY:-5}
             read -p "Enter Start Hour (0-23) [7]: " ACCESS_START_HOUR
             ACCESS_START_HOUR=${ACCESS_START_HOUR:-7}
@@ -1251,6 +1259,34 @@ configure_access_policies() {
     fi
 
     echo -e "${GREEN}Access Policy Configuration Complete.${NC}"
+}
+
+strip_gemini_apps_tfvars() {
+    # Remove any existing top-level `gemini_apps = {...}` assignment from a tfvars
+    # file so callers can rewrite it in place. HCL rejects two assignments to the
+    # same argument, and the map is emitted by jq across multiple lines, so this
+    # tracks brace depth to drop the whole block rather than a single line.
+    local file="$1"
+    [[ -f "$file" ]] || return 0
+
+    local tmp
+    tmp=$(mktemp)
+    awk '
+        skip {
+            n = gsub(/{/, "{"); depth += n
+            m = gsub(/}/, "}"); depth -= m
+            if (depth <= 0) skip = 0
+            next
+        }
+        /^[[:space:]]*gemini_apps[[:space:]]*=/ {
+            skip = 1; depth = 0
+            n = gsub(/{/, "{"); depth += n
+            m = gsub(/}/, "}"); depth -= m
+            if (depth <= 0) skip = 0
+            next
+        }
+        { print }
+    ' "$file" > "$tmp" && mv "$tmp" "$file"
 }
 
 prompt_gemini_apps() {
@@ -1350,6 +1386,7 @@ prompt_gemini_apps() {
             ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="false"
         fi
 
+        ENABLE_MODEL_ARMOR_FLAG="false"
         if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_HIGH" || "$COMPLIANCE_REGIME" == "NONE" ]]; then
             echo ""
             echo -e "${YELLOW}Model Armor Feature:${NC}"
@@ -1518,6 +1555,8 @@ configure_stage_0() {
             echo -e "${RED}Proceed at your own risk.${NC}"
             echo ""
             read -p "Press Enter to acknowledge and continue..."
+            COMPLIANCE_REGIME="NONE"
+            REGIME_DISPLAY="None"
             ;;
         *)
             echo -e "${RED}Invalid selection. Defaulting to FedRAMP High.${NC}"
@@ -1571,7 +1610,7 @@ configure_stage_0() {
                     echo -e "3. Click on the button to ${GREEN}\"Review available updates\"${NC} and apply them."
                     echo ""
                     read -p "Press Enter to acknowledge and continue..."
-                    echo -e "${GREEN}Assured Workload folder ${WORKLOAD_NAME} validated / updated${NC}"
+                    echo -e "${YELLOW}Please verify that you have reviewed and applied any available updates for Assured Workload folder ${WORKLOAD_NAME}.${NC}"
                 fi
             fi
         fi
@@ -2476,6 +2515,7 @@ EOF
 
     # Write gemini_apps to terraform.tfvars
     if [[ "$APPS_OBJ" != "{}" && -n "$APPS_OBJ" ]]; then
+         strip_gemini_apps_tfvars gemini-stage-0/terraform.tfvars
          echo "gemini_apps = ${APPS_OBJ}" >> gemini-stage-0/terraform.tfvars
     fi
 
@@ -2728,6 +2768,7 @@ configure_gemini_apps() {
     fi
 
     # Write the variables to terraform.tfvars
+    strip_gemini_apps_tfvars gemini-stage-0/terraform.tfvars
     echo "gemini_apps = ${APPS_OBJ}" >> gemini-stage-0/terraform.tfvars
 
     export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"

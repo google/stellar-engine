@@ -77,6 +77,9 @@ module "nva-template" {
       image = "cos-cloud/cos-stable"
     }
   }
+  encryption = {
+    kms_key_self_link = module.kms.keys.default.id
+  }
   options = {
     allow_stopping_for_update = true
     deletion_protection       = false

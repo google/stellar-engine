@@ -54,10 +54,6 @@ module "dev-sec-kms" {
   keyring = {
     location = each.key
     name     = "dev-${each.key}"
-    version_template = {
-      algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
-      protection_level = var.kms_protection_level
-    }
   }
   keys = local.kms_locations_keys[each.key]
 }

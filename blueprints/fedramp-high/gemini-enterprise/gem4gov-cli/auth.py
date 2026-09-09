@@ -40,7 +40,7 @@ def get_credentials():
         subprocess.run(['gcloud', 'auth', 'login'])
         subprocess.run(['gcloud', 'auth', 'application-default', 'login'])
 
-    credentials, project = google.auth.default(scopes=['https://www.googleapis.com/auth/cloud-platform'])
+    credentials, _ = google.auth.default(scopes=['https://www.googleapis.com/auth/cloud-platform'])
     return credentials
 
 def force_reauthentication():
