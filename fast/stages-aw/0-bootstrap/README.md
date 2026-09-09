@@ -325,7 +325,7 @@ cicd_repositories = {
 }
 ```
 
-The `type` attribute can be set to one of the supported repository types: `github`, `gitlab`, or `sourcerepo`.
+The `type` attribute can be set to one of the supported repository types: `github`, `gitlab`, or `ssm`.
 
 Once the stage is applied the generated output files will contain pre-configured workflow files for each repository, that will use Workload Identity Federation via a dedicated service account for each repository to impersonate the automation service account for the stage.
 

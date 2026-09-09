@@ -100,19 +100,19 @@ variable "cicd_repositories" {
       v == null || (
         try(v.identity_provider, null) != null
         ||
-        try(v.type, null) == "sourcerepo"
+        try(v.type, null) == "ssm"
       )
     ])
-    error_message = "Non-null repositories need a non-null provider unless type is 'sourcerepo'."
+    error_message = "Non-null repositories need a non-null provider unless type is 'ssm'."
   }
   validation {
     condition = alltrue([
       for k, v in coalesce(var.cicd_repositories, {}) :
       v == null || (
-        contains(["github", "gitlab", "sourcerepo"], coalesce(try(v.type, null), "null"))
+        contains(["github", "gitlab", "ssm"], coalesce(try(v.type, null), "null"))
       )
     ])
-    error_message = "Invalid repository type, supported types: 'github' 'gitlab' or 'sourcerepo'."
+    error_message = "Invalid repository type, supported types: 'github' 'gitlab' or 'ssm'."
   }
 }
 
