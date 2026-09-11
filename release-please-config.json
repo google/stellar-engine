@@ -1,0 +1,24 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "pr-title-pattern": "release: v${version}",
+      "changelog-path": "CHANGELOG.md",
+      "changelog-sections": [
+        {"type": "modules", "section": "Modules", "hidden": false},
+        {"type": "fast", "section": "FAST Stages", "hidden": false},
+        {"type": "blueprints", "section": "Blueprints", "hidden": false},
+        {"type": "feat", "section": "Features", "hidden": false},
+        {"type": "fix", "section": "Bug Fixes", "hidden": false},
+        {"type": "security", "section": "Security Updates", "hidden": false},
+        {"type": "refactor", "section": "Refactors", "hidden": false},
+        {"type": "ci", "section": "CI/CD Workflows", "hidden": true},
+        {"type": "test", "section": "Tests", "hidden": true},
+        {"type": "style", "section": "Style Updates", "hidden": true},
+        {"type": "chore", "section": "Housekeeping", "hidden": true},
+        {"type": "docs", "section": "Documentation", "hidden": true}
+      ]
+    }
+  },
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+}

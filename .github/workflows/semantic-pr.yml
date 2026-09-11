@@ -1,0 +1,36 @@
+name: "Lint Pull Request"
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions:
+  pull-requests: read
+
+jobs:
+  validate-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR Title format
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "Validating PR Title: $PR_TITLE"
+          
+          # Regex matches Conventional Commits format (e.g., modules(kms): add cloud HSM protection support)
+          PATTERN="^(feat|fix|chore|docs|ci|test|refactor|style|modules|fast|blueprints)(\([a-zA-Z0-9_/_-]+\))?!?: .+$"
+          
+          if [[ ! "$PR_TITLE" =~ $PATTERN ]]; then
+            echo "::error::PR Title does not match the Conventional Commits specification!"
+            echo "Expected format: <type>(<scope>): <description> or <type>: <description>"
+            echo "Allowed types: feat, fix, chore, docs, ci, test, refactor, style, modules, fast, blueprints"
+            echo "Example: modules(kms): add HSM protection support"
+            exit 1
+          fi
+          
+          echo "PR Title matches Conventional Commits format successfully!"

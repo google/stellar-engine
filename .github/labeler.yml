@@ -1,0 +1,23 @@
+"modules":
+  - changed-files:
+      - any-glob-to-any-file: 'modules/**'
+
+"fast":
+  - changed-files:
+      - any-glob-to-any-file: 'fast/**'
+
+"blueprints: fedramp-high":
+  - changed-files:
+      - any-glob-to-any-file: 'blueprints/fedramp-high/**'
+
+"blueprints: il5":
+  - changed-files:
+      - any-glob-to-any-file: 'blueprints/il5/**'
+
+"blueprints: stand-alone":
+  - changed-files:
+      - any-glob-to-any-file: 'blueprints/stand-alone/**'
+
+"blueprints: third-party-solutions":
+  - changed-files:
+      - any-glob-to-any-file: 'blueprints/third-party-solutions/**'
