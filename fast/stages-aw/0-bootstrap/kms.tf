@@ -15,7 +15,7 @@
 locals {
   version_template = {
     algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
-    protection_level = var.kms_protection_level
+    protection_level = local.kms_protection_level
   }
 }
 module "logging-kms" {

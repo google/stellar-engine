@@ -190,9 +190,11 @@ variable "kms_keys" {
 }
 
 variable "kms_protection_level" {
+  # tfdoc:variable:source 0-bootstrap
   description = "Protection level (HSM or SOFTWARE) applied to every key in kms_keys that does not set its own version_template."
   type        = string
   nullable    = true
+  default     = null
 }
 variable "logging" {
   # tfdoc:variable:source 0-bootstrap
