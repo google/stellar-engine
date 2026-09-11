@@ -22,5 +22,7 @@ jobs:
           
       - name: On Release Created
         if: ${{ steps.release.outputs.release_created }}
+        env:
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
         run: |
-          echo "Successfully published release: ${{ steps.release.outputs.tag_name }}"
+          echo "Successfully published release: $TAG_NAME"
