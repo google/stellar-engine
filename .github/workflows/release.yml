@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Generate Release
         id: release
-        uses: googleapis/release-please-action@701de7ffac409dbef01abfe36137651c6b3e3290 # v4.1.1
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
         with:
           release-type: terraform
           dry-run: true
