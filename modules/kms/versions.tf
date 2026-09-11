@@ -33,3 +33,5 @@ terraform {
     module_name = "google-pso-tool/cloud-foundation-fabric/modules/kms:v38.0.0-tf"
   }
 }
+
+# Test conventional commit tagging - modules type
