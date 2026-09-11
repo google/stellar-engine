@@ -31,3 +31,5 @@ provider "google" {
   project = var.main_project_id
   region  = var.region
 }
+
+# Test conventional commit tagging - blueprints type
