@@ -1,0 +1,25 @@
+name: "Auto Release"
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Release
+        id: release
+        uses: googleapis/release-please-action@701de7ffac409dbef01abfe36137651c6b3e3290 # v4.1.1
+        with:
+          release-type: terraform
+          
+      - name: On Release Created
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          echo "Successfully published release: ${{ steps.release.outputs.tag_name }}"
