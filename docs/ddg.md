@@ -426,7 +426,7 @@ To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/
   - Select a permission for the principal(s) from Select a role as “Billing
     Account Administrator”.
   - When done, click Save.
-- Change directory into **fast/stages-aw/2-networking-a-fedramp-high**
+- Change directory into **fast/stages-aw/2-networking-a-fedramp**
 - Copy the provider and global tfvars files from the GCS buckets:
 ```bash
 gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./ && \
@@ -636,7 +636,7 @@ Perform the following steps when adding or removing tenants projects for an exis
 
 #### Apply FAST Stage: 02-networking
 - Change directory into appropriate network folder for your Stellar Engine deployment:
-  - fast/stages-aw/2-networking-a-fedramp-high
+  - fast/stages-aw/2-networking-a-fedramp
   - fast/stages-aw/2-networking-b-il5-ngfw
 - Copy the 1-resman 1-resman tfvars file from the GCS bucket
   - `gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./`
