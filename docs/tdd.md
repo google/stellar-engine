@@ -614,7 +614,7 @@ environment.) A subset of the file structure containing IaC is listed below.
   - **stages-aw**
     - **0-bootstrap**
     - **1-resman**
-    - **2-networking-a-fedramp-high**
+    - **2-networking-a-fedramp**
     - **2-networking-b-il5-ngfw**
     - **3-security**
 - **modules**
