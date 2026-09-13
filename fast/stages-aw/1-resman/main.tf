@@ -50,7 +50,7 @@ locals {
     if(
       v != null &&
       (
-        try(v.type, null) == "sourcerepo"
+        try(v.type, null) == "ssm"
         ||
         contains(
           keys(local.identity_providers),
@@ -65,7 +65,7 @@ locals {
     if(
       v != null &&
       (
-        try(v.cicd.type, null) == "sourcerepo"
+        try(v.cicd.type, null) == "ssm"
         ||
         contains(
           keys(local.identity_providers),

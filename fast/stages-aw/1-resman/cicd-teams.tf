@@ -22,7 +22,7 @@ module "branch-teams-team-cicd-repo" {
   source = "../../../modules/source-repository"
   for_each = {
     for k, v in coalesce(local.team_cicd_repositories, {}) : k => v
-    if v.cicd.type == "sourcerepo"
+    if v.cicd.type == "ssm"
   }
   project_id = var.automation.project_id
   name       = each.value.cicd.name
@@ -61,7 +61,7 @@ module "branch-teams-team-sa-cicd" {
   display_name = "Terraform CI/CD team ${each.key} service account."
   prefix       = var.prefix
   iam = (
-    each.value.cicd.type == "sourcerepo"
+    each.value.cicd.type == "ssm"
     # used directly from the cloud build trigger for source repos
     ? {
       "roles/iam.serviceAccountUser" = local.automation_resman_sa_iam

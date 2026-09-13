@@ -21,7 +21,7 @@
 module "branch-gke-dev-cicd-repo" {
   source = "../../../modules/source-repository"
   for_each = (
-    try(local.cicd_repositories.gke_dev.type, null) == "sourcerepo"
+    try(local.cicd_repositories.gke_dev.type, null) == "ssm"
     ? { 0 = local.cicd_repositories.gke_dev }
     : {}
   )
@@ -57,7 +57,7 @@ module "branch-gke-dev-cicd-repo" {
 module "branch-gke-prod-cicd-repo" {
   source = "../../../modules/source-repository"
   for_each = (
-    try(local.cicd_repositories.gke_prod.type, null) == "sourcerepo"
+    try(local.cicd_repositories.gke_prod.type, null) == "ssm"
     ? { 0 = local.cicd_repositories.gke_prod }
     : {}
   )
@@ -100,7 +100,7 @@ module "branch-gke-dev-sa-cicd" {
   display_name = "Terraform CI/CD GKE development service account."
   prefix       = var.prefix
   iam = (
-    each.value.type == "sourcerepo"
+    each.value.type == "ssm"
     # used directly from the cloud build trigger for source repos
     ? {
       "roles/iam.serviceAccountUser" = local.automation_resman_sa_iam
@@ -143,7 +143,7 @@ module "branch-gke-prod-sa-cicd" {
   display_name = "Terraform CI/CD GKE production service account."
   prefix       = var.prefix
   iam = (
-    each.value.type == "sourcerepo"
+    each.value.type == "ssm"
     # used directly from the cloud build trigger for source repos
     ? {
       "roles/iam.serviceAccountUser" = local.automation_resman_sa_iam
@@ -188,7 +188,7 @@ module "branch-gke-dev-r-sa-cicd" {
   display_name = "Terraform CI/CD gke multitenant development service account (read-only)."
   prefix       = var.prefix
   iam = (
-    each.value.type == "sourcerepo"
+    each.value.type == "ssm"
     # build trigger for read-only SA is optionally defined by users
     ? {}
     # impersonated via workload identity federation for external repos
@@ -222,7 +222,7 @@ module "branch-gke-prod-r-sa-cicd" {
   display_name = "Terraform CI/CD gke multitenant production service account (read-only)."
   prefix       = var.prefix
   iam = (
-    each.value.type == "sourcerepo"
+    each.value.type == "ssm"
     # build trigger for read-only SA is optionally defined by users
     ? {}
     # impersonated via workload identity federation for external repos
