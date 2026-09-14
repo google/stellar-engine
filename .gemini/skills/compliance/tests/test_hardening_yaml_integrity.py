@@ -103,12 +103,13 @@ class TestYamlRenderingIntegrity(unittest.TestCase):
         self.assertIn("Recovery Time Objective", parsed["root"]["detail"])
 
     def test_markdown_target_still_renders_badges(self) -> None:
-        """Stripping must be scoped to YAML; Markdown keeps its visual badges."""
+        """Stripping must be scoped to YAML; Markdown keeps its badges without HTML mark tags."""
         engine = TemplateEngine(target_format="markdown")
         rendered = engine.render(
             "Detail: {{ MISSING_VALUE }}", {"{{ MISSING_VALUE }}": ""}
         )
-        self.assertIn("<mark", rendered)
+        self.assertNotIn("<mark", rendered)
+        self.assertIn("[AI CONTEXTUAL EXAMPLE REQUIRED: Missing Value]", rendered)
 
 
 if __name__ == "__main__":

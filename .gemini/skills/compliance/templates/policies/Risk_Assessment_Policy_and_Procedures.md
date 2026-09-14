@@ -191,7 +191,7 @@ Risk assessments can also address information related to the system, including s
 Supply chains provide systems with critical resources required to complete their missions.  This can be in the form of hardware, software, or other resources making them ideal targets for threat actors.  Supply chain-related events include disruption, use of defective components, insertion of counterfeits, theft, malicious development practices, improper delivery practices, and insertion of malicious code. These events can have a significant impact on the confidentiality, integrity, or availability of a system and its information and, therefore, can also adversely impact organizational operations (including mission, functions, image, or reputation), organizational assets, individuals, other organizations, and the Nation. Supply chain-related events may be unintentional or malicious and can occur at any point during the system life cycle. An analysis of supply chain risk can help an organization identify systems or components for which additional supply chain risk mitigations are required.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> [WARNING: RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.]
 > {{ ORGANIZATION }} systems are required to identify any supply chain related risks that could be present in the system. To assist in limiting the potential risk, only hardware and or software that has been approved by DISA or authorized for use by an Authorizing Official via a risk assessment, Security Impact Assessment (SIA).  Monitoring of the supply chain and updates to the supply chain risk assessment will take place at regular intervals based on:
 
 - Significant changes to the supply chain;
@@ -249,7 +249,7 @@ It is extremely important to use correlated information when transitioning from 
 The [Public Vulnerability Disclosure Channel](https://cloud.google.com/security/vulnerability-reporting) is publicly discoverable and contains clear language authorizing good-faith security research.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> [WARNING: RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.]
 > {{ ORGANIZATION }} Cybersecurity Team will establish a distribution email group to be used for the disclosure/submittal of new vulnerabilities that have been identified on {{ ORGANIZATION }} {{ SYSTEM_NAME }}.  The {{ ORGANIZATION }} Cybersecurity team will then work with the affected system to verify the vulnerability is present.  Upon successful verification the {{ ORGANIZATION }} Cybersecurity Team will work with the cybersecurity team ISSO or ISSM of the affected system to:
 
 - Ensure that a POA&M is created for tracking all actions related to the vulnerability if it cannot be immediately resolved.

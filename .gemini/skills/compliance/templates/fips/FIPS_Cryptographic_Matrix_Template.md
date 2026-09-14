@@ -61,7 +61,7 @@ All cryptographic modules utilized within {{ SYSTEM_NAME }} for data-at-rest enc
 ## 5. RMF Team Operational Verification & Action Items
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">**RMF TEAM / HUMAN ACTION REQUIRED**</mark>:
+> [WARNING: RMF TEAM / HUMAN ACTION REQUIRED]:
 > 1. **NIST CMVP Certificate Validation**: Verify that the NIST CMVP certificate numbers listed in Section 2 remain in "Active" status on the NIST CSRC database (https://csrc.nist.gov/projects/cryptographic-module-validation-program/validated-modules) prior to formal SCA submission.
 > 2. **Annual Crypto Period Audit**: Ensure all Cloud KMS CMEK crypto keys have active automated 90-day rotation schedules verified in Cloud Logging audit logs.
 > 3. **eMASS Attachment**: Upload this signed FIPS Cryptographic Matrix document (`.docx` or `.pdf`) into the eMASS Artifacts repository under Control `SC-13`.

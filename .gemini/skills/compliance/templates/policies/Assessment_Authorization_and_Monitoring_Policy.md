@@ -55,7 +55,7 @@ This document establishes a common policy for the effective implementation of se
 This policy covers all {{ ORGANIZATION }} information and information systems to include those used, managed, or operated by a contractor, or other organizations on behalf of {{ ORGANIZATION }}. This policy applies to all {{ ORGANIZATION }} employees, contractors, and all other users of {{ ORGANIZATION }} information and information systems that support the operation and assets of {{ ORGANIZATION }}.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> [WARNING: RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.]
 > The {{ ORGANIZATION }} ISSM shall ensure this policy is reviewed and updated annually, or as needed, and disseminated to {{ ORGANIZATION }} System Administrators, Information System Security Officers, Program Managers, and any relevant stakeholders.
 
 This document complies with the following requirements from NIST Special Publication 800-53 Revision 5, "Security and Privacy Controls for Federal Information Systems and Organizations". A detailed compliance matrix can be found in Appendix A, “Detailed Compliance Matrix”.
@@ -80,7 +80,7 @@ The {{ ORGANIZATION }} Security Assessment Plan (SAP) will address assessment pl
 The SAP will define the scope of the assessment, and the assessment environment, team, roles, and responsibilities.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> [WARNING: RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.]
 > The {{ ORGANIZATION }} Security Assessment Report (SAR) will identify the evaluation status of all security controls, including the extent to which the controls are implemented correctly, operating as intended, producing the desired outcome with respect to meeting established security requirement, compliance/non-compliance statuses of all controls, and specific deficiencies for all non-compliant controls identified. The SAR will be provided directly to the system ISSM/ISSO and will be stored in {{ RMF_GOVERNANCE_SYSTEM }} as an artifact.
 
 
@@ -92,7 +92,7 @@ During RMF Step 4, “Assess Security Controls”, an independent Assessor is re
 ### 1.3 Specialized Assessments
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational specialized assessment frequencies and execution teams under NIST SP 800-53 Control CA-2(2).</mark>
+> [WARNING: RMF TEAM ACTION REQUIRED: Verify and update operational specialized assessment frequencies and execution teams under NIST SP 800-53 Control CA-2(2).]
 
 {{ ORGANIZATION }} conducts specialized assessments, to include:
 
@@ -112,7 +112,7 @@ These assessments improve the readiness by exercising organizational capabilitie
 This section applies to dedicated connections between information systems (i.e., system interconnections) and does not apply to transitory, user-controlled connections such as email and website browsing.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> [WARNING: RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.]
 > {{ ORGANIZATION }} carefully considers the risks that may be introduced when information systems are connected to other systems with different security requirements and security controls, both within {{ ORGANIZATION }} and external to {{ ORGANIZATION }}. If {{ ORGANIZATION }} has an interconnection to another system with the same authorizing official, it is recommended that the {{ ORGANIZATION }} develop an Interconnection Security Agreement. Additionally, the {{ ORGANIZATION }} will describe the interface characteristics between those interconnecting systems in the System Security Plan (SSP). If {{ ORGANIZATION }} has an interconnection to another system with a different authorizing official, an Interconnection Security Agreement (ISA) is required.
 
 All ISAs will be reviewed and updated at least annually.
@@ -148,11 +148,11 @@ The following process is used by {{ ORGANIZATION }} to ensure compliance with PO
 ## 4. Authorization
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> [WARNING: RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.]
 > Security authorizations are official management decisions, conveyed through authorization decision documents, by senior organizational officials or executives (i.e. Authorizing Official) to authorize operation of information systems and to explicitly accept the risk to organizational operations and assets, individuals, other organizations, and the Nation based on the implementation of agreed-upon security controls.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> [WARNING: RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.]
 > {{ ORGANIZATION }} will use the {{ AO_NAME }} ({{ AO_TITLE }})
 
 {{ ORGANIZATION }} PMO will be the point of contact for all communication with the AO office.

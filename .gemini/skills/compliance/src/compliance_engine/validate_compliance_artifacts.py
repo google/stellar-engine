@@ -1686,7 +1686,7 @@ def audit_senior_compliance_quality(
             "component": "RMF Action Alerts",
             "severity": "CAT III (Advisory)",
             "description": f"{len(rmf_action_items)} policy action highlights require review by appointed RMF roles.",
-            "remediation": "Review highlighted <mark> tags in Policies_and_Procedures/."
+            "remediation": "Review highlighted action items ([WARNING: ...] / [INFORMATIONAL: ...]) in Policies_and_Procedures/."
         })
 
     broken_excel = [r for r in excel_results if r.get("status") == "FAIL"]
@@ -1924,7 +1924,7 @@ def hydrate_example_data_in_artifacts(
                 var_name = match.group(0).replace("[CONFIG_REQUIRED:", "").replace("]", "").strip()
                 if is_yaml:
                     return f'"[AI CONTEXTUAL EXAMPLE REQUIRED: {var_name}]"'
-                return f'<mark style="{sample_badge_style}">[AI CONTEXTUAL EXAMPLE REQUIRED: {var_name}]</mark>'
+                return f"[AI CONTEXTUAL EXAMPLE REQUIRED: {var_name}]"
 
             if is_yaml:
                 content = re.sub(
@@ -2535,7 +2535,10 @@ def validate_compliance_package(
 
     token_regex = re.compile(r"\{\{\s*[A-Z0-9_]+\s*\}\}")
     config_req_regex = re.compile(r"\[CONFIG_REQUIRED:\s*[^\]]+\]")
-    mark_action_regex = re.compile(r"<mark\b[^>]*>(.{0,8192}?)</mark>", re.DOTALL)
+    action_item_regex = re.compile(
+        r"\[(?:WARNING|INFORMATIONAL):\s*([^\]]+)\]|<mark\b[^>]*>(.{0,8192}?)</mark>",
+        re.DOTALL,
+    )
 
     for fpath in md_and_yaml_files:
         rel_path = os.path.relpath(fpath, ato_dir)
@@ -2552,9 +2555,10 @@ def validate_compliance_package(
                 unresolved_tokens.append({"file": rel_path, "line": idx, "token": m.group(0), "context": line.strip()})
             for m in config_req_regex.finditer(line):
                 config_required_vars.append({"file": rel_path, "line": idx, "variable": m.group(0), "context": line.strip()})
-            for m in mark_action_regex.finditer(line):
-                txt = m.group(1).strip()
-                rmf_action_items.append({"file": rel_path, "line": idx, "action": txt})
+            for m in action_item_regex.finditer(line):
+                txt = (m.group(1) or m.group(2) or "").strip()
+                if txt:
+                    rmf_action_items.append({"file": rel_path, "line": idx, "action": txt})
 
     # 2. Audit YAML Deliverables Syntax Integrity
     yaml_results = audit_yaml_syntax_integrity(ato_dir)

@@ -4003,9 +4003,9 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
             tagged_count = validate_compliance_artifacts.hydrate_example_data_in_artifacts([yaml_path, md_path])
             self.assertEqual(tagged_count, 2)
 
-            # Markdown must contain high-visibility HTML mark tags
+            # Markdown must contain contextual example placeholders and no HTML mark tags
             hydrated_md = file_helpers.read_text_file(md_path)
-            self.assertIn("<mark style=", hydrated_md)
+            self.assertNotIn("<mark", hydrated_md)
             self.assertIn("[AI CONTEXTUAL EXAMPLE REQUIRED: System Name]", hydrated_md)
 
             # YAML must NEVER contain HTML mark tags; must be valid YAML AST

@@ -66,7 +66,7 @@ This policy defines how removable media will be properly handled for {{ ORGANIZA
 This policy will be made available upon request to any {{ SYSTEM_NAME }} system or user and will be distributed initially through {{ RMF_GOVERNANCE_SYSTEM }} to all {{ ORGANIZATION }} {{ SYSTEM_NAME }} cybersecurity staff and system leadership.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> [WARNING: RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.]
 > The {{ ORGANIZATION }} {{ SYSTEM_NAME }} cybersecurity team is responsible for conducting annual reviews of this policy and making updates when applicable.  In the event updates are made to the policy or associated procedures, the documents will be distributed to each of the {{ ORGANIZATION }} {{ SYSTEM_NAME }} ISSMs for dissemination amongst their respective systems.  Additionally, the updated documents will be posted to {{ RMF_GOVERNANCE_SYSTEM }} where it can be retrieved by {{ ORGANIZATION }} {{ SYSTEM_NAME }} cybersecurity teams.
 
 
@@ -94,7 +94,7 @@ Media storage requirements are fully inherited from Google Cloud. The {{ SYSTEM_
 ## 6. Media Transport
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> [WARNING: RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.]
 > Media transport requirements are fully inherited from Google Cloud. The {{ ORGANIZATION }} {{ SYSTEM_NAME }} is fully hosted in Google Cloud.
 
 

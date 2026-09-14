@@ -397,11 +397,11 @@ The compliance workflow enforces a strict separation of concerns between **Pytho
 > The AI agent **MUST retain and preserve explicit callout banners** in both Markdown and Word DOCX outputs:
 >
 > `> [!IMPORTANT]`
-> `> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">**RMF TEAM / HUMAN ACTION REQUIRED**</mark>: [Exact administrative SOP, physical building office suite number, local training tool URL, or human approval signature required]`
+> `> [WARNING: RMF TEAM / HUMAN ACTION REQUIRED]: [Exact administrative SOP, physical building office suite number, local training tool URL, or human approval signature required]`
 >
-> When `--fill-example-data` is requested, wrap sample data with high-contrast disclaimer borders:
-> ```html
-> <mark style="background-color: #fef08a; border: 2px dashed #ca8a04; color: #854d0e; font-weight: bold; padding: 3px 8px; border-radius: 4px;">[AI-GENERATED EXAMPLE DATA — DO NOT SUBMIT AS FINAL EVIDENCE]: Agency Service Desk Portal (Ticket #REQ-2026-991)</mark>
+> When `--fill-example-data` is requested, wrap sample data with clear disclaimer markers:
+> ```markdown
+> [WARNING: AI-GENERATED EXAMPLE DATA - DO NOT SUBMIT AS FINAL EVIDENCE]: Agency Service Desk Portal (Ticket #REQ-2026-991)
 > ```
 
 ---

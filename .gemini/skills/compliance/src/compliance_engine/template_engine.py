@@ -17,7 +17,7 @@
 
 Provides format-aware template rendering for public-sector and regulated ATO artifacts,
 evaluating conditionals (HTML, Mustache, Jinja) and resolving configuration placeholders.
-Missing configurations directly render high-visibility HTML <mark> badges in Markdown/DOCX
+Missing configurations directly render high-visibility badges in Markdown/DOCX
 or safe double-quoted scalars in YAML deliverables without post-hoc regex file patching.
 """
 
@@ -126,19 +126,18 @@ def render_badge(
     style: Optional[str] = None,
     badge_type: str = "AI CONTEXTUAL EXAMPLE REQUIRED",
 ) -> str:
-    """Renders a high-visibility HTML <mark> badge for Markdown / DOCX deliverables.
+    """Renders a high-visibility badge for Markdown / DOCX deliverables.
 
     Args:
         label: Human-readable variable or requirement title.
-        style: Optional inline CSS style string override.
+        style: Optional inline CSS style string override (retained for backward compatibility).
         badge_type: Warning tag prefix inside the badge.
 
     Returns:
-        Formatted HTML <mark> string.
+        Formatted badge string using bracketed notation.
     """
-    applied_style = style or DEFAULT_BADGE_STYLE
     clean_label = str(label).strip()
-    return f'<mark style="{applied_style}">[{badge_type}: {clean_label}]</mark>'
+    return f"[{badge_type}: {clean_label}]"
 
 
 def render_yaml_placeholder(
@@ -267,7 +266,7 @@ class TemplateEngine:
 
     Features:
       - Native multi-syntax conditionals (HTML comments, Mustache, Jinja).
-      - Direct rendering of high-visibility <mark> badges (Markdown/DOCX).
+      - Direct rendering of high-visibility badges (Markdown/DOCX).
       - Direct rendering of safe double-quoted scalars (YAML).
       - Filter pipeline support (| default, | upper, | lower, | title).
       - Zero regex backslash corruption on values containing escape characters.
@@ -472,7 +471,7 @@ class TemplateEngine:
 
         def _md_replacer(m: re.Match) -> str:
             var_name = m.group(1).strip()
-            return f'<mark style="{style}">[AI CONTEXTUAL EXAMPLE REQUIRED: {var_name}]</mark>'
+            return f"[AI CONTEXTUAL EXAMPLE REQUIRED: {var_name}]"
 
         return LEGACY_CONFIG_REQ_RE.sub(_md_replacer, content)
 

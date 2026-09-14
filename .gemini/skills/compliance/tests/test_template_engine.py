@@ -109,7 +109,7 @@ class TestTemplateEngine(unittest.TestCase):
         self.assertNotIn("Inner Enabled", res_nested_outer_only)
 
     def test_render_markdown_direct_badges(self) -> None:
-        """Tests Markdown document rendering with direct HTML <mark> badge injection for missing vars."""
+        """Tests Markdown document rendering with bracketed badge notation for missing vars."""
         engine = TemplateEngine(target_format="markdown", fill_examples=True)
 
         template = (
@@ -134,8 +134,8 @@ class TestTemplateEngine(unittest.TestCase):
         self.assertIn("Abbreviation: TIH", rendered)
         self.assertIn(r"AES-256-GCM with \1 \g<0> path\to\key", rendered)
 
-        # Missing tokens directly render high-visibility mark badges
-        self.assertIn('<mark style="background-color: #FFF3CD;', rendered)
+        # Missing tokens directly render bracketed badges without HTML mark tags
+        self.assertNotIn("<mark", rendered)
         self.assertIn("[AI CONTEXTUAL EXAMPLE REQUIRED: Organization Name]", rendered)
         self.assertIn("[AI CONTEXTUAL EXAMPLE REQUIRED: Kms Key Name]", rendered)
 
@@ -238,7 +238,7 @@ class TestTemplateEngine(unittest.TestCase):
 
         # Hydrate Markdown
         hydrated_md = TemplateEngine.hydrate_legacy_placeholders(md_content, is_yaml=False)
-        self.assertIn("<mark style=", hydrated_md)
+        self.assertNotIn("<mark", hydrated_md)
         self.assertIn("[AI CONTEXTUAL EXAMPLE REQUIRED: System Name]", hydrated_md)
         self.assertIn("[AI CONTEXTUAL EXAMPLE REQUIRED: Owner Email]", hydrated_md)
 

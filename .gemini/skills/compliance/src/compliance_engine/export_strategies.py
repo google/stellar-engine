@@ -297,11 +297,10 @@ class YamlDataExporter(BaseDataExporter):
         raw_text = read_text_file(template_file)
         version = doc_versions.get(version_key, "1.0.0")
         # `target_format="yaml"` is required, not optional: in Markdown mode the
-        # template engine renders unresolved values as HTML <mark> badges, whose
-        # embedded double quotes terminate the surrounding YAML scalar and leave the
-        # deliverable unparseable. This was previously called with a non-existent
-        # `target_detail` kwarg whose TypeError was caught and retried without any
-        # format at all, silently selecting the Markdown default.
+        # template engine renders unresolved values for human review, which does not
+        # escape characters for double-quoted YAML scalars. This was previously called
+        # with a non-existent `target_detail` kwarg whose TypeError was caught and
+        # retried without any format at all, silently selecting the Markdown default.
         populated = pop_fn(raw_text, inventory, version, target_format="yaml")
         out_path = ensure_path_within_boundary(folder / output_filename, out_dir)
         result_path = write_text_file(out_path, populated, allowed_boundary=out_dir)
