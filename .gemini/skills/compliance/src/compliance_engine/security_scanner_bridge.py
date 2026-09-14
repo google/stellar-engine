@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 Security Scanner Bridge for Automated POA&M Generation
 ======================================================
@@ -155,7 +169,7 @@ MAX_OUTPUT_SIZE: int = 50 * 1024 * 1024  # 50 MiB
 #: dropped so credentials and proxy overrides in the parent environment are not
 #: inherited by third-party binaries (SC-7, SA-9).
 _ALLOWED_ENV_KEYS: frozenset = frozenset(
-    {"PATH", "HOME", "SEMGREP_USER_AGENT_APPEND", "LANG", "LC_ALL", "USER"}
+    {"PATH", "HOME", "SEMGREP_USER_AGENT_APPEND", "LANG", "LC_ALL", "USER", "XDG_CONFIG_HOME", "SEMGREP_SETTINGS_FILE"}
 )
 
 #: Bounded retry policy for transient execution faults.
@@ -355,6 +369,7 @@ def _safe_run_subprocess(
     env: Optional[Dict[str, str]] = None,
     retries: int = SUBPROCESS_RETRY_ATTEMPTS,
     cwd: Optional[str] = None,
+    runner: Optional[Callable] = None,
 ) -> "subprocess.CompletedProcess[str]":
     """Executes a scanner binary with a scrubbed environment and bounded output.
 
@@ -407,16 +422,7 @@ def _safe_run_subprocess(
     if executable:
         argv[0] = executable
 
-    if hasattr(subprocess.run, "assert_called") or hasattr(subprocess.run, "call_args"):
-        return subprocess.run(
-            argv,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            timeout=timeout_seconds,
-            cwd=cwd,
-            env=safe_env,
-        )
+    runner_func = runner or subprocess.Popen
 
     audit = get_audit_logger()
     last_error: Optional[BaseException] = None
@@ -427,7 +433,7 @@ def _safe_run_subprocess(
                 tempfile.TemporaryFile(mode="w+", encoding="utf-8") as out_f,
                 tempfile.TemporaryFile(mode="w+", encoding="utf-8") as err_f,
             ):
-                with subprocess.Popen(
+                with runner_func(
                     argv,
                     stdout=out_f,
                     stderr=err_f,
@@ -507,6 +513,28 @@ def _safe_run_subprocess(
     raise RuntimeError(f"{argv[0]} exhausted {retries} attempts") from last_error
 
 
+
+def _is_safe_binary_path(candidate: Path) -> bool:
+    """Validates that a binary path is safe to execute (absolute, exists, executable, not group/world-writable)."""
+    import stat
+    if not candidate.is_absolute():
+        return False
+    if not candidate.is_file():
+        return False
+    if not os.access(candidate, os.X_OK):
+        return False
+    try:
+        info = candidate.stat()
+        if info.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+            logger.warning(
+                "Refusing group/world-writable binary path %r; permits arbitrary code execution.",
+                str(candidate)
+            )
+            return False
+    except OSError:
+        return False
+    return True
+
 def resolve_preinstalled_scanner_binary(
     tool_name: str,
     custom_path: Optional[str] = None,
@@ -542,7 +570,7 @@ def resolve_preinstalled_scanner_binary(
         val = os.environ.get(env_var)
         if val:
             cand = Path(val).expanduser().resolve()
-            if cand.is_file() and os.access(cand, os.X_OK):
+            if _is_safe_binary_path(cand):
                 return str(cand)
 
     # 3. System PATH lookup
@@ -677,7 +705,7 @@ def scanner_subprocess_runner(
     return decorator
 
 
-def run_checkov_scan(target_dir: str, timeout_seconds: int = 300) -> List[Dict[str, Any]]:
+def run_checkov_scan(target_dir: str, timeout_seconds: int = 300, runner: Optional[Callable] = None) -> List[Dict[str, Any]]:
     """Runs Checkov static analysis and extracts failed IaC checks.
 
     Args:
@@ -687,7 +715,7 @@ def run_checkov_scan(target_dir: str, timeout_seconds: int = 300) -> List[Dict[s
     Returns:
         A list of standardized Checkov finding dictionaries.
     """
-    if not shutil.which("checkov"):
+    if not runner and not shutil.which("checkov"):
         logger.debug("Checkov executable not found on PATH; skipping IaC scan.")
         return []
 
@@ -725,7 +753,7 @@ def run_checkov_scan(target_dir: str, timeout_seconds: int = 300) -> List[Dict[s
         scratch_cwd: Optional[Union[str, Path]] = None,
     ) -> Any:
         return _safe_run_subprocess(
-            cmd_args, timeout_seconds=timeout_seconds, cwd=scratch_cwd
+            cmd_args, timeout_seconds=timeout_seconds, cwd=scratch_cwd, runner=runner
         )
 
     # Checkov embeds a lark-based HCL parser that serializes its compiled grammar
@@ -804,18 +832,30 @@ def _resolve_semgrep_config(semgrep_config: Optional[str] = None) -> Tuple[Optio
     bundled_rules = SEMGREP_RULES_DIR / "public_sector_baseline.yaml"
 
     if semgrep_config is None:
-        if is_offline and bundled_rules.is_file():
+        if bundled_rules.is_file():
             return str(bundled_rules.resolve()), None
-        return "auto", None
+        return None, "Bundled ruleset missing and external ruleset use must be explicitly enabled (e.g. semgrep_config='auto')."
 
     override = str(semgrep_config).strip()
     if override.lower() in ("bundled", "local", "baseline", "public_sector_baseline"):
         if bundled_rules.is_file():
             return str(bundled_rules.resolve()), None
-    if not override or override.lower() == "auto":
-        if is_offline and bundled_rules.is_file():
+        return None, f"Configured semgrep_config '{override}' requested but bundled ruleset is missing."
+    if not override:
+        if bundled_rules.is_file():
             return str(bundled_rules.resolve()), None
+        return None, "Bundled ruleset missing and external ruleset use must be explicitly enabled."
+        
+    if override.lower() == "auto":
+        if is_offline:
+            if bundled_rules.is_file():
+                return str(bundled_rules.resolve()), None
+            return None, "auto ruleset requested but COMPLIANCE_OFFLINE is set and bundled ruleset is missing."
         return "auto", None
+
+    if override.startswith("http://"):
+        return None, f"Refusing cleartext HTTP ruleset URL '{override}'"
+
 
     # Registry references (e.g. 'p/ci', 'r/python.lang...') and remote URLs
     # are passed through untouched to Semgrep unless a matching local path
@@ -870,6 +910,7 @@ def run_semgrep_scan(
     target_dir: str,
     timeout_seconds: int = 300,
     semgrep_config: Optional[str] = None,
+    runner: Optional[Callable] = None,
 ) -> List[Dict[str, Any]]:
     """Runs a Semgrep SAST scan against application code.
 
@@ -885,7 +926,7 @@ def run_semgrep_scan(
         rather than an empty list, so a missing scan is never mistaken for a
         clean scan.
     """
-    if not shutil.which("semgrep"):
+    if not runner and not shutil.which("semgrep"):
         logger.debug("Semgrep executable not found on PATH; skipping SAST scan.")
         return []
 
@@ -918,10 +959,8 @@ def run_semgrep_scan(
         cmd = [
             "semgrep",
             "scan",
+            "--metrics=off",
         ]
-        # Semgrep requires metrics to not be forced off when running with --config auto
-        if config_ref.lower() != "auto":
-            cmd.append("--metrics=off")
         cmd.extend([
             "--disable-version-check",
             # Assessment scope is the accreditation boundary, not the VCS working
@@ -951,7 +990,7 @@ def run_semgrep_scan(
             env_vars: Dict[str, str],
             timeout_seconds: int = timeout_seconds,
         ) -> Any:
-            return _safe_run_subprocess(cmd_args, env=env_vars, timeout_seconds=timeout_seconds)
+            return _safe_run_subprocess(cmd_args, env=env_vars, timeout_seconds=timeout_seconds, runner=runner)
 
         data = _execute_semgrep(cmd, env, timeout_seconds=timeout_seconds)
         if (
@@ -1032,6 +1071,7 @@ def run_trivy_scan(
     timeout_seconds: int = 300,
     enable_bootstrap: bool = False,
     custom_binary_path: Optional[str] = None,
+    runner: Optional[Callable] = None,
 ) -> List[Dict[str, Any]]:
     """Runs Trivy vulnerability and misconfiguration scanner using pre-installed tooling.
 
@@ -1045,7 +1085,11 @@ def run_trivy_scan(
         List of standardized Trivy finding dictionaries.
     """
     trivy_bin = resolve_preinstalled_scanner_binary("trivy", custom_path=custom_binary_path)
+    if not trivy_bin and not runner:
+        logger.debug("Trivy executable not found on PATH or standard locations; skipping CVE scan.")
+        return []
     if not trivy_bin:
+        trivy_bin = "trivy"
         logger.debug("Trivy executable not found on PATH or standard locations; skipping CVE scan.")
         return []
 
@@ -1075,7 +1119,7 @@ def run_trivy_scan(
         cmd_args: List[str],
         timeout_seconds: int = timeout_seconds,
     ) -> Any:
-        return _safe_run_subprocess(cmd_args, timeout_seconds=timeout_seconds)
+        return _safe_run_subprocess(cmd_args, timeout_seconds=timeout_seconds, runner=runner)
 
     data = _execute_trivy(cmd, timeout_seconds=timeout_seconds)
     if isinstance(data, list) and data and "check_id" in data[0] and str(data[0]["check_id"]).startswith("TRIVY_SCANNER_"):
@@ -1110,6 +1154,7 @@ def fetch_live_scc_findings(
     project_id: Optional[str] = None,
     impact_level: Optional[str] = None,
     timeout_seconds: int = 30,
+    runner: Optional[Callable] = None,
 ) -> List[Dict[str, Any]]:
     """Queries live Google Cloud Security Command Center (SCC) active findings.
 
@@ -1133,7 +1178,7 @@ def fetch_live_scc_findings(
         return []
 
     findings: List[Dict[str, Any]] = []
-    if shutil.which("gcloud"):
+    if runner or shutil.which("gcloud"):
         
         if str(project_id).startswith("-"):
             return []
@@ -1145,7 +1190,7 @@ def fetch_live_scc_findings(
             "--limit=50",
         ]
         try:
-            proc = _safe_run_subprocess(cmd, timeout_seconds=timeout_seconds)
+            proc = _safe_run_subprocess(cmd, timeout_seconds=timeout_seconds, runner=runner)
 
             if proc.returncode == 0 and proc.stdout.strip():
                 raw_findings = json.loads(proc.stdout)

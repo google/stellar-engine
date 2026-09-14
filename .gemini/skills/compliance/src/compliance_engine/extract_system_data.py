@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 System Infrastructure & Configuration Extractor
 
@@ -935,41 +949,35 @@ class HclBlock(str):
         obj.parsed = parsed or {}
         return obj
 
-    def get(self, key: str, default: Any = None) -> Any:
-        """Retrieves a top-level key from the attached AST dictionary.
-
-        Args:
-            key: Name of the attribute to look up in the AST dictionary.
-            default: Default fallback value if the key is not present.
-
-        Returns:
-            The attribute value from the AST, or default if missing.
-        """
-        return self.parsed.get(key, default)
-
-
 def _hcl_val_to_str(val: Any, indent: int = 0) -> str:
-    prefix = "  " * indent
-    if isinstance(val, dict):
-        inner = "\n".join(f"{prefix}  {k} = {_hcl_val_to_str(v, indent + 1)}" for k, v in val.items())
-        return f"{{\n{inner}\n{prefix}}}"
-    elif isinstance(val, list):
-        items = ", ".join(_hcl_val_to_str(x, indent) for x in val)
-        return f"[{items}]"
-    elif isinstance(val, str):
+    """Converts a parsed python-hcl2 dictionary structure back to a formatted HCL string."""
+    if isinstance(val, str):
         return f'"{val}"'
     elif isinstance(val, bool):
-        return str(val).lower()
+        return "true" if val else "false"
+    elif isinstance(val, (int, float)):
+        return str(val)
+    elif isinstance(val, list):
+        if not val:
+            return "[]"
+        if isinstance(val[0], dict):
+            return "\n".join(_hcl_val_to_str(v, indent) for v in val)
+        items = ", ".join(_hcl_val_to_str(v, indent) for v in val)
+        return f"[{items}]"
+    elif isinstance(val, dict):
+        lines = []
+        pad = "  " * indent
+        for k, v in val.items():
+            lines.append(f"{pad}{k} = {_hcl_val_to_str(v, indent + 1)}")
+        inner = "\n".join(lines)
+        return f"{{\n{inner}\n{pad}}}"
     return str(val)
 
-
 def _dict_to_hcl_body_str(d: Dict[str, Any]) -> str:
+    """Recursively serialize a python-hcl2 AST resource/module dictionary to string body format."""
     lines = []
     for k, v in d.items():
-        if isinstance(v, dict):
-            inner = "\n".join(f"  {sk} = {_hcl_val_to_str(sv, 1)}" for sk, sv in v.items())
-            lines.append(f"{k} = {{\n{inner}\n}}")
-        elif isinstance(v, list) and v and isinstance(v[0], dict):
+        if isinstance(v, list) and v and isinstance(v[0], dict):
             for item in v:
                 inner = "\n".join(f"  {sk} = {_hcl_val_to_str(sv, 1)}" for sk, sv in item.items())
                 lines.append(f"{k} {{\n{inner}\n}}")
@@ -977,52 +985,6 @@ def _dict_to_hcl_body_str(d: Dict[str, Any]) -> str:
             lines.append(f"{k} = {_hcl_val_to_str(v)}")
     return "\n".join(lines)
 
-
-def extract_balanced_blocks(
-    content: str,
-    keyword: str = "resource",
-) -> List[Tuple[Optional[str], str, Any, int, int]]:
-    """Extracts HCL blocks using python-hcl2 AST parser.
-
-    Deprecated: Maintained for backward compatibility. Production workflows
-    rely directly on hcl2.loads() AST dictionaries.
-
-    Args:
-        content: Full HCL text content.
-        keyword: Keyword to parse ('resource', 'module', 'terraform', etc.).
-
-    Returns:
-        List of tuples (type_or_none, name, body_content, start_idx, end_idx).
-    """
-    results: List[Tuple[Optional[str], str, Any, int, int]] = []
-    try:
-        parsed = hcl2.loads(content)
-    except (ValueError, TypeError, hcl2.Hcl2Error) as e:
-        logger.warning(f"Failed to parse HCL content: {e}")
-        return results
-
-    if not isinstance(parsed, dict):
-        return results
-
-    if keyword == "resource":
-        for r_entry in parsed.get("resource", []):
-            if isinstance(r_entry, dict):
-                for rt, named in r_entry.items():
-                    if isinstance(named, dict):
-                        for rn, r_body in named.items():
-                            body_str = _dict_to_hcl_body_str(r_body) if isinstance(r_body, dict) else str(r_body)
-                            results.append((rt, rn, HclBlock(body_str, parsed=r_body), 0, 0))
-    elif keyword == "module":
-        for m_entry in parsed.get("module", []):
-            if isinstance(m_entry, dict):
-                for mn, m_body in m_entry.items():
-                    body_str = _dict_to_hcl_body_str(m_body) if isinstance(m_body, dict) else str(m_body)
-                    results.append((None, mn, HclBlock(body_str, parsed=m_body), 0, 0))
-    elif keyword in ("terraform", "locals", "required_providers"):
-        for t_entry in parsed.get(keyword, []):
-            results.append((None, keyword, HclBlock(str(t_entry), parsed=t_entry), 0, 0))
-
-    return results
 
 def _parse_hcl_list_items(list_str: str) -> List[str]:
     """Extracts scalar items from a bracketed HCL list string, preserving quoted strings.
@@ -1402,8 +1364,8 @@ def derive_connectivity_summary(
     if conn_items:
         return " / ".join(conn_items)
     elif networks:
-        return "Software-Defined Private VPC / Private Google Access / Cloud NAT"
-    return "Cloud Interconnect / Private Service Connect / VPC Peering"
+        return "Software-Defined Private VPC"
+    return "Not determined from IaC"
 
 
 def derive_authentication_summary(
@@ -1418,8 +1380,10 @@ def derive_authentication_summary(
         auth_items.append("Identity-Aware Proxy (IAP) Context-Aware Access")
     if service_accounts:
         auth_items.append("Least-Privilege Scoped Service Accounts")
-    auth_items.insert(0, "Google Cloud Identity (MFA / Phishing-Resistant FIDO2)")
-    return " / ".join(auth_items)
+    
+    if auth_items:
+        return " / ".join(auth_items)
+    return "Not determined from IaC"
 
 
 def derive_encryption_summary(
@@ -1428,11 +1392,14 @@ def derive_encryption_summary(
 ) -> str:
     """Dynamically derives cryptographic protection architecture description."""
     has_hsm = any(k.get("protection_level") == "HSM" for k in kms_keys)
+    has_software = any(k.get("protection_level") == "SOFTWARE" for k in kms_keys)
     has_cmek = len(kms_keys) > 0 or any(b.get("cmek_encrypted") for b in storage_buckets)
     if has_hsm:
         return "FIPS 140-3 Level 3 Cloud HSM CMEK (AES-256-GCM / RSA-4096)"
-    elif has_cmek:
+    elif has_software:
         return "FIPS 140-3 Level 1 Cloud KMS CMEK (AES-256)"
+    elif has_cmek:
+        return "CMEK (Protection Level Not Determined from IaC)"
     return "Google Default Encryption at Rest (FIPS 140-3 Validated AES-256)"
 
 
@@ -1832,6 +1799,56 @@ def _resolved_asset_name(
         name = res_name if is_valid_resource_name(res_name) else fallback
     return name
 
+def _resolved_cmek_name(raw_cmek: Any, resolved_vars: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    """Cleans an unresolved CMEK reference string into an explanatory statement."""
+    if not raw_cmek:
+        return None
+    raw_str = str(raw_cmek)
+    v_dict = resolved_vars or {}
+    clean = clean_interpolated_string(raw_str, v_dict)
+    if not clean or "var." in clean or "local." in clean or "${" in clean:
+        return "Customer-managed key (reference resolved at apply time)"
+    tails = {t.lower() for t in _REF_TAIL.findall(raw_str)}
+    if clean.strip().lower() in tails:
+        return "Customer-managed key (reference resolved at apply time)"
+    return clean
+
+
+def _text_attr_tristate(body: Any, attr: str) -> Optional[bool]:
+    """Reads a boolean Terraform attribute from raw text without guessing.
+
+    The text-scan path is a degraded fallback used when the HCL AST is
+    unavailable, so an attribute that is simply not present must be reported as
+    undetermined rather than assumed. Asserting a secure default here is what
+    produces unsupportable control statements in the generated SSP.
+
+    Args:
+        body: Raw Terraform source text for the resource body.
+        attr: Attribute name to look for (e.g. 'versioning').
+
+    Returns:
+        True or False when the attribute is explicitly assigned a boolean,
+        otherwise None to signal that the value could not be determined.
+    """
+    match = re.search(
+        r"\b" + re.escape(attr) + r"\s*=\s*(true|false)\b",
+        str(body),
+        re.IGNORECASE,
+    )
+    if match:
+        return match.group(1).lower() == "true"
+    # A bare block (e.g. `versioning { enabled = true }`) carries its own flag.
+    block = re.search(
+        r"\b" + re.escape(attr) + r"\s*(?:=\s*)?\{([^{}]*)\}",
+        str(body),
+        re.IGNORECASE | re.DOTALL,
+    )
+    if block:
+        inner = re.search(r"\benabled\s*=\s*(true|false)\b", block.group(1), re.IGNORECASE)
+        if inner:
+            return inner.group(1).lower() == "true"
+    return None
+
 
 def classify_and_ingest_resource(
     res_type: str,
@@ -1984,10 +2001,13 @@ def classify_and_ingest_resource(
             enc = body.get("encryption") or []
             enc_dict = enc[0] if isinstance(enc, list) and enc else (enc if isinstance(enc, dict) else {})
             cmek_key = enc_dict.get("default_kms_key_name")
+            # Provider defaults (google_storage_bucket): versioning is disabled and
+            # uniform bucket-level access is off unless explicitly configured. Do not
+            # assume the secure value, or the SSP asserts controls that are not enforced.
             vers = body.get("versioning") or []
             vers_dict = vers[0] if isinstance(vers, list) and vers else (vers if isinstance(vers, dict) else {})
-            versioning = bool(vers_dict.get("enabled", True))
-            ubla = bool(body.get("uniform_bucket_level_access", True))
+            versioning = bool(vers_dict.get("enabled", False)) if vers_dict else False
+            ubla = bool(body.get("uniform_bucket_level_access", False))
             tf_data["storage_buckets"].append({
                 "name": b_name,
                 "location": loc,
@@ -2005,8 +2025,10 @@ def classify_and_ingest_resource(
                 return
             loc = extract_hcl_attr(body, "location", vars_dict=vars_dict) or "US"
             cmek = "kms_key_name" in body or "crypto_key" in body
-            vers = ("versioning" in body and "false" not in body)
-            ubla = ("uniform_bucket_level_access" in body and "false" not in body)
+            # Degraded text scan: we cannot see the whole resolved config, so report
+            # None (undetermined) rather than guessing when the attribute is absent.
+            vers = _text_attr_tristate(body, "versioning")
+            ubla = _text_attr_tristate(body, "uniform_bucket_level_access")
             tf_data["storage_buckets"].append({
                 "name": b_name,
                 "location": loc,
@@ -2038,18 +2060,30 @@ def classify_and_ingest_resource(
                 if nic0.get("access_config"):
                     has_pub_ip = True
             shielded = body.get("shielded_instance_config")
-            is_shielded = True
+            is_shielded = None
             if isinstance(shielded, list) and shielded:
-                is_shielded = bool(shielded[0].get("enable_secure_boot", True))
+                s_dict = shielded[0] if isinstance(shielded[0], dict) else {}
+                if "enable_secure_boot" in s_dict:
+                    is_shielded = bool(s_dict["enable_secure_boot"])
             elif isinstance(shielded, dict):
-                is_shielded = bool(shielded.get("enable_secure_boot", True))
+                if "enable_secure_boot" in shielded:
+                    is_shielded = bool(shielded["enable_secure_boot"])
+            
             boot_disk = body.get("boot_disk")
             kms_key = None
+            img = None
             if isinstance(boot_disk, list) and boot_disk:
                 bd0 = boot_disk[0] if isinstance(boot_disk[0], dict) else {}
                 kms_key = bd0.get("kms_key_self_link") or bd0.get("disk_encryption_key_raw")
+                if "initialize_params" in bd0 and isinstance(bd0["initialize_params"], list) and bd0["initialize_params"]:
+                    img = bd0["initialize_params"][0].get("image")
+                elif "initialize_params" in bd0 and isinstance(bd0["initialize_params"], dict):
+                    img = bd0["initialize_params"].get("image")
             elif isinstance(boot_disk, dict):
                 kms_key = boot_disk.get("kms_key_self_link") or boot_disk.get("disk_encryption_key_raw")
+                if "initialize_params" in boot_disk and isinstance(boot_disk["initialize_params"], dict):
+                    img = boot_disk["initialize_params"].get("image")
+                    
             p_id = body.get("project") or (vars_dict.get("project_id") if vars_dict else "") or (vars_dict.get("project") if vars_dict else "") or ""
             tf_data["compute_instances"].append({
                 "name": vm_name,
@@ -2057,7 +2091,7 @@ def classify_and_ingest_resource(
                 "zone": zone,
                 "network_ip": network_ip,
                 "subnetwork": subnetwork,
-                "image": "Google Cloud Hardened Shielded Image",
+                "image": img,
                 "kms_key": kms_key,
                 "has_public_ip": has_pub_ip,
                 "shielded_vm": is_shielded,
@@ -2086,13 +2120,16 @@ def classify_and_ingest_resource(
             if subnet in ("subnet_id", "var.subnet_id", "subnet", ""):
                 subnet = "workload-subnet"
             raw_img = extract_hcl_attr(body, "image", vars_dict=vars_dict)
-            if not raw_img or "var." in str(raw_img) or "${" in str(raw_img):
-                img = "projects/ubuntu-os-cloud/global/images/family/ubuntu-2204-lts"
-            else:
+            img = None
+            if raw_img and "var." not in str(raw_img) and "${" not in str(raw_img):
                 img = clean_interpolated_string(raw_img, vars_dict, default_val=raw_img)
-            kms_key = extract_hcl_attr(body, "kms_key_self_link", vars_dict=vars_dict)
+            kms_key = _resolved_cmek_name(extract_hcl_attr(body, "kms_key_self_link", vars_dict=vars_dict), vars_dict)
             has_pub_ip = ("access_config" in body)
-            is_shielded = ("shielded_instance_config" in body) or ("enable_secure_boot" in body)
+            is_shielded = None
+            if "enable_secure_boot" in body:
+                match = re.search(r'enable_secure_boot\s*=\s*(true|false)', body, re.IGNORECASE)
+                if match:
+                    is_shielded = match.group(1).lower() == "true"
             p_id = (
                 vars_dict.get("project_id")
                 or vars_dict.get("prod_project_id")
@@ -2126,7 +2163,11 @@ def classify_and_ingest_resource(
             rot = body.get("rotation_period", "7776000s")
             vt = body.get("version_template") or []
             vt_dict = vt[0] if isinstance(vt, list) and vt else (vt if isinstance(vt, dict) else {})
-            prot = vt_dict.get("protection_level", "HSM")
+            # Provider default for google_kms_crypto_key is SOFTWARE protection.
+            # Defaulting to HSM would fabricate a FIPS 140-3 Level 3 claim. Check
+            # the nested version_template first, then a flattened top-level value
+            # (emitted by plan JSON and some HCL parses), before falling back.
+            prot = vt_dict.get("protection_level") or body.get("protection_level") or "SOFTWARE"
             tf_data["kms_keys"].append({
                 "type": res_type,
                 "name": key_name,
@@ -2138,8 +2179,13 @@ def classify_and_ingest_resource(
             })
         else:
             raw_key = extract_hcl_attr(body, "name", vars_dict=vars_dict) or extract_hcl_attr(body, "description", vars_dict=vars_dict) or res_name
-            prot = extract_hcl_attr(body, "protection_level", vars_dict=vars_dict) or ("HSM" if "HSM" in body else "SOFTWARE")
-            prot = "HSM" if "HSM" in str(prot) else "SOFTWARE"
+            # Require an explicit protection_level assignment; a bare "HSM" substring
+            # elsewhere in the body (a comment, a key name) is not evidence.
+            prot_raw = extract_hcl_attr(body, "protection_level", vars_dict=vars_dict)
+            if not prot_raw:
+                prot_m = re.search(r'protection_level\s*=\s*"?(HSM|SOFTWARE|EXTERNAL[A-Z_]*)"?', str(body), re.IGNORECASE)
+                prot_raw = prot_m.group(1) if prot_m else "SOFTWARE"
+            prot = "HSM" if "HSM" in str(prot_raw).upper() else "SOFTWARE"
             kr = extract_hcl_attr(body, "key_ring", vars_dict=vars_dict) or res_name
             kr = clean_interpolated_string(kr, vars_dict, default_val=res_name)
             purp = extract_hcl_attr(body, "purpose", vars_dict=vars_dict) or "ENCRYPT_DECRYPT"
@@ -2212,11 +2258,17 @@ def classify_and_ingest_resource(
                 p_net = ip_dict.get("private_network")
                 if p_net and "/" in p_net:
                     p_net = p_net.split("/")[-1]
-                req_ssl = ip_dict.get("require_ssl", True)
+                # Neither TLS enforcement nor backups are on by default in Cloud SQL.
+                # `require_ssl` is deprecated in favour of `ssl_mode`, so honour both.
+                ssl_mode = str(ip_dict.get("ssl_mode") or "").upper()
+                if ssl_mode:
+                    req_ssl = ssl_mode in ("ENCRYPTED_ONLY", "TRUSTED_CLIENT_CERTIFICATE_REQUIRED")
+                else:
+                    req_ssl = bool(ip_dict.get("require_ssl", False))
                 has_pub = bool(ip_dict.get("ipv4_enabled", False))
                 bkp_cfg = s_dict.get("backup_configuration") or []
                 bkp_dict = bkp_cfg[0] if isinstance(bkp_cfg, list) and bkp_cfg else (bkp_cfg if isinstance(bkp_cfg, dict) else {})
-                bkp_enabled = bool(bkp_dict.get("enabled", True))
+                bkp_enabled = bool(bkp_dict.get("enabled", False))
                 cmek = body.get("encryption_key_name")
                 tf_data["databases"].append({
                     "type": res_type,
@@ -2256,8 +2308,17 @@ def classify_and_ingest_resource(
                     else:
                         p_net = p_clean
             cmek = extract_hcl_attr(body, "encryption_key_name", vars_dict=vars_dict)
-            req_ssl = False if ("require_ssl = false" in body or "require_ssl=false" in body) else True
-            bkp_enabled = False if ("backup_configuration" in body and ("enabled = false" in body or "enabled=false" in body)) else True
+            # Degraded text scan: absent evidence is not evidence of compliance.
+            req_ssl = _text_attr_tristate(body, "require_ssl")
+            if req_ssl is None:
+                ssl_m = re.search(r'ssl_mode\s*=\s*"?([A-Z_]+)"?', str(body), re.IGNORECASE)
+                if ssl_m:
+                    req_ssl = ssl_m.group(1).upper() in ("ENCRYPTED_ONLY", "TRUSTED_CLIENT_CERTIFICATE_REQUIRED")
+            bkp_enabled = None
+            if "backup_configuration" in body:
+                bkp_enabled = _text_attr_tristate(body, "backup_configuration")
+                if bkp_enabled is None:
+                    bkp_enabled = False if re.search(r"\benabled\s*=\s*false\b", str(body), re.IGNORECASE) else None
             has_pub = True if ("ipv4_enabled = true" in body or "ipv4_enabled=true" in body or "authorized_networks" in body) else False
             tf_data["databases"].append({
                 "type": res_type,
@@ -2281,8 +2342,9 @@ def classify_and_ingest_resource(
             m_ver = body.get("min_master_version") or body.get("master_version", "1.28+")
             p_cfg = body.get("private_cluster_config") or []
             p_dict = p_cfg[0] if isinstance(p_cfg, list) and p_cfg else (p_cfg if isinstance(p_cfg, dict) else {})
-            priv_cluster = bool(p_dict.get("enable_private_nodes", True))
-            priv_endpoint = bool(p_dict.get("enable_private_endpoint", True))
+            # A cluster with no private_cluster_config is public on both counts.
+            priv_cluster = bool(p_dict.get("enable_private_nodes", False))
+            priv_endpoint = bool(p_dict.get("enable_private_endpoint", False))
             cidr = p_dict.get("master_ipv4_cidr_block", "172.16.0.0/28")
             wif_cfg = body.get("workload_identity_config") or []
             wif = bool(wif_cfg)
@@ -2301,8 +2363,8 @@ def classify_and_ingest_resource(
             m_ver = extract_hcl_attr(body, "min_master_version", vars_dict=vars_dict) or extract_hcl_attr(body, "master_version", vars_dict=vars_dict) or "1.28+"
             cidr = extract_hcl_attr(body, "master_ipv4_cidr_block", vars_dict=vars_dict) or "172.16.0.0/28"
             loc = extract_hcl_attr(body, "location", vars_dict=vars_dict) or "us-east4"
-            priv_cluster = ("private_cluster_config" in body) or ("enable_private_nodes" in body)
-            priv_endpoint = ("enable_private_endpoint = true" in body or "enable_private_endpoint=true" in body)
+            priv_cluster = _text_attr_tristate(body, "enable_private_nodes")
+            priv_endpoint = _text_attr_tristate(body, "enable_private_endpoint")
             wif = ("workload_identity_config" in body)
             tf_data["gke_clusters"].append({
                 "name": cluster_name,
@@ -2587,6 +2649,7 @@ def ingest_terraform_json(
 def discover_or_generate_terraform_json(
     target_dir: Union[str, Path],
     user_config: Optional[Dict[str, Any]] = None,
+    allow_terraform_plan: bool = False,
 ) -> Optional[Dict[str, Any]]:
     """Discovers pre-existing Terraform plan/state JSON or dynamically generates it.
 
@@ -2927,6 +2990,7 @@ def ingest_sbom_json(sbom_data: Dict[str, Any]) -> Dict[str, Any]:
 def discover_or_generate_sbom(
     target_dir: Union[str, Path],
     user_config: Optional[Dict[str, Any]] = None,
+    allow_scanners: bool = False,
 ) -> Optional[Dict[str, Any]]:
     """Discovers pre-existing SBOM JSON or dynamically generates it via Syft / Trivy.
 
@@ -2985,6 +3049,10 @@ def discover_or_generate_sbom(
                 except Exception as err:
                     logger.debug("Candidate file '%s' is not valid SBOM JSON: %s", c_file, err)
 
+    if not allow_scanners:
+        logger.info("Skipping dynamic SBOM generation via Syft/Trivy (not explicitly allowed)")
+        return None
+
     # 3. Auto-generation via Syft
     syft_bin = shutil.which("syft")
     if syft_bin:
@@ -3004,7 +3072,7 @@ def discover_or_generate_sbom(
     if trivy_bin:
         app_dir = target_path / "app" if (target_path / "app").is_dir() else target_path
         try:
-            res = safe_run_command([trivy_bin, "fs", "--format", "cyclonedx", "--", str(app_dir)], timeout=60)
+            res = safe_run_command([trivy_bin, "fs", "--format", "cyclonedx", "--offline-scan", "--skip-db-update", "--", str(app_dir)], timeout=60)
             if res.returncode == 0 and res.stdout.strip():
                 data = json.loads(res.stdout)
                 if data.get("components"):
@@ -3383,14 +3451,22 @@ def deep_scan_tf_files(
                     c_name = clean_interpolated_string(c_name, resolved_vars, default_val=mod_name)
                     loc = extract_hcl_attr(body, "location", vars_dict=resolved_vars) or "us-east4"
                     m_cidr = extract_hcl_attr(body, "private_cluster_config.master_ipv4_cidr_block", vars_dict=resolved_vars) or "172.16.0.0/28"
+                    # Fall back to the fabric module's own documented defaults
+                    # (modules/gke-cluster-standard/variables.tf: access_config
+                    # private_nodes = true, disable_public_endpoint = true,
+                    # enable_features.workload_identity = true), but let an
+                    # explicit override in the module invocation win.
+                    mod_priv_nodes = _text_attr_tristate(body, "private_nodes")
+                    mod_priv_endpoint = _text_attr_tristate(body, "disable_public_endpoint")
+                    mod_wif = _text_attr_tristate(body, "workload_identity")
                     tf_data["gke_clusters"].append({
                         "name": c_name,
                         "master_version": "1.28+",
                         "master_ipv4_cidr_block": m_cidr,
                         "location": loc,
-                        "private_cluster": True,
-                        "private_endpoint": True,
-                        "workload_identity": True,
+                        "private_cluster": True if mod_priv_nodes is None else mod_priv_nodes,
+                        "private_endpoint": True if mod_priv_endpoint is None else mod_priv_endpoint,
+                        "workload_identity": True if mod_wif is None else mod_wif,
                         "file": rel_file,
                     })
 
@@ -3436,7 +3512,9 @@ def deep_scan_tf_files(
                                     sub_idx = len(keys_content)
 
                                 if k_name and is_valid_resource_name(k_name) and k_name not in ("keys", "keyring", "iam", "labels"):
-                                    prot = "HSM" if ("HSM" in k_block or "HSM" in body_str) else "SOFTWARE"
+                                    # Scope to this key's own block: a sibling key
+                                    # declaring HSM is not evidence for this one.
+                                    prot = "HSM" if re.search(r'protection_level\s*=\s*"?HSM', str(k_block), re.IGNORECASE) else "SOFTWARE"
                                     rot_m = re.search(r'rotation_period\s*=\s*"([^"]+)"', k_block)
                                     rot = rot_m.group(1) if rot_m else ("7776000s" if ("rotation_period" in k_block or "7776000s" in body_str) else "7776000s")
                                     tf_data["kms_keys"].append({
@@ -3480,6 +3558,16 @@ def deep_scan_tf_files(
                             cmek = "Customer-managed key (reference resolved at apply time)"
                         else:
                             cmek = cmek_clean
+                    # modules/cloudsql-instance/variables.tf defaults
+                    # backup_configuration.enabled to false and leaves ssl.mode
+                    # unset (provider default allows unencrypted connections), so
+                    # neither can be asserted without reading the invocation.
+                    mod_ssl_m = re.search(r'mode\s*=\s*"([A-Z_]+)"', str(body))
+                    if mod_ssl_m:
+                        mod_req_ssl = mod_ssl_m.group(1).upper() in ("ENCRYPTED_ONLY", "TRUSTED_CLIENT_CERTIFICATE_REQUIRED")
+                    else:
+                        mod_req_ssl = None
+                    mod_bkp = _text_attr_tristate(body, "enabled") if "backup_configuration" in str(body) else False
                     tf_data["databases"].append({
                         "type": "module_cloudsql_database_instance",
                         "name": db_name,
@@ -3487,8 +3575,8 @@ def deep_scan_tf_files(
                         "tier": tier,
                         "private_network": p_net,
                         "cmek_key": cmek,
-                        "require_ssl": True,
-                        "backup_enabled": True,
+                        "require_ssl": mod_req_ssl,
+                        "backup_enabled": mod_bkp,
                         "has_public_ip": False,
                         "file": rel_file
                     })
@@ -3548,14 +3636,18 @@ def deep_scan_tf_files(
                     if is_valid_resource_name(b_name) and not b_name.startswith("${"):
                         b_loc = extract_hcl_attr(body, "location", vars_dict=resolved_vars) or "US"
                         cmek = extract_hcl_attr(body, "encryption.default_kms_key_name", vars_dict=resolved_vars) or extract_hcl_attr(body, "kms_key", vars_dict=resolved_vars)
+                        # modules/gcs/variables.tf defaults versioning to null
+                        # (disabled) and uniform_bucket_level_access to true.
+                        mod_vers = _text_attr_tristate(body, "versioning")
+                        mod_ubla = _text_attr_tristate(body, "uniform_bucket_level_access")
                         tf_data["storage_buckets"].append({
                             "name": b_name,
                             "location": b_loc,
                             "storage_class": "STANDARD",
-                            "cmek_encrypted": bool(cmek) or "kms" in str(body),
+                            "cmek_encrypted": bool(cmek),
                             "kms_key": cmek,
-                            "versioning": True,
-                            "uniform_bucket_level_access": True,
+                            "versioning": False if mod_vers is None else mod_vers,
+                            "uniform_bucket_level_access": True if mod_ubla is None else mod_ubla,
                             "file": rel_file,
                         })
 
@@ -4729,7 +4821,11 @@ def resolve_secops_and_external_systems(
     return resolved_secops, resolved_ext
 
 
-def extract_system_inventory(target_dir: Union[str, Path]) -> Dict[str, Any]:
+def extract_system_inventory(
+    target_dir: Union[str, Path],
+    allow_terraform_plan: bool = False,
+    allow_scanners: bool = False
+) -> Dict[str, Any]:
     """Extracts system inventory data from configs, Terraform, and applications.
 
     Orchestrates configuration aggregation, infrastructure scanning, application
@@ -4753,7 +4849,7 @@ def extract_system_inventory(target_dir: Union[str, Path]) -> Dict[str, Any]:
     doc_vers = user_config.get("document_versions", {})
 
     # 1. Infrastructure Architecture Discovery: Plan/State JSON -> Auto-generation -> Static AST Fallback
-    tf_json = discover_or_generate_terraform_json(target_dir, user_config=user_config)
+    tf_json = discover_or_generate_terraform_json(target_dir, user_config=user_config, allow_terraform_plan=allow_terraform_plan)
     if tf_json:
         logger.info("Ingesting resolved infrastructure architecture from Terraform JSON plan/state.")
         tf_scanned = ingest_terraform_json(tf_json, user_config=user_config, target_dir=target_dir)
@@ -4762,7 +4858,7 @@ def extract_system_inventory(target_dir: Union[str, Path]) -> Dict[str, Any]:
         tf_scanned = deep_scan_tf_files(target_dir, user_config=user_config)
 
     # 2. Application & Software Inventory: SBOM Ingestion -> Auto-generation (Syft) -> Static App Fallback
-    sbom_json = discover_or_generate_sbom(target_dir, user_config=user_config)
+    sbom_json = discover_or_generate_sbom(target_dir, user_config=user_config, allow_scanners=allow_scanners)
     app_scanned = deep_scan_app_files(target_dir)
     if sbom_json:
         logger.info("Ingesting software package catalog from SBOM (CycloneDX/SPDX/Syft).")
@@ -4935,8 +5031,26 @@ def extract_system_inventory(target_dir: Union[str, Path]) -> Dict[str, Any]:
     scrubbed_inventory = scrub_sensitive_data(inventory)
     out_path = os.path.join(target_dir, "system_inventory.json")
     validate_system_inventory_schema(scrubbed_inventory, source_path=out_path)
+
+    # The inventory is a hand-tunable input, not a purely derived artifact: operators
+    # correct inferred facts here and re-run. Replacing it outright would silently
+    # discard that work, so keep the previous revision alongside it.
+    if os.path.isfile(out_path):
+        backup_path = f"{out_path}.bak"
+        try:
+            shutil.copy2(out_path, backup_path)
+            logger.info("Existing inventory preserved as '%s' before regeneration.", backup_path)
+        except OSError as err:
+            logger.warning(
+                "Could not back up the existing inventory '%s': %s. Continuing would "
+                "discard any manual corrections, so the extraction is aborted.",
+                out_path,
+                err,
+            )
+            raise
+
     with audit_operation(event_type=AuditEvent.INVENTORY_EXTRACTED, obj=out_path):
-        write_json_file(out_path, scrubbed_inventory, indent=2)
+        write_json_file(out_path, scrubbed_inventory, indent=2, allowed_boundary=target_dir)
 
     logger.info(
         "Extracted system inventory with %d GCP APIs & %d applications to '%s'",

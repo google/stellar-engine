@@ -37,15 +37,9 @@ hardened-parsers = [
     "defusedxml==0.7.1",
 ]
 
-[project.scripts]
-extract-system-data = "compliance_engine.extract_system_data:main"
-generate-compliance-artifacts = "compliance_engine.generate_compliance_artifacts:main"
-validate-compliance-artifacts = "compliance_engine.validate_compliance_artifacts:main"
-
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["compliance_engine*"]
 
 [tool.setuptools.package-data]
 "compliance_engine" = ["py.typed"]
-"*" = ["templates/**/*", "config/*.json", "config/*.yaml", "config/*.example"]

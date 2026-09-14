@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 Pure-Python High-Fidelity Markdown to DOCX Document Generator for RMF / NIST Policy Manuals & SSP
 
@@ -40,6 +54,7 @@ try:
         resolve_path,
         sanitize_filename,
         split_markdown_table_row,
+        scrub_sensitive_data,
     )
 except (ImportError, ValueError):
     from file_helpers import (
@@ -49,6 +64,7 @@ except (ImportError, ValueError):
         resolve_path,
         sanitize_filename,
         split_markdown_table_row,
+        scrub_sensitive_data,
     )
 
 try:
@@ -1422,6 +1438,7 @@ def convert_markdown_to_docx(
     markdown_content: str,
     output_path: str,
     metadata: Optional[Dict[str, Any]] = None,
+    allowed_boundary: Optional[str] = None,
 ) -> str:
     """Converts a Markdown policy or SSP document into a full .docx Word document using ElementTree DOM.
 
@@ -1429,10 +1446,13 @@ def convert_markdown_to_docx(
         markdown_content: Markdown formatted text content.
         output_path: Target filesystem path for the output .docx document.
         metadata: Optional dictionary with system information and organizational metadata.
+        allowed_boundary: Optional root directory that output_path must be confined inside.
 
     Returns:
         The path to the generated .docx file.
     """
+    if metadata is not None:
+        metadata = scrub_sensitive_data(metadata)
     lines = markdown_content.splitlines()
     doc_root = ET.Element(w_tag("document"))
     body = ET.SubElement(doc_root, w_tag("body"))
@@ -1580,7 +1600,10 @@ def convert_markdown_to_docx(
     document_xml = re.sub(r'<w:([a-zA-Z0-9]+)\s*/>', r'<w:\1/>', raw_doc_xml)
 
     # Write OpenXML ZIP package
-    out_target = resolve_path(output_path)
+    if allowed_boundary:
+        out_target = ensure_path_within_boundary(output_path, allowed_boundary, allow_symlinks=False)
+    else:
+        out_target = resolve_path(output_path)
     ensure_directory(out_target.parent)
     
     with audit_operation(

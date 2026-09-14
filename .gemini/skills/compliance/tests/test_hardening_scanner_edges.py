@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Automated edge-case and negative tests for scanner bridges and POA&M normalization.
 
 Covers failure conditions, timeouts, and boundary mocking in ``security_scanner_bridge.py``
@@ -265,8 +279,8 @@ class TestPoamRulesAndNormalizationEdges(unittest.TestCase):
         inventory: Dict[str, Any] = {
             "system_information": {"system_name": "Clean Platform"},
             "infrastructure_components": {
-                "kms_keys": [{"name": "k1", "rotation_period": "7776000s"}],
-                "storage_buckets": [{"name": "b1", "versioning": True, "cmek_encrypted": True}],
+                "kms_keys": [{"name": "k1", "rotation_period": "7776000s", "protection_level": "HSM"}],
+                "storage_buckets": [{"name": "b1", "versioning": True, "cmek_encrypted": True, "uniform_bucket_level_access": True}],
             },
         }
         items = poam_rules.derive_poam_findings(

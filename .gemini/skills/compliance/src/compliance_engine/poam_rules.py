@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 Plan of Action and Milestones (POA&M) Rules & Normalization Engine
 =================================================================
@@ -305,6 +319,43 @@ class SecurityConcernRule:
 # Declarative Catalog of IaC Architecture Security Rules
 # ==============================================================================
 
+# Attributes whose value the extractor reports as tri-state. A True means the
+# control is enforced, a False means it is not (and is reported by the specific
+# rule for that control), and an explicit None means the IaC did not say. Only
+# the last case belongs to DATA_GAP, so that a single asset is never reported
+# twice for the same attribute.
+_TRISTATE_ATTRS_BY_GROUP = {
+    "storage_buckets": ("Storage Bucket", ["cmek_encrypted", "versioning", "uniform_bucket_level_access"]),
+    "compute_instances": ("Compute Instance", ["shielded_vm"]),
+    "databases": ("Database", ["require_ssl", "backup_enabled"]),
+    "gke_clusters": ("GKE Cluster", ["private_cluster", "private_endpoint"]),
+    "kms_keys": ("KMS Key", ["protection_level"]),
+}
+
+
+def _find_unverified_assets(inv: Dict[str, Any]) -> List[str]:
+    """Lists assets whose security posture the IaC did not determine.
+
+    Args:
+        inv: The extracted system inventory.
+
+    Returns:
+        Labels of the form '<Asset Type> <name>' for each asset carrying at
+        least one attribute that is present but explicitly null. Attributes
+        absent from the record entirely are ignored: the extractor never
+        offered an opinion on them, so they are not an unresolved gap.
+    """
+    gaps = []
+    components = inv.get("infrastructure_components", {}) or {}
+    for group_key, (label, attrs) in _TRISTATE_ATTRS_BY_GROUP.items():
+        for item in components.get(group_key, []) or []:
+            if not isinstance(item, dict):
+                continue
+            if any(attr in item and item.get(attr) is None for attr in attrs):
+                gaps.append(f"{label} {item.get('name', 'unknown')}")
+    return gaps
+
+
 IAC_SECURITY_RULES = [
     # 1. Unencrypted Storage Buckets (SC-28)
     SecurityConcernRule(
@@ -318,7 +369,7 @@ IAC_SECURITY_RULES = [
         impact="Moderate",
         source="Security Assessment & Configuration Inspection",
         sched_days=60,
-        eval_fn=lambda inv: [b.get("name") for b in inv.get("infrastructure_components", {}).get("storage_buckets", []) if not b.get("cmek_encrypted") and not b.get("cmek")],
+        eval_fn=lambda inv: [b.get("name") for b in inv.get("infrastructure_components", {}).get("storage_buckets", []) if b.get("cmek_encrypted") is False],
         desc_fn=lambda names: f"Enforce FIPS 140-3 CMEK encryption across standard Cloud Storage buckets: {', '.join(names[:3])}.",
         milestone_desc="Configure Cloud KMS CMEK key ring and enforce storage CMEK binding policy in Terraform."
     ),
@@ -380,7 +431,7 @@ IAC_SECURITY_RULES = [
         sched_days=90,
         eval_fn=lambda inv: [
             k.get("name") for k in inv.get("infrastructure_components", {}).get("kms_keys", [])
-            if k.get("protection_level", "").upper() == "SOFTWARE" and any(b in str(inv.get("system_information", {}).get("impact_level", "")).upper() or b in str(inv.get("system_information", {}).get("compliance_baseline", "")).upper() for b in {"IL5", "IL6", "DOD IL5", "FEDRAMP HIGH"})
+            if (k.get("protection_level") or "").upper() == "SOFTWARE" and any(b in str(inv.get("system_information", {}).get("impact_level", "")).upper() or b in str(inv.get("system_information", {}).get("compliance_baseline", "")).upper() for b in {"IL5", "IL6", "DOD IL5", "FEDRAMP HIGH"})
         ],
         desc_fn=lambda keys: f"Upgrade Cloud KMS keys ({', '.join(keys[:2])}) from SOFTWARE to FIPS 140-3 Level 3 Cloud HSM.",
         milestone_desc="Provision FIPS 140-3 Level 3 HSM key ring in Cloud KMS and update Terraform CMEK references."
@@ -520,6 +571,23 @@ IAC_SECURITY_RULES = [
         eval_fn=lambda inv: [k.get("name", "key") for k in inv.get("infrastructure_components", {}).get("service_account_keys", [])],
         desc_fn=lambda keys: f"Static service account key resource(s) detected ({', '.join(keys[:2])}), introducing exfiltration risks.",
         milestone_desc="Delete static key resources and migrate workloads to Workload Identity Federation (WIF) or short-lived OAuth tokens."
+    ),
+
+    # 13. Unverified Asset Properties (CA-2 / RA-5)
+    SecurityConcernRule(
+        rule_id="DATA_GAP",
+        control="CA-2 / RA-5 Continuous Monitoring Data Gaps",
+        aps="CA-2(1)",
+        checks="SRG-OS-000480",
+        severity="Low",
+        threat="Low",
+        likelihood="Low",
+        impact="Low",
+        source="Infrastructure Architecture Completeness Review",
+        sched_days=180,
+        eval_fn=lambda inv: _find_unverified_assets(inv),
+        desc_fn=lambda gaps: f"Security posture could not be definitively verified from IaC for: {', '.join(gaps[:3])}.",
+        milestone_desc="Update Terraform definitions to explicitly configure missing properties or allow runtime state ingestion."
     )
 ]
 

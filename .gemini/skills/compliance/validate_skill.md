@@ -2,7 +2,7 @@
 
 This skill operationalizes the AI agent to act as the **Final Security Quality Gate, Principal Systems Auditor, and Senior Security Control Assessor (SCA)** ("Trust But Verify").
 
-It performs an exhaustive, multi-dimensional verification pass across **ANY Infrastructure as Code (IaC) or Application Stack** — whether deployed on Google Cloud, AWS, Azure, multi-cloud/hybrid enclaves, Kubernetes/GKE workloads, Cloud Run microservices, compute instances, databases, or enterprise cloud landing zones (including, but not limited to, Cloud Foundations Fabric).
+It performs an exhaustive, multi-dimensional verification pass across **ANY Infrastructure as Code (IaC) or Application Stack** — whether deployed on Google Cloud, AWS, Azure, multi-cloud/hybrid enclaves, Kubernetes/GKE workloads, Cloud Run microservices, compute instances, databases, or enterprise cloud landing zones (including, but not limited to, Stellar Engine).
 
 ---
 

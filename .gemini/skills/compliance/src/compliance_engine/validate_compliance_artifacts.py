@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 ATO Package Post-Generation Validator, OpenXML Inspector, & Public Sector Submission Engine
 
@@ -1839,7 +1853,39 @@ FOURTEEN_ATC_CONTROLS: List[Tuple[str, str, str]] = [
 ]
 
 
-def hydrate_example_data_in_artifacts(md_and_yaml_files: List[str]) -> int:
+def _walk_artifact_files(ato_dir: str) -> List[str]:
+    """Enumerates files under the artifact directory without following symlinks.
+
+    ``glob.glob(..., recursive=True)`` descends into symlinked directories, so a
+    symlink planted inside ``ato_artifacts/`` (for example ``docs -> ../../``) would
+    pull blueprint-owned files into passes that rewrite artifacts in place. Walking
+    with ``followlinks=False`` keeps enumeration inside the real artifact tree
+    (CWE-59, CWE-22).
+
+    Args:
+        ato_dir: Root artifact directory to enumerate.
+
+    Returns:
+        Sorted list of regular-file paths beneath ``ato_dir``.
+    """
+    if not os.path.isdir(ato_dir):
+        return []
+    collected: List[str] = []
+    for root, dirnames, filenames in os.walk(ato_dir, followlinks=False):
+        # Drop symlinked subdirectories outright rather than merely not following
+        # them, so they are never reported as containers of auditable artifacts.
+        dirnames[:] = [d for d in dirnames if not os.path.islink(os.path.join(root, d))]
+        for fname in filenames:
+            fpath = os.path.join(root, fname)
+            if os.path.isfile(fpath) and not os.path.islink(fpath):
+                collected.append(fpath)
+    return sorted(collected)
+
+
+def hydrate_example_data_in_artifacts(
+    md_and_yaml_files: List[str],
+    allowed_boundary: Optional[str] = None,
+) -> int:
     """Tags pending RMF placeholders with visible sample example badges.
 
     Replaces unconfigured variable placeholders with high-visibility callout badges
@@ -1848,6 +1894,10 @@ def hydrate_example_data_in_artifacts(md_and_yaml_files: List[str]) -> int:
 
     Args:
         md_and_yaml_files: List of file paths to Markdown and YAML artifacts.
+        allowed_boundary: Root directory every rewrite must stay inside. This pass
+            rewrites files in place, so without a boundary a symlinked directory
+            planted inside the artifact tree would redirect the write onto
+            blueprint-owned source files (CWE-59).
 
     Returns:
         Total number of artifact files updated with tagged example badges.
@@ -1893,7 +1943,7 @@ def hydrate_example_data_in_artifacts(md_and_yaml_files: List[str]) -> int:
 
         if content != orig_content:
             total_tagged_items += 1
-            write_text_file(fpath, content)
+            write_text_file(fpath, content, allowed_boundary=allowed_boundary)
 
     return total_tagged_items
 
@@ -2312,7 +2362,7 @@ def audit_yaml_syntax_integrity(ato_dir: str) -> List[Dict[str, Any]]:
         List of audit dictionaries for each audited YAML deliverable.
     """
     yaml_results: List[Dict[str, Any]] = []
-    all_files = glob.glob(os.path.join(ato_dir, "**/*"), recursive=True)
+    all_files = _walk_artifact_files(ato_dir)
     yaml_files = sorted([f for f in all_files if f.endswith((".yaml", ".yml")) and os.path.isfile(f)])
 
     for yf in yaml_files:
@@ -2410,6 +2460,29 @@ def validate_compliance_package(
     # 0. Code Drift Pre-Flight Check & Auto-Repair (Run BEFORE audits to ensure reports reflect post-sync state)
     if inventory and fix_drift:
         generator_script = os.path.join(SKILL_BASE, "scripts", "generate_compliance_artifacts.py")
+
+        # The generator rewrites every deliverable unconditionally. Operators routinely
+        # hand-edit narrative sections of an SSP between runs, and silently discarding
+        # that work is unacceptable for an authorization package, so snapshot the
+        # existing package first and tell the operator where it went.
+        if os.path.isdir(ato_dir):
+            backup_dir = f"{ato_dir.rstrip(os.sep)}_backup_{datetime.now().strftime('%Y%m%dT%H%M%S')}"
+            try:
+                shutil.copytree(ato_dir, backup_dir, symlinks=False)
+                logger.warning(
+                    "--fix regenerates every deliverable and will overwrite manual edits. "
+                    "Existing package backed up to '%s'.",
+                    backup_dir,
+                )
+            except (OSError, shutil.Error) as err:
+                logger.error(
+                    "Could not back up the existing package to '%s': %s. Aborting the "
+                    "drift repair rather than overwriting artifacts with no recovery path.",
+                    backup_dir,
+                    err,
+                )
+                raise
+
         logger.info("Pre-flight sync: Synchronizing generated compliance package with live codebase inventory before audit...")
 
         # Forward explicit CLI format preferences or discover saved preferences from inventory/config
@@ -2445,7 +2518,7 @@ def validate_compliance_package(
             logger.error("Failed executing artifact generator during drift repair: %s", err)
 
     # 1. Inspect Markdown & YAML files
-    all_files = glob.glob(os.path.join(ato_dir, "**/*"), recursive=True)
+    all_files = _walk_artifact_files(ato_dir)
     md_and_yaml_files = [filepath for filepath in all_files if filepath.endswith((".md", ".yaml"))]
     total_files_checked = len(md_and_yaml_files)
 
@@ -2453,7 +2526,7 @@ def validate_compliance_package(
     hydrated_example_count = 0
     if fill_examples:
         logger.info("Filling in realistic sample example data into pending RMF cards and placeholders...")
-        hydrated_example_count = hydrate_example_data_in_artifacts(md_and_yaml_files)
+        hydrated_example_count = hydrate_example_data_in_artifacts(md_and_yaml_files, allowed_boundary=ato_dir)
         logger.info("Hydrated example data across %d artifact files.", hydrated_example_count)
 
     unresolved_tokens: List[Dict[str, Any]] = []
@@ -2564,6 +2637,7 @@ def validate_compliance_package(
     old_val_report = os.path.join(ato_dir, "VALIDATION_REPORT.md")
     if os.path.exists(old_val_report):
         try:
+            logger.info("Removing superseded report '%s' (replaced by the unified PTA report).", old_val_report)
             os.remove(old_val_report)
         except OSError as err:
             logger.warning(
@@ -2574,6 +2648,7 @@ def validate_compliance_package(
     legacy_ai_report = os.path.join(ato_dir, "ai_validation_report.json")
     if os.path.exists(legacy_ai_report):
         try:
+            logger.info("Removing legacy report '%s'.", legacy_ai_report)
             os.remove(legacy_ai_report)
         except OSError as err:
             logger.warning(
@@ -2584,6 +2659,7 @@ def validate_compliance_package(
     old_pta_folder = os.path.join(ato_dir, "PTA")
     if os.path.exists(old_pta_folder) and os.path.isdir(old_pta_folder):
         try:
+            logger.info("Removing superseded PTA folder '%s'.", old_pta_folder)
             shutil.rmtree(old_pta_folder)
         except OSError as err:
             logger.warning(
@@ -3224,7 +3300,9 @@ def main() -> None:
         print("\nSenior Assessor Public Sector Verification Gate & Unified Authorization Playbook Compiler.")
         print("\nPositional Arguments:\n  target_dir       Target foundation directory containing ato_artifacts/ (default: .)")
         print("\nOptions:")
-        print("  --fix                          Auto-reconcile detected architectural drift against live Terraform")
+        print("  --fix                          Regenerate the ENTIRE package to reconcile drift against live Terraform.")
+        print("                                 This OVERWRITES every deliverable, including manual edits. The existing")
+        print("                                 package is copied to ato_artifacts_backup_<timestamp>/ first.")
         print("  --fill-example-data            Populate realistic public-sector sample data into action boxes")
         print("  --no-fill-example-data         Leave action boxes unpopulated for operator entry (default)")
         print("  --policy-format=FORMAT         Override policy format (both, docx, markdown)")
@@ -3250,6 +3328,15 @@ def main() -> None:
     fix_flag = "--fix" in sys.argv
     fill_examples = "--fill-example-data" in sys.argv or "--fill-examples" in sys.argv
     no_fill_examples = "--no-fill-example-data" in sys.argv
+
+    # Mirror the guard in generate_compliance_artifacts.main(). Without it a bare
+    # invocation silently targets the current working directory, which for a user
+    # sitting at the repository root means treating the whole repo as the system
+    # under assessment.
+    target_abs = os.path.abspath(target_dir)
+    if not os.path.isdir(target_abs):
+        logger.error("Target directory does not exist or is not a directory: %s", target_abs)
+        sys.exit(1)
 
     if not fill_examples and not no_fill_examples and sys.stdin.isatty():
         try:

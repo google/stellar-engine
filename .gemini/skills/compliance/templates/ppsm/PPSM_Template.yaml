@@ -1,3 +1,8 @@
+# skip boilerplate check
+# This template is hydrated into customer ATO deliverables; a Google
+# copyright header must not be stamped onto a customer's authorization
+# artifact. See templates/PROVENANCE.md.
+
 # ==============================================================================
 # Ports, Protocols, and Services Matrix (PPSM) Template
 # Derived from Public Sector Network Boundaries & Protocols Matrix Templates

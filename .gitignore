@@ -83,5 +83,12 @@ experimental/logs/
 experimental/state/
 *.bak
 
-# Compliance skill local virtualenv (.gemini/skills/compliance/.venv)
-**/.venv/
+# Compliance skill local virtualenv
+.gemini/skills/compliance/.venv/
+
+# Compliance skill generated output. The engine writes these into the target
+# blueprint directory; they are per-system deliverables, not source.
+# (__pycache__ is already covered above; *.bak covers the inventory backup.)
+ato_artifacts/
+ato_artifacts_backup_*/
+system_inventory.json

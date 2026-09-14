@@ -68,7 +68,7 @@ system_information:
   #
   # Defaults to the Google Cloud FedRAMP High / DoD IL5 P-ATO. Change it if the
   # system runs on a different CSP or inherits from a different package.
-  csp_pato_package_id: "FR1805751477"
+  csp_pato_package_id: "FR-XXXXXXXX"
 
 # ==============================================================================
 # Export Format Preferences (Dual-Format Support)
@@ -164,7 +164,7 @@ security_operations:
 
   # External SIEM / Analytics Platform
   # Options: "Splunk" | "Elasticsearch" | "Azure Sentinel" | "Chronicle" | "QRadar" | "Sumo Logic" | "None"
-  external_siem_type: "Splunk"
+  external_siem_type: "SIEM Provider"
   external_siem_destination: "[LOG_ROUTER_SINK_DESTINATION]"
 
 # ==============================================================================
@@ -188,11 +188,11 @@ external_systems:
 
   # DevSecOps CI/CD & Source Code Management (SCM)
   # Options: "GitLab Ultimate (FedRAMP)" | "Google Cloud Build + Artifact Registry" | "GitHub Enterprise Cloud" | "Jenkins"
-  cicd_platform: "GitLab Ultimate (FedRAMP)"
+  cicd_platform: "CI/CD Platform"
 
   # Host-Level Endpoint Detection & Response (EDR) / Antivirus
   # Options: "CrowdStrike Falcon (GovCloud)" | "Microsoft Defender for Endpoint" | "Tanium" | "Google Container-Optimized OS (COS) / Shielded VM" | "None"
-  edr_solution: "CrowdStrike Falcon (GovCloud)"
+  edr_solution: "EDR Solution"
 
   # Network Perimeter & Deep Packet Inspection Gateway
   # Options: "Google Cloud Armor & Cloud NGFW" | "Palo Alto Networks VM-Series" | "Fortinet FortiGate" | "DISA Cloud Access Point (BCAP / VDSS)"
@@ -313,10 +313,10 @@ disa_stigs:
   # catalog_source: "https://internal-repo.mil/stigs/catalog.json"
 
   # Explicit active version overrides (highest precedence in resolution chain):
-  version_overrides:
-    canonical_ubuntu_2204_lts: "v1R3"
-    kubernetes: "v1R12"
-    cloud_computing_srg: "v1R4"
+  # version_overrides:
+  #   canonical_ubuntu_2204_lts: "v1R3"
+  #   kubernetes: "v1R12"
+  #   cloud_computing_srg: "v1R4"
 
   # Custom mission or enclave checklists to enforce in the accreditation package:
   # custom_checklists:

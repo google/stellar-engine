@@ -56,9 +56,11 @@ the targeted regime (FedRAMP Moderate, FedRAMP High, IL5, etc.).
 
 ## Agent Skills
 
-Reusable agent skills live in `.gemini/skills/<skill-name>/`, each defined by a `SKILL.md` with YAML
+Reusable agent skills are located in `.gemini/skills/<skill-name>/`, each defined by a `SKILL.md` with YAML
 frontmatter (`name`, `description`). Skills are self-contained: they resolve their own root at runtime
-and must not hardcode absolute paths or depend on a specific checkout location.
+and must not hardcode absolute paths or depend on a specific checkout location. Note that auto-discovery 
+of repository-local skills varies by agent runtime environment; users may need to symlink them to their global 
+`~/.gemini/config/skills/` directory if they are not automatically loaded.
 
 ### `compliance` — RMF / FedRAMP / DoD ATO Package Automation
 
@@ -82,7 +84,10 @@ python3 -m venv .gemini/skills/compliance/.venv
 ```bash
 PY=.gemini/skills/compliance/.venv/bin/python
 $PY .gemini/skills/compliance/scripts/extract_system_data.py <TARGET_FOLDER>
-$PY .gemini/skills/compliance/scripts/generate_compliance_artifacts.py <TARGET_FOLDER>
+$PY .gemini/skills/compliance/scripts/generate_compliance_artifacts.py <TARGET_FOLDER> \
+  --policy-format=both \
+  --data-format=both \
+  --oscal-format=both
 $PY .gemini/skills/compliance/scripts/validate_compliance_artifacts.py <TARGET_FOLDER> --fix
 ```
 
@@ -101,7 +106,7 @@ normal compliance run):
 ```
 
 `python-hcl2==7.3.1` is a required pin, not an optional extra: it determines how much Terraform lands
-inside the assessed accreditation boundary (~92% of files vs. ~33% for the in-repo fallback parser).
+inside the assessed accreditation boundary (the in-repo fallback parser historically covers significantly less of a complex estate).
 Always install into the skill's own virtualenv. Running the engine on a bare system interpreter can
 cause it to borrow an unrelated tool's packages (e.g. checkov's incompatible `bc-python-hcl2` fork),
 which is refused by a shape canary and silently degrades Terraform coverage.

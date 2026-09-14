@@ -1,3 +1,8 @@
+# skip boilerplate check
+# This template is hydrated into customer ATO deliverables; a Google
+# copyright header must not be stamped onto a customer's authorization
+# artifact. See templates/PROVENANCE.md.
+
 # ==============================================================================
 # Security Control Traceability Matrix (SCTM) Technical & Operational Traceability
 # Baseline: NIST SP 800-53 Rev. 5 / Public Sector & Regulated Cloud (FedRAMP, StateRAMP, DoD SRG)

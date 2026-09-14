@@ -1,3 +1,8 @@
+# skip boilerplate check
+# This template is hydrated into customer ATO deliverables; a Google
+# copyright header must not be stamped onto a customer's authorization
+# artifact. See templates/PROVENANCE.md.
+
 # ==============================================================================
 # Plan of Action and Milestones (POA&M) Compliance Tracking Matrix
 # Baseline: NIST SP 800-37 Rev. 2 (RMF) / FedRAMP High / DoD Cloud SRG IL5

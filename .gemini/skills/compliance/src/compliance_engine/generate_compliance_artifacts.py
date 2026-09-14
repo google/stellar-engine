@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 Master ATO Artifacts Provisioner & Dual-Format Hydration Engine
 
@@ -218,7 +232,13 @@ def format_storage_buckets(bucket_list: List[Dict[str, Any]]) -> str:
         return "- [NOT DETERMINED FROM SOURCE]"
     lines: List[str] = []
     for b in bucket_list:
-        lines.append(f"- **{b.get('name', 'Storage Bucket')}**: Location `{b.get('location', 'US')}`, CMEK Encrypted: `{b.get('cmek_encrypted', True)}`")
+        # Tri-state, not a boolean with an optimistic default. An absent value means
+        # the extractor could not determine the encryption posture from the IaC; it
+        # must never be rendered as an assurance of CMEK coverage in the SSP, which
+        # would contradict the SC-28 POA&M rule that treats unknown as a gap.
+        cmek_state = b.get("cmek_encrypted")
+        cmek_display = "Not determined from IaC" if cmek_state is None else cmek_state
+        lines.append(f"- **{b.get('name', 'Storage Bucket')}**: Location `{b.get('location', 'US')}`, CMEK Encrypted: `{cmek_display}`")
     return "\n".join(lines)
 
 
@@ -586,7 +606,17 @@ def build_dynamic_system_description(inventory: Dict[str, Any]) -> str:
         db_details = [f"{db.get('name', 'db')} ({db.get('type', db.get('database_version', 'Managed Database'))})" for db in databases]
         data_parts.append(f"managed data persistence stores ({', '.join(db_details)})")
     if buckets:
-        data_parts.append(f"{len(buckets)} Cloud Storage bucket(s) enforcing uniform bucket-level access control and object versioning")
+        ubla_on = sum(1 for b in buckets if b.get("uniform_bucket_level_access") is True)
+        vers_on = sum(1 for b in buckets if b.get("versioning") is True)
+        bucket_desc = f"{len(buckets)} Cloud Storage bucket(s)"
+        qualifiers = []
+        if ubla_on:
+            qualifiers.append(f"{ubla_on} enforcing uniform bucket-level access control")
+        if vers_on:
+            qualifiers.append(f"{vers_on} with object versioning enabled")
+        if qualifiers:
+            bucket_desc += f" ({', '.join(qualifiers)})"
+        data_parts.append(bucket_desc)
 
     enc_desc = inventory.get("encryption_summary", "FIPS 140-3 Level 3 Cloud HSM CMEK (AES-256-GCM / RSA-4096)")
     if data_parts:
@@ -2335,7 +2365,12 @@ def generate_ato_artifacts(
             raw_text, inventory, doc_version, target_format="markdown", fill_examples=True, ai_enrich=ai_enrich, ai_model=ai_model
         )
         for exporter in policy_exporters:
-            generated_path = exporter.export_document(populated, base_output_path, inventory)
+            # The boundary must be supplied to the exporter, not merely asserted on the
+            # path it returns: checking afterwards confirms where the bytes went only
+            # once they are already on disk.
+            generated_path = exporter.export_document(
+                populated, base_output_path, inventory, allowed_boundary=out_dir
+            )
             ensure_path_within_boundary(generated_path, out_dir)
             artifacts_generated.setdefault(exporter.format_name, []).append(str(generated_path))
             if audit_logger:

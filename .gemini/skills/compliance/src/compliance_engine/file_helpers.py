@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Shared File I/O and String Manipulation Utilities for Compliance Engine.
 
 This module provides common, OS-agnostic filesystem operations, path resolution
@@ -28,10 +42,15 @@ logger = logging.getLogger(__name__)
 # site-packages directories (os.pathsep separated).
 _SITE_PACKAGES_ENV: Final[str] = "COMPLIANCE_SITE_PACKAGES"
 
-# When set to a truthy value, dependency resolution is restricted to the active
-# interpreter environment. Accredited deployments should enable this so that the
-# provenance of every dependency is the pinned, attested environment and nothing else.
+# Deprecated: The engine is now strict by default. Setting this has no functional
+# effect, but will emit a debug message that strict mode is the new default.
 _STRICT_DEPS_ENV: Final[str] = "COMPLIANCE_STRICT_DEPS"
+
+# When set to a truthy value, permits legacy fallback dependency borrowing from
+# foreign virtualenvs (like pipx checkov) if dependencies are missing.
+# Note: This is DISABLED by default. checkov's vendored bc-python-hcl2 fork is
+# INCOMPATIBLE with this engine. Use at your own risk.
+_ALLOW_BORROWED_DEPS_ENV: Final[str] = "COMPLIANCE_ALLOW_BORROWED_DEPS"
 
 # Last-resort discovery patterns for environments where the operator installed the
 # supporting toolchain via pipx/Homebrew rather than into the active interpreter.
@@ -142,10 +161,9 @@ def _bootstrap_environment() -> None:
     """
     if _is_truthy_env(_STRICT_DEPS_ENV):
         logger.debug(
-            "%s is enabled; restricting imports to the active interpreter environment.",
+            "%s is deprecated and ignored; dependency resolution is strict by default.",
             _STRICT_DEPS_ENV,
         )
-        return
 
     explicit = [p for p in os.environ.get(_SITE_PACKAGES_ENV, "").split(os.pathsep) if p.strip()]
     if explicit:
@@ -159,6 +177,14 @@ def _bootstrap_environment() -> None:
     except ImportError:
         pass
     else:
+        return
+
+    if not _is_truthy_env(_ALLOW_BORROWED_DEPS_ENV):
+        logger.debug(
+            "Missing dependencies detected. Strict deps is active by default. "
+            "To attempt legacy borrowing, set %s=1.",
+            _ALLOW_BORROWED_DEPS_ENV,
+        )
         return
 
     discovered: List[str] = []

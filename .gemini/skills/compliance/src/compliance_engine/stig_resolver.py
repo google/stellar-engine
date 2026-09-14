@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 Dynamic DISA STIG & SRG Checklist Version Resolver & Lifecycle Manager.
 
@@ -210,7 +224,7 @@ class StigResolver:
         """
         self.target_dir = Path(target_dir).resolve() if target_dir else Path.cwd()
         self.catalog_path = Path(catalog_path).resolve() if catalog_path else CATALOG_PATH
-        self.cache_file = self.target_dir / ".stig_cache.json"
+        self.cache_file = self.target_dir / "ato_artifacts" / ".stig_cache.json"
 
         # 1. Load Authoritative Baseline Catalog
         self.catalog = self._load_baseline_catalog()
@@ -325,9 +339,10 @@ class StigResolver:
         return {"cached_at": None, "stigs": {}}
 
     def _save_cache(self) -> None:
-        """Saves current active STIG version cache to target_dir/.stig_cache.json."""
+        """Saves current active STIG version cache to target_dir/ato_artifacts/.stig_cache.json."""
         try:
             self.cache["cached_at"] = datetime.now(timezone.utc).isoformat()
+            self.cache_file.parent.mkdir(parents=True, exist_ok=True)
             tmp_cache = self.cache_file.with_suffix(".tmp")
             ensure_path_within_boundary(str(self.cache_file), str(self.target_dir))
             
@@ -372,7 +387,7 @@ class StigResolver:
             for domain in cls.ACCREDITED_CATALOG_HOSTS
         )
 
-    def _fetch_remote_catalog(self, url: str, timeout: float) -> "RemoteCatalogResult":
+    def _fetch_remote_catalog(self, url: str, timeout: float, url_opener=None) -> "RemoteCatalogResult":
         """Retrieves a STIG catalog over HTTPS from an accredited endpoint.
 
         Hardening applied beyond a plain ``urlopen``:
@@ -426,8 +441,8 @@ class StigResolver:
         )
         # An opener without HTTPRedirectHandler turns any 3xx into an HTTPError instead
         # of transparently following it to a host that was never allowlisted.
-        if hasattr(urllib.request.urlopen, "assert_called") or hasattr(urllib.request.urlopen, "call_args"):
-            opener_func = urllib.request.urlopen
+        if url_opener:
+            opener_func = url_opener
         else:
             opener = urllib.request.build_opener(_NoRedirectHandler)
             opener_func = opener.open
@@ -514,6 +529,7 @@ class StigResolver:
         self,
         source: Optional[str] = None,
         timeout: float = 3.0,
+        url_opener: Optional[Callable] = None,
     ) -> Dict[str, Any]:
         """Pulls active STIG versions and updated checklists from remote or local sources.
 
@@ -567,7 +583,7 @@ class StigResolver:
 
         # 2. Remote HTTPS URL source
         elif target_source.startswith(("http://", "https://")):
-            fetch_result = self._fetch_remote_catalog(target_source, timeout)
+            fetch_result = self._fetch_remote_catalog(target_source, timeout, url_opener=url_opener)
             if fetch_result.error is not None:
                 result["message"] = fetch_result.error
                 return result
@@ -682,6 +698,7 @@ class StigResolver:
         self,
         inventory: Dict[str, Any],
         trigger_pull: bool = False,
+        url_opener: Optional[Callable] = None,
     ) -> List[Dict[str, Any]]:
         """Evaluates complete DISA STIG applicability and dynamically resolves active versions.
 
@@ -694,7 +711,7 @@ class StigResolver:
             dynamically resolved versions, resolution sources, scopes, and actions.
         """
         if trigger_pull or (self.update_mode == "online" and not self.pulled_in_session):
-            self.pull_active_versions()
+            self.pull_active_versions(url_opener=url_opener)
 
         applicable_stigs: List[Dict[str, Any]] = []
         seen_slugs: Set[str] = set()
@@ -1236,7 +1253,7 @@ def main() -> None:
     if inv_file.is_file():
         try:
             inv = read_json_file(inv_file, allowed_boundary=target_dir)
-        except Exception as err:
+        except (OSError, ValueError, TypeError) as err:
             logger.debug("Could not read system_inventory.json from %s: %s", inv_file, err)
 
     stigs = resolver.evaluate_applicable_stigs(inv)

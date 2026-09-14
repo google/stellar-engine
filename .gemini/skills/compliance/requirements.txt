@@ -54,13 +54,12 @@ openpyxl==3.1.5
 # could not read in the 'unparsed_terraform_files' ledger, which surfaces as a CA-2/RA-5
 # coverage-gap finding in the POA&M. That fallback parser does not implement Terraform
 # expression syntax (function calls, unary/binary operators, 'for' comprehensions), so
-# coverage is substantially lower. Measured against a 269-file DoD IL5 reference estate:
+# coverage is substantially lower. Historical upstream measurements indicate a
+# significant drop in coverage when using the fallback parser, though exact rates
+# vary by deployment.
 #
-#   python-hcl2 7.3.1                 247 / 269 files parsed  (92%)
-#   in-repo hcl_parser.HclParser       90 / 269 files parsed  (33%)
-#
-# Installing this dependency is therefore what keeps two thirds of a real estate inside
-# the assessed boundary.
+# Installing this dependency is therefore what keeps the majority of a complex estate
+# inside the assessed boundary.
 python-hcl2==7.3.1
 
 # --- Optional hardening dependencies -----------------------------------------------

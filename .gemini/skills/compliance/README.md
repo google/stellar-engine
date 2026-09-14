@@ -71,8 +71,7 @@ The compliance engine follows a standard Python modular package layout, separati
 ├── pyproject.toml                     # Modern PEP 517/518 build config & CLI console scripts
 ├── requirements.txt                   # Pinned dependency manifest with supply-chain policy
 ├── README.md                          # System architecture, package layout, and usage guide
-├── compliance_skill.md                # Gemini AI agent master operational skill definition
-├── SKILL.md                           # Agent skill discovery specification
+├── SKILL.md                           # Gemini AI agent master operational skill definition & discovery specification
 ├── validate_skill.md                  # Final Master AI Validation & Drift Quality Gate ("Trust But Verify")
 ├── subskills/                         # Specialized AI Reviewer & Accuracy Checker subskills
 │   ├── ssp_skill.md                   # System Security Plan (SSP) technical review & enrichment
@@ -106,7 +105,6 @@ The compliance engine follows a standard Python modular package layout, separati
 │       ├── utils.py                   # Unified utility facades and logging helpers
 │       └── validate_compliance_artifacts.py # Stage 3: Package validator & drift audit engine
 ├── scripts/                           # Operational CLI entry points & deployment runners
-│   ├── __init__.py                    # Compatibility package shim re-exporting compliance_engine
 │   ├── extract_system_data.py         # Operational CLI script: Stage 1 Discovery
 │   ├── generate_compliance_artifacts.py # Operational CLI script: Stage 2 Provisioning
 │   ├── validate_compliance_artifacts.py # Operational CLI script: Stage 3 Validation & Audit
@@ -162,8 +160,8 @@ The Compliance Skill is **100% self-contained and modular**. It can be installed
 
 ### 1. Dedicated Virtual Environment
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .gemini/skills/compliance/.venv
+source .gemini/skills/compliance/.venv/bin/activate
 ```
 
 ### 2. Install Dependencies
@@ -171,16 +169,13 @@ Install the pinned dependencies into the virtual environment:
 ```bash
 pip install -r .gemini/skills/compliance/requirements.txt
 ```
-Or install the package in editable mode:
-```bash
-pip install -e .gemini/skills/compliance
-```
 
-### 3. Optional Hardened Parsers
-The engine includes robust internal fallback parsers. To use independently audited external parsers:
+### 3. Required Hardened Parsers
+The engine includes robust internal fallback parsers for baseline functionality. However, the independently audited external parsers are strictly required for compliance runs:
 ```bash
 pip install 'defusedxml==0.7.1' 'python-hcl2==7.3.1'
 ```
+*(Note: Omitting `python-hcl2` significantly reduces Terraform assessment coverage, falling back to a simplistic regex parser that silently excludes much of the estate from the accredited boundary. Historical upstream measurements recorded a drop from ~92% to ~33% coverage, though this varies by deployment. It is pre-pinned in `requirements.txt`.)*
 
 ### 4. Strict Supply-Chain Mode
 In air-gapped or accredited environments, enforce strict local dependency isolation:
@@ -203,7 +198,10 @@ python3 .gemini/skills/compliance/scripts/extract_system_data.py <TARGET_FOLDER>
 ### Step 2: Full Package Provisioning & Dual-Format Hydration
 Synthesizes discovered infrastructure data, personnel configuration, and NIST guidance to generate the complete authorization package:
 ```bash
-python3 .gemini/skills/compliance/scripts/generate_compliance_artifacts.py <TARGET_FOLDER>     --policy-format=both     --data-format=both     --oscal-format=both
+python3 .gemini/skills/compliance/scripts/generate_compliance_artifacts.py <TARGET_FOLDER> \
+    --policy-format=both \
+    --data-format=both \
+    --oscal-format=both
 ```
 
 ### Step 3: Package Validation & DISA STIG Audit
@@ -217,18 +215,24 @@ python3 .gemini/skills/compliance/scripts/validate_compliance_artifacts.py <TARG
 ## 🧪 Automated Testing & Verification
 
 The compliance engine maintains a comprehensive automated regression test suite covering all subsystems:
-- **Core Test Suite**: 354 automated tests across 35 test modules with 100% passing status.
+- **Core Test Suite**: Comprehensive tests spanning unit, integration, and security boundaries.
 - **Coverage Areas**: Macro-enabled Excel hydration, OpenXML DOCX generation, OSCAL 1.2.3/1.1.0 schemas, ReDoS prevention, formula injection defense, path traversal confinement, and pre-flight drift repair.
 
 ### Running the Full Test Suite
+Use the dedicated test runner utility, which will execute the entire test suite in the virtual environment:
 ```bash
-# Option A: Using the dedicated test runner utility
 python3 .gemini/skills/compliance/scripts/run_tests.py
-
-# Option B: Using unittest discovery directly
-python3 -m unittest discover -s .gemini/skills/compliance/tests -t .gemini/skills/compliance -q
-
-# Option C: Running the legacy regression suite
-python3 .gemini/skills/compliance/scripts/test_compliance_engine.py
 ```
-*(All 354 unit, integration, and security hardening tests passing)*
+*(Executes all tests with output summarization)*
+
+---
+
+## 🔍 Installation and Discovery
+
+To make this skill available to your Gemini agent:
+
+1. **In-Repo Discovery**: By default, `GEMINI.md` provides explicit instructions to point the agent to `.gemini/skills/compliance`.
+2. **Auto-Discovery**: If you prefer the skill to be automatically discovered as a first-class agent skill without relying on `GEMINI.md`, create a symlink to your global skills directory (this method is verified working):
+   ```bash
+   ln -s "$(pwd)/.gemini/skills/compliance" ~/.gemini/config/skills/compliance
+   ```

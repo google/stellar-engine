@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 Excel Template Hydration Engine for RMF / FedRAMP Compliance Package
 
@@ -506,9 +520,9 @@ class BaseExcelHydrator(ABC):
             orig_hydrate = cls.__dict__["hydrate"]
 
             @functools.wraps(orig_hydrate)
-            def wrapped_hydrate(self: Any, inventory: Dict[str, Any], output_path: str) -> str:
+            def wrapped_hydrate(self: Any, inventory: Dict[str, Any], output_path: str, **kwargs: Any) -> str:
                 try:
-                    return orig_hydrate(self, inventory, output_path)
+                    return orig_hydrate(self, inventory, output_path, **kwargs)
                 finally:
                     self.close_workbook()
 
@@ -581,21 +595,26 @@ class BaseExcelHydrator(ABC):
         if target is self._current_wb:
             self._current_wb = None
 
-    def save_workbook(self, wb: openpyxl.Workbook, output_path: str) -> str:
+    def save_workbook(self, wb: openpyxl.Workbook, output_path: str, allowed_boundary: Optional[str] = None) -> str:
         """Ensures parent directory existence, saves workbook, and releases descriptors.
 
         Args:
             wb: The populated openpyxl Workbook.
             output_path: Target output path for the saved workbook.
+            allowed_boundary: Optional boundary directory to restrict output path.
 
         Returns:
             The normalized output path to the saved workbook.
         """
-        abs_out = os.path.abspath(output_path)
+        if allowed_boundary:
+            abs_out = str(ensure_path_within_boundary(output_path, allowed_boundary, allow_symlinks=False))
+        else:
+            abs_out = os.path.abspath(output_path)
+            
         os.makedirs(os.path.dirname(abs_out), exist_ok=True)
         try:
-            wb.save(output_path)
-            logger.info("Saved hydrated workbook: %s", output_path)
+            wb.save(abs_out)
+            logger.info("Saved hydrated workbook: %s", abs_out)
             audit_logger = audit_log.get_audit_logger()
             audit_logger.emit(
                 audit_log.AuditEvent.ARTIFACT_GENERATED,
@@ -609,7 +628,7 @@ class BaseExcelHydrator(ABC):
             self.close_workbook(wb)
 
     @abstractmethod
-    def hydrate(self, inventory: Dict[str, Any], output_path: str) -> str:
+    def hydrate(self, inventory: Dict[str, Any], output_path: str, allowed_boundary: Optional[str] = None) -> str:
         """Abstract hydration method to be overridden by specialized hydrators."""
         raise NotImplementedError
 
@@ -678,7 +697,7 @@ class HWSWHydrator(BaseExcelHydrator):
         """
         super().__init__(template_path)
 
-    def hydrate(self, inventory: Dict[str, Any], output_path: str) -> str:
+    def hydrate(self, inventory: Dict[str, Any], output_path: str, allowed_boundary: Optional[str] = None) -> str:
         """Hydrates the hardware and software workbook with system inventory data.
 
         Populates system metadata, hardware components (VMs, GKE, databases, VPCs, KMS),
@@ -1168,7 +1187,7 @@ class HWSWHydrator(BaseExcelHydrator):
             # Expand data validations if last_sw_row > 30
             expand_validation_ranges(ws_sw, last_sw_row)
 
-        return self.save_workbook(wb, output_path)
+        return self.save_workbook(wb, output_path, allowed_boundary=allowed_boundary)
 
 
 # POA&M rule evaluation and finding derivation is decoupled into poam_rules.py
@@ -1186,7 +1205,7 @@ class POAMHydrator(BaseExcelHydrator):
         """
         super().__init__(template_path)
 
-    def hydrate(self, inventory: Dict[str, Any], output_path: str) -> str:
+    def hydrate(self, inventory: Dict[str, Any], output_path: str, allowed_boundary: Optional[str] = None) -> str:
         """Hydrates the Plan of Action & Milestones workbook with findings.
 
         Populates system metadata and evaluates open vulnerabilities, unencrypted
@@ -1279,7 +1298,7 @@ class POAMHydrator(BaseExcelHydrator):
                     if target_r > 8:
                         poam_style.apply(cell, target_c)
 
-        return self.save_workbook(wb, output_path)
+        return self.save_workbook(wb, output_path, allowed_boundary=allowed_boundary)
 
 
 class PPSMHydrator(BaseExcelHydrator):
@@ -1293,7 +1312,7 @@ class PPSMHydrator(BaseExcelHydrator):
         """
         super().__init__(template_path)
 
-    def hydrate(self, inventory: Dict[str, Any], output_path: str) -> str:
+    def hydrate(self, inventory: Dict[str, Any], output_path: str, allowed_boundary: Optional[str] = None) -> str:
         """Hydrates the Ports, Protocols, and Services Matrix workbook.
 
         Populates system metadata and generates inbound/outbound communication
@@ -1482,7 +1501,7 @@ class PPSMHydrator(BaseExcelHydrator):
             # Expand data validations if last_ppsm_row > 33
             expand_validation_ranges(ws, last_ppsm_row)
 
-        return self.save_workbook(wb, output_path)
+        return self.save_workbook(wb, output_path, allowed_boundary=allowed_boundary)
 
 
 class SCTMHydrator(BaseExcelHydrator):
@@ -1496,7 +1515,7 @@ class SCTMHydrator(BaseExcelHydrator):
         """
         super().__init__(template_path)
 
-    def hydrate(self, inventory: Dict[str, Any], output_path: str) -> str:
+    def hydrate(self, inventory: Dict[str, Any], output_path: str, allowed_boundary: Optional[str] = None) -> str:
         """Hydrates the Security Control Traceability Matrix workbook in-place.
 
         Preserves existing control catalog rows and populates implementation status,
@@ -1894,7 +1913,7 @@ class SCTMHydrator(BaseExcelHydrator):
                         "Maintain continuous automated monitoring via SCC and monthly ACAS scans."
                     )
 
-        return self.save_workbook(wb, output_path)
+        return self.save_workbook(wb, output_path, allowed_boundary=allowed_boundary)
 
 
 def hydrate_all_excel_templates(

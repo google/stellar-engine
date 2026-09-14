@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Comprehensive Automated Regression Test Suite for Compliance & RMF Engine.
 
 ================================================================================
@@ -34,7 +48,7 @@ from pathlib import Path
 import shutil
 import sys
 import tempfile
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 import unicodedata
 import unittest
 import unittest.mock
@@ -918,7 +932,7 @@ resource "google_project_service" "kms" {
 
             self.assertIn("Cloud Interconnect", inv["connectivity_summary"])
             self.assertIn("FIPS 140-3 Level 3 Cloud HSM", inv["encryption_summary"])
-            self.assertIn("Google Cloud Identity", inv["authentication_summary"])
+            self.assertEqual("Not determined from IaC", inv["authentication_summary"])
 
             self.assertIn("iam_groups", inv)
             self.assertIn("sec-admins@mil.example.com", inv["iam_groups"].get("gcp_security_admins", []))
@@ -1043,7 +1057,7 @@ resource "google_project_service" "kms" {
             },
             "infrastructure_components": {
                 "storage_buckets": [
-                    {"name": "tactical-logs-bucket", "cmek": False, "encryption": "Google-managed"}
+                    {"name": "tactical-logs-bucket", "cmek_encrypted": False, "encryption": "Google-managed"}
                 ],
                 "kms_keys": [
                     {"name": "projects/p/locations/us/keyRings/r/cryptoKeys/soft-key", "protection_level": "SOFTWARE"}
@@ -1404,7 +1418,7 @@ The repository implements a secure decoupled microservices architecture.
                 "firewall_rules": [{"name": "allow-internal", "direction": "INGRESS", "source_ranges": ["10.0.0.0/8"], "ports": "443"}]
             },
             "infrastructure_components": {
-                "storage_buckets": [{"name": "audit-logs", "cmek_encrypted": True}],
+                "storage_buckets": [{"name": "audit-logs", "cmek_encrypted": True, "versioning": True, "uniform_bucket_level_access": True}],
                 "databases": [{"name": "app-db", "require_ssl": True, "backup_enabled": True, "has_public_ip": False}],
                 "compute_instances": [{"name": "worker-01", "has_public_ip": False, "shielded_vm": True}],
                 "kms_keys": [{"name": "core-hsm-key", "protection_level": "HSM"}],
@@ -1713,22 +1727,7 @@ resource "google_storage_bucket" "test_storage" {
         self.assertFalse(extract_system_data.parse_yaml_scalar("false"))
         self.assertEqual(extract_system_data.parse_yaml_scalar('"quoted text"'), "quoted text")
 
-        hcl_sample = """
-        // comment with { brace and "quote"
-        # another comment with }
-        resource "google_storage_bucket" "test_bucket" {
-          name = "secure-bucket" /* inline /* { } */
-          # internal comment with {
-          labels = {
-            env = "prod"
-          }
-        }
-        """
-        blocks = extract_system_data.extract_balanced_blocks(hcl_sample, "resource")
-        self.assertEqual(len(blocks), 1)
-        self.assertEqual(blocks[0][0], "google_storage_bucket")
-        self.assertEqual(blocks[0][1], "test_bucket")
-        self.assertIn('env = "prod"', blocks[0][2])
+
 
         self.assertEqual(excel_hydrator.clean_cell_value("=1+1"), "'=1+1")
         self.assertEqual(excel_hydrator.clean_cell_value("@SUM(A1:A5)"), "'@SUM(A1:A5)")
@@ -1835,6 +1834,7 @@ resource "google_storage_bucket" "test_storage" {
                 markdown_content: str,
                 output_base_path: Union[str, file_helpers.Path],
                 inventory: Dict[str, Any],
+                allowed_boundary: Optional[Union[str, file_helpers.Path]] = None,
             ) -> file_helpers.Path:
                 """Exports document to JSON format.
 
@@ -1842,6 +1842,8 @@ resource "google_storage_bucket" "test_storage" {
                     markdown_content: Markdown text.
                     output_base_path: Base path destination.
                     inventory: System inventory metadata.
+                    allowed_boundary: Root boundary confining the write, as required
+                        by the AbstractExporter interface.
 
                 Returns:
                     Path to created JSON file.
@@ -3250,39 +3252,51 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
 
     def test_security_scanner_bridge_flag_injection_defense(self) -> None:
         """Verifies scanner bridge defense against flag injection via leading hyphens."""
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import MagicMock
         import security_scanner_bridge as ssb
 
         # Create a mock target directory name starting with a hyphen
         hyphen_dir = os.path.join(self.test_dir, "--evil-flag")
         os.makedirs(hyphen_dir, exist_ok=True)
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout="{}", stderr="")
-            # Checkov call: should resolve to absolute path starting with / and use --directory
-            ssb.run_checkov_scan(hyphen_dir)
-            self.assertTrue(mock_run.called)
-            checkov_cmd = mock_run.call_args[0][0]
-            self.assertIn("--directory", checkov_cmd)
-            dir_idx = checkov_cmd.index("--directory") + 1
-            self.assertTrue(
-                checkov_cmd[dir_idx].startswith("/"),
-                "Checkov directory target must be resolved to absolute path",
-            )
+        checkov_cmd_captured = []
+        def mock_checkov_runner(cmd_args, **kwargs):
+            checkov_cmd_captured.append(cmd_args)
+            mock_proc = MagicMock()
+            mock_proc.returncode = 0
+            mock_proc.args = cmd_args
+            return MagicMock(__enter__=MagicMock(return_value=mock_proc))
+            
+        # Checkov call: should resolve to absolute path starting with / and use --directory
+        ssb.run_checkov_scan(hyphen_dir, runner=mock_checkov_runner)
+        self.assertTrue(len(checkov_cmd_captured) > 0)
+        checkov_cmd = checkov_cmd_captured[0]
+        self.assertIn("--directory", checkov_cmd)
+        dir_idx = checkov_cmd.index("--directory") + 1
+        self.assertTrue(
+            checkov_cmd[dir_idx].startswith("/"),
+            "Checkov directory target must be resolved to absolute path",
+        )
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stdout='{"results": []}', stderr="")
-            # Semgrep call: should resolve to absolute path and use '--' positional separation
-            ssb.run_semgrep_scan(hyphen_dir)
-            self.assertTrue(mock_run.called)
-            semgrep_cmd = mock_run.call_args[0][0]
-            self.assertIn("--", semgrep_cmd, "Semgrep command must use '--' argument separator")
-            sep_idx = semgrep_cmd.index("--")
-            target_arg = semgrep_cmd[sep_idx + 1]
-            self.assertTrue(
-                target_arg.startswith("/"),
-                "Semgrep target must be resolved to absolute path after '--'",
-            )
+        semgrep_cmd_captured = []
+        def mock_semgrep_runner(cmd_args, **kwargs):
+            semgrep_cmd_captured.append(cmd_args)
+            mock_proc = MagicMock()
+            mock_proc.returncode = 0
+            mock_proc.args = cmd_args
+            return MagicMock(__enter__=MagicMock(return_value=mock_proc))
+            
+        # Semgrep call: should resolve to absolute path and use '--' positional separation
+        ssb.run_semgrep_scan(hyphen_dir, runner=mock_semgrep_runner)
+        self.assertTrue(len(semgrep_cmd_captured) > 0)
+        semgrep_cmd = semgrep_cmd_captured[0]
+        self.assertIn("--", semgrep_cmd, "Semgrep command must use '--' argument separator")
+        sep_idx = semgrep_cmd.index("--")
+        target_arg = semgrep_cmd[sep_idx + 1]
+        self.assertTrue(
+            target_arg.startswith("/"),
+            "Semgrep target must be resolved to absolute path after '--'",
+        )
 
     def test_cwe_1236_formula_injection_bypass_hardening(self) -> None:
         """Verifies universal mitigation against CWE-1236 CSV/Excel formula injection."""
@@ -3358,6 +3372,7 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
                 content: str,
                 target: Path,
                 inv: Dict[str, Any],
+                allowed_boundary: Optional[Union[str, Path]] = None,
             ) -> Path:
                 """Writes mock policy deliverable.
 
@@ -3365,6 +3380,8 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
                     content: Populated policy Markdown text.
                     target: Target destination file path.
                     inv: System inventory dictionary.
+                    allowed_boundary: Root boundary confining the write, as required
+                        by the AbstractExporter interface.
 
                 Returns:
                     Path to created mock artifact.
@@ -3411,7 +3428,7 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
         # String methods check
         self.assertIn("name = ", block)
         self.assertTrue(block.startswith("name = "))
-        self.assertEqual(block.get("machine_type"), ["n2-standard-4"])
+        self.assertEqual(block.parsed.get("machine_type"), ["n2-standard-4"])
 
         # extract_hcl_attr with AST dict
         self.assertEqual(
@@ -4171,35 +4188,70 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
         import subprocess
 
         # 1. Test Checkov non-zero error exit code (e.g. 2)
-        mock_err_proc = MagicMock(returncode=2, stdout="", stderr="Fatal Checkov crash: Out of memory")
+        mock_err_proc = MagicMock()
+        mock_err_proc.returncode = 2
+        mock_err_proc.args = []
+        
+        def mock_checkov_err_runner(cmd_args, **kwargs):
+            kwargs["stderr"].write("Fatal Checkov crash: Out of memory")
+            kwargs["stderr"].flush()
+            mock_err_proc.args = cmd_args
+            return MagicMock(__enter__=MagicMock(return_value=mock_err_proc))
+
         with patch("shutil.which", return_value="/usr/local/bin/checkov"):
             with patch("os.path.isdir", return_value=True):
                 with patch("os.walk", return_value=[("/mock", [], ["main.tf"])]):
-                    with patch("subprocess.run", return_value=mock_err_proc):
-                        findings = security_scanner_bridge.run_checkov_scan("/mock")
-                        self.assertEqual(len(findings), 1)
-                        self.assertEqual(findings[0]["check_id"], "CKV_SCANNER_ERROR")
-                        self.assertEqual(findings[0]["severity"], "High")
+                    findings = security_scanner_bridge.run_checkov_scan("/mock", runner=mock_checkov_err_runner)
+                    self.assertEqual(len(findings), 1)
+                    self.assertEqual(findings[0]["check_id"], "CKV_SCANNER_ERROR")
+                    self.assertEqual(findings[0]["severity"], "High")
 
         # 2. Test Checkov timeout
+        def mock_checkov_timeout_runner(cmd_args, **kwargs):
+            mock_proc = MagicMock()
+            mock_proc.args = cmd_args
+            mock_proc.wait = MagicMock(side_effect=subprocess.TimeoutExpired(cmd=["checkov"], timeout=60))
+            return MagicMock(__enter__=MagicMock(return_value=mock_proc))
+
         with patch("shutil.which", return_value="/usr/local/bin/checkov"):
             with patch("os.path.isdir", return_value=True):
                 with patch("os.walk", return_value=[("/mock", [], ["main.tf"])]):
-                    with patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd=["checkov"], timeout=60)):
-                        findings = security_scanner_bridge.run_checkov_scan("/mock", timeout_seconds=60)
-                        self.assertEqual(len(findings), 1)
-                        self.assertEqual(findings[0]["check_id"], "CKV_SCANNER_TIMEOUT")
-                        self.assertEqual(findings[0]["severity"], "High")
+                    findings = security_scanner_bridge.run_checkov_scan("/mock", timeout_seconds=60, runner=mock_checkov_timeout_runner)
+                    self.assertEqual(len(findings), 1)
+                    self.assertEqual(findings[0]["check_id"], "CKV_SCANNER_TIMEOUT")
+                    self.assertEqual(findings[0]["severity"], "High")
 
         # 3. Test Semgrep non-zero error exit code
-        mock_sem_proc = MagicMock(returncode=2, stdout="", stderr="Semgrep engine fatal syntax error")
+        mock_sem_proc = MagicMock()
+        mock_sem_proc.returncode = 2
+        mock_sem_proc.args = []
+        
+        def mock_semgrep_err_runner(cmd_args, **kwargs):
+            kwargs["stderr"].write("Semgrep engine fatal syntax error")
+            kwargs["stderr"].flush()
+            mock_sem_proc.args = cmd_args
+            return MagicMock(__enter__=MagicMock(return_value=mock_sem_proc))
+
         with patch("shutil.which", return_value="/usr/local/bin/semgrep"):
             with patch("os.path.isdir", return_value=True):
-                with patch("subprocess.run", return_value=mock_sem_proc):
-                    findings = security_scanner_bridge.run_semgrep_scan("/mock")
-                    self.assertEqual(len(findings), 1)
-                    self.assertEqual(findings[0]["check_id"], "SEMGREP_SCANNER_ERROR")
-                    self.assertEqual(findings[0]["severity"], "High")
+                findings = security_scanner_bridge.run_semgrep_scan("/mock", runner=mock_semgrep_err_runner)
+                self.assertEqual(len(findings), 1)
+                self.assertEqual(findings[0]["check_id"], "SEMGREP_SCANNER_ERROR")
+                self.assertEqual(findings[0]["severity"], "High")
+
+        # 4. Test Semgrep timeout
+        def mock_semgrep_timeout_runner(cmd_args, **kwargs):
+            mock_proc = MagicMock()
+            mock_proc.args = cmd_args
+            mock_proc.wait = MagicMock(side_effect=subprocess.TimeoutExpired(cmd=["semgrep"], timeout=120))
+            return MagicMock(__enter__=MagicMock(return_value=mock_proc))
+
+        with patch("shutil.which", return_value="/usr/local/bin/semgrep"):
+            with patch("os.path.isdir", return_value=True):
+                findings = security_scanner_bridge.run_semgrep_scan("/mock", timeout_seconds=120, runner=mock_semgrep_timeout_runner)
+                self.assertEqual(len(findings), 1)
+                self.assertEqual(findings[0]["check_id"], "SEMGREP_SCANNER_TIMEOUT")
+                self.assertEqual(findings[0]["severity"], "High")
 
         # 4. Test mapping of scanner error to CA-02 / RA-05
         ctl_id, ctl_title = security_scanner_bridge.map_checkov_to_nist("CKV_SCANNER_ERROR", "Checkov crash")
@@ -4214,16 +4266,22 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
         captured_env = {}
         captured_cmd = []
 
-        def mock_run(cmd, *args, **kwargs):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.args = []
+
+        def mock_runner(cmd, *args, **kwargs):
             nonlocal captured_cmd, captured_env
             captured_cmd = cmd
             captured_env = kwargs.get("env", {})
-            return MagicMock(returncode=0, stdout='{"results": []}')
+            kwargs["stdout"].write('{"results": []}')
+            kwargs["stdout"].flush()
+            mock_proc.args = cmd
+            return MagicMock(__enter__=MagicMock(return_value=mock_proc))
 
         with patch("shutil.which", return_value="/usr/local/bin/semgrep"):
             with patch("os.path.isdir", return_value=True):
-                with patch("subprocess.run", side_effect=mock_run):
-                    security_scanner_bridge.run_semgrep_scan("/mock/read_only_dir")
+                security_scanner_bridge.run_semgrep_scan("/mock/read_only_dir", runner=mock_runner)
 
         self.assertIn("--disable-version-check", captured_cmd)
         self.assertIn("HOME", captured_env)
@@ -4237,8 +4295,11 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
         clean_inventory["system_information"]["system_abbreviation"] = "FLW"
         # Ensure no open poam gaps
         clean_inventory["infrastructure_components"]["iam_bindings"] = []
-        clean_inventory["infrastructure_components"]["storage_buckets"] = [{"name": "mock-compliance-bucket", "cmek_encrypted": True}]
-        clean_inventory["infrastructure_components"]["kms_keys"] = [{"name": "key1", "rotation_period": "7776000s"}]
+        clean_inventory["infrastructure_components"]["storage_buckets"] = [{"name": "mock-compliance-bucket", "cmek_encrypted": True, "versioning": True, "uniform_bucket_level_access": True}]
+        clean_inventory["infrastructure_components"]["kms_keys"] = [{"name": "key1", "rotation_period": "7776000s", "protection_level": "HSM"}]
+        clean_inventory["infrastructure_components"]["databases"] = []
+        clean_inventory["infrastructure_components"]["compute_instances"] = []
+        clean_inventory["infrastructure_components"]["gke_clusters"] = []
         clean_inventory["network_architecture"]["firewall_rules"] = [{"direction": "INGRESS", "source_ranges": ["10.0.0.0/8"]}]
 
         # YAML POA&M
@@ -4409,20 +4470,37 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
     def test_scanner_timeouts_default_and_config(self) -> None:
         """Verifies Checkov and Semgrep enforce 300s timeout by default and forward custom timeouts."""
         import security_scanner_bridge as ssb
+        from unittest.mock import MagicMock
+
+        mock_proc_checkov = MagicMock()
+        mock_proc_checkov.returncode = 0
+        mock_proc_checkov.args = []
+        
+        def mock_checkov_runner(cmd_args, **kwargs):
+            mock_proc_checkov.args = cmd_args
+            return MagicMock(__enter__=MagicMock(return_value=mock_proc_checkov))
 
         with unittest.mock.patch("shutil.which", return_value="/usr/local/bin/checkov"):
             with unittest.mock.patch("os.path.isdir", return_value=True):
-                with unittest.mock.patch("subprocess.run") as mock_run:
-                    mock_run.return_value = unittest.mock.MagicMock(returncode=0, stdout="{}", stderr="")
-                    ssb.run_checkov_scan("/mock/dir")
-                    self.assertEqual(mock_run.call_args[1]["timeout"], 300)
+                ssb.run_checkov_scan("/mock/dir", runner=mock_checkov_runner)
+                self.assertEqual(mock_proc_checkov.wait.call_args[1]["timeout"], 300)
+
+        mock_proc_semgrep = MagicMock()
+        mock_proc_semgrep.returncode = 0
+        mock_proc_semgrep.args = []
+        
+        def mock_semgrep_runner(cmd_args, **kwargs):
+            # Write a valid JSON object to stdout so it doesn't fail parsing if it tries
+            kwargs["stdout"].write('{"results": []}')
+            kwargs["stdout"].flush()
+            mock_proc_semgrep.args = cmd_args
+            return MagicMock(__enter__=MagicMock(return_value=mock_proc_semgrep))
 
         with unittest.mock.patch("shutil.which", return_value="/usr/local/bin/semgrep"):
             with unittest.mock.patch("os.path.isdir", return_value=True):
-                with unittest.mock.patch("subprocess.run") as mock_run:
-                    mock_run.return_value = unittest.mock.MagicMock(returncode=0, stdout='{"results": []}', stderr="")
-                    ssb.run_semgrep_scan("/mock/dir")
-                    self.assertEqual(mock_run.call_args[1]["timeout"], 300)
+                ssb.run_semgrep_scan("/mock/dir", runner=mock_semgrep_runner)
+                self.assertEqual(mock_proc_semgrep.wait.call_args[1]["timeout"], 300)
+
 
     def test_dynamic_scanner_bootstrap_integrity(self) -> None:
         """Verifies bootstrap_scanner_binary checks cryptographic SHA-256 and detects mismatches."""
@@ -4472,14 +4550,32 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
                 }
             }
         ])
+        mock_proc = unittest.mock.MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.args = []
+        
+        def mock_scc_runner(cmd_args, **kwargs):
+            kwargs["stdout"].write(mock_scc_json)
+            kwargs["stdout"].flush()
+            mock_proc.args = cmd_args
+            return unittest.mock.MagicMock(__enter__=unittest.mock.MagicMock(return_value=mock_proc))
+
         with unittest.mock.patch("shutil.which", return_value="/usr/local/bin/gcloud"):
-            with unittest.mock.patch("subprocess.run") as mock_run:
-                mock_run.return_value = unittest.mock.MagicMock(returncode=0, stdout=mock_scc_json, stderr="")
-                scc_findings = ssb.fetch_live_scc_findings("test-project-123")
-                self.assertEqual(len(scc_findings), 1)
-                self.assertEqual(scc_findings[0]["check_id"], "SCC_PUBLIC_BUCKET_ACL")
-                self.assertEqual(scc_findings[0]["severity"], "High")
-                self.assertIn("Live Cloud Telemetry (Google SCC v1)", scc_findings[0]["source"])
+            scc_findings = ssb.fetch_live_scc_findings("test-project-123", runner=mock_scc_runner)
+            self.assertEqual(len(scc_findings), 1)
+            self.assertEqual(scc_findings[0]["check_id"], "SCC_PUBLIC_BUCKET_ACL")
+            self.assertEqual(scc_findings[0]["severity"], "High")
+            self.assertIn("Live Cloud Telemetry (Google SCC v1)", scc_findings[0]["source"])
+
+        # 4. Google SCC: mock gcloud API error
+        def mock_scc_err_runner(cmd_args, **kwargs):
+            import subprocess
+            raise subprocess.SubprocessError("API Error 403: Forbidden")
+
+        with unittest.mock.patch("shutil.which", return_value="/usr/local/bin/gcloud"):
+            err_findings = ssb.fetch_live_scc_findings("test-project-123", runner=mock_scc_err_runner)
+            self.assertEqual(len(err_findings), 1)
+            self.assertEqual(err_findings[0]["check_id"], "SCC_QUERY_FAILURE")
 
     def test_parse_tfvars_content_strict_mode(self) -> None:
         """Verifies parse_tfvars_content raises ValueError on invalid HCL syntax in strict mode."""
@@ -4561,19 +4657,19 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
         mock_resp.read.return_value = json.dumps(remote_feed_json).encode("utf-8")
         mock_resp.__enter__.return_value = mock_resp
 
-        with unittest.mock.patch("urllib.request.urlopen", return_value=mock_resp):
-            pull_res = resolver.pull_active_versions(source="https://cyber.mil/stigs.json")
-            self.assertTrue(pull_res["success"])
-            self.assertEqual(pull_res["updated_count"], 2)
+        mock_opener = unittest.mock.MagicMock(return_value=mock_resp)
+        pull_res = resolver.pull_active_versions(source="https://cyber.mil/stigs.json", url_opener=mock_opener)
+        self.assertTrue(pull_res["success"])
+        self.assertEqual(pull_res["updated_count"], 2)
 
-            # Check local cache was saved
-            cache_file = os.path.join(self.test_dir, ".stig_cache.json")
-            self.assertTrue(os.path.isfile(cache_file))
+        # Check local cache was saved
+        cache_file = os.path.join(self.test_dir, "ato_artifacts", ".stig_cache.json")
+        self.assertTrue(os.path.isfile(cache_file))
 
-            # Verify resolution reflects pulled version
-            ver_pg, src_pg = resolver.resolve_version("postgresql_13")
-            self.assertEqual(ver_pg, "v2R5")
-            self.assertIn("Live Active", src_pg)
+        # Verify resolution reflects pulled version
+        ver_pg, src_pg = resolver.resolve_version("postgresql_13")
+        self.assertEqual(ver_pg, "v2R5")
+        self.assertIn("Live Active", src_pg)
 
         # 6. Cached active resolution in a new resolver instance
         cached_resolver = stig_resolver.StigResolver(target_dir=self.test_dir)
@@ -4582,13 +4678,13 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
         self.assertIn("Cached Active", src_pg_cached)
 
         # 7. Air-gapped / offline network resilience
-        with unittest.mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("No route to host")):
-            offline_res = resolver.pull_active_versions(source="https://unreachable.disa.mil/stigs.json")
-            self.assertFalse(offline_res["success"])
-            self.assertIn("unreachable", offline_res["message"].lower())
-            # Resolver falls back safely to catalog baseline without error
-            ver_redis, src_redis = resolver.resolve_version("database_srg")
-            self.assertEqual(ver_redis, "v3R4")
+        mock_err_opener = unittest.mock.MagicMock(side_effect=urllib.error.URLError("No route to host"))
+        offline_res = resolver.pull_active_versions(source="https://unreachable.disa.mil/stigs.json", url_opener=mock_err_opener)
+        self.assertFalse(offline_res["success"])
+        self.assertIn("unreachable", offline_res["message"].lower())
+        # Resolver falls back safely to catalog baseline without error
+        ver_redis, src_redis = resolver.resolve_version("database_srg")
+        self.assertEqual(ver_redis, "v3R4")
 
         # 8. Schema validation in file_helpers
         valid_cfg = {"disa_stigs": {"update_mode": "auto", "version_overrides": {"kubernetes": "v1R12"}}}
@@ -4675,19 +4771,23 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
 
         # 3. Test Trivy command includes '--' argument separator before path
         with unittest.mock.patch("shutil.which", return_value="/usr/local/bin/trivy"):
-            with unittest.mock.patch("subprocess.run") as mock_run:
-                mock_proc = unittest.mock.MagicMock()
-                mock_proc.returncode = 0
-                mock_proc.stdout = "{}"
-                mock_run.return_value = mock_proc
-
-                security_scanner_bridge.run_trivy_scan(self.test_dir)
-                self.assertTrue(mock_run.called)
-                cmd_args = mock_run.call_args[0][0]
-                self.assertIn("--", cmd_args, "Trivy command must contain '--' before target path")
-                dash_idx = cmd_args.index("--")
-                target_idx = len(cmd_args) - 1
-                self.assertEqual(dash_idx, target_idx - 1, "'--' must immediately precede the target path")
+            mock_proc = unittest.mock.MagicMock()
+            mock_proc.returncode = 0
+            mock_proc.args = []
+            
+            def mock_trivy_runner(cmd_args, **kwargs):
+                kwargs["stdout"].write("{}")
+                kwargs["stdout"].flush()
+                mock_proc.args = cmd_args
+                return unittest.mock.MagicMock(__enter__=unittest.mock.MagicMock(return_value=mock_proc))
+                
+            security_scanner_bridge.run_trivy_scan(self.test_dir, runner=mock_trivy_runner)
+            self.assertTrue(len(mock_proc.args) > 0)
+            cmd_args = mock_proc.args
+            self.assertIn("--", cmd_args, "Trivy command must contain '--' before target path")
+            dash_idx = cmd_args.index("--")
+            target_idx = len(cmd_args) - 1
+            self.assertEqual(dash_idx, target_idx - 1, "'--' must immediately precede the target path")
 
         # 4. Test Directory Traversal when target directory contains 'vendor-app' or '.github_repos'
         vendor_app_dir = os.path.join(self.test_dir, "vendor-app-project")

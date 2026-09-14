@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Deterministic Semantic Compliance Linter & Architectural Drift Engine.
 
 Provides deterministic static analysis and semantic evaluation for public sector compliance deliverables:
@@ -347,7 +361,7 @@ def evaluate_architectural_drift(
     # 1. KMS CMEK Drift Verification
     kms_keys = infra.get("kms_keys", []) or []
     buckets = infra.get("storage_buckets", []) or []
-    has_unencrypted_buckets = any(not b.get("cmek_encrypted", True) for b in buckets)
+    has_unencrypted_buckets = any(b.get("cmek_encrypted") is not True for b in buckets)
     
     # Check if artifacts claim customer-managed encryption (CMEK)
     claims_cmek = (

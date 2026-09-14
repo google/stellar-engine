@@ -1,20 +1,7 @@
 ---
 name: compliance
 description: >-
-  Automate NIST SP 800-53 Rev. 5, FedRAMP High/Moderate, DoD Cloud Computing SRG (IL4/IL5/IL6),
-  StateRAMP, CJIS, and FISMA compliance and Authorization to Operate (ATO) package provisioning.
-  Extracts live architecture facts from Terraform blueprints (.tf) and application codebases
-  (Node.js, Python, Go, Java, Docker), populates authoritative templates, synthesizes technical
-  control narratives, and generates dual-format accreditation deliverables across Markdown (.md),
-  Microsoft Word (.docx), YAML (.yaml), and macro-enabled Excel (.xlsm) workbooks:
-  System Security Plan (SSP), 20 Policy & Procedure Manuals, Security Control Traceability Matrix (SCTM),
-  Ports Protocols & Services Matrix (PPSM), Hardware & Software Inventory, Plan of Action & Milestones (POA&M),
-  FIPS 140-3 Cryptographic Matrix, Incident Response Runbooks, and Master Path to Authorization (PTA) Strategy.
-  Validates package integrity, audits OpenXML structures, repairs code drift, maps applicable DISA STIGs
-  with STIG Viewer desktop workflow, checks 14 ATC connection controls, and verifies DoD ISSM submission evidence.
-  Use when provisioning, auditing, validating, or updating RMF/FedRAMP/DoD ATO accreditation packages,
-  auditing security controls against Terraform IaC, or preparing compliance documentation for Google Cloud
-  workloads rather than generic security scanners or manual document drafting.
+  Automate NIST SP 800-53 Rev. 5, FedRAMP High/Moderate, DoD IL4/IL5/IL6, StateRAMP, CJIS, and FISMA Authorization to Operate (ATO) packages. Extracts facts from Terraform (.tf) and code, hydrating templates to generate dual-format (Markdown/DOCX, YAML/Excel) RMF deliverables: System Security Plan (SSP), 20 Policy Manuals, Security Control Traceability Matrix (SCTM), Ports Protocols & Services Matrix (PPSM), HW/SW Inventory, Plan of Action & Milestones (POA&M), FIPS 140-3 Matrix, NIST OSCAL schemas, IR Runbooks, and Path to Authorization (PTA) Strategy. Validates integrity, audits OpenXML, maps DISA STIGs, and verifies 14 ATC connection controls. Use when provisioning, auditing, or updating RMF/FedRAMP/DoD ATO packages, auditing controls against Terraform, or preparing Google Cloud compliance docs.
 ---
 
 # Compliance & RMF Authorization Package Provisioning
@@ -94,7 +81,7 @@ resources or inputs are missing:
 *   **Missing Python Dependencies**: Install the pinned dependency set rather than individual
     packages, so the version actually exercised by the test suite is the one deployed:
     ```bash
-    python3 -m venv .venv && source .venv/bin/activate
+    python3 -m venv .gemini/skills/compliance/.venv && source .gemini/skills/compliance/.venv/bin/activate
     pip install -r .gemini/skills/compliance/requirements.txt
     ```
     Markdown generation requires zero pip dependencies. `PyYAML` is required for configuration
@@ -424,21 +411,15 @@ The compliance workflow enforces a strict separation of concerns between **Pytho
 > [!CAUTION]
 > **FOR CORE COMPLIANCE ENGINE DEVELOPERS ONLY — DO NOT RUN DURING WORKSPACE COMPLIANCE RUNS**
 >
-> The commands below run the comprehensive automated test suite covering 354 unit, integration, and security hardening tests across 35 test modules with 100% pass rate.
+> The command below runs the comprehensive automated test suite covering unit, integration, and security boundaries.
 > **DO NOT run these commands when provisioning, validating, or maintaining compliance artifacts for an active user workspace.**
 > There is **zero reason** for the test suite to run when someone is using the skill as intended.
 > This test suite should ONLY be executed by framework developers when modifying the Python source code of the compliance engine itself (`.gemini/skills/compliance/src/compliance_engine/`).
 
 When making changes to the compliance engine source code itself:
 ```bash
-# Option A: Run complete test suite (354 tests) via unified test runner
+# Run the complete test suite via the dedicated runner
 python3 .gemini/skills/compliance/scripts/run_tests.py
-
-# Option B: Run via standard unittest discovery
-python3 -m unittest discover -s .gemini/skills/compliance/tests -t .gemini/skills/compliance -q
-
-# Option C: Run backward-compatible legacy regression test runner
-python3 .gemini/skills/compliance/scripts/test_compliance_engine.py
 ```
 
 ---
@@ -461,7 +442,7 @@ python3 .gemini/skills/compliance/scripts/test_compliance_engine.py
 | **Discovery Entry Point** | `scripts/extract_system_data.py` | CLI entrypoint delegating to `compliance_engine.extract_system_data` |
 | **Provisioning Entry Point** | `scripts/generate_compliance_artifacts.py` | CLI entrypoint delegating to `compliance_engine.generate_compliance_artifacts` |
 | **Validation Entry Point** | `scripts/validate_compliance_artifacts.py` | CLI entrypoint delegating to `compliance_engine.validate_compliance_artifacts` |
-| **Test Suite Runner** | `scripts/run_tests.py` | Test discovery runner executing 354 automated tests across `tests/` |
+| **Test Suite Runner** | `scripts/run_tests.py` | Test discovery runner executing automated tests across `tests/` |
 
 ---
 
