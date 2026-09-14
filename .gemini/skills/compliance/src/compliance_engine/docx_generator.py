@@ -304,7 +304,7 @@ STYLES_XML = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   </w:style>
 </w:styles>"""
 
-def build_app_xml(org_name: str = "Google Public Sector") -> str:
+def build_app_xml(org_name: str = "Enterprise Organization") -> str:
     """Builds the docProps/app.xml OpenXML metadata manifest using ElementTree DOM.
 
     Args:
@@ -317,7 +317,7 @@ def build_app_xml(org_name: str = "Google Public Sector") -> str:
     app = ET.SubElement(props, f"{{{DOC_PROPS_APP_NS}}}Application")
     app.text = "Automated Compliance & Authorization Engine"
     company = ET.SubElement(props, f"{{{DOC_PROPS_APP_NS}}}Company")
-    company.text = clean_xml_text(org_name if org_name else "Google Public Sector")
+    company.text = clean_xml_text(org_name if org_name else "Enterprise Organization")
     return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' + ET.tostring(props, encoding="unicode")
 
 

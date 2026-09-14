@@ -32,6 +32,11 @@ system_information:
   # the runbooks. Optional.
   org_id: "[YOUR_GCP_ORG_ID]"
 
+  # Team or entity responsible for drafting compliance deliverables (hydrates {{ PREPARED_BY }}
+  # across policy authorization signature blocks and revision history). Optional.
+  # Defaults to "[YOUR_ORGANIZATION_NAME] Security Engineering Team" if omitted.
+  prepared_by: "[YOUR_PREPARED_BY_NAME_OR_TEAM]"
+
   system_name: "[YOUR_SYSTEM_NAME]"
   system_abbreviation: "[YOUR_SYSTEM_ABBREVIATION]"
   confidentiality_impact: "High"    # FIPS 199 Impact Rating: High, Moderate, or Low

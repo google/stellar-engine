@@ -1193,7 +1193,20 @@ def populate_placeholders(
 
     invariants = _get_cached_invariant_replacements(inventory, ai_enrich=ai_enrich, ai_model=ai_model)
 
+    org_val = sys_info.get("organization") or ""
+    if org_val and not org_val.startswith("[CONFIG_REQUIRED"):
+        default_prepared_by = f"{org_val} Security Engineering Team"
+    else:
+        default_prepared_by = "Cybersecurity & Security Engineering Team"
+
+    prepared_by_val = (
+        sys_info.get("prepared_by")
+        or (roles_info.get("prepared_by", {}).get("name") if isinstance(roles_info.get("prepared_by"), dict) else roles_info.get("prepared_by"))
+        or default_prepared_by
+    )
+
     replacements = {
+        "{{ PREPARED_BY }}": prepared_by_val,
         "{{ SYSTEM_NAME }}": sys_info.get("system_name") or "[CONFIG_REQUIRED: System Name]",
         "{{ SYSTEM_ABBREVIATION }}": sys_info.get("system_abbreviation") or "[CONFIG_REQUIRED: System Abbreviation]",
         "{{ CLOUD_PROVIDER }}": cloud_provider_val,

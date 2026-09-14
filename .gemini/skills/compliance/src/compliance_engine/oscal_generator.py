@@ -145,7 +145,7 @@ def build_oscal_metadata(
     roles_info = inventory.get("personnel_roles", {})
     sys_name = sys_info.get("system_name") or "Cloud Foundation Platform"
     sys_abbr = sys_info.get("system_abbreviation") or "CFP"
-    org_name = sys_info.get("organization") or "Google Public Sector"
+    org_name = sys_info.get("organization") or "Enterprise Organization"
 
     active_oscal_version = resolve_oscal_version(inventory, oscal_version)
 

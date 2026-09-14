@@ -20,7 +20,7 @@
 
 | Role / Authority | Designated Official | Signature & Date |
 | :--- | :--- | :--- |
-| **PREPARED BY:** | Google Public Sector LLC (GPS) RMF & Security Engineering Team | Signature: ______________________ Date: {{ DATE }} |
+| **PREPARED BY:** | {{ PREPARED_BY }} | Signature: ______________________ Date: {{ DATE }} |
 | **REVIEWED & RECOMMENDED BY:** | {{ ISSO_NAME }}<br>{{ ISSO_TITLE }}, {{ ORGANIZATION }} | Signature: ______________________ Date: {{ DATE }} |
 | **REVIEWED & RECOMMENDED BY:** | {{ ISSM_NAME }}<br>{{ ISSM_TITLE }}, {{ ORGANIZATION }} | Signature: ______________________ Date: {{ DATE }} |
 | **APPROVED BY:** | {{ SO_NAME }}<br>{{ SO_TITLE }}, {{ ORGANIZATION }} | Signature: ______________________ Date: {{ DATE }} |
@@ -29,7 +29,7 @@
 
 | Date | Version | Author / Prepared By | Changes Made / Section(s) Description |
 | :--- | :--- | :--- | :--- |
-| {{ DATE }} | {{ VERSION }} | {{ ORGANIZATION }} / GPS RMF Team | Initial formal baseline institutionalization under NIST SP 800-53 Rev. 5 / {{ COMPLIANCE_BASELINE }} governance. |
+| {{ DATE }} | {{ VERSION }} | {{ PREPARED_BY }} | Initial formal baseline institutionalization under NIST SP 800-53 Rev. 5 / {{ COMPLIANCE_BASELINE }} governance. |
 
 ### Program Roles & Responsibilities Matrix
 
@@ -495,7 +495,7 @@ The following table provides detailed traceability between the policy implementa
 | IR-02 | Incident Response Training | Provide role-based incident response training to system users within 30 days of role assumption and at least annually thereafter (CCIs: 000813, 000814, 000815, 002778, 002779, 005151, 005152, 005153) | Section 2.2 | Automated LMS tracking, role-based training modules on Google Cloud and DoD incident handling, and ISSM annual curriculum audits. |
 | IR-02(03) | Breach Identification | Train system personnel to identify and respond to data breaches and unauthorized disclosures of sensitive data/PII (CCI: 004118) | Section 2.2 | DoD Cyber Awareness Challenge, specialized GCP audit log inspection curricula, and mandatory PII/CUI breach response training. |
 | IR-03 | Incident Response Testing | Test incident response capability effectiveness every 6 months for HA components and annually using defined tests (CCIs: 000818, 000819, 000820) | Section 2.3 | Bi-annual tabletop exercises (TTX) and live functional failover simulations in sandboxed test projects. |
-| IR-03(02) | Coordination with Related Plans | Coordinate incident response testing with organizational elements responsible for related plans (CCI: 002780) | Section 2.3 | Cross-functional exercise coordination with cyber operations commands, {{ ORGANIZATION }} NetOps, DISA CSSP, {{ SYSTEM_NAME }} COOP/DR teams, and Google Public Sector. |
+| IR-03(02) | Coordination with Related Plans | Coordinate incident response testing with organizational elements responsible for related plans (CCI: 002780) | Section 2.3 | Cross-functional exercise coordination with cyber operations commands, {{ ORGANIZATION }} NetOps, DISA CSSP, {{ SYSTEM_NAME }} COOP/DR teams, and {{ CLOUD_PROVIDER }} incident support. |
 | IR-04 | Incident Handling | Implement an incident handling capability for incidents consistent with the IRP, CP coordination, and lessons learned (CCIs: 000822, 000823, 001625, 004130, 004131, 004132, 004133, 004134, 004135, 004136) | Section 2.4 | 6-Phase NIST SP 800-61 Rev. 2 lifecycle, automated GCP Cloud Logging sinks, BigQuery analytics, and Terraform IaC rollback playbooks. |
 | IR-04(01) | Automated Incident Handling Processes | Support incident handling using automated mechanisms including SIEM, SOAR, EDR, and NAC (CCIs: 000825, 004137) | Section 2.4 | Cloud Logging sinks routing to Pub/Sub, BigQuery, SOAR playbooks, IAM credential revocation, and automated VPC-SC firewall rules. |
 | IR-04(03) | Continuity of Operations | Identify incident classes (CJCSM 6510.01B) and execute actions ensuring mission continuity (CCIs: 000827, 000828, 004139, 004140) | Section 2.4 | Dynamic BGP multi-region route failover, redundant {{ INTERCONNECT_TYPE }} circuits, and HA Cloud VPN gateways. |

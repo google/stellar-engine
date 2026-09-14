@@ -4948,6 +4948,7 @@ def extract_system_inventory(
             # than deriving a domain from the organization display name.
             "organization_domain": sys_info.get("organization_domain") or "",
             "org_id": sys_info.get("org_id") or "",
+            "prepared_by": sys_info.get("prepared_by") or "",
             # Inherited cloud provider authorization. The SSP, SCTM and control
             # inheritance narratives assert this identifier to the assessor, who
             # will look it up on the FedRAMP Marketplace. It was hardcoded in the
