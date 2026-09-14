@@ -17,10 +17,7 @@ import unittest
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
-from compliance_engine.excel_hydrator import BaseExcelHydrator
-from compliance_engine.docx_generator import convert_markdown_to_docx, batch_convert_policies_to_docx
-
-import openpyxl
+from compliance_engine.docx_generator import convert_markdown_to_docx
 
 class TestReviewExportFixes(unittest.TestCase):
     def setUp(self):

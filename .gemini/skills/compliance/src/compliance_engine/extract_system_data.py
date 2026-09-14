@@ -51,7 +51,7 @@ try:
         get_skill_root,
         is_sensitive_key,
         parse_yaml_safe,
-        parse_yaml_scalar,
+        parse_yaml_scalar as parse_yaml_scalar,
         read_json_file,
         read_text_file,
         resolve_path,
@@ -61,13 +61,13 @@ try:
         write_json_file,
     )
 except (ImportError, ValueError):
-    from file_helpers import (
+    from file_helpers import (  # noqa: F401
         DEFAULT_CSP_PATO_PACKAGE_ID,
         ensure_path_within_boundary,
         get_skill_root,
         is_sensitive_key,
         parse_yaml_safe,
-        parse_yaml_scalar,
+        parse_yaml_scalar as parse_yaml_scalar,  # noqa: F401
         read_json_file,
         read_text_file,
         resolve_path,
@@ -3180,8 +3180,6 @@ def deep_scan_tf_files(
                     continue
                 if d == "template" and os.path.abspath(scan_root) != os.path.abspath(os.path.join(root, d)):
                     continue
-                d_path = os.path.join(root, d)
-                pass  # os.walk(followlinks=False) already ignores symlinked directories
                 safe_dirs.append(d)
             dirs[:] = safe_dirs
 

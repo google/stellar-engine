@@ -454,7 +454,7 @@ class TemplateEngine:
         Returns:
             Transformed content string.
         """
-        style = badge_style or DEFAULT_BADGE_STYLE
+        del badge_style  # Unused: bracketed badge notation replaces inline HTML mark tags
 
         if is_yaml:
             def _yaml_replacer(m: re.Match) -> str:

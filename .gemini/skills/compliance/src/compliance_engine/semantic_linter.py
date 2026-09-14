@@ -431,46 +431,47 @@ def evaluate_architectural_drift(
 
     # 2. Remote Access & Ingress Drift (AC-17 & SC-7)
     claims_zero_trust = "iap" in ssp_text.lower() or "identity-aware" in ssp_text.lower() or "zero-trust" in ssp_text.lower()
-    firewall_rules = net.get("firewall_rules", []) or []
+    if claims_zero_trust:
+        firewall_rules = net.get("firewall_rules", []) or []
 
-    for rule in firewall_rules:
-        if not isinstance(rule, dict):
-            continue
-        r_name = rule.get("name", "rule")
-        sources = rule.get("source_ranges") or rule.get("sources") or []
-        if isinstance(sources, str):
-            sources = [sources]
-        is_public = any(s in ["0.0.0.0/0", "::/0"] for s in sources)
-        if not is_public:
-            continue
+        for rule in firewall_rules:
+            if not isinstance(rule, dict):
+                continue
+            r_name = rule.get("name", "rule")
+            sources = rule.get("source_ranges") or rule.get("sources") or []
+            if isinstance(sources, str):
+                sources = [sources]
+            is_public = any(s in ["0.0.0.0/0", "::/0"] for s in sources)
+            if not is_public:
+                continue
 
-        rule_ports: List[str] = []
-        if "ports" in rule:
-            p_val = rule["ports"]
-            if isinstance(p_val, list):
-                rule_ports.extend([str(p).strip() for p in p_val])
-            elif isinstance(p_val, str):
-                rule_ports.extend([p.strip() for p in p_val.split(",") if p.strip()])
-        for al in rule.get("allowed", []) or []:
-            if isinstance(al, dict):
-                for p in al.get("ports", []) or []:
-                    rule_ports.append(str(p).strip())
+            rule_ports: List[str] = []
+            if "ports" in rule:
+                p_val = rule["ports"]
+                if isinstance(p_val, list):
+                    rule_ports.extend([str(p).strip() for p in p_val])
+                elif isinstance(p_val, str):
+                    rule_ports.extend([p.strip() for p in p_val.split(",") if p.strip()])
+            for al in rule.get("allowed", []) or []:
+                if isinstance(al, dict):
+                    for p in al.get("ports", []) or []:
+                        rule_ports.append(str(p).strip())
 
-        if any(p in ["22", "3389"] for p in rule_ports):
-            findings.append(
-                SemanticFinding(
-                    finding_id=f"DRIFT-FW-INGRESS-{r_name}",
-                    severity="CAT I (Critical)",
-                    category="Architectural Drift",
-                    artifact="SSP/SSP_System_Security_Plan.md",
-                    control_id="AC-17",
-                    description=(
-                        f"Firewall rule '{r_name}' permits direct 0.0.0.0/0 remote administrative ingress "
-                        f"on ports {rule_ports}, directly contradicting SSP AC-17 zero-trust / IAP commitments."
-                    ),
-                    remediation="Remove 0.0.0.0/0 source range and enforce Google Cloud IAP netblock (35.235.240.0/20).",
+            if any(p in ["22", "3389"] for p in rule_ports):
+                findings.append(
+                    SemanticFinding(
+                        finding_id=f"DRIFT-FW-INGRESS-{r_name}",
+                        severity="CAT I (Critical)",
+                        category="Architectural Drift",
+                        artifact="SSP/SSP_System_Security_Plan.md",
+                        control_id="AC-17",
+                        description=(
+                            f"Firewall rule '{r_name}' permits direct 0.0.0.0/0 remote administrative ingress "
+                            f"on ports {rule_ports}, directly contradicting SSP AC-17 zero-trust / IAP commitments."
+                        ),
+                        remediation="Remove 0.0.0.0/0 source range and enforce Google Cloud IAP netblock (35.235.240.0/20).",
+                    )
                 )
-            )
 
     # 3. High Availability / Region Drift (CP-2 / SC-5)
     claims_dual_region = "dual-region" in ssp_text.lower() or "multi-region" in ssp_text.lower()
@@ -831,12 +832,6 @@ def validate_poam_semantics(
             or item.get("id")
             or "UNSPECIFIED"
         )
-        raw_sev = str(
-            item.get("severity_risk_level")
-            or item.get("raw_severity")
-            or item.get("severity")
-            or ""
-        ).upper()
         mitigation = str(item.get("planned_mitigation") or item.get("mitigation") or "").strip()
         if not mitigation and isinstance(item.get("milestones"), list) and item["milestones"]:
             m0 = item["milestones"][0]

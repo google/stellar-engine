@@ -55,7 +55,6 @@ import logging
 import os
 import sys
 from typing import Any, BinaryIO, Dict, Final, Iterator, List, Optional, Tuple, Union
-import xml.etree.ElementTree as _stdlib_etree
 from xml.etree.ElementTree import (
     Element,
     ElementTree,

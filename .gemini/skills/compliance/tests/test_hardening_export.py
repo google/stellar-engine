@@ -184,7 +184,7 @@ class TestExcelHydratorHardening(unittest.TestCase):
             f.write(b"\x00")
 
         hydrator = HWSWHydrator(str(huge_file))
-        with self.assertRaises((ValueError, PermissionError)) as ctx:
+        with self.assertRaises((ValueError, PermissionError)):
             hydrator.load_workbook()
 
     def test_load_workbook_boundary(self) -> None:

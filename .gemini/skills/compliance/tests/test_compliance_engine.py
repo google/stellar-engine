@@ -1772,7 +1772,6 @@ resource "google_storage_bucket" "test_storage" {
             None.
         """
         import file_helpers
-        import utils
         from export_strategies import (
             BasePolicyExporter,
             ExporterRegistry,
@@ -2451,7 +2450,7 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
             file_helpers.write_text_file(ws_path / "compliance_config.yaml", cfg_content)
 
             # Step 1: Extract system data
-            out_inv = extract_system_data.extract_system_inventory(ws_path)
+            extract_system_data.extract_system_inventory(ws_path)
             inv_file = ws_path / "system_inventory.json"
             self.assertTrue(inv_file.exists())
             self.assertEqual(inv_file.resolve().parent, ws_path)
@@ -3229,8 +3228,6 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
 
     def test_security_defusedxml_mandatory_enforcement(self) -> None:
         """Verifies XML parsing uses defusedxml if available, or falls back securely to standard library."""
-        import validate_compliance_artifacts
-        import test_compliance_engine
 
         # Verify that ET module exposes fromstring
         self.assertTrue(
@@ -3834,7 +3831,7 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
             self.assertFalse(res["issues"])
 
         # 3b. Test Export & Validation with explicit legacy version 1.1.0
-        oscal_files_110 = oscal_generator.export_oscal_artifacts(
+        oscal_generator.export_oscal_artifacts(
             self.test_dir, self.mock_inventory, doc_version="1.2.0", oscal_format="json", oscal_version="1.1.0"
         )
         audit_res_110 = validate_compliance_artifacts.audit_oscal_packages(ato_dir)
@@ -3970,7 +3967,6 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
 
     def test_package_structure_and_facades(self) -> None:
         """Tests that .gemini.skills.compliance and utils facade can be imported cleanly."""
-        import utils
         self.assertTrue(callable(utils.clean_cell_value))
         self.assertTrue(callable(utils.read_yaml_file))
         self.assertTrue(callable(utils.write_text_file))
@@ -4101,7 +4097,7 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
             test_case = self
             class FaultyHydrator(excel_hydrator.BaseExcelHydrator):
                 def hydrate(self, inventory: Dict[str, Any], output_path: str) -> str:
-                    wb_inst = self.load_workbook()
+                    self.load_workbook()
                     test_case.assertIsNotNone(self._current_wb)
                     raise RuntimeError("Simulated failure during hydration")
 
@@ -4854,7 +4850,7 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
         # 3. DoD guardrail in scanner bridge skips live SCC
         cfg_il5 = {"query_live_cloud_telemetry": True, "impact_level": "IL5"}
         with unittest.mock.patch("security_scanner_bridge.fetch_live_scc_findings") as mock_scc:
-            findings = security_scanner_bridge.scan_and_derive_poam_items(self.test_dir, config=cfg_il5)
+            security_scanner_bridge.scan_and_derive_poam_items(self.test_dir, config=cfg_il5)
             self.assertFalse(mock_scc.called, "DoD IL5 must NOT call commercial SCC telemetry")
 
         # 4. excel_hydrator.resolve_db_asset_and_os consistency with YAML generator

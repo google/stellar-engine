@@ -13,9 +13,8 @@
 # limitations under the License.
 
 import unittest
-import os
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import security_scanner_bridge as ssb
 import file_helpers

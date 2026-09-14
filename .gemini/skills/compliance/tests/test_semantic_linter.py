@@ -31,7 +31,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 import unittest
 
 SCRIPT_DIR: str = os.path.dirname(os.path.abspath(__file__))
@@ -46,12 +46,10 @@ from compliance_engine.file_helpers import _bootstrap_environment, write_json_fi
 _bootstrap_environment()
 
 from compliance_engine.semantic_linter import (
-    PUBLIC_SECTOR_SECURITY_ENGINEER_PROMPT,
     SemanticLinterReport,
     AISemanticValidationReport,
     ArtifactSemanticResult,
     DeterministicAssessorProvider,
-    LLMProvider,
     SemanticFinding,
     _extract_cat_level,
     enrich_narrative_with_ai,
@@ -59,7 +57,6 @@ from compliance_engine.semantic_linter import (
     evaluate_control_substance,
     get_llm_provider,
     run_semantic_linter,
-    run_mandatory_ai_validation,
     validate_poam_semantics,
 )
 

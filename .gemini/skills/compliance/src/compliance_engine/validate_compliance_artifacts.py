@@ -2699,7 +2699,7 @@ def validate_compliance_package(
     report_lines.append("## Document Governance & Accreditation Baseline\n")
     report_lines.append("| Governance Metric | Policy Standard & Specification |")
     report_lines.append("| :--- | :--- |")
-    report_lines.append(f"| **Document Title** | Path to Authorization (PTA) Strategy & Master ATO Roadmap |")
+    report_lines.append("| **Document Title** | Path to Authorization (PTA) Strategy & Master ATO Roadmap |")
     report_lines.append(f"| **Target System Name** | {sys_name} ({sys_abbr}) |")
     report_lines.append(f"| **Security Categorization** | {fips_199} ({impact_level}) |")
     report_lines.append(f"| **Governing Entity** | {org_name} |")

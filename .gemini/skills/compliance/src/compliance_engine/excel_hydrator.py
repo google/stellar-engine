@@ -63,7 +63,6 @@ except ImportError:
 try:
     from .extract_system_data import (
         clean_interpolated_string,
-        is_valid_cidr,
         is_valid_resource_name,
     )
     from .file_helpers import (
@@ -88,7 +87,6 @@ try:
 except (ImportError, ValueError):
     from extract_system_data import (
         clean_interpolated_string,
-        is_valid_cidr,
         is_valid_resource_name,
     )
     from file_helpers import (
@@ -549,11 +547,6 @@ class BaseExcelHydrator(ABC):
             FileNotFoundError: If the template file does not exist.
             ValueError: If the template exceeds size limits or is out of bounds.
         """
-        try:
-            from .file_helpers import ensure_path_within_boundary, get_templates_dir
-        except (ImportError, ValueError):
-            from file_helpers import ensure_path_within_boundary, get_templates_dir
-            
         self.template_path = str(ensure_path_within_boundary(self.template_path, os.path.dirname(os.path.abspath(self.template_path))))
         
         if not os.path.exists(self.template_path):
@@ -718,12 +711,10 @@ class HWSWHydrator(BaseExcelHydrator):
         # Read allowed dropdown sets from (U) Lists if present
         allowed_hw_types = set()
         allowed_sw_types = set()
-        allowed_approvals = set()
         if "(U) Lists" in wb.sheetnames:
             lists_ws = wb["(U) Lists"]
             allowed_hw_types = set([lists_ws.cell(row=r, column=1).value for r in range(2, lists_ws.max_row+1) if lists_ws.cell(row=r, column=1).value is not None])
             allowed_sw_types = set([lists_ws.cell(row=r, column=3).value for r in range(2, lists_ws.max_row+1) if lists_ws.cell(row=r, column=3).value is not None])
-            allowed_approvals = set([lists_ws.cell(row=r, column=5).value for r in range(2, lists_ws.max_row+1) if lists_ws.cell(row=r, column=5).value is not None])
 
         sys_info = inventory.get("system_information", {})
         net_info = inventory.get("network_architecture", {})
@@ -1225,7 +1216,6 @@ class POAMHydrator(BaseExcelHydrator):
 
         sys_info = inventory.get("system_information", {})
         roles_info = inventory.get("personnel_roles", {})
-        so_info = roles_info.get("system_owner", {})
         isso_info = roles_info.get("isso", {})
 
         sys_name = sys_info.get("system_name") or "[CONFIG_REQUIRED: System Name]"
@@ -1239,7 +1229,6 @@ class POAMHydrator(BaseExcelHydrator):
             base_dt = datetime.now()
         omb_year = str(base_dt.year)
 
-        so_name = so_info.get("name") or "[CONFIG_REQUIRED: System Owner Name]"
         isso_name = isso_info.get("name") or "[CONFIG_REQUIRED: ISSO Name]"
         isso_email = isso_info.get("email") or "[CONFIG_REQUIRED: ISSO Email]"
         isso_phone = isso_info.get("phone") or "[CONFIG_REQUIRED: ISSO Phone]"
@@ -1706,8 +1695,8 @@ class SCTMHydrator(BaseExcelHydrator):
                     common_provider = ""
                     test_method = "Test"
                     narrative = (
-                        f"Technical controls enforced via Terraform IAM role bindings, VPC firewall policies, "
-                        f"and Google Cloud KMS FIPS 140-3 CMEK cryptography."
+                        "Technical controls enforced via Terraform IAM role bindings, VPC firewall policies, "
+                        "and Google Cloud KMS FIPS 140-3 CMEK cryptography."
                     )
                 elif family in ["AU", "SI"]:
                     status = "Implemented"
@@ -1716,13 +1705,13 @@ class SCTMHydrator(BaseExcelHydrator):
                     test_method = "Test, Examine"
                     if is_dod:
                         narrative = (
-                            f"Audit logging ingested into Cloud Logging buckets with retention locks and exported "
-                            f"via Pub/Sub to external CSSP SIEM for continuous 24/7 analysis."
+                            "Audit logging ingested into Cloud Logging buckets with retention locks and exported "
+                            "via Pub/Sub to external CSSP SIEM for continuous 24/7 analysis."
                         )
                     else:
                         narrative = (
-                            f"Audit logging ingested into Cloud Logging buckets with retention locks and monitored "
-                            f"continuously via Security Command Center threat event detection."
+                            "Audit logging ingested into Cloud Logging buckets with retention locks and monitored "
+                            "continuously via Security Command Center threat event detection."
                         )
 
                 # SLCM monitoring parameters and comments
@@ -1743,8 +1732,8 @@ class SCTMHydrator(BaseExcelHydrator):
                     method = "Test, Examine"
                     reporting = "eMASS Milestones / ISSM Oversight"
                     slcm_comments = (
-                        f"Scheduled for continuous monitoring integration upon final deployment. Operational evidence and assessment artifacts "
-                        f"will be tracked through monthly eMASS POA&M milestone reviews."
+                        "Scheduled for continuous monitoring integration upon final deployment. Operational evidence and assessment artifacts "
+                        "will be tracked through monthly eMASS POA&M milestone reviews."
                     )
                 elif family in ["AC", "IA"]:
                     resp_entities = "Cloud Platform Engineering Team, ISSM"
@@ -1753,8 +1742,8 @@ class SCTMHydrator(BaseExcelHydrator):
                     method = "Automated"
                     reporting = monitoring_dashboard
                     slcm_comments = (
-                        f"User identities, Workload Identity Federation (WIF), and service account permissions monitored continuously via Google Cloud IAM Recommender "
-                        f"and Cloud Audit Logs. Inactive accounts disabled automatically; privileged access reviewed monthly in eMASS."
+                        "User identities, Workload Identity Federation (WIF), and service account permissions monitored continuously via Google Cloud IAM Recommender "
+                        "and Cloud Audit Logs. Inactive accounts disabled automatically; privileged access reviewed monthly in eMASS."
                     )
                 elif family in ["AU", "SI"]:
                     resp_entities = "Cloud Platform Engineering Team, ISSM"
@@ -1763,8 +1752,8 @@ class SCTMHydrator(BaseExcelHydrator):
                     method = "Automated"
                     reporting = monitoring_dashboard
                     slcm_comments = (
-                        f"Audit log streams ingested with Bucket Lock retention into Cloud Logging and streamed via Pub/Sub to external CSSP SIEM for continuous 24/7 analysis. "
-                        f"Automated threat detection alerts and monthly ACAS vulnerability scans tracked continuously in eMASS."
+                        "Audit log streams ingested with Bucket Lock retention into Cloud Logging and streamed via Pub/Sub to external CSSP SIEM for continuous 24/7 analysis. "
+                        "Automated threat detection alerts and monthly ACAS vulnerability scans tracked continuously in eMASS."
                     )
                 elif family in ["SC"]:
                     resp_entities = "Cloud Platform Engineering Team, ISSM"
@@ -1773,8 +1762,8 @@ class SCTMHydrator(BaseExcelHydrator):
                     method = "Automated"
                     reporting = monitoring_dashboard
                     slcm_comments = (
-                        f"Hub-and-Spoke VPC boundaries, VPC Service Controls perimeters, and Cloud KMS CMEK key rotations monitored continuously via VPC Flow Logs "
-                        f"and Cloud Audit Logs. Firewall changes audited against approved baseline with alerts sent to NetOps/CSSP."
+                        "Hub-and-Spoke VPC boundaries, VPC Service Controls perimeters, and Cloud KMS CMEK key rotations monitored continuously via VPC Flow Logs "
+                        "and Cloud Audit Logs. Firewall changes audited against approved baseline with alerts sent to NetOps/CSSP."
                     )
                 elif family in ["CM"]:
                     resp_entities = "Cloud Platform Engineering Team, ISSM"
@@ -1783,8 +1772,8 @@ class SCTMHydrator(BaseExcelHydrator):
                     method = "Automated"
                     reporting = monitoring_dashboard
                     slcm_comments = (
-                        f"Infrastructure as Code configurations version-controlled in Git repositories with automated CI/CD security scanning. "
-                        f"Configuration drift monitored continuously via Google Cloud Asset Inventory feeds and tracked in eMASS."
+                        "Infrastructure as Code configurations version-controlled in Git repositories with automated CI/CD security scanning. "
+                        "Configuration drift monitored continuously via Google Cloud Asset Inventory feeds and tracked in eMASS."
                     )
                 elif family in ["CP"]:
                     resp_entities = "Cloud Platform Engineering Team, ISSM"
@@ -1793,8 +1782,8 @@ class SCTMHydrator(BaseExcelHydrator):
                     method = "Test, Examine"
                     reporting = "Disaster Recovery Testing Reports / eMASS"
                     slcm_comments = (
-                        f"Multi-region dual-tier architecture with Cloud Storage multi-region replication and automated Cloud SQL backups. "
-                        f"Disaster recovery failover and contingency plan simulations executed and validated annually per RTO/RPO targets."
+                        "Multi-region dual-tier architecture with Cloud Storage multi-region replication and automated Cloud SQL backups. "
+                        "Disaster recovery failover and contingency plan simulations executed and validated annually per RTO/RPO targets."
                     )
                 elif family in ["IR"]:
                     resp_entities = "Incident Response Team, ISSM, CSSP"
@@ -1803,8 +1792,8 @@ class SCTMHydrator(BaseExcelHydrator):
                     method = "Semi-Automated"
                     reporting = monitoring_dashboard
                     slcm_comments = (
-                        f"Tactical cloud incident response runbooks maintained for IAM, compute, KMS, network, and VPC-SC events. "
-                        f"Integrated with 24/7 CSSP SOC, automated SCC alerting, and annual TTX tabletop simulation exercises."
+                        "Tactical cloud incident response runbooks maintained for IAM, compute, KMS, network, and VPC-SC events. "
+                        "Integrated with 24/7 CSSP SOC, automated SCC alerting, and annual TTX tabletop simulation exercises."
                     )
                 else:
                     resp_entities = "Cloud Platform Engineering Team, ISSM"

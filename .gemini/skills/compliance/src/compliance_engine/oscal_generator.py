@@ -219,7 +219,6 @@ def build_oscal_system_characteristics(inventory: Dict[str, Any]) -> Dict[str, A
     """
     inventory = scrub_sensitive_data(inventory)
     sys_info = inventory.get("system_information", {})
-    infra_info = inventory.get("infrastructure_components", {})
     net_info = inventory.get("network_architecture", {})
 
     sys_name = sys_info.get("system_name") or "Cloud Foundation Platform"
@@ -345,8 +344,6 @@ def build_oscal_components(inventory: Dict[str, Any]) -> Tuple[List[Dict[str, An
     net_info = inventory.get("network_architecture", {})
     app_info = inventory.get("application_components", {})
     sys_abbr = sys_info.get("system_abbreviation") or "CFP"
-    cloud_provider = "Google Cloud Platform"
-    csp_abbr = "GCP"
 
     components: List[Dict[str, Any]] = []
     comp_map: Dict[str, str] = {}

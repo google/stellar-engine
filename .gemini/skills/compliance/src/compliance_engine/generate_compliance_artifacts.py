@@ -66,7 +66,6 @@ try:
     from .service_catalog import resolve_gcp_service
     from .extract_system_data import (
         clean_interpolated_string,
-        is_valid_cidr,
         is_valid_resource_name,
     )
     from . import excel_hydrator
@@ -111,7 +110,6 @@ except (ImportError, ValueError):
     from service_catalog import resolve_gcp_service
     from extract_system_data import (
         clean_interpolated_string,
-        is_valid_cidr,
         is_valid_resource_name,
     )
     from template_engine import (
@@ -345,11 +343,6 @@ def format_separation_of_duties_table(inventory: Dict[str, Any]) -> str:
         A Markdown-formatted table representing IAM separation of duties.
     """
     sys_info = inventory.get("system_information", {})
-    cloud_provider = (
-        sys_info.get("cloud_provider")
-        or inventory.get("cloud_provider")
-        or "Google Cloud Platform"
-    )
     csp_abbr = (
         sys_info.get("cloud_service_provider_abbr")
         or "GCP"
@@ -536,9 +529,7 @@ def build_dynamic_system_description(inventory: Dict[str, Any]) -> str:
     gke = infra_info.get("gke_clusters", [])
     vms = infra_info.get("compute_instances", [])
     vpcs = net_info.get("vpcs", [])
-    kms = infra_info.get("kms_keys", [])
     buckets = infra_info.get("storage_buckets", [])
-    cloud_provider = str(sys_info.get("cloud_provider") or "gcp")
 
     desc_paras = []
 
@@ -590,9 +581,9 @@ def build_dynamic_system_description(inventory: Dict[str, Any]) -> str:
     if vms:
         compute_parts.append(f"{len(vms)} hardened Compute Engine virtual machine instance(s) running verified operating system images with Shielded VM vTPM integrity monitoring")
     if infra_info.get("cloud_run_services"):
-        compute_parts.append(f"serverless Cloud Run microservices with restricted private ingress and binary authorization verification")
+        compute_parts.append("serverless Cloud Run microservices with restricted private ingress and binary authorization verification")
     if infra_info.get("cloud_functions"):
-        compute_parts.append(f"event-driven Cloud Functions executing in private VPC perimeters")
+        compute_parts.append("event-driven Cloud Functions executing in private VPC perimeters")
 
     if compute_parts:
         desc_paras.append(
@@ -823,16 +814,16 @@ def build_audit_and_siem_implementation_narrative(inventory: Dict[str, Any]) -> 
         )
     else:
         paras.append(
-            f"Audit telemetry is exported in real time via Cloud Logging Log Router aggregated sinks to BigQuery analytical datasets "
-            f"in a dedicated, isolated audit project. Scheduled SQL queries and Cloud Monitoring metric alerts continuously inspect "
-            f"audit records for unauthorized IAM modifications, anomalous network changes, and privilege escalations."
+            "Audit telemetry is exported in real time via Cloud Logging Log Router aggregated sinks to BigQuery analytical datasets "
+            "in a dedicated, isolated audit project. Scheduled SQL queries and Cloud Monitoring metric alerts continuously inspect "
+            "audit records for unauthorized IAM modifications, anomalous network changes, and privilege escalations."
         )
 
     paras.append(
-        f"For evidentiary integrity and long-term regulatory compliance, all raw audit logs are simultaneously archived to a "
-        f"dedicated Google Cloud Storage bucket configured with Object Retention (Bucket Lock) in WORM (Write Once, Read Many) "
-        f"mode. The bucket retention period is enforced at 365 calendar days with Cloud KMS customer-managed encryption keys (CMEK), "
-        f"preventing premature deletion or tampering even by privileged administrators."
+        "For evidentiary integrity and long-term regulatory compliance, all raw audit logs are simultaneously archived to a "
+        "dedicated Google Cloud Storage bucket configured with Object Retention (Bucket Lock) in WORM (Write Once, Read Many) "
+        "mode. The bucket retention period is enforced at 365 calendar days with Cloud KMS customer-managed encryption keys (CMEK), "
+        "preventing premature deletion or tampering even by privileged administrators."
     )
     return "\n\n".join(paras)
 
@@ -883,11 +874,11 @@ def build_incident_escalation_implementation_narrative(inventory: Dict[str, Any]
             f"enforces automated incident reporting and triage procedures:"
         )
         paras.append(
-            f"- **Critical / High Impact Incidents (Data Breach / System Compromise)**: Mandatory reporting within **1 hour** "
-            f"of confirmation to US-CERT (CISA via soc@cisa.gov) and the FedRAMP Program Management Office (info@fedramp.gov), "
-            f"followed by immediate escalation to the Agency Authorizing Official and ISSM.\n"
-            f"- **Moderate Impact Incidents**: Notification within **4 hours** to organizational stakeholders.\n"
-            f"- **Low Impact Incidents / Anomalies**: Documented and reviewed during standard weekly incident triage."
+            "- **Critical / High Impact Incidents (Data Breach / System Compromise)**: Mandatory reporting within **1 hour** "
+            "of confirmation to US-CERT (CISA via soc@cisa.gov) and the FedRAMP Program Management Office (info@fedramp.gov), "
+            "followed by immediate escalation to the Agency Authorizing Official and ISSM.\n"
+            "- **Moderate Impact Incidents**: Notification within **4 hours** to organizational stakeholders.\n"
+            "- **Low Impact Incidents / Anomalies**: Documented and reviewed during standard weekly incident triage."
         )
         paras.append(
             f"Incident ticketing, responder task assignments, and evidence preservation workflows are managed through {itsm}, "
@@ -1006,9 +997,9 @@ def build_identity_and_access_implementation_narrative(inventory: Dict[str, Any]
             f"requires phishing-resistant multi-factor authentication ({mfa}). Session timeouts are enforced after 15 minutes of inactivity."
         )
         paras.append(
-            f"**Least Privilege & Role Elevation**: Role assignments follow custom predefined IAM roles mapped strictly to job functions. "
-            f"Elevated access is mediated through Google Cloud Privileged Access Manager (PAM) for temporary, time-bound session elevations "
-            f"with auditable approval trails."
+            "**Least Privilege & Role Elevation**: Role assignments follow custom predefined IAM roles mapped strictly to job functions. "
+            "Elevated access is mediated through Google Cloud Privileged Access Manager (PAM) for temporary, time-bound session elevations "
+            "with auditable approval trails."
         )
     return "\n\n".join(paras)
 
@@ -2208,11 +2199,6 @@ def generate_poam_matrix_yaml(
     lines.append(f"  document_version: {safe_yaml_scalar(doc_version)}")
     lines.append(f"  grc_repository_reference: {safe_yaml_scalar(rmf_system)}")
     lines.append(f"  security_point_of_contact: {safe_yaml_scalar(f'{isso_name} ({isso_title})')}")
-    cloud_provider = (
-        sys_info.get("cloud_provider")
-        or inventory.get("cloud_provider")
-        or "Google Cloud Platform"
-    )
     csp_abbr = (
         sys_info.get("cloud_service_provider_abbr")
         or "GCP"
