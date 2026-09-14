@@ -58,4 +58,4 @@ ppsm_matrix:
     ppsm_status: "Approved (Registered in {{ RMF_GOVERNANCE_SYSTEM }} PPSM / Port Registry)"
 
 rmf_team_manual_action:
-  callout: "> [!IMPORTANT] ⚠️ **RMF TEAM ACTION REQUIRED**: Confirm registration of all listed ports/protocols in the {{ RMF_GOVERNANCE_SYSTEM }} PPSM / Port Registry and upload approval certificates."
+  callout: "> [!IMPORTANT] **RMF TEAM ACTION REQUIRED**: Confirm registration of all listed ports/protocols in the {{ RMF_GOVERNANCE_SYSTEM }} PPSM / Port Registry and upload approval certificates."

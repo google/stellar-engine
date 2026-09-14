@@ -32,7 +32,7 @@
 ## 1.3 System Points of Contact & Other Designated POCs
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and populate organizational contact details, secondary system points of contact (POCs), technical leads, and mission representatives in this section prior to formal ATO authorization submission.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and populate organizational contact details, secondary system points of contact (POCs), technical leads, and mission representatives in this section prior to formal ATO authorization submission.</mark>
 
 | Role / Designation | Name | Title | Organization / Office | Work Phone | Email Address |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -40,8 +40,8 @@
 | **ISSM** | {{ ISSM_NAME }} | {{ ISSM_TITLE }} | {{ ISSM_ORG }} | {{ ISSM_PHONE }} | {{ ISSM_EMAIL }} |
 | **ISSO** | {{ ISSO_NAME }} | {{ ISSO_TITLE }} | {{ ISSO_ORG }} | {{ ISSO_PHONE }} | {{ ISSO_EMAIL }} |
 | **Authorizing Official (AO)** | {{ AO_NAME }} | {{ AO_TITLE }} | {{ AO_ORG }} | {{ AO_PHONE }} | {{ AO_EMAIL }} |
-| **Technical / DevSecOps Lead** | `<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Technical POC Name</mark>` | DevSecOps Lead Engineer | `<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Office Address</mark>` | `<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Phone</mark>` | `<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Email</mark>` |
-| **Other Designated POC (Operations)** | `<mark style="background-color: #e0f2fe; color: #0369a1; font-weight: bold; padding: 1px 5px; border-radius: 3px;">ℹ️ OPTIONAL CONFIG: Secondary Ops Contact</mark>` | Cloud Operations Lead | `<mark style="background-color: #e0f2fe; color: #0369a1; font-weight: bold; padding: 1px 5px; border-radius: 3px;">ℹ️ OPTIONAL CONFIG: Office Address</mark>` | `<mark style="background-color: #e0f2fe; color: #0369a1; font-weight: bold; padding: 1px 5px; border-radius: 3px;">ℹ️ OPTIONAL CONFIG: Phone</mark>` | `<mark style="background-color: #e0f2fe; color: #0369a1; font-weight: bold; padding: 1px 5px; border-radius: 3px;">ℹ️ OPTIONAL CONFIG: Email</mark>` |
+| **Technical / DevSecOps Lead** | `<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Technical POC Name</mark>` | DevSecOps Lead Engineer | `<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Office Address</mark>` | `<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Phone</mark>` | `<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Email</mark>` |
+| **Other Designated POC (Operations)** | `<mark style="background-color: #e0f2fe; color: #0369a1; font-weight: bold; padding: 1px 5px; border-radius: 3px;">OPTIONAL CONFIG: Secondary Ops Contact</mark>` | Cloud Operations Lead | `<mark style="background-color: #e0f2fe; color: #0369a1; font-weight: bold; padding: 1px 5px; border-radius: 3px;">OPTIONAL CONFIG: Office Address</mark>` | `<mark style="background-color: #e0f2fe; color: #0369a1; font-weight: bold; padding: 1px 5px; border-radius: 3px;">OPTIONAL CONFIG: Phone</mark>` | `<mark style="background-color: #e0f2fe; color: #0369a1; font-weight: bold; padding: 1px 5px; border-radius: 3px;">OPTIONAL CONFIG: Email</mark>` |
 
 
 ## 1.4 Information System Operational Status
@@ -70,7 +70,7 @@
 ## 1.7 Types of Users & Codebase IAM Architecture
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Confirm system access roles, administrative groups, and separation of duties boundaries match operational organizational policies.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Confirm system access roles, administrative groups, and separation of duties boundaries match operational organizational policies.</mark>
 
 The system enforces principle of least privilege and strict separation of duties across Google Cloud organizations, folders, and application projects. Architectural security identities, administrative role groups, and cloud service accounts are dynamically extracted directly from source code and Terraform blueprints:
 
@@ -2026,7 +2026,7 @@ Employ an independent penetration testing agent or team to perform penetration t
 ### CA-8(3) Penetration Testing | Facility Penetration Testing
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 > Employ a penetration testing process that includes [Assignment: organization-defined frequency] [Selection: announced; unannounced] attempts to bypass or circumvent controls associated with physical access points to the facility.
 
 
@@ -2790,7 +2790,7 @@ Prevent the installation of [Assignment: organization-defined software and firmw
   b. Provides recovery objectives, restoration priorities, and metrics;
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 >   c. Addresses contingency roles, responsibilities, assigned individuals with contact information;
 
   d. Addresses maintaining essential mission and business functions despite a system disruption, compromise, or failure;
@@ -3212,7 +3212,7 @@ Use a sample of backup information in the restoration of selected system functio
 ### CP-9(3) System Backup | Separation Storage for Critical Information
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 > Store backup copies of [Assignment: organization-defined critical system software and other security-related information] in a separate facility or in a fire rated container that is not collocated with the operational system.
 
 
@@ -4647,7 +4647,7 @@ Verify session and network connection termination after the completion of nonloc
 1. Implement procedures for the use of maintenance personnel that lack appropriate security clearances or are not U.S. citizens, that include the following requirements:
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 >   a. Maintenance personnel who do not have needed access authorizations, clearances, or formal access approvals are escorted and supervised during the performance of maintenance and diagnostic activities on the system by approved organizational personnel who are fully cleared, have appropriate access authorizations, and are technically qualified; and
 
   b. Prior to initiating maintenance or diagnostic activities by personnel who do not have needed access authorizations, clearances or formal access approvals, all volatile information storage components within the system are sanitized and all nonvolatile storage media are removed or physically disconnected from the system and secured; and
@@ -4916,11 +4916,11 @@ Apply nondestructive sanitization techniques to portable storage devices prior t
 1. Enforce physical access authorizations at [Assignment: organization-defined entry and exit points to the facility where the system resides] by:
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 >   a. Verifying individual access authorizations before granting access to the facility; and
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 >   b. Controlling ingress and egress to the facility using [Selection (one or more): [Assignment: organization-defined physical access control systems or devices]; guards];
 
 
@@ -4952,7 +4952,7 @@ Apply nondestructive sanitization techniques to portable storage devices prior t
 ### PE-3(1) Physical Access Control | System Access
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 > Enforce physical access authorizations to the system in addition to the physical access controls for the facility at [Assignment: organization-defined physical spaces containing one or more components of the system].
 
 
@@ -5009,7 +5009,7 @@ Control physical access to output from [Assignment: organization-defined output 
 ### PE-6(1) Monitoring Physical Access | Intrusion Alarms and Surveillance Equipment
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 > Monitor physical access to the facility where the system resides using physical intrusion alarms and surveillance equipment.
 
 
@@ -5023,7 +5023,7 @@ Control physical access to output from [Assignment: organization-defined output 
 ### PE-6(4) Monitoring Physical Access | Monitoring Physical Access to Systems
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 > Monitor physical access to the system in addition to the physical access monitoring of the facility at [Assignment: organization-defined physical spaces containing one or more components of the system].
 
 
@@ -5135,7 +5135,7 @@ Provide an alternate power supply for the system that is activated [Selection: m
 ### PE-12 Emergency Lighting
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 > Employ and maintain automatic emergency lighting for the system that activates in the event of a power outage or disruption and that covers emergency exits and evacuation routes within the facility.
 
 
@@ -5189,7 +5189,7 @@ Employ fire detection systems that activate automatically and notify [Assignment
 ### PE-13(4) Fire Protection | Inspections
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 > Ensure that the facility undergoes [Assignment: organization-defined frequency] fire protection inspections by authorized and qualified inspectors and identified deficiencies are resolved within [Assignment: organization-defined time period].
 
 
@@ -5281,7 +5281,7 @@ Detect the presence of water near the system and alert [Assignment: organization
 ### PE-18 Location of System Components
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 > Position system components within the facility to minimize potential damage from [Assignment: organization-defined physical and environmental hazards] and to minimize the opportunity for unauthorized access.
 
 
@@ -5388,7 +5388,7 @@ Mark [Assignment: organization-defined system hardware components] indicating th
   n. Include security- and privacy-related activities affecting the system that require planning and coordination with [Assignment: organization-defined individuals or groups]; and
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational procedure or contact details in this section.</mark>
 >   o. Are reviewed and approved by the authorizing official or designated representative prior to plan implementation.
 
 

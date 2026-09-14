@@ -1924,7 +1924,7 @@ def hydrate_example_data_in_artifacts(
                 var_name = match.group(0).replace("[CONFIG_REQUIRED:", "").replace("]", "").strip()
                 if is_yaml:
                     return f'"[AI CONTEXTUAL EXAMPLE REQUIRED: {var_name}]"'
-                return f'<mark style="{sample_badge_style}">⚠️ [AI CONTEXTUAL EXAMPLE REQUIRED: {var_name}]</mark>'
+                return f'<mark style="{sample_badge_style}">[AI CONTEXTUAL EXAMPLE REQUIRED: {var_name}]</mark>'
 
             if is_yaml:
                 content = re.sub(
@@ -2553,7 +2553,7 @@ def validate_compliance_package(
             for m in config_req_regex.finditer(line):
                 config_required_vars.append({"file": rel_path, "line": idx, "variable": m.group(0), "context": line.strip()})
             for m in mark_action_regex.finditer(line):
-                txt = m.group(1).replace("⚠️", "").strip()
+                txt = m.group(1).strip()
                 rmf_action_items.append({"file": rel_path, "line": idx, "action": txt})
 
     # 2. Audit YAML Deliverables Syntax Integrity
@@ -2746,7 +2746,7 @@ def validate_compliance_package(
     reconciled_cnt = alignment_results["reconciled_assets_count"]
     total_disc_cnt = alignment_results["total_discovered_assets"]
 
-    report_lines.append("## 🎖️ Senior Compliance Assessor Multi-Level Quality & Technical Evidence Readiness Dashboard\n")
+    report_lines.append("## Senior Compliance Assessor Multi-Level Quality & Technical Evidence Readiness Dashboard\n")
     report_lines.append("An independent automated evaluation was conducted across all generated deliverables in accordance with NIST SP 800-37 Rev. 2, NIST SP 800-53A Rev. 5, and DoD Instruction 8510.01 assessment standards:\n")
     report_lines.append("| Assessor Evaluation Dimension | Evaluation / Determination | Target Baseline | Compliance Assessor Assessment Status |")
     report_lines.append("| :--- | :--- | :--- | :--- |")
@@ -2759,7 +2759,7 @@ def validate_compliance_package(
     report_lines.append("")
 
     # Level 2 Reconciliation Table
-    report_lines.append("### 🧩 Dynamic System Architecture & Inventory Cross-Reconciliation")
+    report_lines.append("### Dynamic System Architecture & Inventory Cross-Reconciliation")
     report_lines.append("The validation engine verifies that every cloud asset discovered in `system_inventory.json` is formally accounted for in the System Security Plan (SSP), Hardware/Software Inventory, PPSM, or FIPS matrix:\n")
     report_lines.append("| Asset Category | Discovered in Inventory | Documented in ATO Package | Reconciliation Coverage | Status |")
     report_lines.append("| :--- | :--- | :--- | :--- | :--- |")
@@ -2781,9 +2781,9 @@ def validate_compliance_package(
         c_disc = bd.get(cat_key, {}).get("discovered", 0)
         c_match = bd.get(cat_key, {}).get("matched", 0)
         c_pct = ("%.1f%%" % ((c_match / max(1, c_disc)) * 100.0)) if c_disc > 0 else "N/A"
-        c_status = "✅ Reconciled" if (c_disc == 0 or c_match >= c_disc) else "⚠️ Review Needed"
+        c_status = "Reconciled" if (c_disc == 0 or c_match >= c_disc) else "Review Needed"
         report_lines.append(f"| **{cat_label}** | `{c_disc}` | `{c_match}` | {c_pct} | {c_status} |")
-    report_lines.append(f"| **Total Assets Reconciled** | **`{total_disc_cnt}`** | **`{reconciled_cnt}`** | **`{'%.1f' % cov_pct}%`** | **`{'✅ Complete' if cov_pct >= 95 else '⚠️ Review Needed'}`** |")
+    report_lines.append(f"| **Total Assets Reconciled** | **`{total_disc_cnt}`** | **`{reconciled_cnt}`** | **`{'%.1f' % cov_pct}%`** | **`{'Complete' if cov_pct >= 95 else 'Review Needed'}`** |")
     report_lines.append("")
 
     if alignment_results.get("discrepancies"):
@@ -2798,7 +2798,7 @@ def validate_compliance_package(
     # Itemized Findings & Remediation (CAT I, CAT II, CAT III)
     all_findings = senior_audit.get("cat_1_findings", []) + senior_audit.get("cat_2_findings", []) + senior_audit.get("cat_3_findings", [])
     if all_findings:
-        report_lines.append("### 🚨 Senior Compliance Assessor Findings & Remediation Plan")
+        report_lines.append("### Senior Compliance Assessor Findings & Remediation Plan")
         report_lines.append(
             "The following security findings and documentation gaps were identified during multi-level assessment. "
             "Findings are categorized by **NIST SP 800-30 / FedRAMP Risk Level** (Critical, High, Medium, Low) and "
@@ -2827,7 +2827,7 @@ def validate_compliance_package(
     # -------------------------------------------------------------
     # SECTION 1: NIST SP 800-37 Rev. 2 RMF 7-Step Crosswalk & Master ATO Journey
     # -------------------------------------------------------------
-    report_lines.append("## 🏛️ NIST SP 800-37 Rev. 2 RMF 7-Step Crosswalk\n")
+    report_lines.append("## NIST SP 800-37 Rev. 2 RMF 7-Step Crosswalk\n")
     report_lines.append("Federal and Department of Defense (DoD) Authorizing Officials (AOs), assessors, and eMASS workflows track system accreditation through the canonical **7-Step Risk Management Framework (RMF)** defined in [NIST SP 800-37 Rev. 2](https://csrc.nist.gov/pubs/sp/800/37/r2/final). The table below cross-maps the official NIST RMF steps to our engineering delivery phases and automated compliance deliverables:\n")
     report_lines.append("| NIST RMF Step | Step Focus & Authoritative Publications | Delivery Phase | Key Activities & Deliverable Artifacts |")
     report_lines.append("| :--- | :--- | :--- | :--- |")
@@ -2841,7 +2841,7 @@ def validate_compliance_package(
     report_lines.append("| **Step 5: Authorize** | Senior official makes risk-based decision to authorize system operation.<br>*Standards*: [NIST SP 800-37 Rev. 2](https://csrc.nist.gov/pubs/sp/800/37/r2/final), [DoD Instruction 8510.01](https://www.esd.whs.mil/Directives/issuances/dodi/) | **Phase 5 & Phase 6**<br>(Governance & eMASS) | Finalize operational agreements (CSSP/SOC SLA, ISA/MOU, Access Agreements / DD 2875, TTX); author Executive ATO Request Memo; route package through eMASS/GRC Package Approval Chain (ISSO -> ISSM -> SCA -> AO); Authorizing Official grants formal ATO. |")
     report_lines.append("| **Step 6: Monitor** | Continuously monitor control implementation and operational risk posture.<br>*Standards*: [NIST SP 800-137](https://csrc.nist.gov/pubs/sp/800/137/final), [OMB M-14-03](https://www.whitehouse.gov/omb/) | **Phase 6**<br>(Continuous Monitoring) | Execute monthly ACAS scans, quarterly STIG reviews, and continuous POA&M milestone burndown; track live infrastructure drift with `validate_compliance_artifacts.py`; manage 3-year re-authorization cycle without compliance debt. |\n")
 
-    report_lines.append("## 🗺️ Master ATO Journey & Complete Accreditation Itinerary\n")
+    report_lines.append("## Master ATO Journey & Complete Accreditation Itinerary\n")
     report_lines.append("| Phase | Journey Phase Name | Key Activities & Requirements | Deliverable Artifacts & Outputs |")
     report_lines.append("| :--- | :--- | :--- | :--- |")
     p1_activities = ("Appoint ISSM, ISSO, System Owner, and Project Sponsor; verify U.S. Citizenship & clearances; provision eMASS/CRAMS accounts; setup Google Cloud Organization and Assured Workloads IL5 boundary." if is_dod else "Appoint ISSM, ISSO, System Owner, and Project Sponsor; verify personnel vetting; provision GRC accounts; setup Google Cloud Organization and landing zone boundary.")
@@ -2855,7 +2855,7 @@ def validate_compliance_package(
     report_lines.append("| **Phase 5** | **Operational Governance & Simulations** | Establish 24/7 CSSP/SOC SLA; execute Interconnection Agreements (ISA/MOU); obtain signed Privileged User Access Agreements (SAAR / DD Form 2875 or Access Agreement); conduct annual DR dual-region failover and TTX tabletop exercises. | Signed CSSP/SOC Agreement, Signed ISA/MOU PDFs, Signed Access Agreements Roster, TTX After-Action Report, PIA (DD Form 2930 / Privacy Assessment). |")
     report_lines.append("| **Phase 6** | **eMASS Submission & AO ATO Determination** | Author Executive ATO Request Memorandum; route package through eMASS Package Approval Chain (ISSO -> ISSM -> SCA -> AO); Authorizing Official issues formal ATO accreditation decision. | Executive ATO Determination Request Memo, eMASS Authorization Package, Authorizing Official Signed ATO Decision Letter. |\n")
 
-    report_lines.append("### 🚩 Phase 1: Program Initiation, Stakeholders & Account Provisioning")
+    report_lines.append("### Phase 1: Program Initiation, Stakeholders & Account Provisioning")
     report_lines.append("| Step | Key Activity / Requirement | Responsible Lead | Status & Verification Guidance |")
     report_lines.append("| :--- | :--- | :--- | :--- |")
     report_lines.append("| **1.1** | **Designate Key Stakeholders & Governance**: Formally appoint Project Sponsor, dedicated PM, ISSM, ISSO, System Owner, and technical/security SMEs. Conduct initial kick-off meeting with the Authorizing Official (AO) and their security team. | `Project Sponsor / System Owner` | Establish formal charter, stakeholder roster, weekly cadence, and mutual risk-tolerance alignment. |")
@@ -2869,14 +2869,14 @@ def validate_compliance_package(
     report_lines.append("| **1.3** | **eMASS / CRAMS Account Provisioning**: Ensure designated security and administrative personnel have active accounts in eMASS / CRAMS with appropriate roles. | `Lead ISSM / ISSO` | Confirm system registration and workflow permissions in eMASS. |")
     report_lines.append(f"| **1.4** | {s14_activity} | `Cloud Platform Team` | {s14_guidance} |\n")
 
-    report_lines.append("### 🏗️ Phase 2: Architecture Boundary, Infrastructure & Technical Design")
+    report_lines.append("### Phase 2: Architecture Boundary, Infrastructure & Technical Design")
     report_lines.append("| Step | Key Activity / Requirement | Responsible Lead | Status & Verification Guidance |")
     report_lines.append("| :--- | :--- | :--- | :--- |")
     report_lines.append(f"| **2.1** | {s21_activity} | `Lead Cloud Architect` | Document network topology and boundary in TDD. |")
     report_lines.append("| **2.2** | **Technical Infrastructure Design Document (TIDD / TDD)**: Author technical design document defining all infrastructure components, encryption rings, and firewall tiers. | `Lead Cloud Architect` | Verify TDD captures AC, AU, CA, CP, IA, IR, MA, and SR controls. |")
     report_lines.append(f"| **2.3** | {s23_activity} | `DevOps / Platform Lead` | Terraform configuration active with 0 drift. |\n")
 
-    report_lines.append("### ⚡ Phase 3: Automated ATO Foundation Generation (Delivered by this Skill)")
+    report_lines.append("### Phase 3: Automated ATO Foundation Generation (Delivered by this Skill)")
     report_lines.append("| Deliverable Artifact | Subfolder Location | Formats | Primary Control | Purpose & Implementation |")
     report_lines.append("| :--- | :--- | :--- | :--- | :--- |")
     report_lines.append("| **System Security Plan (SSP)** | `SSP/` | `.md`, `.docx` | PL-2, NIST SP 800-18 | Authoritative system boundary, architecture, and control implementation statements. |")
@@ -2889,7 +2889,7 @@ def validate_compliance_package(
     report_lines.append("| **Incident Response Runbooks (5 Workflows)** | `Incident_Response_Runbooks/` | `.md`, `.docx` | IR-4, IR-5, IR-8 | Tactical cloud runbooks for compromised credentials, compute, CMEK, network intrusion, and VPC-SC. |")
     report_lines.append("| **Path to Authorization (PTA)** | Root `ato_artifacts/` | `.md`, `.docx` | CA-6 | Executive accreditation roadmap, validation audit, and testing strategy. |\n")
 
-    report_lines.append("### 🔍 Phase 4: Security Assessments, Vulnerability Scans & STIG Benchmarks")
+    report_lines.append("### Phase 4: Security Assessments, Vulnerability Scans & STIG Benchmarks")
     report_lines.append("| Step | Assessment Activity | Primary Control | Format / Sourcing | Verification & Acceptance Standard |")
     report_lines.append("| :--- | :--- | :--- | :--- | :--- |")
     report_lines.append("| **4.1** | **ACAS / Nessus Credentialed Scans**: Execute credentialed vulnerability scans on all host VMs and databases within 30 days of submission. | `RA-5, SC-28` | `ACAS: ASR/ARF` or `.nessus` | Must return 'Good Data' (credentialed plugins firing), 0 unmapped findings, and 0 unmitigated CISA KEV exploits. |")
@@ -2897,7 +2897,7 @@ def validate_compliance_package(
     report_lines.append("| **4.3** | **Software Assurance (SAST/DAST & SBOM)**: Run static code scans (Trivy/Semgrep) in CI/CD and container scans in Artifact Registry. | `SA-11, SI-2, SR-4` | Trivy SAST + CycloneDX SBOM | Zero Critical/High static analysis flaws; container images in Artifact Registry scanned and signed. |")
     report_lines.append("| **4.4** | **14 ATC Critical Controls Audit**: Audit the 14 mandatory DoD connection controls in the SCTM ensuring residual risk <= Moderate. | `AC-17, IA-2, SC-7` | SCTM Narrative + Evidence | All 14 ATC controls verified in SCTM with residual risk <= Moderate; no Very High/High residual risks. |\n")
 
-    report_lines.append("### 🤝 Phase 5: Operational Governance, Agreements & Simulations")
+    report_lines.append("### Phase 5: Operational Governance, Agreements & Simulations")
     report_lines.append("| Step | Operational Requirement | Primary Control | Required Evidence Format | Acceptance & Submission Criteria |")
     report_lines.append("| :--- | :--- | :--- | :--- | :--- |")
     report_lines.append("| **5.1** | **CSSP SLA & Cloud Inheritance**: Establish 24/7 CSOC monitoring SLA and accept Cloud Common Control Provider (CCP) package in eMASS. | `CA-3, CA-9` | Signed CSSP SLA Agreement PDF | Active agreement with accredited 24/7 CSSP (e.g. C5ISR / DISA / Agency CSOC); CCP inheritance accepted. |")
@@ -2906,7 +2906,7 @@ def validate_compliance_package(
     report_lines.append("| **5.4** | **Contingency Plan & IR Tabletop Exercise (TTX)**: Execute annual DR dual-region failover test and CSOC incident escalation tabletop simulation. | `CP-4, IR-4` | Tabletop After-Action Report PDF | Conduct annual disaster recovery simulation across dual regions and upload formal test results. |")
     report_lines.append("| **5.5** | **Privacy Impact Assessment (PIA DD Form 2930)**: Complete and upload privacy assessment to eMASS FISMA tab if processing PII/PHI. | `PT-2, PT-3, AR-4` | Signed DD Form 2930 PDF | Signed DD Form 2930 PDF uploaded to eMASS System > Details > FISMA for systems handling PII/PHI. |\n")
 
-    report_lines.append("### 🎖️ Phase 6: Package Assembly, eMASS Submission & AO Authorization Determination")
+    report_lines.append("### Phase 6: Package Assembly, eMASS Submission & AO Authorization Determination")
     report_lines.append("| Step | Milestone Activity | Responsible Role | Target Output & Execution Action |")
     report_lines.append("| :--- | :--- | :--- | :--- |")
     report_lines.append("| **6.1** | **Lead Assessor Audit & Remediation Pass**: Run package validation (`validate_compliance_artifacts.py --fix`) to audit all deliverables. | `Lead ISSM / SCA` | Resolve all pending institutional variables and high-visibility action cards. |")
@@ -2915,7 +2915,7 @@ def validate_compliance_package(
     report_lines.append("| **6.4** | **Authorizing Official (AO) ATO Determination**: Authorizing Official reviews residual risk posture and grants formal ATO decision. | `Authorizing Official (AO)` | Formal ATO Accreditation Decision Letter issued for maximum 3-year term (subject to continuous monitoring). |")
     report_lines.append("| **6.5** | **Continuous Monitoring (ConMon) Execution**: Perform monthly ACAS scans, quarterly STIG reviews, and annual POA&M milestone burndown. | `ISSO / SecOps Team` | Maintain active ATO status, avoid re-authorization debt, and ensure zero expired POA&M milestones over 90 days. |\n")
 
-    report_lines.append("## 🧠 Strategic RMF Considerations & Authorizing Official (AO) Engagement\n")
+    report_lines.append("## Strategic RMF Considerations & Authorizing Official (AO) Engagement\n")
     report_lines.append(f"To successfully navigate the accreditation lifecycle on {csp_name}, the program team must incorporate four critical governance principles:\n")
     report_lines.append("### 1. Authorizing Official (AO) Mission-Alignment & Translation")
     report_lines.append("Authorizing Officials (AOs) are executive-level leaders (e.g., Senior Executive Service, General/Flag Officers, Agency Chief Information Officers) with demanding schedules and statutory accountability for operational missions. While AOs rely on technical advisors (ISSMs, Security Control Assessors), they are primarily experts in the **mission and business domain**, not necessarily cloud engineering subject matter experts.\n")
@@ -2957,7 +2957,7 @@ def validate_compliance_package(
     report_lines.append("- **Purpose**: An IATT is a temporary accreditation granted by the Authorizing Official (AO) for a specified duration (typically 90 to 180 days) permitting system connection to live networks specifically to conduct credentialed ACAS vulnerability scans, DISA STIG audits, and penetration testing.")
     report_lines.append("- **Prerequisites for IATT Request**: Draft System Security Plan (`SSP/`) with preliminary boundary definition; approved IATT Test Plan detailing test schedule and tools; residual risk assessment indicating no unmitigated CAT I (Very High) vulnerabilities; Authorizing Official signed IATT Letter.\n")
 
-    report_lines.append("## 🔒 Federal & DoD Privacy Compliance Requirements (PIA, PCIL, SORN)\n")
+    report_lines.append("## Federal & DoD Privacy Compliance Requirements (PIA, PCIL, SORN)\n")
     report_lines.append("Federal and Department of Defense systems handling personnel records, user accounts, or mission datasets containing Personally Identifiable Information (PII) or Protected Health Information (PHI) must comply with the Privacy Act of 1974 and OMB mandates. The privacy evaluation consists of three interdependent deliverables:\n")
     report_lines.append("| Privacy Deliverable | Legal / Regulatory Mandate | Purpose & Assessment Standard | Target eMASS / Submission Location |")
     report_lines.append("| :--- | :--- | :--- | :--- |")
@@ -2973,7 +2973,7 @@ def validate_compliance_package(
     # -------------------------------------------------------------
     # SECTION 2: 14 ATC (Authorization to Connect) Critical Controls Audit
     # -------------------------------------------------------------
-    report_lines.append("## ⚡ 14 ATC (Authorization to Connect) Critical Controls Verification")
+    report_lines.append("## 14 ATC (Authorization to Connect) Critical Controls Verification")
     report_lines.append("For systems connecting to DoD enterprise networks or requesting an Authorization to Connect (ATC), the following 14 critical controls must have complete implementation statements in the SCTM and zero unmitigated High/Very High residual risks:\n")
     report_lines.append("| Control ID | Control Name | DoD Connection Standard & Enforcement Focus | Verification Status | Evidence Source | Implementation Evidence in SCTM / SSP |")
     report_lines.append("| :--- | :--- | :--- | :--- | :--- | :--- |")
@@ -2998,7 +2998,7 @@ def validate_compliance_package(
     # -------------------------------------------------------------
     # SECTION 3: Dynamic DISA STIGs Section referencing STIG Viewer
     # -------------------------------------------------------------
-    report_lines.append("## 🛡️ Mandatory DISA STIG & SRG Checklist Compliance Roadmap")
+    report_lines.append("## Mandatory DISA STIG & SRG Checklist Compliance Roadmap")
     report_lines.append("> [!IMPORTANT]")
     report_lines.append("> **AUTHORITATIVE DISA STIG SOURCE & DESKTOP STIG VIEWER APPLICATION**:")
     report_lines.append("> 1. **Official STIG Downloads**: Official DISA STIG compilation packages and checklist benchmarks must be downloaded from the DoD Cyber Exchange at [https://public.cyber.mil/stigs/downloads/](https://public.cyber.mil/stigs/downloads/) (requires CAC authentication).")
@@ -3022,7 +3022,7 @@ def validate_compliance_package(
     # -------------------------------------------------------------
     # SECTION 4: OpenXML Excel & Word Audit Results
     # -------------------------------------------------------------
-    report_lines.append("## 📊 Excel Workbooks (.xlsm) Audit Results")
+    report_lines.append("## Excel Workbooks (.xlsm) Audit Results")
     report_lines.append("| Workbook File | Audit Status | Sheet Structure | Populated Rows | Status Details |")
     report_lines.append("| :--- | :--- | :--- | :--- | :--- |")
     for xr in excel_results:
@@ -3032,13 +3032,13 @@ def validate_compliance_package(
         report_lines.append(f"| `{xr['file']}` | `{xr['status']}` | {sheets_str} | {rows_str} | {details} |")
     report_lines.append("")
 
-    report_lines.append("## 📄 Word Policy Documents (.docx) Audit Results")
+    report_lines.append("## Word Policy Documents (.docx) Audit Results")
     report_lines.append(f"- Total DOCX Policies Verified: `{len(docx_results)}` files")
     total_docx_hl = sum(r.get("hyperlinks_count", 0) for r in docx_results)
     report_lines.append(f"- OpenXML Packaging Conformance: `100% Passed` (Valid XML AST, {total_docx_hl} Verified External Hyperlinks, Executive Cover Headers, Bordered Tables, Dynamic Footers)\n")
 
     if unresolved_tokens:
-        report_lines.append("## ❌ Critical Unresolved Syntax Tokens")
+        report_lines.append("## Critical Unresolved Syntax Tokens")
         report_lines.append("| Document Path | Line | Token Found | Raw Context Snippet |")
         report_lines.append("| :--- | :--- | :--- | :--- |")
         for u in unresolved_tokens:
@@ -3046,7 +3046,7 @@ def validate_compliance_package(
         report_lines.append("")
 
     if config_required_vars:
-        report_lines.append("## ⚠️ Pending Institutional Configuration Variables (`compliance_config.yaml`)")
+        report_lines.append("## Pending Institutional Configuration Variables (`compliance_config.yaml`)")
         report_lines.append("| Document Path | Line | Placeholder Variable | Action Required |")
         report_lines.append("| :--- | :--- | :--- | :--- |")
         for c in config_required_vars:
@@ -3056,7 +3056,7 @@ def validate_compliance_package(
     # -------------------------------------------------------------
     # SECTION 4: Comprehensive Institutional Policies & Human Execution Matrix
     # -------------------------------------------------------------
-    report_lines.append("## 📋 Institutional Policy Manuals & Core Deliverables Human Execution Matrix")
+    report_lines.append("## Institutional Policy Manuals & Core Deliverables Human Execution Matrix")
     report_lines.append("The compliance foundation provides 20 institutional cybersecurity policy manuals, system security plans, and structured registers. The RMF and platform teams must execute the following human governance and operational actions across all deliverables:\n")
     report_lines.append("| Deliverable Artifact | Subfolder Location | NIST Family / Control | Responsible Lead | Mandatory Human Execution & Customization Action |")
     report_lines.append("| :--- | :--- | :--- | :--- | :--- |")
@@ -3095,7 +3095,7 @@ def validate_compliance_package(
     report_lines.append("")
 
     if rmf_action_items:
-        report_lines.append("## 🔍 Live Policy Customization & Action Item Alerts (Grouped by Document)")
+        report_lines.append("## Live Policy Customization & Action Item Alerts (Grouped by Document)")
         report_lines.append("The scanner identified the following action alerts across the generated policy manuals and security documentation:\n")
         report_lines.append("| Policy / Document Path | Action Items Count | Key Action Highlights |")
         report_lines.append("| :--- | :--- | :--- |")
@@ -3120,7 +3120,7 @@ def validate_compliance_package(
     # -------------------------------------------------------------
     # SECTION 5: Sample Executive Determination Memo & WBS
     # -------------------------------------------------------------
-    report_lines.append("## 📝 Sample Executive ATO Determination Request Memo Template\n")
+    report_lines.append("## Sample Executive ATO Determination Request Memo Template\n")
     report_lines.append("```text")
     report_lines.append(f"MEMORANDUM FOR: Authorizing Official (AO), {org_name}")
     report_lines.append(f"FROM: Information System Security Manager (ISSM), {sys_name}")
@@ -3147,7 +3147,7 @@ def validate_compliance_package(
     report_lines.append(f"{org_name}")
     report_lines.append("```\n")
 
-    report_lines.append("## 📊 Work Breakdown Structure (WBS) for ATO\n")
+    report_lines.append("## Work Breakdown Structure (WBS) for ATO\n")
     report_lines.append("| WBS # | Milestone Action & Target Output | Responsible Role |")
     report_lines.append("| :--- | :--- | :--- |")
     report_lines.append("| **1.0** | **Project Kick-Off & Stakeholder Alignment**: Kick-off meeting with Authorizing Official (AO), ISSM, and mission leadership. | Project Sponsor & PM |")
@@ -3164,7 +3164,7 @@ def validate_compliance_package(
     report_lines.append("| **1.3.8** | Submit Complete Package into eMASS Package Approval Chain (PAC) | Lead ISSM |")
     report_lines.append("| **1.4** | **Authorizing Official (AO) Awards Formal ATO Letter** | Authorizing Official (AO) |\n")
 
-    report_lines.append("## 🎖️ Military Service Branch & Federal Agency Governance Overlays\n")
+    report_lines.append("## Military Service Branch & Federal Agency Governance Overlays\n")
     report_lines.append("When tailoring the compliance package for specific defense components or civilian departments, align deliverables with the governing agency instructions below:\n")
     report_lines.append("> [!IMPORTANT]")
     report_lines.append("> **Defense Telemetry & CSSP Integration**: Ensure all audit logs, system telemetry, and security events route via Cloud Logging export sinks to designated CSSP / SIEM endpoints (e.g., C5ISR, DISA, Chronicle GovCloud, Splunk) per DoDI 8530.01. Responders should align monitoring consoles and roles with organizational CSSP agreements and active cloud security services.\n")
@@ -3180,7 +3180,7 @@ def validate_compliance_package(
     report_lines.append("| **Defense Health Agency (DHA)** | `DHA RMF Process Workflow v8.3`, `DHAAI 077` | **DHA CSSP / Medical Cybersecurity Ops** | Incorporate Military Health System (MHS) privacy overlays, HIPAA Security Rule mappings, and medical device boundary isolation. |")
     report_lines.append("| **Department of Veterans Affairs (Dept of VA)** | `VA Directive 6500`, `VA Handbook 6500`, VA Notice 24-12 | **VA-ESOC** (Enterprise SOC) | Adhere to VA National Rules of Behavior; map cloud audit trails to the VA Enterprise Security Operations Center (VA-ESOC). |\n")
 
-    report_lines.append("## 📚 References\n")
+    report_lines.append("## References\n")
     report_lines.append("- [NIST SP 800-37 Rev. 2](https://csrc.nist.gov/pubs/sp/800/37/r2/final), Risk Management Framework for Information Systems and Organizations: A System Life Cycle Approach for Security and Privacy")
     report_lines.append("- [NIST SP 800-39](https://csrc.nist.gov/pubs/sp/800/39/final), Managing Information Security Risk: Organization, Mission, and Information System View")
     report_lines.append("- [Federal Information Processing Standards (FIPS) 199](https://csrc.nist.gov/pubs/fips/199/final), Standards for Security Categorization of Federal Information and Information Systems")
@@ -3208,7 +3208,7 @@ def validate_compliance_package(
     ports_cnt = len(app_info.get("exposed_ports", []))
 
     logger.info("=" * 80)
-    logger.info("✅ COMPLIANCE PACKAGE VALIDATION AUDIT COMPLETE")
+    logger.info("COMPLIANCE PACKAGE VALIDATION AUDIT COMPLETE")
     logger.info("=" * 80)
     logger.info("  • Markdown/YAML Audited      : %d", total_files_checked)
     logger.info("  • Structured YAML Audited    : %d files (%s)", len(yaml_results), yaml_status_note)

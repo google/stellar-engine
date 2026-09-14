@@ -173,7 +173,7 @@ All {{ ORGANIZATION }} identifiers are required to be unique. Identifiers must a
 Note: Contractors who are also foreign nationals are identified as both, e.g., user.sample.ctr.uk@{{ ORGANIZATION_DOMAIN }}
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Prior to an identifier being distributed to the end user, it must be authorized by at least the {{ ORGANIZATION }} {{ SYSTEM_NAME }} program manager and the ISSM.
 
 {{ ORGANIZATION }} {{ SYSTEM_NAME }} is configured to disable identifiers after 35 days of inactivity through implementation of the appropriate STIG requirements.
@@ -266,7 +266,7 @@ External PKI PIV credentials allow trusted non-{{ ORGANIZATION }} users to acces
 {{ ORGANIZATION }} shall accept only external authenticators that are NIST-compliant and document and maintain a list of accepted external authenticators authorized for use on {{ ORGANIZATION }} {{ SYSTEM_NAME }}. Acceptance of only NIST-compliant external authenticators applies to {{ ORGANIZATION }} {{ SYSTEM_NAME }} that are accessible to the public (e.g. public facing websites).  External authenticators are issued by nonfederal government entities and are compliant with SP 800-63B.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update the list of accepted external authenticators for your organization.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update the list of accepted external authenticators for your organization.</mark>
 
 Below is the list of accepted external authenticators authorized for use on {{ ORGANIZATION }} {{ SYSTEM_NAME }}:
 
@@ -309,7 +309,7 @@ Within {{ ORGANIZATION }} {{ SYSTEM_NAME }}, identities are resolved to a unique
 ### 15.1 Supervisor Authorization
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > {{ ORGANIZATION }} requires System Owner / ISSO approval for new user registration.
 
 
@@ -327,7 +327,7 @@ Personnel requiring access to {{ ORGANIZATION }} {{ SYSTEM_NAME }} must submit t
 ### 15.4 In-Person Validation and Verification
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > The validation and verification of identity evidence must be conducted in-person before System Owner / ISSO.
 
 

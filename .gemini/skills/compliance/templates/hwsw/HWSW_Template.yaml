@@ -76,4 +76,4 @@ software_and_services_inventory:
     {{ SERVICE_ACCOUNTS_LIST }}
 
 rmf_team_manual_action:
-  callout: "> [!IMPORTANT] ⚠️ **RMF TEAM ACTION REQUIRED**: Perform annual physical asset audits for local client workstations and confirm {{ RMF_GOVERNANCE_SYSTEM }} asset inventory serial numbers."
+  callout: "> [!IMPORTANT] **RMF TEAM ACTION REQUIRED**: Perform annual physical asset audits for local client workstations and confirm {{ RMF_GOVERNANCE_SYSTEM }} asset inventory serial numbers."

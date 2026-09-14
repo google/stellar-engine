@@ -65,8 +65,8 @@ class TestHtmlBadgeStripping(unittest.TestCase):
     """Presentational markup must not reach machine-readable deliverables."""
 
     def test_badge_is_reduced_to_its_label(self) -> None:
-        badge = '<mark style="background-color: #FFF3CD;">⚠️ [CONFIG_REQUIRED: RTO]</mark>'
-        self.assertEqual(_strip_html_badges(badge), "⚠️ [CONFIG_REQUIRED: RTO]")
+        badge = '<mark style="background-color: #FFF3CD;">[CONFIG_REQUIRED: RTO]</mark>'
+        self.assertEqual(_strip_html_badges(badge), "[CONFIG_REQUIRED: RTO]")
 
     def test_multiple_badges_are_all_stripped(self) -> None:
         text = '<mark style="a">one</mark> and <mark style="b">two</mark>'
@@ -94,7 +94,7 @@ class TestYamlRenderingIntegrity(unittest.TestCase):
         template = 'root:\n  detail: "RTO objective: {{ RTO }}."\n'
         badge = (
             '<mark style="background-color: #FFF3CD; color: #856404;">'
-            "⚠️ [AI CONTEXTUAL EXAMPLE REQUIRED: Recovery Time Objective]</mark>"
+            "[AI CONTEXTUAL EXAMPLE REQUIRED: Recovery Time Objective]</mark>"
         )
         engine = TemplateEngine(target_format="yaml")
         rendered = engine.render(template, {"{{ RTO }}": badge})

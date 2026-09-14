@@ -6,7 +6,7 @@ The engine operates on a **modular, multi-stage architecture**: it discovers tec
 
 ---
 
-## 🏛️ System Architecture
+## System Architecture
 
 ```mermaid
 flowchart TD
@@ -62,7 +62,7 @@ flowchart TD
 
 ---
 
-## 📂 Modular Package Structure
+## Modular Package Structure
 
 The compliance engine follows a standard Python modular package layout, separating core business logic, validation suites, operational CLI entry points, templates, and configurations:
 
@@ -137,7 +137,7 @@ The compliance engine follows a standard Python modular package layout, separati
 
 ---
 
-## 📦 Output Deliverables in `<TARGET_FOLDER>/ato_artifacts/`
+## Output Deliverables in `<TARGET_FOLDER>/ato_artifacts/`
 
 | Deliverable | Formats | Scope & Purpose |
 | :--- | :--- | :--- |
@@ -154,7 +154,7 @@ The compliance engine follows a standard Python modular package layout, separati
 
 ---
 
-## 🚀 Local Setup & Installation
+## Local Setup & Installation
 
 The Compliance Skill is **100% self-contained and modular**. It can be installed as a standard Python package or run directly via CLI scripts.
 
@@ -185,7 +185,7 @@ export COMPLIANCE_STRICT_DEPS=1
 
 ---
 
-## ⚡ Operational Workflow
+## Operational Workflow
 
 The compliance provisioning lifecycle operates in three sequential stages:
 
@@ -212,7 +212,7 @@ python3 .gemini/skills/compliance/scripts/validate_compliance_artifacts.py <TARG
 
 ---
 
-## 🧪 Automated Testing & Verification
+## Automated Testing & Verification
 
 The compliance engine maintains a comprehensive automated regression test suite covering all subsystems:
 - **Core Test Suite**: Comprehensive tests spanning unit, integration, and security boundaries.
@@ -227,7 +227,7 @@ python3 .gemini/skills/compliance/scripts/run_tests.py
 
 ---
 
-## 🔍 Installation and Discovery
+## Installation and Discovery
 
 To make this skill available to your Gemini agent:
 

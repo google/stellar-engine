@@ -34,7 +34,7 @@ Cross-reference policy statements against live Terraform code in `<TARGET_FOLDER
 - Replace any remaining ambiguous phrases (`"appropriate controls"`, `"as needed"`, `"regularly reviewed"`) with precise operational frequencies (e.g. quarterly account recertification, annual policy reviews, 24-hour account deactivation upon termination).
 
 ### Step 4: Preserve Human Governance Callouts
-- Ensure all organizational action callouts (`> [!IMPORTANT] ⚠️ **RMF TEAM / HUMAN ACTION REQUIRED**`) for agency escalation phone numbers, local training LMS links, or executive signatures remain intact for human administrative sign-off.
+- Ensure all organizational action callouts (`> [!IMPORTANT] **RMF TEAM / HUMAN ACTION REQUIRED**`) for agency escalation phone numbers, local training LMS links, or executive signatures remain intact for human administrative sign-off.
 
 ---
 

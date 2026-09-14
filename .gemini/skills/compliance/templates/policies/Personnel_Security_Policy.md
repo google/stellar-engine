@@ -96,7 +96,7 @@ Enclosure 1 lists the Position Designations and Record of Review, which must be 
 ## 4. Personnel Screening
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Personnel screening and rescreening activities reflect applicable laws, executive orders, directives, regulations, policies, standards, guidelines, and specific criteria established for the risk designations of assigned positions. Examples of personnel screening include background investigations and agency checks. Organizations may define different rescreening conditions and frequencies for personnel accessing systems based on types of information processed, stored, or transmitted by the systems.
 
 Personnel screening ensures all government and contract personnel meet the appropriate Automated Data Processing/Information Technology (ADP/IT) level designation requirements IAW DoD 5200.2-R in addition to DoDI 5200.02 guidance prior to authorizing access to the {{ ORGANIZATION }} {{ SYSTEM_NAME }}.
@@ -115,7 +115,7 @@ Personnel screening ensures all government and contract personnel meet the appro
 
 - ISO define and document the required frequency of rescreening to maintain access to {{ SYSTEM_NAME }}
 
-{{ ORGANIZATION }} requires users accessing {{ SYSTEM_NAME }} maintain U.S. Citizenship or verified background clearance (`<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Agency Citizenship / Clearance Rule</mark>`).
+{{ ORGANIZATION }} requires users accessing {{ SYSTEM_NAME }} maintain U.S. Citizenship or verified background clearance (`<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Agency Citizenship / Clearance Rule</mark>`).
 
 
 ## 5. Personnel Termination
@@ -142,7 +142,7 @@ Documentation of the system access termination should be retained to provide upo
 ## 6. Personnel Transfer
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Personnel transfer applies when reassignments or transfers of individuals are permanent or of such extended duration as to make the actions warranted. {{ ORGANIZATION }} define actions appropriate for the types of reassignments or transfers, whether permanent or extended. Actions that may be required for personnel transfers or reassignments to other positions within organizations include returning old and issuing new keys, identification cards, and building passes; closing system accounts and establishing new accounts; changing system access authorizations (i.e., privileges); and providing for access to official records to which individuals had access at previous work locations and in previous system accounts.
 
 A permanent transfer from one {{ ORGANIZATION }} system to another rarely will require a person to retain their level of access prior to the transfer. Any individual filling a position on an {{ ORGANIZATION }} system must have documentation that requests and authorizes the level of access they will need. Transfers or reassignment of personnel on {{ ORGANIZATION }} systems will be:
@@ -153,14 +153,14 @@ A permanent transfer from one {{ ORGANIZATION }} system to another rarely will r
 
 The only exception to this process will be that the transferring employee will retain their authenticator token ({{ MFA_MECHANISM }}) as the sponsorship will remain to be held by {{ ORGANIZATION }}.
 
-Access and authorizations for newly assigned systems will follow the user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Access Request Form</mark>) process.
+Access and authorizations for newly assigned systems will follow the user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Access Request Form</mark>) process.
 
 
 ## 7. Access Agreements
 
 Access agreements include nondisclosure agreements, acceptable use agreements, rules of behavior, and conflict-of-interest agreements. Signed access agreements include an acknowledgement that individuals have read, understand, and agree to abide by the constraints associated with organizational systems to which access is authorized. Organizations can use electronic signatures to acknowledge access agreements unless specifically prohibited by organizational policy.
 
-{{ ORGANIZATION }} utilizes user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Access Request Form</mark>) as the method to request and grant access to {{ SYSTEM_NAME }}.
+{{ ORGANIZATION }} utilizes user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Access Request Form</mark>) as the method to request and grant access to {{ SYSTEM_NAME }}.
 
 {{ ORGANIZATION }} will review, and update as required, access agreements, as mandated by security controls or no more than an annual basis. At which time upon making updated versions available to systems, all {{ ORGANIZATION }} {{ SYSTEM_NAME }} users are required to resign the document and have it added to their personnel record. If no changes are deemed necessary, signature by users is not required. Any user who fails to digitally sign an updated access agreement, regardless of having signed prior versions may be subject to have their access revoked to {{ SYSTEM_NAME }} until the document is signed or employment is terminated.  Discretion of the {{ ORGANIZATION }} may be exercised in certain circumstances and considered on a per instance basis.
 
@@ -188,7 +188,7 @@ All third parties providing support to {{ ORGANIZATION }} {{ SYSTEM_NAME }} must
 External vendors who are contracted to support {{ ORGANIZATION }} {{ SYSTEM_NAME }} must have roles and responsibilities explicitly defined in any contract authorizing their work to be performed.  {{ ORGANIZATION }} may define the roles and responsibilities to suit their support requirements.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > In addition to any existing contract requirements, third-party providers are required to notify at a minimum, the system ISSO and responsible personnel for transferring credentials of any personnel transfers or terminations of third-party personnel who possess organizational credentials and/or badges, or who have information system privileges immediately.
 
 
@@ -197,7 +197,7 @@ External vendors who are contracted to support {{ ORGANIZATION }} {{ SYSTEM_NAME
 In the event personnel fail to comply with established information security policies and procedures for {{ SYSTEM_NAME }}, formal sanctions will be employed.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > The {{ SYSTEM_NAME }} ISSO will be immediately notified when the formal employee sanctions process is initiated, identifying the individual sanctioned and the reason for the sanction. The {{ SYSTEM_NAME }} ISSO will provide situational awareness to the {{ ORGANIZATION }} leadership within 24 hours of the sanctions process being initiated.
 
 Formal Sanctions are part of the general personnel policies and procedures for the {{ SYSTEM_NAME }}. The process addresses the following:

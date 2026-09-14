@@ -71,7 +71,7 @@ Information system contingency planning refers to a coordinated strategy involvi
 2.Performing some or all of the affected business processes using alternate processing (manual) means (typically acceptable for only short-term disruptions);
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > 3.Recovering information systems operations at an alternate location (typically acceptable for only long–term disruptions or those physically impacting the facility); and
 
 4.Implementing appropriate contingency planning controls based on the information system’s security impact level.
@@ -170,21 +170,21 @@ This Contingency Plan will be provided to all personnel that hold roles and resp
 This ISCP has been developed to recover and reconstitute the {{ SYSTEM_NAME }} using a three-phased approach. This approach ensures that system recovery and reconstitution efforts are performed in a methodical sequence to maximize the effectiveness of the recovery and reconstitution efforts and minimize system outage time due to errors and omissions. The three system recovery phases consist of activation and notification, recovery and reconstitution:
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Activation and Notification Phase Activation of the ISCP occurs after a disruption or outage that may reasonably extend beyond the RTO established for {{ SYSTEM_NAME }}. The outage event may result in severe damage to the facility that houses the system, severe damage or loss of equipment, or other damage that typically results in long-term loss.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Once the ISCP is activated, system owners and users are notified of a possible long-term outage, and a thorough outage assessment is performed for the system. Information from the outage assessment is presented to system owners and may be used to modify recovery procedures specific to the cause of the outage.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Recovery Phase The Recovery phase details the activities and procedures for recovery of {{ SYSTEM_NAME }}. Activities and procedures are written at a level that an appropriately skilled technician can recover the system without intimate system knowledge. This phase includes notification and awareness escalation procedures for communication of recovery status to system owners and users.
 
 Reconstitution Phase The Reconstitution phase defines the actions taken to test and validate {{ SYSTEM_NAME }} capability and functionality at the original or new permanent location. This phase consists of two major activities: validating successful reconstitution and deactivation of the plan.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > During validation, {{ SYSTEM_NAME }} is tested and validated as operational prior to returning operation to its normal state. Validation procedures may include functionality or regression testing, concurrent processing, and/or data validation. {{ SYSTEM_NAME }} is declared recovered and operational by system owners upon successful completion of validation testing.
 
 Deactivation includes activities to notify users of {{ SYSTEM_NAME }} operational status. This phase also addresses recovery effort documentation, activity log finalization, incorporation of lessons learned into plan updates, and readying resources for any future events.
@@ -288,7 +288,7 @@ The {{ ORGANIZATION }} ISCP may be activated if one or more of the following cri
 1)The type of outage indicates an {{ ORGANIZATION }} system will be down for more than the system established RTO;
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > 2)The facility housing the {{ ORGANIZATION }} system is damaged and may not be available within the system established RTO;
 
 3)Other criteria, documented in {{ SYSTEM_NAME }} contingency plans.
@@ -381,7 +381,7 @@ The Recovery Phase provides formal recovery operations that begin after the ISCP
 3)Resume operational capabilities at the original location
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > 4)Report status to system owner, ISCP Coordinator and Technical Recovery Lead
 
 At the completion of the Recovery Phase, {{ ORGANIZATION }} will be functional and capable of performing the functions identified in Section 3.1 of this plan.
@@ -410,7 +410,7 @@ Recovery procedures shall be outlined in each system’s ISCP and will be execut
 #### 5.2.1 Recovery After a Disruption
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Recovery procedures shall be outlined in {{ SYSTEM_NAME }} ISCP.  In the event of a disruption, the System Owner will execute the following:
 
 - System Validation Test Plan
@@ -428,7 +428,7 @@ Recovery procedures shall be outlined in {{ ORGANIZATION }} {{ SYSTEM_NAME }} IS
 #### 5.2.3 Recovery After a Failure
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Recovery procedures shall be outlined in {{ ORGANIZATION }} {{ SYSTEM_NAME }} ISCP.  In the event of a failure that requires the purchase of new and/or additional equipment, the System Owner will start the purchase request process.
 
 
@@ -516,7 +516,7 @@ Physical access is not required to the offsite storage facilities to access the 
 ## 8. Telecommunications
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Google utilizes an alternate implementation for this control enhancement. Google is its own telecommunications provider and manages its own redundant telecommunications services. Google Engineering implements a redundant architecture built on redundant telecommunication backbones that are a requirement for use with all Google data centers. Data centers are connected by Google's fiber backbone ensuring multiple connections to each facility to minimize latency while maximizing availability and customer experience.
 
 The Google production network is connected to the Internet through multiple peering points, and routes to this network are advertised to peers through the Border Gateway Protocol (BGP) as a public autonomous system (AS15169). Backbone routers connect many metro networks encompassing many regions around the globe operating at 10Gbps (OC-192/10GE) or greater. Google uses a combination of commercial and proprietary devices as backbone routers. The fiber optic network that connects data centers is managed by Google. The global backbone provides connectivity between all production data centers and points of presence. Backbone and peering layer routers provide ingress filtering through ACLs.
@@ -552,7 +552,7 @@ Google’s service resiliency is achieved through hardware redundancy, multi-hom
 Google's storage services provide replication so that data is written to at least two other clusters in physically separate facilities. Google stores backup copies of all system software and security information in this manner.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > {{ ORGANIZATION }} is responsible for storing backup copies of critical information system software and other security-related information in a separate facility or in a fire-rated container that is not colocated with the operational system.
 
 
@@ -571,7 +571,7 @@ Google's storage services provide continuous replication so that data is written
 ## 10. System Recovery and Reconstitution
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Reconstitution is the process by which recovery activities are completed and normal system operations are resumed. If the original facility is unrecoverable, the activities in this phase can also be applied to preparing a new permanent location to support system processing requirements. A determination must be made on whether the system has undergone significant change and will require reassessment and reauthorization. The phase consists of two major activities: validating successful reconstitution and deactivation of the plan.
 
 Google has designed its production infrastructure and operations with anticipated failure of components in order to plan for and address traditional contingencies faced by organizations such as hardware failure, data center outages, denial of service attacks, office space unavailability and people related emergencies. Google plans for these traditional contingencies through:

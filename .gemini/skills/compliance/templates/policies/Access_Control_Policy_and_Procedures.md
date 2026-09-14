@@ -57,7 +57,7 @@ The purpose of this document is the establishment of a common policy for the imp
 This policy covers all {{ ORGANIZATION }} information and information systems to include those used, managed, or operated by a contractor, or other organizations on behalf of {{ ORGANIZATION }}. This policy applies to all {{ ORGANIZATION }} employees, contractors, and all other users of {{ ORGANIZATION }} information and information systems that support the operation and assets of {{ ORGANIZATION }}.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > The {{ ORGANIZATION }} ISSM shall ensure this policy is reviewed and updated annually, or as needed, and disseminated to {{ ORGANIZATION }} System Administrators, Information System Security Officers, Program Managers, and any relevant stakeholders.
 
 This document complies with the following requirements from NIST Special Publication 800-53 Revision 5, "Security and Privacy Controls for Federal Information Systems and Organizations". A detailed compliance matrix can be found in Appendix A, “Detailed Compliance Matrix”.
@@ -85,7 +85,7 @@ Google Cloud Identity / SSO is utilized across {{ SYSTEM_NAME }} for the support
 
 ### 2.2 System Account Management
 
-{{ SYSTEM_NAME }} will follow established accepted system account management practices utilizing the user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>).  user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) must be completed per account on each security domain within a given {{ ORGANIZATION }} system.  {{ ORGANIZATION }} systems may customize the approved user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) template to combine security domains and consolidate paperwork more efficiently.
+{{ SYSTEM_NAME }} will follow established accepted system account management practices utilizing the user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>).  user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) must be completed per account on each security domain within a given {{ ORGANIZATION }} system.  {{ ORGANIZATION }} systems may customize the approved user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) template to combine security domains and consolidate paperwork more efficiently.
 
 At a minimum, each {{ ORGANIZATION }} system will identify the personnel responsible for the management of system accounts that hold the following roles:
 
@@ -94,13 +94,13 @@ At a minimum, each {{ ORGANIZATION }} system will identify the personnel respons
 - {{ SYSTEM_NAME }} Information System Security Officer
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Given the position of these roles and the necessity of open communication with them for a wide variety of purposes, contact information for these roles will be well communicated amongst each of the {{ ORGANIZATION }} systems for the purpose of facilitating system accounts.
 
 
 #### 2.2.1 Account Authorization
 
-{{ ORGANIZATION }} will authorize the accounts that are on {{ SYSTEM_NAME }}.  Records of these authorizations will be kept throughout the duration of a user’s employment.  {{ ORGANIZATION }} will utilize the euser access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) to approve access to {{ SYSTEM_NAME }} based on intended usage and missions/business functions.
+{{ ORGANIZATION }} will authorize the accounts that are on {{ SYSTEM_NAME }}.  Records of these authorizations will be kept throughout the duration of a user’s employment.  {{ ORGANIZATION }} will utilize the euser access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) to approve access to {{ SYSTEM_NAME }} based on intended usage and missions/business functions.
 
 
 **System Account Authorization**
@@ -131,24 +131,24 @@ An inventory list of the groups will be maintained containing information about 
 - System implemented (AD, KeyCloak, CSP)
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Unauthorized groups that are identified will be escalated to the respective {{ SYSTEM_NAME }} ISSO for investigation and potential execution of Incident Response procedures.  See Incident Response Policy.
 
-The list of Groups is compared against current authorizations of Groups on file for traceability.  All {{ SYSTEM_NAME }} users must be authorized to be members of a specific group as documented on their user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>).
+The list of Groups is compared against current authorizations of Groups on file for traceability.  All {{ SYSTEM_NAME }} users must be authorized to be members of a specific group as documented on their user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>).
 
 
 **Role Authorization**
 
 A system role is a collection of responsibilities and tasks that are carried out by authorized individuals that use technology to meet those obligations.  Examples of roles can be as specific or vaguely define a group of people such as in a RACI matrix.  A role may need to belong to several groups to be able to complete their tasks and responsibilities.  Potentially, roles can be easily translated into job descriptions and if the need is deemed critical enough, the role can be filled with a Full or Part-time employee. Despite this easy translation, roles are not synonymous with job positions as a job position may hold a single or many roles.
 
-{{ ORGANIZATION }} shall identify and maintain a list of roles critical to fulfill the mission of {{ SYSTEM_NAME }}, the groups that they shall be members of, and the requirements of fulfilling that role.  The list of Roles is compared against current authorizations of users/groups within Roles on file for traceability.  All {{ SYSTEM_NAME }} system users must be authorized to hold a specific role(s) as documented on their user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>).
+{{ ORGANIZATION }} shall identify and maintain a list of roles critical to fulfill the mission of {{ SYSTEM_NAME }}, the groups that they shall be members of, and the requirements of fulfilling that role.  The list of Roles is compared against current authorizations of users/groups within Roles on file for traceability.  All {{ SYSTEM_NAME }} system users must be authorized to hold a specific role(s) as documented on their user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>).
 
 
 **Access Authorization**
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
-> {{ ORGANIZATION }} must authorize access for their own user accounts.  For non-privileged accounts, this will be reflected by the electronic signature of the respective system ISSO on the user’s user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) form.  For privileged accounts, the respective system's ISSM signature must also be obtained on the user’s user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) form.
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> {{ ORGANIZATION }} must authorize access for their own user accounts.  For non-privileged accounts, this will be reflected by the electronic signature of the respective system ISSO on the user’s user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) form.  For privileged accounts, the respective system's ISSM signature must also be obtained on the user’s user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) form.
 
 Regular audits of access authorizations will be reviewed once {{ SYSTEM_NAME }} comes into full operation and then on a regular basis thereafter to ensure that the access granted is reflected in writing. The process for determining the level of access for user accounts is the responsibility of {{ ORGANIZATION }}.  Logs shall be kept to provide for audits to ensure the process is not only established, but implemented and followed.
 
@@ -156,13 +156,13 @@ Regular audits of access authorizations will be reviewed once {{ SYSTEM_NAME }} 
 #### 2.2.2 Account Approval/Creation
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
-> Approval of an account is represented by the finalizing signature of ISSO and/or ISSM.  {{ SYSTEM_NAME }} ISSO/ISSM shall not apply their signature until they are certain that the needed information is complete, accurate and all steps in the identified process have been completed.  System Administrators may only create accounts that have the required ISSO/ISSM signatures on a completed user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) and for which they are notified to proceed by the system ISSO/ISSM.
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> Approval of an account is represented by the finalizing signature of ISSO and/or ISSM.  {{ SYSTEM_NAME }} ISSO/ISSM shall not apply their signature until they are certain that the needed information is complete, accurate and all steps in the identified process have been completed.  System Administrators may only create accounts that have the required ISSO/ISSM signatures on a completed user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) and for which they are notified to proceed by the system ISSO/ISSM.
 
 
 #### 2.2.3 Account Maintenance
 
-{{ SYSTEM_NAME }} utilizes the user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) Process for creating, enabling, modifying, and tracking system accounts.
+{{ SYSTEM_NAME }} utilizes the user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) Process for creating, enabling, modifying, and tracking system accounts.
 
 {{ SYSTEM_NAME }} follows the Personnel Termination process contained in the {{ SYSTEM_NAME }} Personnel Security Plan for disabling and removing system accounts.
 
@@ -190,14 +190,14 @@ Management of temporary and emergency accounts includes the removal or disabling
 #### 2.3.1 Temporary Accounts
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > In a case after {{ SYSTEM_NAME }} becomes operational, it may be necessary to create an account for testing a new functionality.  {{ SYSTEM_NAME }} authorizes the creation of temporary accounts for testing or to support mission needs with the approval of the {{ SYSTEM_NAME }} ISSM, and applicable stakeholders being informed. These accounts will be identified as temporary in status by meeting the following criteria:
 
 - Adding the “.tmp” identifier to the end of the username at the time of creating the account.  For example, “TempUser.tmp”;
 
 - Disabled Temporary accounts will be reviewed and removed, at minimum, on a quarterly basis; and
 
-- Temporary Accounts will have a/an user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) completed and kept on file that documents the purpose of the account and system ISSM approval.
+- Temporary Accounts will have a/an user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) completed and kept on file that documents the purpose of the account and system ISSM approval.
 
 
 #### 2.3.2 Emergency Accounts
@@ -205,7 +205,7 @@ Management of temporary and emergency accounts includes the removal or disabling
 {{ SYSTEM_NAME }} authorizes the use of emergency accounts to ensure access to the system in the event primary accounts are unavailable to accomplish privileged tasks; they must remain under restrictive control.  The emergency account must be clearly defined as an emergency account.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Passwords for emergency accounts must be regularly changed and exceed the minimum length requirements set for administrator/root passwords.  See the IA policy “Password Based Authentication” requirements. Passwords, once set, will be printed, double sealed in two envelopes (one inside the other) and stored in a GSA approved safe; emergency account passwords must never be saved or stored electronically. Access to these passwords stored in a GSA approved safe must be with the permission of the {{ SYSTEM_NAME }} ISSO, ISSM, or onsite commanding officer/manager only with the latter providing immediate notification to the former. An access log recording the name of the user, the reason for access, which emergency account was accessed, and the approver must be stored with the sealed passwords. Upon completing the task in which the emergency accounts were accessed, notification to the {{ SYSTEM_NAME }} ISSO and/or ISSM must be made. The account shall then be disabled, a new password set, sealed and placed in the safe.
 
 Emergency Accounts must not be removed from the systems but remain in an enabled state until needed.
@@ -376,9 +376,9 @@ IAM bindings across {{ SYSTEM_NAME }} projects enforce the principle of least pr
 
   - {{ ORGANIZATION }} is responsible for providing identities and assigning users to groups, managing who has access.
 
-  - {{ SYSTEM_NAME }} account management follows established practices, including the use of user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>).
+  - {{ SYSTEM_NAME }} account management follows established practices, including the use of user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>).
 
-  - user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) is used to authorize user access.
+  - user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) is used to authorize user access.
 
   - {{ SYSTEM_NAME }} uses automated mechanisms to manage accounts, including creation, modification, and removal.
 
@@ -395,7 +395,7 @@ IAM bindings across {{ SYSTEM_NAME }} projects enforce the principle of least pr
 
 ### 3.1 Logical Access Enforcement
 
-For all {{ ORGANIZATION }}, access to logical resources shall be identified on the user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>).  Access to resources is enforced using Google Cloud IAM.
+For all {{ ORGANIZATION }}, access to logical resources shall be identified on the user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>).  Access to resources is enforced using Google Cloud IAM.
 
 {{ SYSTEM_NAME }} must enforce approved authorizations for logical access to information and system resources in accordance with applicable access control policies.
 
@@ -464,16 +464,16 @@ Separation of duties addresses the potential for abuse of authorized privileges 
 
 ## 6. Least Privilege
 
-{{ ORGANIZATION }} the user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) and implements the concept of least privilege, allowing only authorized accesses for users (and processes acting on behalf of users) which are necessary to accomplish assigned tasks in accordance with mission and business functions.
+{{ ORGANIZATION }} the user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) and implements the concept of least privilege, allowing only authorized accesses for users (and processes acting on behalf of users) which are necessary to accomplish assigned tasks in accordance with mission and business functions.
 
 
 ### 6.1 Authorize Access to Security Functions
 
-All privileged accounts will be strictly role based and will follow the user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) process.  A user must prove that they meet the requirements necessary to support their position before an account can be authorized to be created on an {{ SYSTEM_NAME }}.
+All privileged accounts will be strictly role based and will follow the user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>) process.  A user must prove that they meet the requirements necessary to support their position before an account can be authorized to be created on an {{ SYSTEM_NAME }}.
 
 To include:
 
-- Completed user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>)
+- Completed user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>)
 
 - Comply with DoDI 8140.01 and DoDM 8570.01 certification requirements
 
@@ -517,7 +517,7 @@ In accordance with NIST SP 800-53 Rev. 5 (`AC-6`, `AC-17`) and DISA STIG guideli
 
 In accordance with DoD Directive 8140.01 (and related DoDI 8140.02/DODM 8140.03) regarding the DoD Cyberspace Workforce Framework, all {{ ORGANIZATION }} systems will conduct regular review/auditing of privileged user accounts to ensure that the user in which the privileged account is associated with maintains the requirements on an annual basis.  Should a user fail to comply with any one of the requirements, their account will be disabled until the requirements are met. It is the user’s responsibility to maintain certifications and annual training requirements and provide the required copies of certificates of completion to {{ ORGANIZATION }} cybersecurity staff.
 
-The audit must include a review of privileges the user has reconciled to what has been authorized by the user’s most recent user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>).  Deviations must be documented and corrected.
+The audit must include a review of privileges the user has reconciled to what has been authorized by the user’s most recent user access request form (<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Identity Request Form / GRC Ticket</mark>).  Deviations must be documented and corrected.
 
 Audits must be completed on no less than a quarterly basis with records kept to meet authorization security controls.
 

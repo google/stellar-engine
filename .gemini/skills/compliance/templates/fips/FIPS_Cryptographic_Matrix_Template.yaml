@@ -49,4 +49,4 @@ cryptographic_modules:
     validation_status: "Active / Approved DoD UC APL List"
 
 rmf_team_manual_action:
-  callout: "> [!IMPORTANT] ⚠️ **RMF TEAM ACTION REQUIRED**: Maintain updated NIST CMVP Certificate numbers and verify module expiration dates prior to 3PAO / SCA assessment."
+  callout: "> [!IMPORTANT] **RMF TEAM ACTION REQUIRED**: Maintain updated NIST CMVP Certificate numbers and verify module expiration dates prior to 3PAO / SCA assessment."

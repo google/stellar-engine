@@ -55,7 +55,7 @@ Audit and accountability policy and procedures ensure {{ ORGANIZATION }}, {{ SYS
 This document complies with the following requirements from NIST Special Publication 800-53 Revision 5, "Security and Privacy Controls for Federal Information Systems and Organizations". A detailed compliance matrix can be found in Appendix A, “Detailed Compliance Matrix”.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > This {{ ORGANIZATION }} Audit and Accountability Policy is consistent with applicable federal laws, directives, policies, regulations, standards and guidance. This plan facilitates the implementation of the audit and accountability policy and the associated audit and accountability controls.  The {{ ORGANIZATION }} Cybersecurity Team’s office is responsible for the development of, update, annual review and dissemination of this Audit and Accountability Policy.  Dissemination of this policy and any associated procedures will occur initially to all {{ ORGANIZATION }} {{ SYSTEM_NAME }} level ISSMs and ISSOs, provided as an artifact in the Common Control Provider {{ RMF_GOVERNANCE_SYSTEM }} package for {{ SYSTEM_NAME }}, and is available upon request to the {{ ORGANIZATION }} Cybersecurity Team.  All reviews and updates will be tracked via the Change Record.
 
 This policy is subject to change, upon review, in response to any event, After Action Report, to incorporate lessons learned, or as directed by higher commands and in accordance with any changes in applicable laws or directives.
@@ -151,7 +151,7 @@ Google Cloud Logging does not run out of storage in the traditional sense, but a
 ### 5.2 Real-Time Alerts
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational audit log failure notification thresholds and incident response team contacts.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational audit log failure notification thresholds and incident response team contacts.</mark>
 
 {{ ORGANIZATION }} is responsible for providing immediate real-time automated alerts (within 15 minutes of detection via Cloud Monitoring alerting policies, {{ SIEM_TOOL }} channels, and {{ CSSP_PROVIDER }} alert feeds) when critical audit logging failure events occur, including:
 
@@ -178,7 +178,7 @@ Within the GCP instance of {{ SYSTEM_NAME }}, Google retains online audit logs f
 ### 6.3 Central Review and Analysis
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Confirm agency operational audit review cadence and analytical reporting recipients.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Confirm agency operational audit review cadence and analytical reporting recipients.</mark>
 
 {{ ORGANIZATION }} reviews system audit records at least weekly (and continuously 24x7 via automated {{ SIEM_TOOL }} / {{ CSSP_PROVIDER }} and {{ THREAT_DETECTION_ENGINE }}) for unusual or anomalous activities. All security findings will be reported to ISSO, ISSM, and enterprise SOC/CSSP stakeholders. {{ ORGANIZATION }} uses organization-level Cloud Logging aggregated log sinks exporting to immutable Cloud Storage buckets and BigQuery as the central repository for all organizational audit logs and records.
 

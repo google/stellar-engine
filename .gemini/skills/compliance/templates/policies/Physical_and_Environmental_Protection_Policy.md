@@ -64,7 +64,7 @@ The {{ ORGANIZATION }} Physical and Environmental Protection Policy includes a s
 The {{ ORGANIZATION }} Physical and Environmental Protection Policy also includes procedures to facilitate the implementation of the physical and environmental protection policy, associated physical and environmental protection controls, and periodic review and update of Physical and environmental protection Policy and procedures.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > This plan has been disseminated to the {{ ORGANIZATION }} system team, ISSO and ISSM via {{ RMF_GOVERNANCE_SYSTEM }}.  This policy will be updated and/or reviewed, at minimum, on an annual basis
 
 

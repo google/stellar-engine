@@ -461,7 +461,7 @@ class ExcelDataExporter(BaseDataExporter):
         for _, path_str in xl_results.items():
             p = resolve_path(path_str)
             generated.append(p)
-            logger.info("  ✓ Hydrated Excel: %s", p.name)
+            logger.info("  Hydrated Excel: %s", p.name)
 
         return generated
 

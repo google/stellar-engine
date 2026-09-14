@@ -1844,7 +1844,7 @@ def generate_hwsw_inventory_yaml(inventory: Dict[str, Any], doc_version: str = "
 
     lines.append("\nrmf_team_manual_action:")
     lines.append(
-        '  callout: "> [!IMPORTANT] ⚠️ **RMF TEAM ACTION REQUIRED**: Perform annual'
+        '  callout: "> [!IMPORTANT] **RMF TEAM ACTION REQUIRED**: Perform annual'
         ' physical asset audits for local client workstations and confirm'
         ' eMASS hardware barcode serial numbers."'
     )
@@ -2123,7 +2123,7 @@ def generate_ppsm_matrix_yaml(inventory: Dict[str, Any], doc_version: str = "1.0
 
     lines.append("\nrmf_team_manual_action:")
     lines.append(
-        '  callout: "> [!IMPORTANT] ⚠️ **RMF TEAM ACTION REQUIRED**: Confirm'
+        '  callout: "> [!IMPORTANT] **RMF TEAM ACTION REQUIRED**: Confirm'
         ' registration of all listed ports/protocols in the eMASS PPSM'
         ' Registry and upload approval certificates."'
     )
@@ -2251,7 +2251,7 @@ def generate_poam_matrix_yaml(
     lines.append('  review_frequency: "Monthly (Every 30 Days) during Continuous Monitoring"')
     lines.append(f"  reporting_authority: {safe_yaml_scalar(f'{ao_name} ({ao_title})')}")
     lines.append(
-        f'  rmf_team_callout: "> [!IMPORTANT] ⚠️ **RMF TEAM ACTION REQUIRED**: Review'
+        f'  rmf_team_callout: "> [!IMPORTANT] **RMF TEAM ACTION REQUIRED**: Review'
         f' and update POA&M milestone dates monthly in {rmf_system}. All findings'
         ' must retain an active remediation pathway or formal AO risk acceptance decision."'
     )
@@ -2335,7 +2335,7 @@ def generate_ato_artifacts(
     }
 
     logger.info("=" * 80)
-    logger.info("🚀 ATO COMPLIANCE PACKAGE GENERATION: %s", target_path)
+    logger.info("ATO COMPLIANCE PACKAGE GENERATION: %s", target_path)
     logger.info("   Policy Format Preference : %s", policy_format.upper())
     logger.info("   Data Format Preference   : %s", data_format.upper())
     logger.info("   OSCAL Format Preference  : %s", str(oscal_format).upper())
@@ -2490,7 +2490,7 @@ def generate_ato_artifacts(
         audit_logger.emit(AuditEvent.PIPELINE_COMPLETED, detail={"total_artifacts": total_count})
 
     logger.info("=" * 80)
-    logger.info("✅ ATO PACKAGE PROVISIONING COMPLETE: Generated %d Total Deliverables", total_count)
+    logger.info("ATO PACKAGE PROVISIONING COMPLETE: Generated %d Total Deliverables", total_count)
     logger.info("=" * 80)
     logger.info("  • Markdown Artifacts (.md)   : %d", len(artifacts_generated.get("markdown", [])))
     logger.info("  • Word Policy Manuals (.docx): %d", len(artifacts_generated.get("docx", [])))
@@ -2514,7 +2514,7 @@ def generate_ato_artifacts(
     except ValueError:
         target_display = str(target_path)
     logger.info("=" * 80)
-    logger.info("📋 NEXT RECOMMENDED STEP (PART B): ATO PACKAGE VALIDATION & STIG AUDIT")
+    logger.info("NEXT RECOMMENDED STEP (PART B): ATO PACKAGE VALIDATION & STIG AUDIT")
     logger.info("=" * 80)
     logger.info("To run package validation, check for drift, and inspect required DISA STIGs:")
     logger.info("  python3 %s %s --fix", val_script_display, target_display)

@@ -16,7 +16,7 @@
 """Comprehensive Automated Regression Test Suite for Compliance & RMF Engine.
 
 ================================================================================
-⚠️  INTERNAL DEVELOPER TEST SUITE ONLY  ⚠️
+INTERNAL DEVELOPER TEST SUITE ONLY
 ================================================================================
 This test suite is exclusively for developers modifying the internal Python source
 code of the compliance engine scripts (.gemini/skills/compliance/scripts/).
@@ -385,7 +385,7 @@ The following team assignments govern access control:
 | Cloud Admin | Manages IAM bindings | Platform Engineering |
 
 > [!IMPORTANT]
-> ⚠️ **RMF TEAM / HUMAN ACTION REQUIRED**: Provide local biometric datacenter SOP.
+> **RMF TEAM / HUMAN ACTION REQUIRED**: Provide local biometric datacenter SOP.
 """
         out_docx = os.path.join(self.test_dir, "Access_Control_Policy.docx")
         docx_generator.convert_markdown_to_docx(sample_md, out_docx, self.mock_inventory)
@@ -4006,12 +4006,11 @@ and standard entities like <script>alert("XSS & Injection")</script> and &amp; &
             # Markdown must contain high-visibility HTML mark tags
             hydrated_md = file_helpers.read_text_file(md_path)
             self.assertIn("<mark style=", hydrated_md)
-            self.assertIn("⚠️ [AI CONTEXTUAL EXAMPLE REQUIRED: System Name]", hydrated_md)
+            self.assertIn("[AI CONTEXTUAL EXAMPLE REQUIRED: System Name]", hydrated_md)
 
             # YAML must NEVER contain HTML mark tags; must be valid YAML AST
             hydrated_yaml = file_helpers.read_text_file(yaml_path)
             self.assertNotIn("<mark", hydrated_yaml)
-            self.assertNotIn("⚠️", hydrated_yaml)
             self.assertIn("[AI CONTEXTUAL EXAMPLE REQUIRED: System Name]", hydrated_yaml)
 
             # Must parse cleanly with standard YAML parser

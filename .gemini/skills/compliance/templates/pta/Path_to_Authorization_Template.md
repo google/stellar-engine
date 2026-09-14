@@ -26,7 +26,7 @@
 
 ---
 
-## 🏛️ NIST SP 800-37 Rev. 2 RMF 7-Step Crosswalk
+## NIST SP 800-37 Rev. 2 RMF 7-Step Crosswalk
 
 Federal and Department of Defense (DoD) Authorizing Officials (AOs), assessors, and eMASS workflows track system accreditation through the canonical **7-Step Risk Management Framework (RMF)** defined in [NIST SP 800-37 Rev. 2](https://csrc.nist.gov/pubs/sp/800/37/r2/final). The table below cross-maps the official NIST RMF steps to our engineering delivery phases and automated compliance deliverables:
 
@@ -42,7 +42,7 @@ Federal and Department of Defense (DoD) Authorizing Officials (AOs), assessors, 
 
 ---
 
-## 🗺️ The 6-Phase Master ATO Journey & Execution Itinerary
+## The 6-Phase Master ATO Journey & Execution Itinerary
 
 | Phase | Journey Phase Name | Key Activities & Requirements | Deliverable Artifacts & Outputs |
 | :--- | :--- | :--- | :--- |
@@ -55,7 +55,7 @@ Federal and Department of Defense (DoD) Authorizing Officials (AOs), assessors, 
 
 ---
 
-### 🚩 Phase 1: Program Initiation, Stakeholders & Account Provisioning
+### Phase 1: Program Initiation, Stakeholders & Account Provisioning
 
 | Step | Key Activity / Requirement | Responsible Lead | Status & Verification Guidance |
 | :--- | :--- | :--- | :--- |
@@ -66,7 +66,7 @@ Federal and Department of Defense (DoD) Authorizing Officials (AOs), assessors, 
 
 ---
 
-### 🏗️ Phase 2: Architecture Boundary, Infrastructure & Technical Design
+### Phase 2: Architecture Boundary, Infrastructure & Technical Design
 
 | Step | Key Activity / Requirement | Responsible Lead | Status & Verification Guidance |
 | :--- | :--- | :--- | :--- |
@@ -76,7 +76,7 @@ Federal and Department of Defense (DoD) Authorizing Officials (AOs), assessors, 
 
 ---
 
-### ⚡ Phase 3: Automated ATO Foundation Generation (Delivered by this Skill)
+### Phase 3: Automated ATO Foundation Generation (Delivered by this Skill)
 
 | Deliverable Artifact | Subfolder Location | Formats | Primary Control | Purpose & Implementation |
 | :--- | :--- | :--- | :--- | :--- |
@@ -90,7 +90,7 @@ Federal and Department of Defense (DoD) Authorizing Officials (AOs), assessors, 
 | **Incident Response Runbooks (5 Workflows)** | `Incident_Response_Runbooks/` | `.md`, `.docx` | IR-4, IR-5, IR-8 | Tactical cloud runbooks for compromised credentials, compute, CMEK, network intrusion, and VPC-SC. |
 | **Path to Authorization (PTA)** | Root `ato_artifacts/` | `.md`, `.docx` | CA-6 | Executive accreditation roadmap, validation audit, and testing strategy. |
 
-#### 📋 Complete Institutional Policy Manuals & Core Deliverables Human Execution Matrix
+#### Complete Institutional Policy Manuals & Core Deliverables Human Execution Matrix
 
 The compliance foundation provides 20 institutional cybersecurity policy manuals, system security plans, and structured registers. The RMF and platform teams must execute the following human governance and operational actions across all deliverables:
 
@@ -125,7 +125,7 @@ The compliance foundation provides 20 institutional cybersecurity policy manuals
 
 ---
 
-### 🔍 Phase 4: Security Assessments, Vulnerability Scans & STIG Benchmarks
+### Phase 4: Security Assessments, Vulnerability Scans & STIG Benchmarks
 
 | Step | Assessment Activity | Primary Control | Format / Sourcing | Verification & Acceptance Standard |
 | :--- | :--- | :--- | :--- | :--- |
@@ -136,7 +136,7 @@ The compliance foundation provides 20 institutional cybersecurity policy manuals
 
 ---
 
-### 🤝 Phase 5: Operational Governance, Agreements & Simulations
+### Phase 5: Operational Governance, Agreements & Simulations
 
 | Step | Operational Requirement | Primary Control | Required Evidence Format | Acceptance & Submission Criteria |
 | :--- | :--- | :--- | :--- | :--- |
@@ -148,7 +148,7 @@ The compliance foundation provides 20 institutional cybersecurity policy manuals
 
 ---
 
-### 🎖️ Phase 6: Package Assembly, eMASS Submission & AO Authorization Determination
+### Phase 6: Package Assembly, eMASS Submission & AO Authorization Determination
 
 | Step | Milestone Activity | Responsible Role | Target Output & Execution Action |
 | :--- | :--- | :--- | :--- |
@@ -160,7 +160,7 @@ The compliance foundation provides 20 institutional cybersecurity policy manuals
 
 ---
 
-## 🧠 Strategic RMF Considerations & Authorizing Official (AO) Engagement
+## Strategic RMF Considerations & Authorizing Official (AO) Engagement
 
 To successfully navigate the accreditation lifecycle on Google Cloud, the program team must incorporate four critical governance principles:
 
@@ -217,7 +217,7 @@ In complex federal and DoD authorizations, programs often require an **Interim A
 
 ---
 
-## 🔒 Federal & DoD Privacy Compliance Requirements (PIA, PCIL, SORN)
+## Federal & DoD Privacy Compliance Requirements (PIA, PCIL, SORN)
 
 Federal and Department of Defense systems handling personnel records, user accounts, or mission datasets containing Personally Identifiable Information (PII) or Protected Health Information (PHI) must comply with the Privacy Act of 1974 and OMB mandates. The privacy evaluation consists of three interdependent deliverables:
 
@@ -235,7 +235,7 @@ Federal and Department of Defense systems handling personnel records, user accou
 
 ---
 
-## ⚡ 14 ATC (Authorization to Connect) Critical Controls
+## 14 ATC (Authorization to Connect) Critical Controls
 
 When requesting an Authorization to Connect (ATC) to enterprise networks or cloud enclaves, the security team must confirm the 14 mandatory baseline controls:
 
@@ -265,7 +265,7 @@ When requesting an Authorization to Connect (ATC) to enterprise networks or clou
 
 ---
 
-## 🔍 ACAS Vulnerability Scan "Good Data" Verification Rules
+## ACAS Vulnerability Scan "Good Data" Verification Rules
 
 When evaluating ACAS Nessus scan results prior to eMASS upload:
 1. **Recency**: Scans must have been performed within 30 days of the eMASS submission date.
@@ -275,7 +275,7 @@ When evaluating ACAS Nessus scan results prior to eMASS upload:
 
 ---
 
-## 🛡️ Mandatory DISA STIG & SRG Checklist Compliance Roadmap
+## Mandatory DISA STIG & SRG Checklist Compliance Roadmap
 
 > [!IMPORTANT]
 > **AUTHORITATIVE DISA STIG SOURCE & DESKTOP STIG VIEWER APPLICATION**:
@@ -299,7 +299,7 @@ Based on the infrastructure components discovered in Terraform code, the cyberse
 
 ---
 
-## 📝 Sample Executive ATO Determination Request Memo Template
+## Sample Executive ATO Determination Request Memo Template
 
 > [!CAUTION]
 > This is an **unsigned skeleton**, not a completed attestation. Every
@@ -348,7 +348,7 @@ System Owner / Program Manager
 
 ---
 
-## 📊 Work Breakdown Structure (WBS) for ATO
+## Work Breakdown Structure (WBS) for ATO
 
 | WBS # | Milestone Action & Target Output | Responsible Role |
 | :--- | :--- | :--- |
@@ -368,7 +368,7 @@ System Owner / Program Manager
 
 ---
 
-## 🎖️ Military Service Branch & Federal Agency Governance Overlays
+## Military Service Branch & Federal Agency Governance Overlays
 
 When tailoring the compliance package for specific defense components or civilian departments, align deliverables with the governing agency instructions below:
 
@@ -384,7 +384,7 @@ When tailoring the compliance package for specific defense components or civilia
 
 ---
 
-## 📚 References
+## References
 
 - [NIST SP 800-37 Rev. 2](https://csrc.nist.gov/pubs/sp/800/37/r2/final), Risk Management Framework for Information Systems and Organizations: A System Life Cycle Approach for Security and Privacy
 - [NIST SP 800-39](https://csrc.nist.gov/pubs/sp/800/39/final), Managing Information Security Risk: Organization, Mission, and Information System View

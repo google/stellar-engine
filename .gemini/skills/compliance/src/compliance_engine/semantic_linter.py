@@ -275,7 +275,7 @@ class SemanticLinterReport:
         lines.append(f"| **Architectural Drift Items Detected** | `{len(self.drift_findings)}` discrepancy item(s) | `{'PASS' if len(self.drift_findings) == 0 else 'DRIFT DETECTED'}` |\n")
 
         if self.drift_findings:
-            lines.append("### ⚡ Live Code vs. Accreditation Narrative Architectural Drift")
+            lines.append("### Live Code vs. Accreditation Narrative Architectural Drift")
             lines.append("| Finding ID | Control | Discrepancy Description | Required Terraform / Policy Remediation |")
             lines.append("| :--- | :--- | :--- | :--- |")
             for df in self.drift_findings:

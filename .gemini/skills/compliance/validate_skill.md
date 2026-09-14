@@ -6,7 +6,7 @@ It performs an exhaustive, multi-dimensional verification pass across **ANY Infr
 
 ---
 
-## 🏛️ Operating Posture & Core Principles
+## Operating Posture & Core Principles
 
 > [!IMPORTANT]
 > **SENIOR ASSESSOR & PRINCIPAL AUDITOR POSTURE ("TRUST BUT VERIFY")**:
@@ -22,7 +22,7 @@ It performs an exhaustive, multi-dimensional verification pass across **ANY Infr
 
 ---
 
-## 🔍 The 5-Phase Verification Architecture
+## The 5-Phase Verification Architecture
 
 ```mermaid
 flowchart TD
@@ -69,7 +69,7 @@ flowchart TD
 
 ---
 
-## 📋 Detailed Verification Methodology
+## Detailed Verification Methodology
 
 ### Phase 1: Contractual Intent & Delivery Audit ("Did we do what we said we would do?")
 
@@ -175,13 +175,13 @@ The assessor performs deep cross-referencing between the live architecture facts
 
 ---
 
-## 📊 Standard Executive Audit Deliverables
+## Standard Executive Audit Deliverables
 
 The assessor compiles the final assessment results into `<TARGET_FOLDER>/ato_artifacts/Path_to_Authorization.md` and `.docx`:
 
 ### 1. Executive Lead Assessor Audit Table
 ```markdown
-## 🛡️ Lead Assessor Executive Quality Gate & Audit Summary
+## Lead Assessor Executive Quality Gate & Audit Summary
 
 | Audit Dimension | Evaluation Finding | Compliance Posture |
 | :--- | :--- | :--- |
@@ -197,7 +197,7 @@ The assessor compiles the final assessment results into `<TARGET_FOLDER>/ato_art
 
 ### 2. Tri-Directional Audit Table (Intent vs. Code vs. Documentation)
 ```markdown
-### 🔄 Tri-Directional Fidelity Matrix
+### Tri-Directional Fidelity Matrix
 | Architectural Capability | Promised in `spec.md` | Implemented in Code | Documented in ATO Package | Fidelity Status |
 | :--- | :--- | :--- | :--- | :--- |
 | Zero-Trust Remote Access | Cloud IAP with TLS 1.3 | Verified in `firewalls.tf` | Documented in SSP (AC-17) | `ALIGNED` |
@@ -207,7 +207,7 @@ The assessor compiles the final assessment results into `<TARGET_FOLDER>/ato_art
 
 ### 3. Live Architectural Drift & Code Discrepancy Table
 ```markdown
-### ⚡ Live Code vs. Accreditation Architectural Drift
+### Live Code vs. Accreditation Architectural Drift
 | Finding ID | Control / Component | Discrepancy Description | Required Code / Narrative Remediation |
 | :--- | :--- | :--- | :--- |
 | `DFT-SC28-001` | **SC-28** / Storage | Bucket `app-data` has `cmek_encrypted: false` | Update Terraform to bind KMS key ring |
@@ -215,7 +215,7 @@ The assessor compiles the final assessment results into `<TARGET_FOLDER>/ato_art
 
 ### 4. Auditor Auto-Repair Log
 ```markdown
-### 🛠️ Auditor Auto-Repair Log
+### Auditor Auto-Repair Log
 | Timestamp | Artifact Path | Issue Discovered | Auto-Repair Applied |
 | :--- | :--- | :--- | :--- |
 | 2026-09-11 | `SSP/SSP_System_Security_Plan.md` | KMS crypto key path drifted from Terraform | Synchronized key resource path to live code |
@@ -224,7 +224,7 @@ The assessor compiles the final assessment results into `<TARGET_FOLDER>/ato_art
 
 ### 5. Role-Grouped Human Remediation Playbook
 ```markdown
-### 📋 Role-Grouped Human Remediation Playbook
+### Role-Grouped Human Remediation Playbook
 | Finding ID | Control | Severity | Assignee Role | Target File & Line | Assessor Finding | Actionable Draft Text for Copy-Paste |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `AUD-AC-001` | **AC-2** | **HIGH** | `ISSO` | `SSP:L142` | Account creation SLA missing. | *"Account creation requests require written Supervisor approval within 48h. Quarterly access audits occur on the 1st of each calendar quarter."* |
@@ -233,7 +233,7 @@ The assessor compiles the final assessment results into `<TARGET_FOLDER>/ato_art
 
 ---
 
-## 🎯 Verification Trigger Commands
+## Verification Trigger Commands
 
 Prompt the AI agent at any time with:
 - `"Validate that what we built matches what we said we would do in spec.md"`

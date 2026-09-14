@@ -161,7 +161,7 @@ A well-defined configuration change control process is fundamental to any config
 
 - Notify approval authorities of proposed changes to {{ SYSTEM_NAME }} and request change approval;
 
-- Highlight proposed changes to {{ SYSTEM_NAME }} that have not been approved or disapproved within 5 business days (`<mark style="background-color: #e0f2fe; color: #0369a1; font-weight: bold; padding: 1px 5px; border-radius: 3px;">ℹ️ OPTIONAL CONFIG: Institutional change window SLA</mark>`)
+- Highlight proposed changes to {{ SYSTEM_NAME }} that have not been approved or disapproved within 5 business days (`<mark style="background-color: #e0f2fe; color: #0369a1; font-weight: bold; padding: 1px 5px; border-radius: 3px;">OPTIONAL CONFIG: Institutional change window SLA</mark>`)
 
 
 ### 4.2 Testing, Validation, and Documentation of Changes
@@ -198,14 +198,14 @@ In order to prevent unauthorized changes to {{ SYSTEM_NAME }}, {{ ORGANIZATION }
 ### 4.6 Review System Changes
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Confirm institutional Change Control Board (CCB / CAB) review frequencies and operational triggers.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Confirm institutional Change Control Board (CCB / CAB) review frequencies and operational triggers.</mark>
 
 {{ ORGANIZATION }} Change Control Board (CCB) and DevSecOps release managers review all infrastructure and security changes to {{ SYSTEM_NAME }} bi-weekly or upon major architecture events, including:
 
 - Proposed modifications to foundational Terraform blueprints, IAM roles, or Organization Policy guardrails (`CM-3`).
 - High or Critical security vulnerability alerts flagged by {{ VULNERABILITY_SCANNER }}, CI/CD scanners, external {{ CSSP_PROVIDER }}/{{ SIEM_TOOL }} feeds, or Container Analysis (`RA-5`, `SI-2`).
 - Unscheduled emergency hotfix deployment requests or post-incident recovery configuration updates (`IR-4`, `CM-3`).
-- `<mark style="background-color: #e0f2fe; color: #0369a1; font-weight: bold; padding: 1px 5px; border-radius: 3px;">ℹ️ OPTIONAL CONFIG: Additional agency-specific CCB meeting trigger</mark>`
+- `<mark style="background-color: #e0f2fe; color: #0369a1; font-weight: bold; padding: 1px 5px; border-radius: 3px;">OPTIONAL CONFIG: Additional agency-specific CCB meeting trigger</mark>`
 
 
 ### 4.7 Prevent or Restrict Configuration Changes
@@ -291,7 +291,7 @@ Access control policies control access between active entities or subjects and p
 
 {{ ORGANIZATION }} is responsible for managing all aspects of access control users of {{ SYSTEM_NAME }}.
 
-For all {{ ORGANIZATION }}, access to logical resources shall be documented via user access request workflow (`<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">⚠️ RMF TEAM ACTION REQUIRED: Account Creation Request Form / GRC Ticket</mark>`). Access to resources is enforced using Google Cloud Identity and Google Cloud IAM.
+For all {{ ORGANIZATION }}, access to logical resources shall be documented via user access request workflow (`<mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 1px 5px; border-radius: 3px;">RMF TEAM ACTION REQUIRED: Account Creation Request Form / GRC Ticket</mark>`). Access to resources is enforced using Google Cloud Identity and Google Cloud IAM.
 
 {{ SYSTEM_NAME }} must enforce approved authorizations for logical access to information and system resources in accordance with applicable access control policies.
 
@@ -382,7 +382,7 @@ All program execution within {{ SYSTEM_NAME }} occurs via managed services. Each
 ### 13.5 Binary or Machine Executable Code
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Binary or machine executable code applies to all sources of binary or machine-executable code, including commercial software and firmware and open-source software. {{ ORGANIZATION }} prohibits the use of binary or machine-executable code from sources with limited or no warranty or without the provision of source code. {{ ORGANIZATION }} allows for exceptions only for compelling mission or requirements with the approval of the authorizing official.
 
 

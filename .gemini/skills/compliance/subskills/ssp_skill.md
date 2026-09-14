@@ -33,7 +33,7 @@ Inspect the implementation narratives across all 20 NIST SP 800-53 Rev. 5 contro
 - Eliminate any vague qualifiers (`"appropriate measures"`, `"as needed"`, `"reasonable precautions"`) by substituting exact operational parameters and SLAs.
 
 ### Step 4: Verify Human Action Callout Preservation
-- Ensure all visual yellow action badges (`> [!IMPORTANT] ⚠️ **RMF TEAM / HUMAN ACTION REQUIRED**`) for site-specific physical security, facility suites, or executive signatures are preserved for human organizational review.
+- Ensure all visual yellow action badges (`> [!IMPORTANT] **RMF TEAM / HUMAN ACTION REQUIRED**`) for site-specific physical security, facility suites, or executive signatures are preserved for human organizational review.
 
 ---
 

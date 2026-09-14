@@ -407,7 +407,7 @@ The {{ ORGANIZATION }} cyber team provides incident response support resources i
 ## 7. Incident Response Methodology
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > {{ ORGANIZATION }} develops, disseminates, and maintains the Incident Response Plan that ultimately defines roles, responsibilities, and procedures for {{ ORGANIZATION }} incident response procedures of detection, analysis, containment, eradication, recovery, and post-incident activities. This Incident Response Plan compiles the usage of NIST SP 800-53 Incident Response (IR) Security Control family, Google best security practices, industry standards, and lessons learned from previous incidents and exercises. The ISSM oversees the development, documentation, implementation, approval, and dissemination of the {{ ORGANIZATION }} Cybersecurity Incident Response Plan.
 
 Reportable incidents in {{ ORGANIZATION }} are identified as (but not limited to) the following CJCSM 6510.01B Table B-A-2:
@@ -436,7 +436,7 @@ Adherence to the {{ ORGANIZATION }} Incident Response Plan ensures a coordinated
 All known or suspected instances of data spillages are to be reported and full cooperation is to be rendered during any investigation.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Thorough investigations are to be conducted to determine the cause of any spillage incident. Depending on the level of data spillage, external communications to applicable federal, state, or local law enforcement agencies are done by the {{ ORGANIZATION }} {{ SYSTEM_NAME }} ISO for legal handling of that incident.
 
 For any security incident, {{ SYSTEM_NAME }} is subject to isolation and will be processed according through the methods outlined in this policy, as well as any additional {{ ORGANIZATION }} Incident Response policies.

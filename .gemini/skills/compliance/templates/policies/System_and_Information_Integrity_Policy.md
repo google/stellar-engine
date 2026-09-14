@@ -150,7 +150,7 @@ Alerts may be generated from a variety of sources, including audit records or in
 Alerts can be automated and may be transmitted telephonically, by electronic mail messages, or by text messaging.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > {{ ORGANIZATION }} will alert system administrators, mission or business owners, system owners, information owners/stewards, senior agency information security officers, senior agency officials for privacy, system security officers, or privacy officers when the following system-generated indications of compromise or potential compromise occur:
 
 - Unauthorized IAM privilege escalations or service account key creation
@@ -177,7 +177,7 @@ Organizations balance the need to encrypt communications traffic to protect data
 ### 4.7 Automated Organization-Generated Alerts
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > {{ ORGANIZATION }} personnel on the system alert notification list include system administrators, mission or business owners, system owners, senior agency information security officer, senior agency official for privacy, system security officers, or privacy officers.
 
 {{ ORGANIZATION }} will alert personnel on the system alert notification list using Google Cloud Monitoring Alerting Policies when the following indications of inappropriate or unusual activities with security or privacy implications occur:
@@ -207,7 +207,7 @@ Organizations balance the need to encrypt communications traffic to protect data
 ### 4.11 Risk for Individuals
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > Indications of increased risk from individuals can be obtained from different sources, including personnel records, intelligence agencies, law enforcement organizations, and other sources. The monitoring of individuals is coordinated with the management, legal, security, privacy, and human resource officials who conduct such monitoring.
 
 {{ ORGANIZATION }} will conduct monitoring in accordance with applicable laws, executive orders, directives, regulations, policies, standards, and guidelines.
@@ -245,11 +245,11 @@ Indicators of compromise (IOC) are forensic artifacts from intrusions that are i
 ## 5. Security Alerts, Advisories, and Directives
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > The United States Computer Emergency Readiness Team (US-CERT) generates security alerts and advisories to maintain situational awareness across the federal government. Security directives are issued by OMB or other designated organizations with the responsibility and authority to issue such directives. Compliance to security directives is essential due to the critical nature of many of these directives and the potential immediate adverse effects on organizational operations and assets, individuals, other organizations, and the Nation should the directives not be implemented in a timely manner. External organizations include, for example, external mission/business partners, supply chain partners, external service providers, and other peer/supporting organizations.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > The {{ ORGANIZATION }} ISSM will be registered to automatically receive notifications from USCYBERCOM. The {{ ORGANIZATION }} ISSM will distribute the notifications to affected personnel, i.e. ISSO, system administrator and other impacted stakeholders.
 
 {{ ORGANIZATION }} utilizes DoD approved vulnerability management process system to maintain compliance reporting to ensure that security directives have been implemented in accordance with established time frames or notifies the issuing organization of the degree of noncompliance.
@@ -419,7 +419,7 @@ Restricting the use of inputs to trusted sources and in trusted formats applies 
 ## 10. Error Handling
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > {{ ORGANIZATION }} {{ SYSTEM_NAME }} error handling procedures reveal error messages only to ISSO, ISSM, and SCA. {{ ORGANIZATION }} is responsible for ensuring applications built on GCP generate error messages that provide information necessary for corrective actions.
 
 

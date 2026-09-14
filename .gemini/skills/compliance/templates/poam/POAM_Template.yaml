@@ -54,4 +54,4 @@ poam_items:
 governance_instructions:
   review_frequency: "Monthly (Every 30 Days) during Continuous Monitoring"
   reporting_authority: "{{ AO_NAME }} ({{ AO_TITLE }})"
-  rmf_team_callout: "> [!IMPORTANT] ⚠️ **RMF TEAM ACTION REQUIRED**: Review and update POA&M milestone dates monthly in {{ RMF_GOVERNANCE_SYSTEM }}. All findings must retain an active remediation pathway or formal AO risk acceptance decision."
+  rmf_team_callout: "> [!IMPORTANT] **RMF TEAM ACTION REQUIRED**: Review and update POA&M milestone dates monthly in {{ RMF_GOVERNANCE_SYSTEM }}. All findings must retain an active remediation pathway or formal AO risk acceptance decision."

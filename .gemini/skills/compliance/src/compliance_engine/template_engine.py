@@ -138,7 +138,7 @@ def render_badge(
     """
     applied_style = style or DEFAULT_BADGE_STYLE
     clean_label = str(label).strip()
-    return f'<mark style="{applied_style}">⚠️ [{badge_type}: {clean_label}]</mark>'
+    return f'<mark style="{applied_style}">[{badge_type}: {clean_label}]</mark>'
 
 
 def render_yaml_placeholder(
@@ -472,7 +472,7 @@ class TemplateEngine:
 
         def _md_replacer(m: re.Match) -> str:
             var_name = m.group(1).strip()
-            return f'<mark style="{style}">⚠️ [AI CONTEXTUAL EXAMPLE REQUIRED: {var_name}]</mark>'
+            return f'<mark style="{style}">[AI CONTEXTUAL EXAMPLE REQUIRED: {var_name}]</mark>'
 
         return LEGACY_CONFIG_REQ_RE.sub(_md_replacer, content)
 

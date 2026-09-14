@@ -66,7 +66,7 @@ A detailed compliance matrix can be found in Appendix A, “Detailed Compliance 
 PII processing, transparency policy, and procedures address the controls in the PII Processing and Transparency (PT) family that are implemented within {{ ORGANIZATION }} {{ SYSTEM_NAME }}.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > {{ ORGANIZATION }} is responsible for the development of, updates, annual reviews and dissemination of this PT Policy.  Dissemination of this policy and any associated procedures shall occur initially, and upon update(s), to all {{ ORGANIZATION }} {{ SYSTEM_NAME }} Information System Security Managers (ISSM) and Information System Security Officers (ISSO). All reviews and updates to this policy shall be tracked via the Review and Change Records at the beginning of this document.
 
 This document shall be reviewed and updated no less than annually by {{ ORGANIZATION }}, with updates completed as necessary to account for changes in processes, requirements, and applicable training. Updates shall consider changes required due to modifications to the enterprise architecture documentation; system security plan; privacy plan; records of system security and privacy plan reviews and updates; security and privacy architecture and design documentation; risk assessments; risk assessment results; control assessment documentation; and other relevant documents or records. This policy is also subject to change in response to any event, After Action Report (AAR), to incorporate lessons learned, or as directed by higher commands and in accordance with any changes in applicable laws or directives.
@@ -146,11 +146,11 @@ This document shall be reviewed and updated no less than annually by {{ ORGANIZA
 ## 5. Authority to Process PII and Consent
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > The {{ ORGANIZATION }} has implemented rigorous standards to protect data-at-rest and data-in-transit utilizing established public key infrastructure ({{ PKI_TRUST_TYPE }}) leveraging certificates stored on hardware tokens ({{ MFA_MECHANISM }}). Personnel and contractors assigned to support {{ ORGANIZATION }} {{ SYSTEM_NAME }} provide explicit consent through the user access agreement form ({{ ACCESS_AGREEMENT_TYPE }}) maintained with the ISSO/ISSM granting authorized access. {{ ORGANIZATION }} reserves the authority to associate unique enterprise identifiers ({{ USER_IDENTIFIER_TYPE }}) with username, first, and last name in support of hardware token-based authentication.
 
 > [!IMPORTANT]
-> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">⚠️ RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
+> <mark style="background-color: #fff9c4; color: #b71c1c; font-weight: bold; padding: 2px 6px; border-radius: 4px;">RMF TEAM ACTION REQUIRED: Verify and update operational contact/procedure details in this section.</mark>
 > At the conclusion of the RMF process, the {{ ORGANIZATION }} Authorizing Official (AO) shall determine whether the overall risk posture of the system is acceptable to issue an “Authorization-to-Operate” (ATO). This provides the system with the ability to process information, to include PII.
 
 

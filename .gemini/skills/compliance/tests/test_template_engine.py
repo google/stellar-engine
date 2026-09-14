@@ -136,8 +136,8 @@ class TestTemplateEngine(unittest.TestCase):
 
         # Missing tokens directly render high-visibility mark badges
         self.assertIn('<mark style="background-color: #FFF3CD;', rendered)
-        self.assertIn("⚠️ [AI CONTEXTUAL EXAMPLE REQUIRED: Organization Name]", rendered)
-        self.assertIn("⚠️ [AI CONTEXTUAL EXAMPLE REQUIRED: Kms Key Name]", rendered)
+        self.assertIn("[AI CONTEXTUAL EXAMPLE REQUIRED: Organization Name]", rendered)
+        self.assertIn("[AI CONTEXTUAL EXAMPLE REQUIRED: Kms Key Name]", rendered)
 
     def test_render_yaml_safe_quotes(self) -> None:
         """Tests YAML deliverable rendering where missing placeholders directly produce valid safe scalars."""
@@ -162,7 +162,6 @@ class TestTemplateEngine(unittest.TestCase):
 
         # Must not contain HTML mark tags
         self.assertNotIn("<mark", rendered)
-        self.assertNotIn("⚠️", rendered)
 
         # Must not contain doubled quotes like ""[...]""
         self.assertNotIn('""[AI CONTEXTUAL EXAMPLE REQUIRED', rendered)
@@ -232,7 +231,6 @@ class TestTemplateEngine(unittest.TestCase):
         # Hydrate YAML
         hydrated_yaml = TemplateEngine.hydrate_legacy_placeholders(yaml_content, is_yaml=True)
         self.assertNotIn("<mark", hydrated_yaml)
-        self.assertNotIn("⚠️", hydrated_yaml)
         parsed_yaml = yaml.safe_load(hydrated_yaml)
         self.assertEqual(parsed_yaml["system"]["name"], "[AI CONTEXTUAL EXAMPLE REQUIRED: System Name]")
         self.assertEqual(parsed_yaml["system"]["quoted_name"], "[AI CONTEXTUAL EXAMPLE REQUIRED: Quoted Name]")
@@ -241,8 +239,8 @@ class TestTemplateEngine(unittest.TestCase):
         # Hydrate Markdown
         hydrated_md = TemplateEngine.hydrate_legacy_placeholders(md_content, is_yaml=False)
         self.assertIn("<mark style=", hydrated_md)
-        self.assertIn("⚠️ [AI CONTEXTUAL EXAMPLE REQUIRED: System Name]", hydrated_md)
-        self.assertIn("⚠️ [AI CONTEXTUAL EXAMPLE REQUIRED: Owner Email]", hydrated_md)
+        self.assertIn("[AI CONTEXTUAL EXAMPLE REQUIRED: System Name]", hydrated_md)
+        self.assertIn("[AI CONTEXTUAL EXAMPLE REQUIRED: Owner Email]", hydrated_md)
 
 
 if __name__ == "__main__":

@@ -1043,29 +1043,29 @@ def build_callout_box_elements(
     clean_text = text.strip()
 
     if "RMF TEAM" in clean_text.upper() or "[!IMPORTANT]" in clean_text or "ACTION REQUIRED" in clean_text.upper():
-        title = "⚠️ RMF TEAM / HUMAN ACTION REQUIRED"
+        title = "RMF TEAM / HUMAN ACTION REQUIRED"
         fill_color = "FEFCBF"
         border_color = "9B2C2C"
         title_color = "9B2C2C"
     elif "[!WARNING]" in clean_text or "CAUTION" in clean_text.upper():
-        title = "⚠️ WARNING / SECURITY NOTICE"
+        title = "WARNING / SECURITY NOTICE"
         fill_color = "FFF5F5"
         border_color = "DD6B20"
         title_color = "C53030"
     elif "[!TIP]" in clean_text:
-        title = "💡 BEST PRACTICE & RECOMMENDATION"
+        title = "BEST PRACTICE & RECOMMENDATION"
         fill_color = "E6FFFA"
         border_color = "319795"
         title_color = "234E52"
     else:
-        title = "ℹ️ ARCHITECTURE & POLICY NOTE"
+        title = "ARCHITECTURE & POLICY NOTE"
         fill_color = "EDF2F7"
         border_color = "1F4E79"
         title_color = "1F4E79"
 
     clean_text = re.sub(r'\[!(IMPORTANT|WARNING|NOTE|TIP|CAUTION)\]', '', clean_text, flags=re.IGNORECASE)
     clean_text = re.sub(r'<[^>]+>', '', clean_text)
-    clean_text = re.sub(r'⚠️\s*\*?\*?RMF TEAM[^:]+\*?\*?:?', '', clean_text, flags=re.IGNORECASE)
+    clean_text = re.sub(r'\s*\*?\*?RMF TEAM[^:]+\*?\*?:?', '', clean_text, flags=re.IGNORECASE)
     clean_text = clean_text.replace(">", "").strip()
 
     tbl = ET.Element(w_tag("tbl"))
