@@ -1,0 +1,71 @@
+# Pinned dependency manifest for the Public Sector & Regulated Cloud Compliance Engine
+# (NIST SP 800-53 Rev. 5, FedRAMP, DoD RMF, StateRAMP, CJIS).
+#
+# SUPPLY CHAIN POLICY (NIST SP 800-53 SR-3, SR-4, SR-11 / SA-10)
+# --------------------------------------------------------------
+# Versions are pinned with '==' rather than '>=' so that an authorization package is
+# reproducible: the same inputs must produce byte-comparable artifacts on the assessor's
+# machine and on the ISSO's machine. Floating '>=' constraints silently change the
+# toolchain between runs, which invalidates reproducibility evidence.
+#
+# Install into a dedicated virtual environment, not into a system interpreter:
+#
+#   python3 -m venv .venv
+#   .venv/bin/python -m pip install --require-virtualenv -r requirements.txt
+#
+# For an accredited deployment, additionally set COMPLIANCE_STRICT_DEPS=1. That disables
+# the last-resort discovery of dependencies inside foreign tool virtualenvs, so the engine
+# fails closed instead of importing a parser whose version and provenance are controlled
+# by an unrelated package (see src/compliance_engine/file_helpers.py::_bootstrap_environment).
+#
+# To produce a hash-pinned lock file for an air-gapped or attested build, generate it at
+# release time against your own trusted index rather than trusting hashes committed here:
+#
+#   python3 -m pip install pip-tools
+#   pip-compile --generate-hashes --output-file requirements.lock requirements.txt
+#   pip install --require-hashes -r requirements.lock
+
+# --- Required runtime dependencies -------------------------------------------------
+# YAML parsing for configuration, inventory, and structured compliance matrices.
+# Parsed exclusively through yaml.safe_load with size and alias-expansion budgets.
+PyYAML==6.0.3
+
+# OpenXML spreadsheet hydration for macro-enabled (.xlsm) compliance workbooks.
+openpyxl==3.1.5
+
+# Terraform HCL2 AST extraction. This determines how much of the operator's
+# infrastructure-as-code lands inside the assessed accreditation boundary, so it is a
+# required dependency rather than an optional one.
+#
+# The major version is load-bearing. src/compliance_engine/hcl_parser.py accepts a backend only after
+# a canary document round-trips to the exact canonical output shape, and the shape
+# differs materially between releases:
+#
+#   python-hcl2 7.x  -- canonical shape; ACCEPTED.
+#   python-hcl2 8.x  -- REJECTED. Retains quote characters on block labels and string
+#                       values ('"t"' rather than 't') and injects a synthetic
+#                       '__is_block__' key into every block body.
+#   bc-python-hcl2   -- REJECTED. The fork vendored by checkov; wraps every scalar
+#                       attribute in a one-element list and injects synthetic
+#                       '__start_line__' / '__end_line__' keys.
+#
+# A rejected backend is not a hard failure: the engine falls back to the in-repo
+# hardened recursive-descent parser in src/compliance_engine/hcl_parser.py and records every file it
+# could not read in the 'unparsed_terraform_files' ledger, which surfaces as a CA-2/RA-5
+# coverage-gap finding in the POA&M. That fallback parser does not implement Terraform
+# expression syntax (function calls, unary/binary operators, 'for' comprehensions), so
+# coverage is substantially lower. Measured against a 269-file DoD IL5 reference estate:
+#
+#   python-hcl2 7.3.1                 247 / 269 files parsed  (92%)
+#   in-repo hcl_parser.HclParser       90 / 269 files parsed  (33%)
+#
+# Installing this dependency is therefore what keeps two thirds of a real estate inside
+# the assessed boundary.
+python-hcl2==7.3.1
+
+# --- Optional hardening dependencies -----------------------------------------------
+# Uncomment to use the independently audited defusedxml distribution instead of the
+# in-repo hardened fallback parser in src/compliance_engine/safe_xml.py. Both enforce the same
+# controls; defusedxml carries broader external review.
+# defusedxml==0.7.1
+

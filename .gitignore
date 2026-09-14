@@ -82,3 +82,6 @@ experimental/last_operation.env
 experimental/logs/
 experimental/state/
 *.bak
+
+# Compliance skill local virtualenv (.gemini/skills/compliance/.venv)
+**/.venv/

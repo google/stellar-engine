@@ -1,0 +1,52 @@
+# ==============================================================================
+# Plan of Action and Milestones (POA&M) Compliance Tracking Matrix
+# Baseline: NIST SP 800-37 Rev. 2 (RMF) / FedRAMP High / DoD Cloud SRG IL5
+# Note: Hydrated dynamically by generate_compliance_artifacts.py based on real
+# system telemetry, infrastructure gaps, unencrypted resources, or user findings.
+# ==============================================================================
+
+system_metadata:
+  system_name: "{{ SYSTEM_NAME }}"
+  system_abbreviation: "{{ SYSTEM_ABBREVIATION }}"
+  impact_level: "{{ IMPACT_LEVEL }}"
+  compliance_baseline: "{{ COMPLIANCE_BASELINE }}"
+  governance_regime: "{{ GOVERNANCE_REGIME }}"
+  organization: "{{ ORGANIZATION }}"
+  effective_date: "{{ DATE }}"
+  document_version: "{{ VERSION }}"
+  grc_repository_reference: "{{ RMF_GOVERNANCE_SYSTEM }}"
+  discovered_infrastructure_summary:
+    active_gcp_apis: "{{ DISCOVERED_SERVICES_COUNT }}"
+    deployed_terraform_modules: "{{ DISCOVERED_MODULES_COUNT }}"
+    scanned_resources: "{{ DISCOVERED_RESOURCES_COUNT }}"
+    primary_gcp_region: "{{ PRIMARY_LOCATION }}"
+
+poam_tracking_summary:
+  total_open_items: "{{ POAM_OPEN_ITEMS_COUNT }}"
+  high_risk_items: "{{ POAM_HIGH_ITEMS_COUNT }}"
+  moderate_risk_items: "{{ POAM_MODERATE_ITEMS_COUNT }}"
+  low_risk_items: "{{ POAM_LOW_ITEMS_COUNT }}"
+  automated_iac_coverage_status: "{{ POAM_COVERAGE_STATUS }}"
+
+poam_items:
+  - item_id: "{{ POAM_ITEM_ID }}"
+    control_identifier: "{{ POAM_CONTROL_IDENTIFIER }}"
+    weakness_name: "{{ POAM_WEAKNESS_NAME }}"
+    weakness_description: "{{ POAM_WEAKNESS_DESCRIPTION }}"
+    source_of_weakness: "{{ POAM_SOURCE_OF_WEAKNESS }}"
+    severity_risk_level: "{{ POAM_SEVERITY_LEVEL }}"
+    scheduled_completion_date: "{{ POAM_SCHEDULED_COMPLETION_DATE }}"
+    milestones:
+      - step: 1
+        description: "{{ POAM_MILESTONE_DESCRIPTION }}"
+        target_date: "{{ POAM_MILESTONE_TARGET_DATE }}"
+        status: "{{ POAM_MILESTONE_STATUS }}"
+    point_of_contact: "{{ POAM_POC }}"
+    affected_components: "{{ POAM_AFFECTED_COMPONENTS }}"
+    resources_required: "{{ POAM_RESOURCES_REQUIRED }}"
+    status: "{{ POAM_STATUS }}"
+
+governance_instructions:
+  review_frequency: "Monthly (Every 30 Days) during Continuous Monitoring"
+  reporting_authority: "{{ AO_NAME }} ({{ AO_TITLE }})"
+  rmf_team_callout: "> [!IMPORTANT] ⚠️ **RMF TEAM ACTION REQUIRED**: Review and update POA&M milestone dates monthly in {{ RMF_GOVERNANCE_SYSTEM }}. All findings must retain an active remediation pathway or formal AO risk acceptance decision."

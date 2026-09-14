@@ -1,0 +1,56 @@
+# ==============================================================================
+# Ports, Protocols, and Services Matrix (PPSM) Template
+# Derived from Public Sector Network Boundaries & Protocols Matrix Templates
+# ==============================================================================
+
+system_metadata:
+  system_name: "{{ SYSTEM_NAME }}"
+  system_abbreviation: "{{ SYSTEM_ABBREVIATION }}"
+  impact_level: "{{ IMPACT_LEVEL }}"
+  compliance_baseline: "{{ COMPLIANCE_BASELINE }}"
+  organization: "{{ ORGANIZATION }}"
+  date_exported: "{{ DATE }}"
+  document_version: "{{ VERSION }}"
+  emass_system_id: "EMASS-{{ SYSTEM_ABBREVIATION }}-001"
+  ditpr_id: "DITPR-{{ SYSTEM_ABBREVIATION }}-001"
+
+personnel_contacts:
+  system_owner:
+    name: "{{ SO_NAME }}"
+    email: "{{ SO_EMAIL }}"
+    phone: "{{ SO_PHONE }}"
+  isso_poc:
+    name: "{{ ISSO_NAME }}"
+    email: "{{ ISSO_EMAIL }}"
+    phone: "{{ ISSO_PHONE }}"
+
+boundary_firewall_matrix:
+  {{ FIREWALL_MATRIX }}
+
+# ------------------------------------------------------------------------------
+# PPSM Boundary Export Table (Single Schema Entry for Recursive Expansion)
+# ------------------------------------------------------------------------------
+ppsm_matrix:
+  - id: "1"
+    type: "{{ PPSM_RECORD_TYPE }}"
+    record_name: "{{ PPSM_RECORD_NAME }}"
+    protocol: "{{ PPSM_PROTOCOL }}"
+    data_service: "{{ PPSM_DATA_SERVICE }}"
+    port: "{{ PPSM_PORT }}"
+    boundary: "{{ PPSM_BOUNDARY }}"
+    source_device_name: "{{ PPSM_SOURCE_DEVICE_NAME }}"
+    source_location: "{{ CLOUD_PROVIDER }} ({{ PRIMARY_LOCATION }})"
+    source_ip: "{{ PPSM_SOURCE_IP }}"
+    source_fqdn: "{{ PPSM_SOURCE_FQDN }}"
+    logical_source_point: "{{ PPSM_LOGICAL_SOURCE_POINT }}"
+    destination_device_name: "{{ PPSM_DESTINATION_DEVICE_NAME }}"
+    destination_location: "{{ CLOUD_PROVIDER }} ({{ PRIMARY_LOCATION }})"
+    destination_ip: "{{ PPSM_DESTINATION_IP }}"
+    destination_fqdn: "{{ PPSM_DESTINATION_FQDN }}"
+    logical_destination_point: "{{ PPSM_LOGICAL_DESTINATION_POINT }}"
+    vpn_encrypted_traffic: "{{ PPSM_VPN_ENCRYPTED_TRAFFIC }}"
+    purpose: "{{ PPSM_PURPOSE }}"
+    ppsm_status: "Approved (Registered in {{ RMF_GOVERNANCE_SYSTEM }} PPSM / Port Registry)"
+
+rmf_team_manual_action:
+  callout: "> [!IMPORTANT] ⚠️ **RMF TEAM ACTION REQUIRED**: Confirm registration of all listed ports/protocols in the {{ RMF_GOVERNANCE_SYSTEM }} PPSM / Port Registry and upload approval certificates."

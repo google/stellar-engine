@@ -48,10 +48,63 @@ the targeted regime (FedRAMP Moderate, FedRAMP High, IL5, etc.).
     *   Subnets: Typically defined within the `modules/net-vpc/` module.
     *   Other networking components: See other modules starting with `net-` in the `modules/` directory.
 *   **Naming Convention Documentation:** `documentation/naming-convention.md`
+*   **Agent Skills:** `.gemini/skills/` (see **Agent Skills** below)
 *   **Examples of Well-Structured Blueprints:**
     *   `blueprints/il5/bigquery/`
     *   `blueprints/fedramp-high/cloud-run/`
     *   The `fast/` directory contains staged blueprints for bootstrapping an organization.
+
+## Agent Skills
+
+Reusable agent skills live in `.gemini/skills/<skill-name>/`, each defined by a `SKILL.md` with YAML
+frontmatter (`name`, `description`). Skills are self-contained: they resolve their own root at runtime
+and must not hardcode absolute paths or depend on a specific checkout location.
+
+### `compliance` — RMF / FedRAMP / DoD ATO Package Automation
+
+`.gemini/skills/compliance/` automates NIST SP 800-53 Rev. 5, FedRAMP Moderate/High, DoD CC SRG
+(IL4/IL5/IL6), StateRAMP, CJIS, and FISMA Authorization to Operate (ATO) packages. It extracts live
+architecture facts from Terraform blueprints and application code, hydrates authoritative templates,
+and emits deliverables as Markdown, Word (`.docx`), YAML, and macro-enabled Excel (`.xlsm`):
+SSP, 20 policy manuals, SCTM, PPSM, HW/SW inventory, POA&M, FIPS 140-3 matrix, IR runbooks,
+NIST OSCAL packages, and the master Path to Authorization roadmap.
+
+**Setup** (pinned dependencies, isolated virtualenv — `.venv/` is gitignored):
+
+```bash
+python3 -m venv .gemini/skills/compliance/.venv
+.gemini/skills/compliance/.venv/bin/python -m pip install --require-virtualenv \
+  -r .gemini/skills/compliance/requirements.txt
+```
+
+**Operational workflow** — the only three commands run against a target folder:
+
+```bash
+PY=.gemini/skills/compliance/.venv/bin/python
+$PY .gemini/skills/compliance/scripts/extract_system_data.py <TARGET_FOLDER>
+$PY .gemini/skills/compliance/scripts/generate_compliance_artifacts.py <TARGET_FOLDER>
+$PY .gemini/skills/compliance/scripts/validate_compliance_artifacts.py <TARGET_FOLDER> --fix
+```
+
+Here `<TARGET_FOLDER>` is a single blueprint directory (e.g. `blueprints/il5/bigquery/`), **not** the
+repository root. Artifacts are written to `<TARGET_FOLDER>/ato_artifacts/`.
+
+> **Target folder isolation:** the skill operates strictly within one designated target folder. If the
+> target folder is not specified and cannot be determined from context, STOP and ask the user. Never
+> guess a blueprint directory and never generate `ato_artifacts/` into the repository root.
+
+**Engine test suite** (framework developers modifying `src/compliance_engine/` only — never during a
+normal compliance run):
+
+```bash
+.gemini/skills/compliance/.venv/bin/python .gemini/skills/compliance/scripts/run_tests.py
+```
+
+`python-hcl2==7.3.1` is a required pin, not an optional extra: it determines how much Terraform lands
+inside the assessed accreditation boundary (~92% of files vs. ~33% for the in-repo fallback parser).
+Always install into the skill's own virtualenv. Running the engine on a bare system interpreter can
+cause it to borrow an unrelated tool's packages (e.g. checkov's incompatible `bc-python-hcl2` fork),
+which is refused by a shape canary and silently degrades Terraform coverage.
 
 ## Guidance for AI Assistants
 
@@ -68,4 +121,8 @@ When generating or modifying code within the Stellar Engine repository, especial
 privileged service account), ask the user to confirm if this is truly necessary and why existing components cannot be used.
 5.  **Consult Module READMEs:** When using a module from `modules/`, always read its `README.md` to understand its usage, inputs, and
 outputs.
+6.  **Use the `compliance` Skill for ATO Work:** For any RMF, FedRAMP, DoD IL, StateRAMP, or CJIS accreditation
+request, use `.gemini/skills/compliance/` (see **Agent Skills** above) rather than drafting compliance
+documents by hand. Read its `SKILL.md` first, and confirm the target blueprint folder before running it.
+
 

@@ -1,0 +1,472 @@
+{
+  "catalog_version": "2026.3.0",
+  "last_updated": "2026-09-10",
+  "description": "Authoritative DISA STIG and SRG Baseline Checklist Catalog for Cloud Enclave Authorization",
+  "cyber_exchange_root": "https://public.cyber.mil/stigs/downloads/",
+  "stig_viewer_root": "https://www.stigviewer.com/stigs/",
+  "stigs": {
+    "cloud_computing_srg": {
+      "title": "DISA Cloud Computing Security Requirements Guide (CC SRG)",
+      "slug": "cloud_computing_srg",
+      "aliases": [
+        "cc_srg",
+        "cloud_computing",
+        "cloud_srg",
+        "cloud_computing_mission_owner_operating_system_security_requirements_guide"
+      ],
+      "version": "v1R4",
+      "release_date": "2024-04-25",
+      "category": "Cloud Foundation Baseline",
+      "scope": "Mission Owner responsibilities for cloud enclaves, Assured Workloads IL5 guardrails, organization policies, and FedRAMP inheritance.",
+      "action": "Complete Cloud Computing Mission Owner CKL; verify Assured Workloads boundary guardrails and organization policy constraints.",
+      "url": "https://www.stigviewer.com/stigs/cloud_computing_mission_owner_operating_system_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": true
+    },
+    "identity_and_access_management_iam_srg": {
+      "title": "DISA Identity, Credential, and Access Management (ICAM) SRG / IAM STIG",
+      "slug": "identity_and_access_management_iam_srg",
+      "aliases": [
+        "iam_srg",
+        "icam_srg",
+        "iam_stig",
+        "icam"
+      ],
+      "version": "v1R2",
+      "release_date": "2024-01-18",
+      "category": "Identity & Access Control",
+      "scope": "Cloud Identity SAML/OIDC federated SSO, hardware MFA enforcement, custom IAM roles, and automated service account key rotation.",
+      "action": "Complete IAM CKL; audit all custom role bindings, eliminate static service account keys in favor of Workload Identity Federation.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": true
+    },
+    "key_and_certificate_management_srg": {
+      "title": "DISA Key and Certificate Management SRG / KMS STIG",
+      "slug": "key_and_certificate_management_srg",
+      "aliases": [
+        "kms_srg",
+        "key_management_srg",
+        "kms_stig",
+        "key_mgmt"
+      ],
+      "version": "v1R1",
+      "release_date": "2023-11-20",
+      "category": "Cryptography & PKI",
+      "scope": "FIPS 140-3 Cloud KMS CMEK encryption keys, 90-day automated key rotation, Certificate Manager TLS 1.3 PKI, and algorithm restrictions.",
+      "action": "Complete Key Mgmt CKL; verify CMEK association across all storage buckets, disks, and databases with automatic rotation active.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": true
+    },
+    "canonical_ubuntu_2204_lts": {
+      "title": "DISA Canonical Ubuntu 22.04 LTS STIG",
+      "slug": "canonical_ubuntu_2204_lts",
+      "aliases": [
+        "canonical_ubuntu_22.04_lts",
+        "ubuntu_2204",
+        "ubuntu_22.04",
+        "ubuntu2204"
+      ],
+      "version": "v1R3",
+      "release_date": "2026-05-14",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened Ubuntu Linux Compute Engine instances and build worker bastions.",
+      "action": "Complete Ubuntu 22.04 CKL; apply Ubuntu Security Guide (USG) DISA profile in STIG Viewer desktop app.",
+      "url": "https://www.stigviewer.com/stigs/canonical_ubuntu_2204_lts",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "canonical_ubuntu_2004_lts": {
+      "title": "DISA Canonical Ubuntu 20.04 LTS STIG",
+      "slug": "canonical_ubuntu_2004_lts",
+      "aliases": [
+        "canonical_ubuntu_20.04_lts",
+        "ubuntu_2004",
+        "ubuntu_20.04"
+      ],
+      "version": "v1R10",
+      "release_date": "2024-03-21",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Legacy Ubuntu Linux 20.04 instances.",
+      "action": "Complete Ubuntu 20.04 CKL in STIG Viewer desktop app.",
+      "url": "https://www.stigviewer.com/stigs/canonical_ubuntu_2004_lts",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "canonical_ubuntu_2404_lts": {
+      "title": "DISA Canonical Ubuntu 24.04 LTS STIG",
+      "slug": "canonical_ubuntu_2404_lts",
+      "aliases": [
+        "canonical_ubuntu_24.04_lts",
+        "ubuntu_2404",
+        "ubuntu_24.04"
+      ],
+      "version": "v1R1",
+      "release_date": "2026-01-15",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened Ubuntu 24.04 LTS host compute instances.",
+      "action": "Complete Ubuntu 24.04 CKL; apply DISA profile in STIG Viewer.",
+      "url": "https://www.stigviewer.com/stigs/canonical_ubuntu_2404_lts",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "red_hat_enterprise_linux_9": {
+      "title": "DISA Red Hat Enterprise Linux 8/9 STIG",
+      "slug": "red_hat_enterprise_linux_9",
+      "aliases": [
+        "rhel9",
+        "rhel8",
+        "redhat9",
+        "redhat8",
+        "red_hat_enterprise_linux_8"
+      ],
+      "version": "v1R3",
+      "release_date": "2024-04-18",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened Compute Engine VM hosts and administrative bastions.",
+      "action": "Complete RHEL / Linux OS CKL; apply OpenSCAP/Ansible DISA STIG baseline.",
+      "url": "https://www.stigviewer.com/stigs/red_hat_enterprise_linux_9",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "debian_linux": {
+      "title": "DISA Debian Linux STIG / General Purpose OS SRG",
+      "slug": "debian_linux",
+      "aliases": [
+        "debian",
+        "general_purpose_operating_system_security_requirements_guide"
+      ],
+      "version": "v1R1",
+      "release_date": "2023-09-12",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened Debian Linux Compute Engine host instances.",
+      "action": "Complete Debian OS CKL; apply Debian security hardening baseline.",
+      "url": "https://www.stigviewer.com/stigs/general_purpose_operating_system_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "ms_windows_server_2019": {
+      "title": "DISA Microsoft Windows Server 2019/2022 STIG",
+      "slug": "ms_windows_server_2019",
+      "aliases": [
+        "windows_server_2019",
+        "windows_server_2022",
+        "ms_windows_server_2022"
+      ],
+      "version": "v2R3",
+      "release_date": "2024-06-20",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened Windows Server Compute Engine instances and active directory bastions.",
+      "action": "Complete Windows Server CKL; apply DISA GPO baseline in STIG Viewer desktop app.",
+      "url": "https://www.stigviewer.com/stigs/microsoft_windows_server_2022",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "suse_linux_enterprise_server": {
+      "title": "DISA SUSE Linux Enterprise Server STIG",
+      "slug": "suse_linux_enterprise_server",
+      "aliases": [
+        "suse",
+        "sles",
+        "suse_linux"
+      ],
+      "version": "v1R2",
+      "release_date": "2023-10-15",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened SUSE Linux Enterprise instances.",
+      "action": "Complete SLES CKL; apply OpenSCAP baseline.",
+      "url": "https://www.stigviewer.com/stigs/suse_linux_enterprise_server_15",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "cisco_ios_xe_router": {
+      "title": "DISA Cisco IOS-XE Router STIG / Network Infrastructure SRG",
+      "slug": "cisco_ios_xe_router",
+      "aliases": [
+        "cisco_ios_xe_router_rtr",
+        "cisco_router",
+        "ios_xe"
+      ],
+      "version": "v2R4",
+      "release_date": "2024-05-02",
+      "category": "Network Appliances & Routing",
+      "scope": "Virtual edge router instances, IPsec transport encryption, and perimeter routing appliances.",
+      "action": "Complete Cisco IOS-XE Router CKL; verify MACsec / IPsec encryption and control plane policing.",
+      "url": "https://www.stigviewer.com/stigs/cisco_ios_xe_router_rtr",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "kubernetes": {
+      "title": "DISA Kubernetes STIG & Container Platform SRG",
+      "slug": "kubernetes",
+      "aliases": [
+        "k8s",
+        "gke",
+        "kubernetes_stig"
+      ],
+      "version": "v1R12",
+      "release_date": "2026-02-12",
+      "category": "Containers & Microservices",
+      "scope": "GKE private clusters, master control plane endpoints, RBAC, and Container Platform security.",
+      "action": "Complete Kubernetes CKL; audit master authorized networks and Pod Security Standards in STIG Viewer.",
+      "url": "https://www.stigviewer.com/stigs/kubernetes",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "container_platform_srg": {
+      "title": "DISA Container Platform & Serverless Workload SRG",
+      "slug": "container_platform_srg",
+      "aliases": [
+        "container_platform",
+        "serverless_srg",
+        "container_platform_security_requirements_guide"
+      ],
+      "version": "v1R1",
+      "release_date": "2023-08-30",
+      "category": "Containers & Microservices",
+      "scope": "Serverless container workloads, Cloud Run service perimeters, and stateless compute isolation.",
+      "action": "Complete Container Platform CKL; enforce VPC-SC perimeter on Cloud Run services and verify non-root container execution.",
+      "url": "https://www.stigviewer.com/stigs/container_platform_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "docker_enterprise": {
+      "title": "DISA Container Runtime & Docker Enterprise STIG",
+      "slug": "docker_enterprise",
+      "aliases": [
+        "docker",
+        "container_runtime"
+      ],
+      "version": "v2R1",
+      "release_date": "2023-12-07",
+      "category": "Containers & Microservices",
+      "scope": "Container base images, Dockerfile hardening, and non-root execution.",
+      "action": "Complete Docker Enterprise CKL; eliminate root user in Dockerfiles and verify artifact signing.",
+      "url": "https://www.stigviewer.com/stigs/container_platform_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "postgresql_13": {
+      "title": "DISA PostgreSQL 13/14/15/16 STIG",
+      "slug": "postgresql_13",
+      "aliases": [
+        "postgresql",
+        "postgres",
+        "alloydb",
+        "psql"
+      ],
+      "version": "v2R3",
+      "release_date": "2024-04-10",
+      "category": "Databases & Data Management",
+      "scope": "Cloud SQL PostgreSQL / AlloyDB instances, PGAudit logging, and TLS in transit.",
+      "action": "Complete PostgreSQL CKL; configure PGAudit database flags and verify Cloud Logging sink.",
+      "url": "https://www.stigviewer.com/stigs/crunchy_data_postgresql",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "oracle_mysql_8.0": {
+      "title": "DISA Oracle MySQL 8.0 STIG",
+      "slug": "oracle_mysql_8.0",
+      "aliases": [
+        "mysql",
+        "mysql_8",
+        "oracle_mysql_80"
+      ],
+      "version": "v1R3",
+      "release_date": "2024-01-25",
+      "category": "Databases & Data Management",
+      "scope": "Cloud SQL MySQL database instances and secure transport enforcement.",
+      "action": "Complete MySQL CKL; enforce require_secure_transport and audit logging.",
+      "url": "https://www.stigviewer.com/stigs/oracle_mysql_80",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "ms_sql_server_2016_instance": {
+      "title": "DISA Microsoft SQL Server 2016/2019 STIG",
+      "slug": "ms_sql_server_2016_instance",
+      "aliases": [
+        "sql_server",
+        "mssql",
+        "sqlserver"
+      ],
+      "version": "v2R3",
+      "release_date": "2024-02-14",
+      "category": "Databases & Data Management",
+      "scope": "Cloud SQL SQL Server / MSSQL database instances.",
+      "action": "Complete SQL Server CKL; configure Windows Authentication / Cloud IAM and TLS encryption.",
+      "url": "https://www.stigviewer.com/stigs/ms_sql_server_2016_instance",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "oracle_database_12c": {
+      "title": "DISA Oracle Database 12c/19c STIG",
+      "slug": "oracle_database_12c",
+      "aliases": [
+        "oracle_db",
+        "oracle_19c"
+      ],
+      "version": "v2R4",
+      "release_date": "2024-03-14",
+      "category": "Databases & Data Management",
+      "scope": "Oracle database instances and Transparent Data Encryption (TDE).",
+      "action": "Complete Oracle CKL; enforce unified auditing and secure connection strings.",
+      "url": "https://www.stigviewer.com/stigs/oracle_database_19c",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "database_srg": {
+      "title": "DISA Database Security Requirements Guide (Generic RDBMS SRG)",
+      "slug": "database_srg",
+      "aliases": [
+        "rdbms_srg",
+        "spanner_srg",
+        "bigquery_srg",
+        "database_security_requirements_guide"
+      ],
+      "version": "v3R4",
+      "release_date": "2024-04-25",
+      "category": "Databases & Data Management",
+      "scope": "Managed relational database services, CMEK encryption at rest, and private IP only.",
+      "action": "Complete Database SRG CKL; enforce require_ssl=true and disable public IPv4.",
+      "url": "https://www.stigviewer.com/stigs/database_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "mongodb_enterprise_3.x": {
+      "title": "DISA MongoDB Enterprise STIG / NoSQL Database SRG",
+      "slug": "mongodb_enterprise_3.x",
+      "aliases": [
+        "mongodb",
+        "mongo",
+        "mongodb_enterprise"
+      ],
+      "version": "v2R1",
+      "release_date": "2023-11-09",
+      "category": "Databases & Data Management",
+      "scope": "Document database instances, wiredTiger encryption, and SCRAM authentication.",
+      "action": "Complete MongoDB CKL; enforce role-based access control and TLS transport.",
+      "url": "https://www.stigviewer.com/stigs/mongodb_enterprise_advanced_7x",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "storage_area_network_san_srg": {
+      "title": "DISA Storage Area Network (SAN) / Cloud Object Store SRG",
+      "slug": "storage_area_network_san_srg",
+      "aliases": [
+        "san_srg",
+        "object_store_srg",
+        "gcs_srg"
+      ],
+      "version": "v2R1",
+      "release_date": "2023-12-14",
+      "category": "Storage & Persistence",
+      "scope": "Google Cloud Storage (GCS) buckets, uniform bucket access, and retention policy locks.",
+      "action": "Complete Storage SRG CKL; verify public access prevention and CMEK key encryption.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "firewall_srg": {
+      "title": "DISA Perimeter Firewall & Network Infrastructure SRG",
+      "slug": "firewall_srg",
+      "aliases": [
+        "perimeter_firewall_srg",
+        "firewall_security_requirements_guide"
+      ],
+      "version": "v2R1",
+      "release_date": "2023-09-28",
+      "category": "Networking & Perimeter",
+      "scope": "VPC Hub/Spoke perimeter firewall policy tiers, default-deny ingress, and Cloud IAP bastions.",
+      "action": "Complete Firewall CKL; verify default-deny ingress rule and zero 0.0.0.0/0 exposure.",
+      "url": "https://www.stigviewer.com/stigs/firewall_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "vpn_gateway_srg": {
+      "title": "DISA Virtual Private Network (VPN) Gateway SRG",
+      "slug": "vpn_gateway_srg",
+      "aliases": [
+        "vpn_srg",
+        "vpn_gateway"
+      ],
+      "version": "v2R2",
+      "release_date": "2024-03-07",
+      "category": "Networking & Perimeter",
+      "scope": "Cloud HA VPN gateways, IPsec cryptographic profiles, and BGP dynamic routing.",
+      "action": "Complete VPN Gateway CKL; enforce IKEv2 and AES-GCM 256-bit encryption cipher suites.",
+      "url": "https://www.stigviewer.com/stigs/virtual_private_network_vpn_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "web_application_firewall_srg": {
+      "title": "DISA Web Application Firewall (WAF) SRG",
+      "slug": "web_application_firewall_srg",
+      "aliases": [
+        "waf_srg",
+        "cloud_armor_srg",
+        "waf"
+      ],
+      "version": "v1R1",
+      "release_date": "2023-08-17",
+      "category": "Networking & Perimeter",
+      "scope": "Cloud Armor WAF policies, adaptive protection against DDoS, and OWASP Top 10 rule sets.",
+      "action": "Complete WAF SRG CKL; verify pre-configured OWASP CRS rules and rate-limiting policies.",
+      "url": "https://www.stigviewer.com/stigs/firewall_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "application_security_and_development_stig": {
+      "title": "DISA Application Security and Development (ASD) STIG",
+      "slug": "application_security_and_development_stig",
+      "aliases": [
+        "asd_stig",
+        "app_security_stig",
+        "application_security_and_development"
+      ],
+      "version": "v5R3",
+      "release_date": "2024-01-26",
+      "category": "Application Security & DevSecOps",
+      "scope": "DevSecOps CI/CD pipelines, container vulnerability scanning, and OWASP defenses.",
+      "action": "Complete ASD STIG CKL; incorporate automated container scanning in CI/CD pipeline.",
+      "url": "https://www.stigviewer.com/stigs/application_security_and_development",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "apache_server_2.4_unix_server": {
+      "title": "DISA Apache / Nginx Web Server STIG",
+      "slug": "apache_server_2.4_unix_server",
+      "aliases": [
+        "apache_server",
+        "nginx_server",
+        "apache_server_24_unix_server"
+      ],
+      "version": "v2R4",
+      "release_date": "2024-02-08",
+      "category": "Application Security & DevSecOps",
+      "scope": "Web servers, reverse proxies, and Target HTTP/HTTPS proxies.",
+      "action": "Complete Web Server CKL; disable weak TLS ciphers, server tokens, and enforce HTTP security headers.",
+      "url": "https://www.stigviewer.com/stigs/apache_server_24_unix_server",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "enterprise_message_broker_srg": {
+      "title": "DISA Enterprise Message Broker & Telemetry Ingestion SRG",
+      "slug": "enterprise_message_broker_srg",
+      "aliases": [
+        "message_broker_srg",
+        "pubsub_srg",
+        "message_broker"
+      ],
+      "version": "v1R1",
+      "release_date": "2023-11-30",
+      "category": "Application Security & DevSecOps",
+      "scope": "Cloud Pub/Sub messaging topics, telemetry pipelines, and dead-letter queues.",
+      "action": "Complete Message Broker CKL; enforce CMEK encryption on topics and restrict publisher/subscriber IAM roles.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    }
+  },
+  "cyber_exchange_tools": "https://public.cyber.mil/stigs/srg-stig-tools/"
+}

@@ -1,0 +1,47 @@
+# ==============================================================================
+# FIPS 140-2 / FIPS 140-3 Cryptographic Validation Matrix
+# Required for Public Sector and Regulated Cloud Authorizations (FedRAMP, StateRAMP, CJIS, and DoD)
+# ==============================================================================
+
+system_metadata:
+  system_name: "{{ SYSTEM_NAME }}"
+  system_abbreviation: "{{ SYSTEM_ABBREVIATION }}"
+  impact_level: "{{ IMPACT_LEVEL }}"
+  compliance_baseline: "{{ COMPLIANCE_BASELINE }}"
+  organization: "{{ ORGANIZATION }}"
+  effective_date: "{{ DATE }}"
+  document_version: "{{ VERSION }}"
+
+cryptographic_modules:
+  - module_id: "FIPS-01"
+    function_area: "Data-at-Rest Encryption (Cloud KMS CMEK)"
+    module_name: "{{ CLOUD_PROVIDER }} KMS FIPS 140-3 Level 3 HSM"
+    vendor: "{{ CLOUD_PROVIDER }} / Hardware Security Partner"
+    fips_certificate_number: "NIST CMVP Cert #4282 / #3318"
+    validation_level: "FIPS 140-3 Level 3"
+    cryptographic_algorithms: "AES-256 GCM, RSA-4096, ECDSA P-384, SHA-384"
+    implementation_scope: "Customer-Managed Encryption Keys (CMEK) securing GCS Buckets, Cloud SQL, Persistent Disks, and Secret Manager."
+    validation_status: "Active / Verified CMVP Certificate"
+
+  - module_id: "FIPS-02"
+    function_area: "Data-in-Transit Encryption (TLS 1.3)"
+    module_name: "Google BoringCrypto Cryptographic Module"
+    vendor: "{{ CLOUD_PROVIDER }}"
+    fips_certificate_number: "NIST CMVP Cert #3318 / #4407"
+    validation_level: "FIPS 140-2 Level 1 / FIPS 140-3 Level 1"
+    cryptographic_algorithms: "TLS 1.3, AES-256-GCM, ECDHE-ECDSA, SHA-256"
+    implementation_scope: "Encrypted Transport Layer Security across all Google Front Ends (GFE), Private Google Access, and inter-VPC endpoints."
+    validation_status: "Active / Verified CMVP Certificate"
+
+  - module_id: "FIPS-03"
+    function_area: "Perimeter Boundary Firewall Encryption (IPsec / TLS)"
+    module_name: "FIPS 140-3 Validated Cryptographic Appliance / Module"
+    vendor: "Google Cloud / Enterprise Appliance Security Vendor"
+    fips_certificate_number: "NIST CMVP Cert #4123"
+    validation_level: "FIPS 140-2 / FIPS 140-3 Level 2"
+    cryptographic_algorithms: "IPsec IKEv2, AES-256-GCM, AES-256-CBC, HMAC-SHA256, Diffie-Hellman Group 14/19/20"
+    implementation_scope: "DISA BCAP Interconnect & Perimeter Boundary Tunnel Encryption (if NGFW deployed)."
+    validation_status: "Active / Approved DoD UC APL List"
+
+rmf_team_manual_action:
+  callout: "> [!IMPORTANT] ⚠️ **RMF TEAM ACTION REQUIRED**: Maintain updated NIST CMVP Certificate numbers and verify module expiration dates prior to 3PAO / SCA assessment."

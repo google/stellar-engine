@@ -1,0 +1,242 @@
+rules:
+  - id: python-weak-hash-algorithm
+    message: >-
+      Use of a non-FIPS-140-3-approved hash algorithm. FIPS 140-3 validated
+      modules are mandatory for federal systems handling CUI (NIST SP 800-53
+      SC-13). Replace with SHA-256 or stronger. If the hash is genuinely
+      non-security (e.g. a cache key), pass usedforsecurity=False explicitly.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: ["CWE-327"]
+      nist-800-53: ["SC-13"]
+    patterns:
+      - pattern-either:
+          - pattern: hashlib.md5(...)
+          - pattern: hashlib.sha1(...)
+          - pattern: hashlib.new("md5", ...)
+          - pattern: hashlib.new("sha1", ...)
+      - pattern-not: hashlib.md5(..., usedforsecurity=False)
+      - pattern-not: hashlib.sha1(..., usedforsecurity=False)
+      - pattern-not: hashlib.new("md5", ..., usedforsecurity=False)
+      - pattern-not: hashlib.new("sha1", ..., usedforsecurity=False)
+
+  - id: python-disabled-tls-verification
+    message: >-
+      TLS certificate verification is disabled. This defeats transmission
+      confidentiality and integrity (NIST SP 800-53 SC-8, SC-23) and permits
+      an active man-in-the-middle.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: ["CWE-295"]
+      nist-800-53: ["SC-8", "SC-23"]
+    pattern-either:
+      - pattern: requests.$METHOD(..., verify=False, ...)
+      - pattern: ssl._create_unverified_context(...)
+      - pattern: |
+          $CTX.verify_mode = ssl.CERT_NONE
+
+  - id: python-os-command-injection
+    message: >-
+      Externally influenced input reaches an OS command executed through a
+      shell. Pass an argument vector and set shell=False (NIST SP 800-53
+      SI-10).
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: ["CWE-78"]
+      nist-800-53: ["SI-10"]
+    pattern-either:
+      - pattern: os.system(...)
+      - pattern: subprocess.$F(..., shell=True, ...)
+      - pattern: os.popen(...)
+
+  - id: python-insecure-deserialization
+    message: >-
+      Deserializing untrusted data permits arbitrary code execution. Use a
+      structured, schema-validated format such as JSON (NIST SP 800-53 SI-10).
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: ["CWE-502"]
+      nist-800-53: ["SI-10"]
+    pattern-either:
+      - pattern: pickle.load(...)
+      - pattern: pickle.loads(...)
+      - pattern: yaml.load($X)
+      - pattern: yaml.load($X, Loader=yaml.Loader)
+      - pattern: yaml.load($X, Loader=yaml.UnsafeLoader)
+      - pattern: marshal.loads(...)
+
+  - id: python-xxe-unsafe-xml-parser
+    message: >-
+      XML parsed with a parser that resolves external entities, permitting XXE
+      disclosure and SSRF. Use defusedxml (NIST SP 800-53 SI-10).
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: ["CWE-611"]
+      nist-800-53: ["SI-10"]
+    pattern-either:
+      - pattern: xml.etree.ElementTree.fromstring(...)
+      - pattern: xml.etree.ElementTree.parse(...)
+      - pattern: xml.dom.minidom.parse(...)
+      - pattern: xml.sax.parse(...)
+
+  - id: python-sql-injection-string-built-query
+    message: >-
+      SQL statement assembled by string formatting. Use parameterized queries
+      (NIST SP 800-53 SI-10).
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: ["CWE-89"]
+      nist-800-53: ["SI-10"]
+    # Deep expression matching (`<... ...>`) is required, not cosmetic: the
+    # canonical injection is `"... WHERE id = '" + value + "'"`, whose outermost
+    # operand is a BinOp rather than a literal. A shallow `"..." + $X` pattern
+    # silently misses it.
+    pattern-either:
+      - pattern: $CURSOR.execute(<... "..." % $X ...>, ...)
+      - pattern: $CURSOR.execute(<... "..." + $X ...>, ...)
+      - pattern: $CURSOR.execute(<... "...".format(...) ...>, ...)
+      - pattern: $CURSOR.execute(f"...{$X}...", ...)
+      - pattern: $CURSOR.executemany(<... "..." % $X ...>, ...)
+      - pattern: $CURSOR.executemany(<... "..." + $X ...>, ...)
+      - pattern: $CURSOR.executemany(f"...{$X}...", ...)
+
+  - id: python-insecure-random-for-security
+    message: >-
+      The `random` module is not cryptographically secure and must not be used
+      to generate tokens, keys, nonces, or passwords. Use `secrets` or
+      `os.urandom` (NIST SP 800-53 SC-13).
+    languages: [python]
+    severity: WARNING
+    metadata:
+      cwe: ["CWE-338"]
+      nist-800-53: ["SC-13"]
+    patterns:
+      - pattern-either:
+          - pattern: random.random(...)
+          - pattern: random.randint(...)
+          - pattern: random.choice(...)
+          - pattern: random.randrange(...)
+      - pattern-inside: |
+          def $FUNC(...):
+            ...
+      - metavariable-regex:
+          metavariable: $FUNC
+          regex: (?i).*(token|secret|key|nonce|salt|password|passwd|credential|session|otp).*
+
+  - id: python-hardcoded-credential-assignment
+    message: >-
+      Hardcoded credential in source. Store authenticators in Secret Manager
+      and inject at runtime (NIST SP 800-53 IA-5).
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: ["CWE-798"]
+      nist-800-53: ["IA-5"]
+    patterns:
+      - pattern: $VAR = "..."
+      # An exact-match anchor here caught only a bare `password = "..."`. Real
+      # code writes `DB_PASSWORD`, `ADMIN_API_KEY`, `SERVICE_ACCOUNT_SECRET`, so
+      # a qualifying prefix is permitted.
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: (?i)^([a-z0-9]+_)*(password|passwd|pwd|secret|api_key|apikey|access_key|secret_key|private_key|auth_token|bearer_token|client_secret)$
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: ^(?!.*(_ENV|_VAR|_NAME|_FIELD|_KEY_ID|_PATH|_FILE|_HEADER)$).*$
+      # Unpopulated scaffolding is not a leaked credential; reporting it as one
+      # trains reviewers to ignore the rule.
+      - pattern-not-regex: (?i)=\s*"(|changeme|change_me|placeholder|redacted|todo|tbd|none|null|xxx+|\[[^"]*\]|<[^"]*>|\$\{[^"]*\}|%[sd])"
+      - pattern-not: $VAR = os.environ[...]
+      - pattern-not: $VAR = os.environ.get(...)
+      - pattern-not: $VAR = os.getenv(...)
+
+  - id: python-flask-debug-enabled
+    message: >-
+      Debug mode exposes an interactive console and must never be enabled in a
+      production or accredited environment (NIST SP 800-53 CM-7, SI-11).
+    languages: [python]
+    severity: ERROR
+    metadata:
+      cwe: ["CWE-489"]
+      nist-800-53: ["CM-7", "SI-11"]
+    pattern-either:
+      - pattern: $APP.run(..., debug=True, ...)
+      - pattern: $APP.config["DEBUG"] = True
+
+  - id: python-path-traversal-unvalidated-join
+    message: >-
+      Externally influenced input is joined into a filesystem path without
+      confinement, permitting traversal outside the intended directory. Resolve
+      the path and assert it stays within the boundary (NIST SP 800-53 AC-3,
+      SI-10).
+    languages: [python]
+    severity: WARNING
+    metadata:
+      cwe: ["CWE-22"]
+      nist-800-53: ["AC-3", "SI-10"]
+    patterns:
+      - pattern-either:
+          - pattern: open(os.path.join(..., $REQ.$ANY, ...), ...)
+          - pattern: open($REQ.$ANY, ...)
+      - metavariable-regex:
+          metavariable: $REQ
+          regex: (?i)^(request|req|flask\.request)$
+
+  - id: javascript-eval-of-dynamic-input
+    message: >-
+      Dynamic code evaluation permits arbitrary execution when the argument is
+      influenced by untrusted input (NIST SP 800-53 SI-10).
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: ["CWE-95"]
+      nist-800-53: ["SI-10"]
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+
+  - id: javascript-disabled-tls-verification
+    message: >-
+      TLS certificate verification is disabled, permitting an active
+      man-in-the-middle (NIST SP 800-53 SC-8, SC-23).
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: ["CWE-295"]
+      nist-800-53: ["SC-8", "SC-23"]
+    pattern-either:
+      - pattern: process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+      - pattern: |
+          {..., rejectUnauthorized: false, ...}
+
+  - id: go-disabled-tls-verification
+    message: >-
+      TLS certificate verification is disabled, permitting an active
+      man-in-the-middle (NIST SP 800-53 SC-8, SC-23).
+    languages: [go]
+    severity: ERROR
+    metadata:
+      cwe: ["CWE-295"]
+      nist-800-53: ["SC-8", "SC-23"]
+    pattern: |
+      &tls.Config{..., InsecureSkipVerify: true, ...}
+
+  - id: go-weak-hash-algorithm
+    message: >-
+      Use of a non-FIPS-140-3-approved hash algorithm (NIST SP 800-53 SC-13).
+    languages: [go]
+    severity: ERROR
+    metadata:
+      cwe: ["CWE-327"]
+      nist-800-53: ["SC-13"]
+    pattern-either:
+      - pattern: md5.New()
+      - pattern: md5.Sum(...)
+      - pattern: sha1.New()
+      - pattern: sha1.Sum(...)
