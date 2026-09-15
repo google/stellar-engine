@@ -13,6 +13,7 @@
 # limitations under the License.
 
 locals {
+  kms_protection_level = coalesce(var.kms_protection_level, var.assured_workloads.regime == "FEDRAMP_MODERATE" ? "SOFTWARE" : "HSM")
   version_template = {
     algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
     protection_level = local.kms_protection_level
