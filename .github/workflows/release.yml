@@ -3,7 +3,7 @@ name: "Auto Release"
 on:
   push:
     branches:
-      - test-release-automation
+      - main
 
 permissions:
   contents: write
@@ -19,8 +19,8 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          target-branch: test-release-automation
-          
+          target-branch: main
+
       - name: On Release Created
         if: ${{ steps.release.outputs.release_created }}
         env:
