@@ -21,7 +21,8 @@ import file_helpers
 
 class TestReviewScannerRegression(unittest.TestCase):
     def test_semgrep_http_rejection(self):
-        findings = ssb.run_semgrep_scan(".", semgrep_config="http://malicious.com/rules.yml")
+        with patch("security_scanner_bridge.shutil.which", return_value="/usr/bin/semgrep"):
+            findings = ssb.run_semgrep_scan(".", semgrep_config="http://malicious.com/rules.yml")
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0]["check_id"], "SEMGREP_SCANNER_ERROR")
         self.assertIn("Refusing cleartext HTTP", findings[0]["message"])
