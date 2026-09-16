@@ -1,7 +1,5 @@
 name: "Pull Request Labeler"
 
-# pull_request_target so fork PRs get labelled; on pull_request their token is
-# read-only. Safe only because this job never checks out or runs PR code.
 on:
   pull_request_target:
     types:
