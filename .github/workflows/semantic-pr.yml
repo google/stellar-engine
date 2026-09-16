@@ -24,10 +24,8 @@ jobs:
         run: |
           echo "Validating PR title: $PR_TITLE"
 
-          # Conventional Commits. Only feat and fix reach the CHANGELOG, and
-          # only a CHANGELOG entry opens a Release PR; SILENT types are accepted
-          # but never rendered. 'release' is reserved for Release Please's PR.
-          # Dependency bumps go under build, e.g. build(deps): bump provider.
+          # Only feat and fix reach the CHANGELOG, which is what gates a release.
+          # 'release' is reserved for Release Please's own PR.
           RELEASING="feat|fix"
           SILENT="docs|style|refactor|test|build|ci|chore"
           SCOPE="\([a-zA-Z0-9_/.-]+\)"
