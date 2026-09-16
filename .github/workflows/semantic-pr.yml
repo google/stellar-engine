@@ -2,6 +2,8 @@ name: "Lint Pull Request"
 
 on:
   pull_request:
+    branches:
+      - main
     types:
       - opened
       - edited
@@ -20,17 +22,22 @@ jobs:
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          echo "Validating PR Title: $PR_TITLE"
-          
-          # Regex matches Conventional Commits format (e.g., modules(kms): add cloud HSM protection support)
-          PATTERN="^(feat|fix|chore|docs|ci|test|refactor|style|modules|fast|blueprints)(\([a-zA-Z0-9_/_-]+\))?!?: .+$"
-          
-          if [[ ! "$PR_TITLE" =~ $PATTERN ]]; then
-            echo "::error::PR Title does not match the Conventional Commits specification!"
-            echo "Expected format: <type>(<scope>): <description> or <type>: <description>"
-            echo "Allowed types: feat, fix, chore, docs, ci, test, refactor, style, modules, fast, blueprints"
-            echo "Example: modules(kms): add HSM protection support"
+          echo "Validating PR title: $PR_TITLE"
+
+          # Conventional Commits. Only feat and fix reach the CHANGELOG, and
+          # only a CHANGELOG entry opens a Release PR; SILENT types are accepted
+          # but never rendered. 'release' is reserved for Release Please's PR.
+          # Dependency bumps go under build, e.g. build(deps): bump provider.
+          RELEASING="feat|fix"
+          SILENT="docs|style|refactor|test|build|ci|chore"
+          SCOPE="\([a-zA-Z0-9_/.-]+\)"
+          FORMAT="^($RELEASING|$SILENT|release)($SCOPE)?!?: .+$"
+
+          if [[ ! "$PR_TITLE" =~ $FORMAT ]]; then
+            echo "::error::PR title must follow Conventional Commits: <type>(<scope>): <description>"
+            echo "Types: $RELEASING | $SILENT"
+            echo "Example: feat(modules/kms): add HSM protection support"
             exit 1
           fi
-          
-          echo "PR Title matches Conventional Commits format successfully!"
+
+          echo "PR title OK"

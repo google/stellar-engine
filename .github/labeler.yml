@@ -1,23 +1,28 @@
-"modules":
+# PR labels are applied along two independent dimensions, so a PR can carry
+# both a Type and a Framework label (e.g. a change under
+# blueprints/fedramp-high/ receives "Type - Blueprint" AND
+# "Framework - FedRAMP High").
+
+# --- Type: which top-level area of the repo the PR touches ---
+
+"Type - Modules":
   - changed-files:
       - any-glob-to-any-file: 'modules/**'
 
-"fast":
+"Type - Fast":
   - changed-files:
       - any-glob-to-any-file: 'fast/**'
 
-"blueprints: fedramp-high":
+"Type - Blueprint":
+  - changed-files:
+      - any-glob-to-any-file: 'blueprints/**'
+
+# --- Framework: which compliance framework the PR relates to ---
+
+"Framework - FedRAMP High":
   - changed-files:
       - any-glob-to-any-file: 'blueprints/fedramp-high/**'
 
-"blueprints: il5":
+"Framework - FedRAMP IL5":
   - changed-files:
       - any-glob-to-any-file: 'blueprints/il5/**'
-
-"blueprints: stand-alone":
-  - changed-files:
-      - any-glob-to-any-file: 'blueprints/stand-alone/**'
-
-"blueprints: third-party-solutions":
-  - changed-files:
-      - any-glob-to-any-file: 'blueprints/third-party-solutions/**'
