@@ -1,0 +1,282 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# ==============================================================================
+# Declarative Google Cloud Platform Service & Compliance Catalog
+# ==============================================================================
+# Maps GCP service API endpoints (*.googleapis.com) to:
+# - category: Formal Architecture & Compliance Domain
+# - display_name: Human-Readable Service Name
+# - purpose: NIST SP 800-53 / DoD SRG Security & Compliance Purpose
+#
+# Custom services or third-party tools can be added or overridden in compliance_config.yaml
+# under the 'custom_services' key without modifying Python code.
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Security, Identity & Cryptography
+  # ----------------------------------------------------------------------------
+  secretmanager.googleapis.com:
+    category: "Secrets Management"
+    display_name: "Google Secret Manager"
+    purpose: "Encrypted Secrets, API Tokens & Dynamic Credentials Storage"
+
+  cloudkms.googleapis.com:
+    category: "Key Management & HSM"
+    display_name: "Google Cloud KMS"
+    purpose: "FIPS 140-3 CMEK Key Generation, HSM Protection & Envelope Cryptography"
+
+  iam.googleapis.com:
+    category: "Identity & Access Control"
+    display_name: "Google Cloud IAM"
+    purpose: "Role-Based Access Control (RBAC), Service Account Keys & Least Privilege"
+
+  iap.googleapis.com:
+    category: "Zero Trust Tunneling"
+    display_name: "Google Identity-Aware Proxy (IAP)"
+    purpose: "Context-Aware Administrative Tunneling Without Public IP Exposure"
+
+  securitycenter.googleapis.com:
+    category: "SIEM & Posture Management"
+    display_name: "Google Cloud Security Command Center (SCC)"
+    purpose: "Continuous Threat Detection, Vulnerability Auditing & Security Posture"
+
+  accesscontextmanager.googleapis.com:
+    category: "Zero Trust Perimeter Control"
+    display_name: "Google Access Context Manager"
+    purpose: "VPC Service Controls & Context-Aware Access Ingress/Egress Guardrails"
+
+  certificatemanager.googleapis.com:
+    category: "PKI & TLS Certificate Management"
+    display_name: "Google Certificate Manager"
+    purpose: "Automated TLS/SSL Certificate Lifecycle Management & Public Key Infrastructure"
+
+  assuredworkloads.googleapis.com:
+    category: "Compliance Control Plane"
+    display_name: "Google Assured Workloads"
+    purpose: "DoD Impact Level 5 / FedRAMP High Boundary Guardrails & Data Sovereignty"
+
+  orgpolicy.googleapis.com:
+    category: "Organizational Policy"
+    display_name: "Google Cloud Org Policy Engine"
+    purpose: "Enterprise Guardrails, Constraints & Mandatory Compliance Enforcement"
+
+  containeranalysis.googleapis.com:
+    category: "Supply Chain Vulnerability Scanning"
+    display_name: "Google Container Analysis"
+    purpose: "Automated Container Image Vulnerability Scanning & SBOM Metadata Ingestion"
+
+  containerscanning.googleapis.com:
+    category: "Container Image Scanning"
+    display_name: "Google Container Scanning API"
+    purpose: "Continuous Vulnerability Analysis for Container Registries"
+
+  containersecurity.googleapis.com:
+    category: "Container Threat Detection"
+    display_name: "Google Container Security API"
+    purpose: "Runtime Container Security & Workload Posture Monitoring"
+
+  # ----------------------------------------------------------------------------
+  # Compute, Containers & Serverless
+  # ----------------------------------------------------------------------------
+  compute.googleapis.com:
+    category: "Infrastructure-as-a-Service (IaaS)"
+    display_name: "Google Compute Engine"
+    purpose: "Hardened Virtual Machine Instances, Shielded VMs & Virtual Networking"
+
+  container.googleapis.com:
+    category: "Container Orchestration Engine"
+    display_name: "Google Kubernetes Engine (GKE)"
+    purpose: "Private Microservice Pod Scheduling, Control Plane & Auto-Upgrading Nodes"
+
+  run.googleapis.com:
+    category: "Serverless Container Runtime"
+    display_name: "Google Cloud Run"
+    purpose: "Fully Managed Serverless Container Execution with Private Ingress"
+
+  cloudfunctions.googleapis.com:
+    category: "Serverless Functions"
+    display_name: "Google Cloud Functions"
+    purpose: "Event-Driven Serverless Microservices & Automated Infrastructure Handlers"
+
+  anthos.googleapis.com:
+    category: "Hybrid & Multi-Cloud Fleet"
+    display_name: "Google Anthos / GKE Enterprise"
+    purpose: "Centralized Kubernetes Fleet Management & Declarative Policy Controller"
+
+  gkehub.googleapis.com:
+    category: "Kubernetes Fleet Management"
+    display_name: "Google GKE Hub"
+    purpose: "Multi-Cluster Fleet Membership & Service Mesh Connect Integration"
+
+  appengine.googleapis.com:
+    category: "PaaS Application Framework"
+    display_name: "Google App Engine"
+    purpose: "Managed Platform Application Runtime & Scalable Microservices"
+
+  # ----------------------------------------------------------------------------
+  # Networking & Connectivity
+  # ----------------------------------------------------------------------------
+  dns.googleapis.com:
+    category: "Domain Name Resolution"
+    display_name: "Google Cloud DNS"
+    purpose: "Internal Private Network Name Resolution & Split-Horizon DNS Zones"
+
+  servicenetworking.googleapis.com:
+    category: "Private VPC Peering"
+    display_name: "Google Service Networking"
+    purpose: "Private Service Connect & Tenant VPC Peering for Cloud Services"
+
+  vpcaccess.googleapis.com:
+    category: "Serverless VPC Access"
+    display_name: "Google VPC Access Connector"
+    purpose: "Direct Serverless-to-VPC Private Egress Tunneling"
+
+  domains.googleapis.com:
+    category: "Domain Registration & Management"
+    display_name: "Google Cloud Domains"
+    purpose: "Authoritative Enterprise Domain Registration & Lifecycle Management"
+
+  # ----------------------------------------------------------------------------
+  # Storage, Databases & Analytics
+  # ----------------------------------------------------------------------------
+  storage.googleapis.com:
+    category: "Cloud Object Storage"
+    display_name: "Google Cloud Storage (GCS)"
+    purpose: "Durable Encrypted Storage Buckets, Retention Policy Locks & Log Sinks"
+
+  storage-api.googleapis.com:
+    category: "Cloud Object Storage API"
+    display_name: "Google Cloud Storage JSON/gRPC API"
+    purpose: "Direct Object Access, Streaming & Bucket Metadata Operations"
+
+  sqladmin.googleapis.com:
+    category: "Relational Database Management"
+    display_name: "Google Cloud SQL Admin"
+    purpose: "Managed PostgreSQL/MySQL High-Availability RDBMS with CMEK & Private IP"
+
+  spanner.googleapis.com:
+    category: "Global Relational Database"
+    display_name: "Google Cloud Spanner"
+    purpose: "Horizontally Scalable Enterprise Database with FIPS CMEK Encryption"
+
+  bigquery.googleapis.com:
+    category: "Security Analytics Warehouse"
+    display_name: "Google BigQuery"
+    purpose: "Enterprise Log Audit Analytics, Security Data Lake & SIEM Store"
+
+  redis.googleapis.com:
+    category: "In-Memory Cache"
+    display_name: "Google Memorystore for Redis"
+    purpose: "Managed Low-Latency In-Memory Data Store with In-Transit Encryption"
+
+  dataproc.googleapis.com:
+    category: "Big Data Processing"
+    display_name: "Google Cloud Dataproc"
+    purpose: "Managed Apache Spark & Hadoop Cluster Engine with Shielded Nodes"
+
+  dataflow.googleapis.com:
+    category: "Stream & Batch Processing"
+    display_name: "Google Cloud Dataflow"
+    purpose: "Unified Stream & Batch Data Pipeline Execution Engine"
+
+  # ----------------------------------------------------------------------------
+  # Observability, Logging & Administration
+  # ----------------------------------------------------------------------------
+  logging.googleapis.com:
+    category: "Audit Ingestion & Logging"
+    display_name: "Google Cloud Logging"
+    purpose: "Centralized Immutable Audit Logging, Export Sinks & Retention Locks"
+
+  monitoring.googleapis.com:
+    category: "Observability & Alerting"
+    display_name: "Google Cloud Monitoring"
+    purpose: "System Metric Observability, Performance Dashboards & SLO Alerting"
+
+  cloudasset.googleapis.com:
+    category: "Asset Inventory Audit"
+    display_name: "Google Cloud Asset Inventory"
+    purpose: "Continuous CM-8 Resource Inventory Visibility, Change Tracking & Export"
+
+  cloudaudit.googleapis.com:
+    category: "Audit Trail Ingestion"
+    display_name: "Google Cloud Audit Logs"
+    purpose: "Immutable Admin Activity, System Events & Access Transparency Logging"
+
+  stackdriver.googleapis.com:
+    category: "Cloud Operations Suite"
+    display_name: "Google Cloud Operations"
+    purpose: "Unified Diagnostics, Error Reporting & APM Instrumentation Suite"
+
+  # ----------------------------------------------------------------------------
+  # Integration, CI/CD & Automation
+  # ----------------------------------------------------------------------------
+  pubsub.googleapis.com:
+    category: "Event Messaging Broker"
+    display_name: "Google Cloud Pub/Sub"
+    purpose: "Asynchronous Interservice Event Bus with CMEK & Dead Letter Queues"
+
+  eventarc.googleapis.com:
+    category: "Event Bus Engine"
+    display_name: "Google Eventarc"
+    purpose: "Audit Log & Infrastructure Event Routing to Serverless Handlers"
+
+  cloudbuild.googleapis.com:
+    category: "CI/CD Build Automation"
+    display_name: "Google Cloud Build"
+    purpose: "Isolated Container & Infrastructure Build Execution in Private Worker Pools"
+
+  cloudscheduler.googleapis.com:
+    category: "Task Scheduling Engine"
+    display_name: "Google Cloud Scheduler"
+    purpose: "Automated Cron Triggering & Scheduled Compliance Audit Execution"
+
+  artifactregistry.googleapis.com:
+    category: "Secure Container Registry"
+    display_name: "Google Artifact Registry"
+    purpose: "Encrypted Container Image & Package Storage with Vulnerability Scanning"
+
+  # ----------------------------------------------------------------------------
+  # Resource Management, Governance & Billing
+  # ----------------------------------------------------------------------------
+  cloudresourcemanager.googleapis.com:
+    category: "Resource Hierarchy"
+    display_name: "Google Cloud Resource Manager"
+    purpose: "Organization, Folder & Project Structural Governance and IAM Inheritance"
+
+  serviceusage.googleapis.com:
+    category: "API Management & Enablement"
+    display_name: "Google Service Usage"
+    purpose: "Centralized API Management, Quotas & Service Dependency Governance"
+
+  cloudbilling.googleapis.com:
+    category: "Financial Governance"
+    display_name: "Google Cloud Billing"
+    purpose: "Enterprise Billing Account Governance, Cost Controls & Invoicing"
+
+  billingbudgets.googleapis.com:
+    category: "Budget Governance & Alerts"
+    display_name: "Google Cloud Billing Budgets"
+    purpose: "Automated Budget Monitoring, Threshold Alerts & Cost Governance"
+
+  essentialcontacts.googleapis.com:
+    category: "Incident Notification"
+    display_name: "Google Essential Contacts"
+    purpose: "Direct Security & Compliance Notification Routing to Designated Contacts"
+
+  admin.googleapis.com:
+    category: "Directory & Domain Administration"
+    display_name: "Google Workspace Admin SDK"
+    purpose: "Cloud Identity Directory, User Provisioning & Group Synchronization"

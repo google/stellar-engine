@@ -88,3 +88,34 @@ jobs:
       - name: Run Python Unit Tests
         run: |
           pytest
+
+  compliance-engine-tests:
+    name: Compliance Engine Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38
+        with:
+          python-version: "3.11"
+
+      - name: Check Boilerplate
+        run: |
+          python tools/check_boilerplate.py .gemini/skills/compliance/
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m venv .gemini/skills/compliance/.venv
+          .gemini/skills/compliance/.venv/bin/pip install -r .gemini/skills/compliance/requirements.txt
+          .gemini/skills/compliance/.venv/bin/pip install pytest
+
+      - name: Run Compliance Engine Test Suite
+        run: |
+          .gemini/skills/compliance/.venv/bin/python .gemini/skills/compliance/scripts/run_tests.py
