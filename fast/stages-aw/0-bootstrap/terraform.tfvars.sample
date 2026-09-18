@@ -75,3 +75,8 @@ assured_workloads = {
 bootstrap_project = "<bootstrap_project_id>"
 
 alert_email = "<alert_email>"
+
+# KMS protection level for CMEK keys. Leave unset to get a regime-aware default:
+# SOFTWARE for FEDRAMP_MODERATE, HSM for all other regimes (including FEDRAMP_HIGH and IL5).
+# Explicitly set to "SOFTWARE" or "HSM" to override the default.
+# kms_protection_level = "HSM"

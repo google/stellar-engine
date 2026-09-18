@@ -1,52 +1,67 @@
-# Release Strategy and Documentation
+# Release Strategy
 
-This document outlines the versioning scheme, release classification, and release automation process for the [stellar-engine](https://github.com/google/stellar-engine/) repository.
+Versioning, release classification, and release automation for
+[stellar-engine](https://github.com/google/stellar-engine/).
 
-## Release Classification and Versioning Scheme
+## Versioning
 
-`stellar-engine` follows Semantic Versioning (`vMAJOR.MINOR.PATCH`). Releases are categorized based on their impact on underlying Terraform state and deployed infrastructure resources.
+`stellar-engine` follows Semantic Versioning (`vMAJOR.MINOR.PATCH`). The version
+is derived from the Conventional Commits prefix on each squashed commit merged
+to `main`.
 
-### Major Releases
+| Bump | Trigger | Meaning |
+| :--- | :--- | :--- |
+| **Major** (`vX.0.0`) | `<type>!:` or a `BREAKING CHANGE:` footer | Requires Terraform state manipulation, state moves, or resource recreation. Ships with migration notes. |
+| **Minor** (`vX.Y.0`) | `feat:` | Backwards-compatible additions. No state changes. |
+| **Patch** (`vX.Y.Z`) | `fix:` | Bug fixes, security patches, non-breaking corrections. |
 
-Major releases (e.g., `vX.0.0`) cover breaking changes or updates that require state manipulation or resource redeployment.
+## Pull request titles
 
-* Definition: Any changes that require:
-  * Terraform state manipulation (e.g., manual state modification, removals).
-  * Terraform state moves (`terraform state mv` or refactoring existing resource addresses).
-  * Redeployment or recreation of existing infrastructure resources.
-* Process: Executed manually.
-* Upgrade Guidance: Major releases will include detailed migration notes, state refactoring scripts, or step-by-step instructions for upgrading existing environments without unexpected downtime or state drift.
+All PR titles targeting `main` must follow
+[Conventional Commits](https://www.conventionalcommits.org/):
+`<type>(<scope>): <description>`. A status check enforces this.
 
-### Minor Releases
+| Type | Purpose | Changelog |
+| :--- | :--- | :--- |
+| `feat` | A new feature | Features |
+| `fix` | A bug fix | Bug Fixes |
+| `docs` `style` `refactor` `test` `build` `ci` `chore` | Everything else | not shown |
 
-Minor releases (e.g., `vX.Y.0`) cover backwards-compatible feature additions, updates, and enhancements.
+Only `feat` and `fix` produce a CHANGELOG entry, and a release happens only when
+that entry is non-empty — so they are also the only two types that cut a release.
+Everything else is recorded in git history and ships with the next release.
 
-* Definition: Feature additions, enhancements, or updates that do not require Terraform state manipulation, state moves, or redeployment of existing resources (e.g., backwards-compatible infrastructure additions, non-destructive parameter updates).
-* Process: Generated monthly on the last Friday of the month automatically from the `main` branch.
+Breaking changes are the exception: `!` or a `BREAKING CHANGE:` footer always
+appears under **⚠ BREAKING CHANGES**, whatever the type. A refactor requiring
+state moves must therefore be titled `refactor(modules/kms)!: ...`.
 
-### Patch Releases
+Dependency bumps use `build`, e.g. `build(deps): bump google provider to 6.12`.
 
-Patch releases (e.g., `vX.Y.Z`) cover critical bug fixes, security patches, and urgent non-breaking adjustments.
+### Scopes
 
-* Definition: Critical bug fixes, security patches, or urgent non-breaking adjustments.
-* Process: Executed on an ad-hoc basis, where the release is updated and tagged manually.
+Optional, but encouraged on `feat` and `fix`. The scope renders as a bold prefix
+and is what tells a reader which part of the repository changed:
 
-## Release Cadence and Automation Summary
+* `feat(modules/kms): add support for HSM protection level`
+* `fix(fast/2-networking): correct subnet CIDR validation`
+* `feat(blueprints/il5/bastion-pattern): add IAP tunnel support`
 
-| Release Type | Trigger / Cadence | Execution | State Manipulation / Redeploy Required? |
-| :--- | :--- | :--- | :--- |
-| Major (`vX.0.0`) | As needed | Manual | Yes |
-| Minor (`vX.Y.0`) | Monthly | Automated (from `main`) | No |
-| Patch (`vX.Y.Z`) | Ad-hoc / As needed | Manual | No |
+Start with the top-level area and narrow as far as is useful. For a PR spanning
+several areas, pick the dominant one or omit the scope.
 
-## Contributor Guidelines and Release Workflow
+## Merging
 
-To ensure smooth automated and manual releases, contributors must adhere to the following workflow:
+`main` is squash-merge only, and the squashed commit title is taken from the PR
+title. Check the title is clean before merging — it becomes the changelog entry.
 
-1. Pull Request Impact Assessment:
-   * PR authors must explicitly state whether their proposed changes require state manipulation, state moves, or resource redeployment.
-   * If a PR introduces breaking state changes or resource redeployments, it must be flagged for inclusion in an upcoming Major Release.
-2. Main Branch Readiness:
-   * All changes merged into the `main` branch should be tested and production-ready, as automated Minor Releases are generated directly from `main` on a monthly schedule.
-3. Patch / Hotfix Workflow:
-   * Urgent fixes requiring a Patch Release are tagged manually ad-hoc against the affected version target and merged back to `main`.
+## Releases
+
+Release Please keeps one open PR titled `release: vX.Y.Z`, updating it as changes
+land on `main`. Merging that PR tags the release and publishes it with the
+compiled changelog. The `release` type is reserved for that bot PR.
+
+## Labels
+
+The Pull Request Labeler applies `Type - *` and `Framework - *` labels from the
+paths you touch. They are informational only, and have no effect on versioning or
+the CHANGELOG.

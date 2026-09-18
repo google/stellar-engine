@@ -36,7 +36,9 @@ To destroy a previous FAST deployment follow the instructions detailed in cleanu
 - [FedRAMP High/Moderate Compliant](/fast/stages-aw/2-networking-a-fedramp/README.md)
 - [IL5/IL4 Compliant](2-networking-b-il5-ngfw/README.md)
 
-Manages centralized network resources in a separate stage, and is typically owned by the networking team. This stage implements a hub-and-spoke design, and includes connectivity via VPN to on-premises, and YAML-based factories for firewall rules (hierarchical and VPC-level) and subnets. Currently, two networking options (IL5/IL4 and FedRAMP High/Moderate Compliant) are available.
+Manages centralized network resources in a separate stage and is typically owned by the networking team. This stage implements a hub-and-spoke design. Firewall rules and subnets are configured through Terraform variables. Currently, two networking options (IL5/IL4 and FedRAMP High/Moderate Compliant) are available.
+
+Hybrid connectivity is not deployed by either networking option and must be designed separately.
 
 ## Security (3)
 

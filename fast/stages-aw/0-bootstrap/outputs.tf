@@ -108,6 +108,7 @@ locals {
     }
     assured_workloads      = merge(var.assured_workloads, { "folder" = local.assured_workload_folder })
     common_services_folder = module.branch-common-services-folder.folder.name
+    kms_protection_level   = local.kms_protection_level
     regions                = var.regions
   }
 
@@ -165,7 +166,7 @@ output "custom_roles" {
 
 output "kms_protection_level" {
   description = "KMS protection level."
-  value       = var.kms_protection_level
+  value       = local.kms_protection_level
 }
 
 output "outputs_bucket" {
