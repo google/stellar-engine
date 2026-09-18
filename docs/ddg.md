@@ -4,9 +4,9 @@ Cloud Foundation Fabric Detailed Deployment Guide
 
 | <strong>Created:</strong>             | June 04, 2023 |
 | :------------------------------------ | :------------ |
-| <strong>Updated:</strong>             | May 11, 2026  |
-| <strong>Version:</strong>             | v2.9.1        |
-| <strong>Most recent changes:</strong> | Refresh to v2.9.1|
+| <strong>Updated:</strong>             | September 16, 2026 |
+| <strong>Version:</strong>             | v4.0.0        |
+| <strong>Most recent changes:</strong> | Refresh to v4.0.0 |
 
 ##
 
@@ -75,7 +75,7 @@ To make using this deployment guide easier, the variables described below need t
 | <strong>Prefix</strong>               | `prefix`                         | This is the prefix appended to the beginning of projects and resources deployed selected by your or your organization. <strong>Full project names must be globally unique and the prefix must use a maximum of 7 characters</strong>. A 409 error will occur if a globally unique project name is not created. |
 | <strong>Region</strong>               | `assured_workloads.location`     | This is the (US) based region that we are deploying resources into (Dual regions like “NAM9” or continents are currently not supported)                                                                                                                                                                        |
 | <strong>Tenant Name</strong>          | `tenants` (Stage 1)              | The name for the first tenant that will be deployed via this document. <strong>Full project names must be globally unique and the tenant-name must use a maximum of 6 characters</strong>.                                                                                                                     |
-| <strong>Secondary Region</strong>     | `regions.secondary`              | The secondary region for resource deployment.                                                                                                                                                                                                                                                                  |
+| <strong>KMS Protection Level</strong> | `kms_protection_level`           | The Cloud KMS protection level required across every FAST stage (`0-bootstrap`, `1-resman`, `2-networking-a-fedramp`, `3-security`). Use `"HSM"` for FedRAMP High and IL5 compliance; `"SOFTWARE"` is permitted for FedRAMP Moderate.                                                                    |
 
 
 ## Prerequisites
@@ -146,21 +146,25 @@ permissions.**
   Admin
 - Follow the [Initial Groups and Administrative Access in Cloud Setup Steps 2
   and 3](https://console.cloud.google.com/cloud-setup/overview) instructions
-  adding all the below groups.
+  adding the required administrative groups bound by the FAST stages (`0-bootstrap/variables.tf` through `3-security`):
   - If prompted, skip the IDP step for now
 - Note: You do not have to complete subsequent steps but make sure you finish
   Step 2. Google may change their default group names. You can manually create
   the [group](https://console.cloud.google.com/iam-admin/groups) if it is not
   contained in the wizard.)
-  - gcp-billing-admins@`<domain>`
-  - gcp-developers@`<domain>`
-  - gcp-devops@`<domain>`
-  - gcp-hybrid-connectivity-admins@`<domain>`
-  - gcp-logging-monitoring-admins@`<domain>`
-  - gcp-logging-monitoring-viewers@`<domain>`
-  - gcp-organization-admins@`<domain>`
-  - gcp-vpc-network-admins@`<domain>`
-  - gcp-security-admins@`<domain>`
+
+  **Required FAST Stage Groups:**
+  - `gcp-billing-admins@<domain>`
+  - `gcp-devops@<domain>` (`gcp-support` is aliased to `gcp-devops`)
+  - `gcp-vpc-network-admins@<domain>`
+  - `gcp-organization-admins@<domain>`
+  - `gcp-security-admins@<domain>`
+
+  **Application / Optional Groups (defined in `docs/tdd.md` role mappings):**
+  - `gcp-developers@<domain>`
+  - `gcp-logging-admins@<domain>`
+  - `gcp-logging-viewers@<domain>`
+  - `gcp-monitoring-admins@<domain>`
 - We need to enable these Google Cloud Services by running the following
   script:
     - fast/stages-aw/0-bootstrap/enableServices.sh
@@ -211,6 +215,8 @@ billing_account = {
 regions = {
  primary = "`<region>`"
 }
+# KMS protection level: "HSM" for FedRAMP High and IL5 compliance; "SOFTWARE" permitted for FedRAMP Moderate. Required across all stages.
+kms_protection_level = "HSM"
 # use `gcloud organizations list`
 organization = {
  domain = "`<domain>`" # DISPLAY_NAME
@@ -363,6 +369,7 @@ ten-1 = { ## Change tenant_name here - 6 or less characters
   }
 ## You can have “n” number of tenants
 }
+kms_protection_level = "HSM"
 fast_features = {
  envs = true
 }
