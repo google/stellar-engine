@@ -527,7 +527,9 @@ if promptUser "Stage 0 - Bootstrap -"; then
 
   # Check for custom IAM roles
   # Filter out standard roles that we expect to be there or will be managed by Terraform
-  standard_roles="gcveNetworkAdmin|organizationAdminViewer|organizationIamAdmin|serviceProjectNetworkAdmin|storageViewer|tagViewer|tenantNetworkAdmin"
+  # storage_viewer is snake_case here on purpose: its role file is the only one
+  # without a `name:`, so modules/organization/iam.tf falls back to the filename.
+  standard_roles="gcveNetworkAdmin|organizationAdminViewer|organizationIamAdmin|serviceProjectNetworkAdmin|storage_viewer|tagViewer|tenantNetworkAdmin"
   custom_roles=$(gcloud iam roles list --organization="${ORGANIZATION_ID}" --format="value(name)" 2>/dev/null | grep -vE "$standard_roles" || echo "")
   if [[ -n "$custom_roles" ]]; then
     log_warn "Found existing custom IAM roles at organization level:"
@@ -1071,6 +1073,10 @@ if promptUser "Stage 2 - Networking -"; then
     echo "You have selected IL5"
     cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-b-il5-ngfw || exit
     deploy_networking
+
+  else
+    log_error "Invalid selection \"${choice}\": expected 1, 2, or 3. No networking was deployed."
+    exit 1
   fi
 
   echo "Congratulations, you have completed Stage 2!"
