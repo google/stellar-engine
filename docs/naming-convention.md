@@ -28,7 +28,7 @@ _Throughout this documentation we use example naming and diagrams to show exampl
 
 _acme_ - `ACME` is the example prefix we will use for this codebase.
 
-A short prefix of no more than 6 characters representing the company name and or team name that will flow down through the infrastructure for all named resources.  We use this `prefix` to ensure we comply with any globally unique naming, like `Google Cloud Projects`.
+A short prefix of no more than 7 characters representing the company name and or team name that will flow down through the infrastructure for all named resources.  We use this `prefix` to ensure we comply with any globally unique naming, like `Google Cloud Projects`.
 
 _Note: The only place we _do not_ use or need the prefix is in the `Google Cloud Folders` which are only viewable within the Google Cloud WebUI.  Brevity in the Google Cloud Folder structure is paramount for clean Resource Management._
 
