@@ -10,7 +10,7 @@ This repository provides **end-to-end blueprints** and a **suite of Terraform mo
 - Reference [blueprints](./blueprints/) used to securely deep dive into network patterns or product features
 - Comprehensive source of lean [modules](./modules/) that lend themselves well to changes
 
-> **Workstation Note**: Deployment and stage-linking scripts (`scripts/*.sh` and `fast/stage-links.sh`) require a POSIX-compliant shell environment (Linux, macOS, Google Cloud Shell, or **WSL2** on Windows). Native Windows shells (PowerShell, Command Prompt, Git Bash/`MINGW64`, or Cygwin) are not supported due to POSIX path, symbolic link (`ln -s`), and line-ending requirements. See the [Deployment Prerequisites](./docs/prerequisites.md) and [Scripts README](./scripts/README.md) for details.
+Deployment and stage-linking scripts (`scripts/*.sh` and `fast/stage-links.sh`) require a POSIX-compliant shell environment (Linux, macOS, Google Cloud Shell, or WSL2 on Windows). Native Windows shells (PowerShell, Command Prompt, Git Bash/`MINGW64`, or Cygwin) are not supported due to POSIX path, symbolic link (`ln -s`), and line-ending requirements. See the [Deployment Prerequisites](./docs/prerequisites.md) and [Scripts README](./scripts/README.md) for details.
 
 ## Target Audience and Benefits
 
