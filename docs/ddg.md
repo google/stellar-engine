@@ -669,9 +669,9 @@ Each FAST deployment stage uses a dedicated least-privilege automation service a
 
 If you encounter `403 Forbidden` or `Permission 'iam.serviceAccounts.getAccessToken' denied` errors when transitioning between stages:
 
-1. **Clear stale shell impersonation variables**: If `GOOGLE_IMPERSONATE_SERVICE_ACCOUNT` or `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT` was exported while debugging a previous stage, it overrides the provider block in the current stage. Run `../../stage-links.sh <OUTPUTS_PATH>` (or `unset GOOGLE_IMPERSONATE_SERVICE_ACCOUNT CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT`) so Terraform uses the stage's `*-providers.tf` configuration.
-2. **Verify service account lockdown status**: Ensure `./sa_lockdown.sh --enable` has been executed in `fast/stages-aw/3-security` if the deployment service accounts were previously disabled.
-3. **Verify token creator permissions**: Confirm your active `gcloud auth list` identity is a member of the organization admins or devops group granted `roles/iam.serviceAccountTokenCreator` on the target stage service account.
+1. Clear any stale shell impersonation variables. If `GOOGLE_IMPERSONATE_SERVICE_ACCOUNT` or `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT` was exported while debugging a previous stage, it overrides the provider block in the current stage. Run `../../stage-links.sh <OUTPUTS_PATH>` (or `unset GOOGLE_IMPERSONATE_SERVICE_ACCOUNT CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT`) so Terraform uses the stage's `*-providers.tf` configuration.
+2. Verify that `./sa_lockdown.sh --enable` has been executed in `fast/stages-aw/3-security` if the deployment service accounts were previously disabled.
+3. Confirm that your active `gcloud auth list` identity is a member of the organization admins or devops group granted `roles/iam.serviceAccountTokenCreator` on the target stage service account.
 
 ### Additional Notes
 

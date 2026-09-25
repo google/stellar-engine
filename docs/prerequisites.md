@@ -7,8 +7,8 @@ Stage 0.
 
 ## Local Workstation
 
-- Use a POSIX-compliant shell environment: Linux, macOS, Google Cloud Shell, or **WSL2 (Windows Subsystem for Linux)** on Windows workstations.
-  - **Windows note**: Native Windows terminals (PowerShell, `cmd.exe`, Git Bash/`MINGW64`, or Cygwin) are not supported because stage linking (`fast/stage-links.sh`) and automation scripts (`scripts/*.sh`) rely on POSIX path resolution, `ln -s` symbolic links, and standard Unix utilities. Clone the repository and run all commands inside a WSL2 Linux filesystem (for example, `~/stellar-engine`) rather than a mounted Windows drive (`/mnt/c/...`) to avoid CRLF line-ending and symlink permission issues.
+- Use a POSIX-compliant shell environment: Linux, macOS, Google Cloud Shell, or WSL2 (Windows Subsystem for Linux) on Windows workstations.
+  - Native Windows terminals (PowerShell, `cmd.exe`, Git Bash/`MINGW64`, or Cygwin) are not supported because stage linking (`fast/stage-links.sh`) and automation scripts (`scripts/*.sh`) rely on POSIX path resolution, `ln -s` symbolic links, and standard Unix utilities. Clone the repository and run all commands inside a WSL2 Linux filesystem (for example, `~/stellar-engine`) rather than a mounted Windows drive (`/mnt/c/...`) to avoid CRLF line-ending and symlink permission issues.
 - Clone the Stellar Engine repository.
 - Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install).
 - Install Terraform version 1.8.1 or newer.
