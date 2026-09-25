@@ -46,12 +46,15 @@ GLOBALS="tfvars/0-globals.auto.tfvars.json"
 PROVIDER_CMD=$CMD
 STAGE_NAME=$(basename "$(pwd)")
 
+STAGE_SA_PATTERN=""
+
 case $STAGE_NAME in
 
 "0-bootstrap")
   unset GLOBALS
   PROVIDER="providers/0-bootstrap-providers.tf"
   TFVARS=""
+  STAGE_SA_PATTERN="bootstrap-0"
   ;;
 "0-bootstrap-tenant")
   MESSAGE="remember to set the prefix in the provider file"
@@ -59,10 +62,12 @@ case $STAGE_NAME in
   PROVIDER="providers/0-bootstrap-tenant-providers.tf"
   TFVARS="tfvars/0-bootstrap.auto.tfvars.json
   tfvars/1-resman.auto.tfvars.json"
+  STAGE_SA_PATTERN="bootstrap-0"
   ;;
 "1-resman")
   PROVIDER="providers/${STAGE_NAME}-providers.tf"
   TFVARS="tfvars/0-bootstrap.auto.tfvars.json"
+  STAGE_SA_PATTERN="resman-0"
   ;;
 "1-resman-tenant")
   if [[ -z "$TENANT" ]]; then
@@ -72,6 +77,7 @@ case $STAGE_NAME in
   unset GLOBALS
   PROVIDER="tenants/$TENANT/providers/1-resman-tenant-providers.tf"
   TFVARS="tenants/$TENANT/tfvars/0-bootstrap-tenant.auto.tfvars.json"
+  STAGE_SA_PATTERN="resman-0"
   ;;
 "2-networking"*)
   if [[ -z "$TENANT" ]]; then
@@ -85,6 +91,7 @@ case $STAGE_NAME in
     TFVARS="tenants/$TENANT/tfvars/0-bootstrap-tenant.auto.tfvars.json
     tenants/$TENANT/tfvars/1-resman.auto.tfvars.json"
   fi
+  STAGE_SA_PATTERN="networking-0"
   ;;
 "3-security"*)
   if [[ -z "$TENANT" ]]; then
@@ -98,6 +105,7 @@ case $STAGE_NAME in
     TFVARS="tenants/$TENANT/tfvars/0-bootstrap-tenant.auto.tfvars.json
     tenants/$TENANT/tfvars/1-resman.auto.tfvars.json"
   fi
+  STAGE_SA_PATTERN="security-0"
   ;;
 *)
   # check for a "dev" stage 3
@@ -134,6 +142,16 @@ fi
 for f in $TFVARS; do
   echo "$CMD/$f ./"
 done
+
+if [[ -n "$STAGE_SA_PATTERN" ]]; then
+  echo -e "\n# Stage IAM impersonation context: expects *-${STAGE_SA_PATTERN}@*.iam.gserviceaccount.com"
+  ACTIVE_IMPERSONATE_SA="${GOOGLE_IMPERSONATE_SERVICE_ACCOUNT:-${CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT:-}}"
+  if [[ -n "$ACTIVE_IMPERSONATE_SA" && "$ACTIVE_IMPERSONATE_SA" != *"${STAGE_SA_PATTERN}"* ]]; then
+    echo "# WARNING: Active shell impersonation ($ACTIVE_IMPERSONATE_SA) does not match stage '$STAGE_NAME' ($STAGE_SA_PATTERN)."
+    echo "# Clear stale cross-stage impersonation variables to prevent 403 Forbidden errors:"
+    echo "unset GOOGLE_IMPERSONATE_SERVICE_ACCOUNT CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT"
+  fi
+fi
 
 if [[ -n ${MESSAGE+x} ]]; then
   echo -e "\n# ---> $MESSAGE <---"
