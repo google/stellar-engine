@@ -1,17 +1,10 @@
 {
   "name": "Stellar Engine Workstation",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
-  "features": {
-    "ghcr.io/devcontainers/features/terraform:1": {
-      "version": "1.7.4",
-      "tflint": "latest"
-    },
-    "ghcr.io/devcontainers/features/python:1": {
-      "version": "3.11"
-    },
-    "ghcr.io/dhoeric/features/google-cloud-cli:1": {}
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
   },
-  "postCreateCommand": "pip install --no-cache-dir -r tools/requirements.txt",
+  "postCreateCommand": "pip3 install --no-cache-dir --break-system-packages -r tools/requirements.txt",
   "remoteEnv": {
     "CLOUDSDK_CORE_DISABLE_PROMPTS": "1"
   }
