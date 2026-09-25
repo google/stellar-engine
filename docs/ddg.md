@@ -169,7 +169,7 @@ permissions.**
   script:
     - fast/stages-aw/0-bootstrap/enableServices.sh
       - If you run into issues with the above command, you can simply run the following deprecated command (on MacOS, works on other *nix variants)
-        - `echo "iam cloudkms pubsub serviceusage cloudresourcemanager bigquery assuredworkloads cloudbilling logging iamcredentials orgpolicy" | xargs -n1 -I {} gcloud services enable "{}.googleapis.com"`
+        - `echo "iam cloudkms pubsub serviceusage cloudresourcemanager bigquery assuredworkloads cloudbilling logging iamcredentials orgpolicy" | tr ' ' '\n' | xargs -I {} gcloud services enable "{}.googleapis.com"`
 - [Enable Access
   Transparency](https://console.cloud.google.com/iam-admin/settings) for your
   organization
@@ -271,11 +271,11 @@ alert_email = "`<alert_email>`"
 - Run `terraform init`
 - Run `terraform apply -var bootstrap_user=$(gcloud config list --format 'value(core.account)')`
   - Type `yes` when prompted
-  - **Note:** You may receive an error in this stage where it reports that
-    ‘bigquery.googleapis.com\` is not usable in the Assured Workloads. 
+  - **Note:** You may receive a `403` error in this stage:
+    `Request is disallowed by organization's constraints/gcp.restrictServiceUsage constraint ... attempting to use service 'bigquery.googleapis.com'`.
     - If you see this error, go to the [Assured Workloads
     ](https://console.cloud.google.com/compliance/assuredworkloads) page
-    - Click the  StellarEngine-`<compliance_regime>` folder (and Networking folder, if applicable)
+    - Click the `StellarEngine-<prefix>` folder (and Networking folder, if applicable)
     - Click “Review Available Updates”, 
     - Go to “Allowed Services”
     - Click “Allow services” to bring in the BigQuery family of APIs. 
@@ -410,7 +410,7 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap
 
 - **Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
 you can use a **billing override** to run the project creation/billing links under your personal credentials. 
-To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/terraform.tfvars** file
+To do this, define the `billing_override` variable in **fast/stages-aw/2-networking-a-fedramp/terraform.tfvars** file
 
   ```hcl
   billing_override = {
@@ -468,7 +468,7 @@ a VM code and register them. For more instructions, see the README in the the
 
 - **Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
 you can use a **billing override** to run the project creation/billing links under your personal credentials. 
-To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/terraform.tfvars** file
+To do this, define the `billing_override` variable in **fast/stages-aw/2-networking-b-il5-ngfw/terraform.tfvars** file
 
   ```hcl
   billing_override = {
@@ -556,9 +556,9 @@ are responsible for the audit project.
   Billing Account Administrator for the following service account to the external billing account:**
   - `<prefix>`-security-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com
   
-- **Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
+- **Note:** If you are using an external billing account where the security service account cannot be granted billing permissions, 
 you can use a **billing override** to run the project creation/billing links under your personal credentials. 
-To do this, define the `billing_override` variable in **fast/stages-aw/1-resman/terraform.tfvars** file
+To do this, define the `billing_override` variable in **fast/stages-aw/3-security/terraform.tfvars** file
 
   ```hcl
   billing_override = {
