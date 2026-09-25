@@ -89,13 +89,13 @@ variable "allowed_ip_ranges" {
 }
 
 variable "access_start_hour" {
-  description = "The hour (0-23) in America/New_York timezone when access starts."
+  description = "The hour (0-23) in the configured access_time_zone (default America/New_York) when access starts."
   type        = number
   default     = 7
 }
 
 variable "access_end_hour" {
-  description = "The hour (0-23) in America/New_York timezone when access ends."
+  description = "The hour (0-23) in the configured access_time_zone (default America/New_York) when access ends."
   type        = number
   default     = 21
 }

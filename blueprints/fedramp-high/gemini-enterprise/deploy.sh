@@ -51,59 +51,75 @@ normalize_environment() {
 check_dependencies() {
     echo ""
     echo -e "${BLUE}--- Check Dependencies ---${NC}"
-    echo "Validating required dependencies: tfenv, gcloud, terraform, pip3, python3, jq..."
-    
-    # Ensure ~/.tfenv/bin is in PATH early if it exists (resolves precedence issues)
-    if [[ -d "$HOME/.tfenv/bin" ]] && [[ ":$PATH:" != *":$HOME/.tfenv/bin:"* ]]; then
-        export PATH="$HOME/.tfenv/bin:$PATH"
-        hash -r 2>/dev/null || true
+    echo "Validating required dependencies: gcloud, terraform, pip3, python3, jq..."
+
+    local tf_compatible="false"
+    if command -v terraform &> /dev/null; then
+        local tf_ver
+        tf_ver=$(terraform version 2>/dev/null | head -n 1 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+" || true)
+        if [[ -n "$tf_ver" ]]; then
+            local lowest
+            lowest=$(printf "%s\n1.7.4\n" "$tf_ver" | sort -V | head -n 1)
+            if [[ "$lowest" == "1.7.4" ]]; then
+                echo -e "${GREEN}Compatible Terraform version (${tf_ver}) is already installed.${NC}"
+                tf_compatible="true"
+            fi
+        fi
     fi
 
-    if command -v tfenv &> /dev/null; then
-        echo -e "${GREEN}tfenv is installed. Setting Terraform version to 1.12.2...${NC}"
-        tfenv install 1.12.2
-        tfenv use 1.12.2
-    else
-        echo -e "${YELLOW}tfenv is not installed. Checking OS...${NC}"
-        if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
-            echo -e "${RED}Windows detected.${NC}"
-            echo "Please manually install Terraform v1.12.2:"
-            echo "1. Download the binary from: https://releases.hashicorp.com/terraform/1.12.2/terraform_1.12.2_windows_amd64.zip"
-            echo "2. Extract the zip file."
-            echo "3. Add the dir containing terraform.exe to your system's PATH environment variable."
-            exit 1
-        elif [[ "$OSTYPE" == "darwin"* || "$OSTYPE" == "linux-gnu"* ]]; then
-            echo -e "${YELLOW}MacOS/Linux detected. Installing tfenv manually...${NC}"
-            if [[ ! -d "$HOME/.tfenv" ]]; then
-                git clone --depth=1 https://github.com/tfutils/tfenv.git ~/.tfenv
-            else
-                echo -e "${GREEN}tfenv directory already exists at $HOME/.tfenv. Skipping clone.${NC}"
-            fi
-            
-            # Add to bashrc/bash_profile to ensure Linux/MacOS compat
-            for PROFILE in ~/.bash_profile ~/.bashrc; do
-                if [[ -f "$PROFILE" ]] && ! grep -q 'export PATH="$HOME/.tfenv/bin:$PATH"' "$PROFILE" 2>/dev/null; then
-                    echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> "$PROFILE"
-                fi
-            done
-            # If neither file existed, just create .bashrc for Linux
-            if [[ ! -f ~/.bash_profile && ! -f ~/.bashrc ]]; then
-                echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> ~/.bashrc
-            fi
-            
+    if [[ "$tf_compatible" != "true" ]]; then
+        # Ensure ~/.tfenv/bin is in PATH early if it exists (resolves precedence issues)
+        if [[ -d "$HOME/.tfenv/bin" ]] && [[ ":$PATH:" != *":$HOME/.tfenv/bin:"* ]]; then
             export PATH="$HOME/.tfenv/bin:$PATH"
             hash -r 2>/dev/null || true
-            echo -e "${GREEN}tfenv installed. Setting Terraform version to 1.12.2...${NC}"
+        fi
+
+        if command -v tfenv &> /dev/null; then
+            echo -e "${GREEN}tfenv is installed. Setting Terraform version to 1.12.2...${NC}"
             tfenv install 1.12.2
             tfenv use 1.12.2
-            
-            if [[ "$CLOUD_SHELL" == "true" ]]; then
-                echo -e "${YELLOW}IMPORTANT: You are running in Google Cloud Shell.${NC}"
-                echo -e "${YELLOW}To use the 'tfenv' or 'terraform' commands in your terminal AFTER this script finishes, you MUST run: ${GREEN}source ~/.bashrc${NC}"
-            fi
         else
-            echo -e "${RED}Unsupported OS: $OSTYPE. Please install Terraform 1.12.2 manually before running this script.${NC}"
-            exit 1
+            echo -e "${YELLOW}Compatible Terraform (>= 1.7.4) and tfenv not found. Checking OS...${NC}"
+            if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
+                echo -e "${RED}Windows detected.${NC}"
+                echo "Please manually install Terraform v1.12.2:"
+                echo "1. Download the binary from: https://releases.hashicorp.com/terraform/1.12.2/terraform_1.12.2_windows_amd64.zip"
+                echo "2. Extract the zip file."
+                echo "3. Add the dir containing terraform.exe to your system's PATH environment variable."
+                exit 1
+            elif [[ "$OSTYPE" == "darwin"* || "$OSTYPE" == "linux-gnu"* ]]; then
+                echo -e "${YELLOW}MacOS/Linux detected. Installing tfenv manually...${NC}"
+                if [[ ! -d "$HOME/.tfenv" ]]; then
+                    git clone --depth=1 https://github.com/tfutils/tfenv.git ~/.tfenv
+                else
+                    echo -e "${GREEN}tfenv directory already exists at $HOME/.tfenv. Skipping clone.${NC}"
+                fi
+                
+                # Add to bashrc/bash_profile to ensure Linux/MacOS compat
+                for PROFILE in ~/.bash_profile ~/.bashrc; do
+                    if [[ -f "$PROFILE" ]] && ! grep -q 'export PATH="$HOME/.tfenv/bin:$PATH"' "$PROFILE" 2>/dev/null; then
+                        echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> "$PROFILE"
+                    fi
+                done
+                # If neither file existed, just create .bashrc for Linux
+                if [[ ! -f ~/.bash_profile && ! -f ~/.bashrc ]]; then
+                    echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> ~/.bashrc
+                fi
+                
+                export PATH="$HOME/.tfenv/bin:$PATH"
+                hash -r 2>/dev/null || true
+                echo -e "${GREEN}tfenv installed. Setting Terraform version to 1.12.2...${NC}"
+                tfenv install 1.12.2
+                tfenv use 1.12.2
+                
+                if [[ "$CLOUD_SHELL" == "true" ]]; then
+                    echo -e "${YELLOW}IMPORTANT: You are running in Google Cloud Shell.${NC}"
+                    echo -e "${YELLOW}To use the 'tfenv' or 'terraform' commands in your terminal AFTER this script finishes, you MUST run: ${GREEN}source ~/.bashrc${NC}"
+                fi
+            else
+                echo -e "${RED}Unsupported OS: $OSTYPE. Please install Terraform 1.12.2 manually before running this script.${NC}"
+                exit 1
+            fi
         fi
     fi
 
@@ -579,16 +595,21 @@ discover_infrastructure() {
         fi
 
         # 3. Check State Bucket
-        # 1-resman names the tenant state bucket <prefix>-tn-<env>-<tenant>-0
-        # (branch-tenants.tf, module tenant-core-gcs).
-        POTENTIAL_BUCKET="${PREFIX}-tn-${ENVIRONMENT}-${TENANT}-0"
-        echo "Checking for Terraform State Bucket: ${POTENTIAL_BUCKET}..."
-        if gcloud storage buckets describe "gs://${POTENTIAL_BUCKET}" &>/dev/null; then
-            STATE_BUCKET="${POTENTIAL_BUCKET}"
+        # 1-resman creates the dedicated tenant IaC state bucket <prefix>-<env>-<tenant>-iac-0
+        # (branch-tenants.tf, module tenant-iac-gcs), as well as the tenant core bucket
+        # <prefix>-tn-<env>-<tenant>-0 (module tenant-core-gcs).
+        IAC_STATE_BUCKET="${PREFIX}-${ENVIRONMENT}-${TENANT}-iac-0"
+        LEGACY_CORE_BUCKET="${PREFIX}-tn-${ENVIRONMENT}-${TENANT}-0"
+        echo "Checking for Terraform State Bucket: ${IAC_STATE_BUCKET}..."
+        if gcloud storage buckets describe "gs://${IAC_STATE_BUCKET}" &>/dev/null; then
+            STATE_BUCKET="${IAC_STATE_BUCKET}"
+            echo -e "Found Terraform State Bucket: ${GREEN}${STATE_BUCKET}${NC}"
+        elif gcloud storage buckets describe "gs://${LEGACY_CORE_BUCKET}" &>/dev/null; then
+            STATE_BUCKET="${LEGACY_CORE_BUCKET}"
             echo -e "Found Terraform State Bucket: ${GREEN}${STATE_BUCKET}${NC}"
         else
-             echo -e "${YELLOW}Terraform State Bucket not found (Will be created).${NC}"
-             STATE_BUCKET=""
+            echo -e "${YELLOW}Terraform State Bucket not found (Will be created).${NC}"
+            STATE_BUCKET=""
         fi
 
         # 4. Check Keyrings and Keys
@@ -1152,6 +1173,13 @@ configure_access_policies() {
         if [[ "$MANAGED_ACCESS_LEVELS" == *"time"* ]]; then
              echo -e "${GREEN}Found existing MANAGED Access Level 'time'. Preserving.${NC}"
              CREATE_TIME_ACCESS="true"
+             if [[ -f "gemini-stage-0/terraform.tfvars" ]]; then
+                 ACCESS_START_DAY=$(grep '^access_start_day' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
+                 ACCESS_END_DAY=$(grep '^access_end_day' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
+                 ACCESS_START_HOUR=$(grep '^access_start_hour' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
+                 ACCESS_END_HOUR=$(grep '^access_end_hour' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
+                 ACCESS_TIME_ZONE=$(grep '^access_time_zone' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
+             fi
         else
              echo -e "${YELLOW}Access Level 'time' already exists (Unmanaged). Skipping.${NC}"
              CREATE_TIME_ACCESS="false"
@@ -1160,16 +1188,16 @@ configure_access_policies() {
         read -p "Restrict incoming traffic based on a specific time schedule (Business Hours)? (y/N): " TIME_CHOICE
         if [[ "$TIME_CHOICE" == "y" || "$TIME_CHOICE" == "Y" ]]; then
             CREATE_TIME_ACCESS="true"
+            read -p "Enter Time Zone (IANA format, e.g. America/New_York) [America/New_York]: " ACCESS_TIME_ZONE
+            ACCESS_TIME_ZONE=${ACCESS_TIME_ZONE:-"America/New_York"}
             read -p "Enter Start Day (0=Sun, 6=Sat) [1]: " ACCESS_START_DAY
             ACCESS_START_DAY=${ACCESS_START_DAY:-1}
             read -p "Enter End Day (0=Sun, 6=Sat) [5]: " ACCESS_END_DAY
             ACCESS_END_DAY=${ACCESS_END_DAY:-5}
-            read -p "Enter Start Hour (0-23) [7]: " ACCESS_START_HOUR
+            read -p "Enter Start Hour in ${ACCESS_TIME_ZONE} (0-23) [7]: " ACCESS_START_HOUR
             ACCESS_START_HOUR=${ACCESS_START_HOUR:-7}
-            read -p "Enter End Hour (0-23) [21]: " ACCESS_END_HOUR
+            read -p "Enter End Hour in ${ACCESS_TIME_ZONE} (0-23) [21]: " ACCESS_END_HOUR
             ACCESS_END_HOUR=${ACCESS_END_HOUR:-21}
-            read -p "Enter Time Zone (e.g. America/New_York) [America/New_York]: " ACCESS_TIME_ZONE
-            ACCESS_TIME_ZONE=${ACCESS_TIME_ZONE:-"America/New_York"}
         else
             CREATE_TIME_ACCESS="false"
         fi
@@ -1182,6 +1210,9 @@ configure_access_policies() {
         if [[ "$MANAGED_ACCESS_LEVELS" == *"expire"* ]]; then
              echo -e "${GREEN}Found existing MANAGED Access Level 'expire'. Preserving.${NC}"
              CREATE_EXPIRE_ACCESS="true"
+             if [[ -f "gemini-stage-0/terraform.tfvars" ]]; then
+                 ACCESS_EXPIRATION_TIMESTAMP=$(grep '^access_expiration_timestamp' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
+             fi
         else
              echo -e "${YELLOW}Access Level 'expire' already exists (Unmanaged). Skipping.${NC}"
              CREATE_EXPIRE_ACCESS="false"
@@ -2561,20 +2592,27 @@ deploy_stage_0() {
                 # A. Configure Observability Config (Audit Logs)
                 if [[ "$ENABLE_AUDIT" == "true" ]]; then
                     echo "Enabling conversation audit logging for Engine: ${ENG_ID}..."
-                    curl -s -o /dev/null -X PATCH \
-                        -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-                        -H "Content-Type: application/json" \
-                        -H "X-Goog-User-Project: ${PROJECT_ID}" \
-                        "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}?updateMask=observabilityConfig" \
-                        -d '{"observabilityConfig": {"observabilityEnabled": true, "sensitiveLoggingEnabled": true}}'
+                    OBS_Payload='{"observabilityConfig": {"observabilityEnabled": true, "sensitiveLoggingEnabled": true}}'
                 else
                     echo "Disabling conversation audit logging for Engine: ${ENG_ID}..."
-                    curl -s -o /dev/null -X PATCH \
-                        -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-                        -H "Content-Type: application/json" \
-                        -H "X-Goog-User-Project: ${PROJECT_ID}" \
-                        "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}?updateMask=observabilityConfig" \
-                        -d '{"observabilityConfig": {"observabilityEnabled": false, "sensitiveLoggingEnabled": false}}'
+                    OBS_Payload='{"observabilityConfig": {"observabilityEnabled": false, "sensitiveLoggingEnabled": false}}'
+                fi
+                OBS_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
+                    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+                    -H "Content-Type: application/json" \
+                    -H "X-Goog-User-Project: ${PROJECT_ID}" \
+                    "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}?updateMask=observabilityConfig" \
+                    -d "${OBS_Payload}")
+                OBS_HTTP_CODE=$(echo "$OBS_RESPONSE" | tail -n1)
+                OBS_BODY=$(echo "$OBS_RESPONSE" | sed '$d')
+                if [[ "$OBS_HTTP_CODE" != "200" ]]; then
+                    echo -e "${RED}Warning: Failed to update observabilityConfig for Engine ${ENG_ID} (HTTP ${OBS_HTTP_CODE}):${NC}"
+                    echo "$OBS_BODY"
+                elif [[ "$ENABLE_AUDIT" == "true" ]]; then
+                    SENSITIVE_ENABLED=$(echo "$OBS_BODY" | jq -r '.observabilityConfig.sensitiveLoggingEnabled // false' 2>/dev/null || echo "false")
+                    if [[ "$SENSITIVE_ENABLED" != "true" ]]; then
+                        echo -e "${YELLOW}Warning: observabilityConfig PATCH succeeded for Engine ${ENG_ID}, but sensitiveLoggingEnabled was not confirmed in the API response.${NC}"
+                    fi
                 fi
 
                 # B. Configure Default Assistant Compliance
@@ -2608,12 +2646,18 @@ deploy_stage_0() {
                      ASSISTANT_BODY="$BASE_JSON"
                 fi
 
-                curl -s -o /dev/null -X PATCH \
+                ASST_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
                     -H "Authorization: Bearer ${ACCESS_TOKEN}" \
                     -H "Content-Type: application/json" \
                     -H "X-Goog-User-Project: ${PROJECT_ID}" \
                     "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}/assistants/default_assistant?updateMask=${MASK}" \
-                    -d "${ASSISTANT_BODY}"
+                    -d "${ASSISTANT_BODY}")
+                ASST_HTTP_CODE=$(echo "$ASST_RESPONSE" | tail -n1)
+                ASST_BODY=$(echo "$ASST_RESPONSE" | sed '$d')
+                if [[ "$ASST_HTTP_CODE" != "200" ]]; then
+                    echo -e "${RED}Warning: Failed to update default assistant for Engine ${ENG_ID} (HTTP ${ASST_HTTP_CODE}):${NC}"
+                    echo "$ASST_BODY"
+                fi
             fi
         done < <(echo "$AUDIT_LOGS_MAP" | jq -r --argjson ma "$MODEL_ARMOR_MAP" 'to_entries[] | "\(.key)\t\(.value)\t\(($ma[.key]) // false)"')
     fi
