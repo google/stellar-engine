@@ -62,6 +62,19 @@ class TestBootstrapLoggingOrder(unittest.TestCase):
             ' module.organization-logging',
         )
 
+  def test_org_policy_parameters_not_double_encoded(self):
+    org_tf = (_BOOTSTRAP_DIR / 'organization.tf').read_text(encoding='utf-8')
+    self.assertNotIn(
+        'parameters = try(jsonencode(r.parameters), null)',
+        org_tf,
+        'org_policies should not unconditionally jsonencode string parameters',
+    )
+    self.assertIn(
+        'try(tostring(r.parameters), jsonencode(r.parameters))',
+        org_tf,
+    )
+
 
 if __name__ == '__main__':
   unittest.main()
+

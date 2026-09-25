@@ -135,8 +135,12 @@ locals {
             all    = try(r.deny.all, null)
             values = try(r.deny.values, null)
           } : null
-          enforce    = try(r.enforce, null)
-          parameters = try(jsonencode(r.parameters), null)
+          enforce = try(r.enforce, null)
+          parameters = (
+            can(r.parameters) && r.parameters != null
+            ? try(tostring(r.parameters), jsonencode(r.parameters))
+            : null
+          )
           condition = {
             description = try(r.condition.description, null)
             expression  = try(r.condition.expression, null)
