@@ -430,7 +430,7 @@ def onboard():
     company_name = click.prompt('Please enter the Agency / Department Name (no abbreviations)').strip()
     click.echo(nl=True)
     engine_id = generate_id('g4g-gem-ent-app-')
-    create_engine(credentials, project_id, engine_id, engine_display_name, company_name, data_store_list)
+    create_engine(credentials, project_id, engine_id, engine_display_name, company_name, data_store_list, compliance_regime=compliance_regime_id)
     if idp_type == "THIRD_PARTY" and (workforce_pool_id and workforce_provider_id):
         configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_id, workforce_provider_id)
     if idp_type == "THIRD_PARTY" and ((workforce_pool_id is None) or (workforce_provider_id is None)):
@@ -847,11 +847,6 @@ def create_application_logic(credentials, project_id, data_store_list, workforce
         click.echo(nl=True)
         engine_id = 'g4g-gem-ent-app-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
     
-    create_engine(credentials, project_id, engine_id, engine_display_name, company_name, data_store_list, enable_audit_logs)
-
-    if workforce_pool_id and workforce_provider_id:
-        configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_id, workforce_provider_id)
-    
     # Re-using the prompt from onboard for consistency
     if not compliance_regime:
         click.echo(nl=True)
@@ -861,6 +856,11 @@ def create_application_logic(credentials, project_id, data_store_list, workforce
         click.echo("3) IL5")
         click.echo("4) None")
         compliance_regime = click.prompt('Please enter the number for your response', type=click.Choice(['1', '2', '3', '4']), default = '1', show_default = False)
+
+    create_engine(credentials, project_id, engine_id, engine_display_name, company_name, data_store_list, enable_audit_logs, compliance_regime=compliance_regime)
+
+    if workforce_pool_id and workforce_provider_id:
+        configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_id, workforce_provider_id)
 
     if compliance_regime in ['1', 'FEDRAMP_HIGH']:
         click.echo(click.style("Configuring for FedRAMP High...", fg="yellow"))
@@ -1183,11 +1183,13 @@ def configure_cmek(credentials, project_id, kms_key_name):
         sys.exit(1)
 
 
-def create_engine(credentials, project_id, engine_id, display_name, company_name, data_store_list, enable_audit_logs=False):
+def create_engine(credentials, project_id, engine_id, display_name, company_name, data_store_list, enable_audit_logs=False, compliance_regime=None):
     """Creates a new engine."""
     client_options = ClientOptions(api_endpoint="https://us-discoveryengine.googleapis.com")
     service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
     
+    is_regulated = compliance_regime not in ('4', 'NONE')
+
     # Get the absolute path to the directory containing the script
     script_dir = os.path.dirname(os.path.abspath(__file__))
     # Construct the absolute path to the YAML file
@@ -1206,9 +1208,8 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
             "searchAddOns": ["SEARCH_ADD_ON_LLM"],
             "requiredSubscriptionTier": "SUBSCRIPTION_TIER_SEARCH_AND_ASSISTANT"
         },
-        "features": engine_features.get('features'),
         "industryVertical": "GENERIC",
-        "disableAnalytics": True,
+        "disableAnalytics": is_regulated,
         "commonConfig": {
             "companyName": company_name
         },
@@ -1219,6 +1220,9 @@ def create_engine(credentials, project_id, engine_id, display_name, company_name
         "dataStores": [],
         "dataStoreIds": []
     }
+
+    if is_regulated:
+        engine["features"] = engine_features.get('features')
 
     if enable_audit_logs:
         engine["observabilityConfig"] = {
@@ -1451,19 +1455,16 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         sys.exit(1)
 
     if access_token:
-        url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=agentConfigs,generationConfig,disableLocationContext,webGroundingType,defaultWebGroundingToggleOff"
+        url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=generationConfig.defaultLanguage,webGroundingType,defaultWebGroundingToggleOff,enableEndUserAgentCreation,disableLocationContext"
 
         assistant_patch_body = {
-          "displayName":"Default Assistant",
-          "googleSearchGroundingEnabled": False,
-          "webGroundingType":"WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
-          "generationConfig":{
-            "systemInstruction":{
-              "additionalSystemInstruction":""
-            }
-          },
-          "defaultWebGroundingToggleOff": False,
-          "disableLocationContext": True
+            "generationConfig": {
+                "defaultLanguage": "en"
+            },
+            "webGroundingType": "WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
+            "defaultWebGroundingToggleOff": False,
+            "enableEndUserAgentCreation": False,
+            "disableLocationContext": True
         }
 
         # Use subprocess to run the curl command

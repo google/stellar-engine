@@ -54,6 +54,24 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
       self.assertNotIn('"disableAnalytics": True', func_src)
       self.assertIn("sys.exit(1)", func_src)
 
+  def test_compliance_regime_respected_in_terraform_and_cli(self):
+    """Ensure discovery-engine.tf and gem4gov.py respect compliance_regime (#190)."""
+    tf_path = (
+        REPO_ROOT
+        / "blueprints/fedramp-high/gemini-enterprise/gemini-stage-0/discovery-engine.tf"
+    )
+    tf_content = tf_path.read_text(encoding="utf-8")
+    self.assertIn("features = merge(", tf_content)
+    self.assertIn('var.compliance_regime != "NONE" ? {', tf_content)
+
+    py_content = GEM4GOV_PATH.read_text(encoding="utf-8")
+    self.assertIn(
+        "def create_engine(credentials, project_id, engine_id, display_name, company_name, data_store_list, enable_audit_logs=False, compliance_regime=None):",
+        py_content,
+    )
+    self.assertIn("is_regulated = compliance_regime not in ('4', 'NONE')", py_content)
+    self.assertNotIn("updateMask=agentConfigs", py_content)
+
 
 if __name__ == "__main__":
   unittest.main()
