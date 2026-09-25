@@ -51,9 +51,19 @@ All script executions are logged to the `logs/` directory, organized by script n
 - Format: `logs/<script_name>/<script_name>_<YYYYMMDD_HHMMSS>.txt`
 - These logs contain the full output of the terminal session, making them ideal for debugging and review.
 
+## Supported Shell Environments
+
+These scripts rely on POSIX path resolution, symbolic links, and standard GNU/BSD utilities (`bash`, `sed`, `awk`, `grep`, `jq`).
+
+- **Supported environments**: Linux, macOS, Google Cloud Shell, and **WSL2 (Windows Subsystem for Linux)** on Windows workstations.
+- **Native Windows limitations**: Running these scripts directly from PowerShell, Command Prompt (`cmd.exe`), Git Bash (`MINGW64`/`MSYS`), or Cygwin is not supported and is blocked by the pre-flight check (`check_os_environment`) in `common-functions.sh`. Native Windows terminals can encounter:
+  - Path separator translation issues (`\` vs `/`) when generating Terraform stage links and backend paths.
+  - Symbolic link creation failures (`ln -s`) unless Windows Developer Mode or elevated privileges are enabled.
+  - Line-ending (`CRLF` vs `LF`) and file permission incompatibilities in generated configuration files.
+
 ## Usage
 
-1.  **Setup**: Ensure you have the required permissions and dependencies (gcloud, terraform).
+1.  **Setup**: Ensure you are running in a supported shell environment (Linux, macOS, Cloud Shell, or WSL2) and have the required permissions and dependencies (`gcloud`, `terraform`, `jq`).
 2.  **Deploy**: Run `./deploy.sh` and follow the prompts.
 3.  **Destroy**: Run `./destroy.sh` when you need to tear down the environment.
 

@@ -147,8 +147,35 @@ backup_config() {
     fi
 }
 
+# Verify that the script is running in a supported POSIX shell environment
+# (Linux, macOS, Cloud Shell, or WSL2) rather than native Windows shells.
+check_os_environment() {
+    local os_name="${1:-$(uname -s 2>/dev/null || echo "Unknown")}"
+    local ostype="${2:-${OSTYPE:-}}"
+
+    case "${os_name}:${ostype}" in
+        MINGW*|MSYS*|CYGWIN*|*:msys*|*:cygwin*|*:win32*)
+            log_error "Unsupported native Windows shell environment detected (${os_name})."
+            log_error "Please run Stellar Engine scripts inside WSL2 (Windows Subsystem for Linux) or Google Cloud Shell."
+            return 1
+            ;;
+    esac
+
+    if [[ "${OS:-}" == "Windows_NT" && -z "${WSL_DISTRO_NAME:-}" && ! -f "/proc/sys/fs/binfmt_misc/WSLInterop" ]]; then
+        log_error "Unsupported native Windows environment detected (OS=Windows_NT without WSL2)."
+        log_error "Please run Stellar Engine scripts inside WSL2 (Windows Subsystem for Linux) or Google Cloud Shell."
+        return 1
+    fi
+
+    return 0
+}
+
 # Check prerequisites (commands, auth, project)
 check_prerequisites() {
+    if ! check_os_environment; then
+        return 1
+    fi
+
     local missing_commands=()
 
     # Check for required commands

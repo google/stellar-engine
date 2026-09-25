@@ -116,6 +116,16 @@ assert_equals "backup file contains original contents" "KEY=VALUE" "$BACKUP_CONT
 # 10. Test backup_config with non-existent file
 assert_false "backup_config fails for non-existent file" 'backup_config "${TMP_TEST_DIR}/nonexistent.env" "$BACKUP_DIR" 2>/dev/null'
 
+# 11. Test check_os_environment on supported and unsupported platforms
+assert_true "check_os_environment succeeds on Linux" 'check_os_environment "Linux" "linux-gnu"'
+assert_true "check_os_environment succeeds on macOS (Darwin)" 'check_os_environment "Darwin" "darwin23"'
+assert_false "check_os_environment fails on MINGW64" 'check_os_environment "MINGW64_NT-10.0" "msys" 2>/dev/null'
+assert_false "check_os_environment fails on CYGWIN" 'check_os_environment "CYGWIN_NT-10.0" "cygwin" 2>/dev/null'
+assert_true "check_os_environment succeeds when OS=Windows_NT inside WSL2" 'OS="Windows_NT" WSL_DISTRO_NAME="Ubuntu" check_os_environment "Linux" "linux-gnu"'
+assert_false "check_os_environment fails when OS=Windows_NT outside WSL2" 'OS="Windows_NT" WSL_DISTRO_NAME="" check_os_environment "Windows_NT" "win32" 2>/dev/null'
+OS_ERR_OUTPUT=$(check_os_environment "MINGW64_NT-10.0" "msys" 2>&1 || true)
+assert_true "check_os_environment error recommends WSL2" '[[ "$OS_ERR_OUTPUT" == *"WSL2"* ]]'
+
 echo ""
 echo "Summary: ${TEST_COUNT} shell unit tests run, ${FAIL_COUNT} failures."
 
