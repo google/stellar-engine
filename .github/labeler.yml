@@ -1,21 +1,29 @@
 # Type and Framework are independent: a blueprints/fedramp-high/ change gets both.
 
-"Type - Modules":
+"Scope - Modules":
   - changed-files:
       - any-glob-to-any-file: 'modules/**'
 
-"Type - Fast":
+"Scope - Fast":
   - changed-files:
       - any-glob-to-any-file: 'fast/**'
 
-"Type - Blueprint":
+"Scope - Blueprint":
   - changed-files:
       - any-glob-to-any-file: 'blueprints/**'
+
+"Framework - FedRAMP Moderate":
+  - changed-files:
+      - any-glob-to-any-file: 'blueprints/fedramp-moderate/**'
 
 "Framework - FedRAMP High":
   - changed-files:
       - any-glob-to-any-file: 'blueprints/fedramp-high/**'
 
-"Framework - FedRAMP IL5":
+"Framework - IL4":
+  - changed-files:
+      - any-glob-to-any-file: 'blueprints/il4/**'
+
+"Framework - IL5":
   - changed-files:
       - any-glob-to-any-file: 'blueprints/il5/**'
