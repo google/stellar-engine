@@ -21,10 +21,17 @@ data "google_compute_network" "network" {
   project = var.network_project_id
 }
 
+resource "google_project_service" "sqladmin" {
+  project            = var.main_project_id
+  service            = "sqladmin.googleapis.com"
+  disable_on_destroy = false
+}
+
 resource "google_project_service_identity" "cloudsql_sa" {
-  provider = google-beta
-  project  = var.main_project_id
-  service  = "sqladmin.googleapis.com"
+  provider   = google-beta
+  project    = var.main_project_id
+  service    = "sqladmin.googleapis.com"
+  depends_on = [google_project_service.sqladmin]
 }
 
 resource "google_kms_crypto_key_iam_member" "sql_sa" {
@@ -83,4 +90,9 @@ module "postgres" {
     log_min_duration_statement = var.log_min_duration_statement
     "cloudsql.enable_pgaudit"  = var.enable_pgaudit
   }
+
+  depends_on = [
+    google_project_service.sqladmin,
+    google_kms_crypto_key_iam_member.sql_sa,
+  ]
 }
