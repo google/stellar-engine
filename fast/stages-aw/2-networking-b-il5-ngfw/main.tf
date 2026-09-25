@@ -42,7 +42,7 @@ module "folder" {
 
 module "firewall-policy-default" {
   source    = "../../../modules/net-firewall-policy"
-  name      = var.factories_config.firewall_policy_name
+  name      = coalesce(var.factories_config.firewall_policy_name, "${var.prefix}-net-default")
   parent_id = module.folder.id
   factories_config = {
     cidr_file_path          = "${var.factories_config.data_dir}/cidrs.yaml"

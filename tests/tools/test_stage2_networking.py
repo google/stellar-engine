@@ -27,6 +27,19 @@ class TestStage2Networking(unittest.TestCase):
     self.assertIn('routes = flatten([', nva_tf)
     self.assertNotIn('s.name if s.tenant != null][0]', nva_tf)
 
+  def test_firewall_policy_name_defaults_to_prefixed_name(self):
+    for stage_dir in (_FEDRAMP_NET_DIR, _IL5_NET_DIR):
+      with self.subTest(stage=stage_dir.name):
+        main_tf = (stage_dir / 'main.tf').read_text(encoding='utf-8')
+        vars_tf = (stage_dir / 'variables.tf').read_text(encoding='utf-8')
+        self.assertIn(
+            'coalesce(var.factories_config.firewall_policy_name,'
+            ' "${var.prefix}-net-default")',
+            main_tf,
+        )
+        self.assertIn('firewall_policy_name  = optional(string)', vars_tf)
+
 
 if __name__ == '__main__':
   unittest.main()
+
