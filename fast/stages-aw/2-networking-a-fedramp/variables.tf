@@ -75,7 +75,7 @@ variable "factories_config" {
   type = object({
     data_dir              = optional(string, "data")
     dns_policy_rules_file = optional(string, "data/dns-policy-rules.yaml")
-    firewall_policy_name  = optional(string, "net-default")
+    firewall_policy_name  = optional(string)
   })
   default = {
     data_dir = "data"
@@ -84,10 +84,6 @@ variable "factories_config" {
   validation {
     condition     = var.factories_config.data_dir != null
     error_message = "Data folder needs to be non-null."
-  }
-  validation {
-    condition     = var.factories_config.firewall_policy_name != null
-    error_message = "Firewall policy name needs to be non-null."
   }
 }
 
@@ -109,6 +105,13 @@ variable "gcp_ranges" {
     gcp_dmz_primary             = "10.64.128.0/24"
     gcp_prod_primary            = "10.72.0.0/16"
   }
+}
+
+variable "nva_spot_vms" {
+  description = "Whether to provision NVA instances as Spot VMs. Defaults to false (standard on-demand instances with automatic restart)."
+  type        = bool
+  default     = false
+  nullable    = false
 }
 
 variable "organization" {
