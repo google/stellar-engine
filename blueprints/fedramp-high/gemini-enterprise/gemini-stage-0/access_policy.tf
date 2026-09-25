@@ -40,12 +40,12 @@ resource "google_access_context_manager_access_level" "us" {
   }
 }
 
-# Access level for Time (7AM-9PM Monday-Friday)
+# Access level for Time (Business Hours)
 resource "google_access_context_manager_access_level" "time" {
   count  = var.access_policy_number != "" && var.create_time_access ? 1 : 0
   parent = "accessPolicies/${var.access_policy_number}"
   name   = "accessPolicies/${var.access_policy_number}/accessLevels/time"
-  title  = "Business Hours East Coast"
+  title  = "Business Hours (${var.access_time_zone})"
   custom {
     expr {
       expression = ("request.time.getHours(\"${var.access_time_zone}\") >= ${var.access_start_hour} && request.time.getHours(\"${var.access_time_zone}\") <= ${var.access_end_hour} && request.time.getDayOfWeek(\"${var.access_time_zone}\") >= ${var.access_start_day} && request.time.getDayOfWeek(\"${var.access_time_zone}\") <= ${var.access_end_day}")

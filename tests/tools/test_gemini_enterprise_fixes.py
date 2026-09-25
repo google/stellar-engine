@@ -81,6 +81,27 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
     self.assertIn(".observabilityConfig.sensitiveLoggingEnabled", deploy_sh)
     self.assertIn("ASST_RESPONSE=$(curl -s -w", deploy_sh)
 
+  def test_time_access_level_timezone_and_preservation(self):
+    """Ensure time access level title, variable descriptions, and deploy.sh preservation use access_time_zone (#187)."""
+    access_policy_tf = (
+        REPO_ROOT
+        / "blueprints/fedramp-high/gemini-enterprise/gemini-stage-0/access_policy.tf"
+    ).read_text(encoding="utf-8")
+    self.assertIn('title  = "Business Hours (${var.access_time_zone})"', access_policy_tf)
+    self.assertNotIn("Business Hours East Coast", access_policy_tf)
+
+    variables_tf = (
+        REPO_ROOT
+        / "blueprints/fedramp-high/gemini-enterprise/gemini-stage-0/variables.tf"
+    ).read_text(encoding="utf-8")
+    self.assertIn("configured access_time_zone", variables_tf)
+
+    deploy_sh = (
+        REPO_ROOT / "blueprints/fedramp-high/gemini-enterprise/deploy.sh"
+    ).read_text(encoding="utf-8")
+    self.assertIn("grep '^access_time_zone' gemini-stage-0/terraform.tfvars", deploy_sh)
+    self.assertIn("grep '^access_expiration_timestamp' gemini-stage-0/terraform.tfvars", deploy_sh)
+
 
 if __name__ == "__main__":
   unittest.main()

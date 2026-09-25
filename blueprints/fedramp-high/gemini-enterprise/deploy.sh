@@ -1152,6 +1152,13 @@ configure_access_policies() {
         if [[ "$MANAGED_ACCESS_LEVELS" == *"time"* ]]; then
              echo -e "${GREEN}Found existing MANAGED Access Level 'time'. Preserving.${NC}"
              CREATE_TIME_ACCESS="true"
+             if [[ -f "gemini-stage-0/terraform.tfvars" ]]; then
+                 ACCESS_START_DAY=$(grep '^access_start_day' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
+                 ACCESS_END_DAY=$(grep '^access_end_day' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
+                 ACCESS_START_HOUR=$(grep '^access_start_hour' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
+                 ACCESS_END_HOUR=$(grep '^access_end_hour' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
+                 ACCESS_TIME_ZONE=$(grep '^access_time_zone' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
+             fi
         else
              echo -e "${YELLOW}Access Level 'time' already exists (Unmanaged). Skipping.${NC}"
              CREATE_TIME_ACCESS="false"
@@ -1160,16 +1167,16 @@ configure_access_policies() {
         read -p "Restrict incoming traffic based on a specific time schedule (Business Hours)? (y/N): " TIME_CHOICE
         if [[ "$TIME_CHOICE" == "y" || "$TIME_CHOICE" == "Y" ]]; then
             CREATE_TIME_ACCESS="true"
+            read -p "Enter Time Zone (IANA format, e.g. America/New_York) [America/New_York]: " ACCESS_TIME_ZONE
+            ACCESS_TIME_ZONE=${ACCESS_TIME_ZONE:-"America/New_York"}
             read -p "Enter Start Day (0=Sun, 6=Sat) [1]: " ACCESS_START_DAY
             ACCESS_START_DAY=${ACCESS_START_DAY:-1}
             read -p "Enter End Day (0=Sun, 6=Sat) [5]: " ACCESS_END_DAY
             ACCESS_END_DAY=${ACCESS_END_DAY:-5}
-            read -p "Enter Start Hour (0-23) [7]: " ACCESS_START_HOUR
+            read -p "Enter Start Hour in ${ACCESS_TIME_ZONE} (0-23) [7]: " ACCESS_START_HOUR
             ACCESS_START_HOUR=${ACCESS_START_HOUR:-7}
-            read -p "Enter End Hour (0-23) [21]: " ACCESS_END_HOUR
+            read -p "Enter End Hour in ${ACCESS_TIME_ZONE} (0-23) [21]: " ACCESS_END_HOUR
             ACCESS_END_HOUR=${ACCESS_END_HOUR:-21}
-            read -p "Enter Time Zone (e.g. America/New_York) [America/New_York]: " ACCESS_TIME_ZONE
-            ACCESS_TIME_ZONE=${ACCESS_TIME_ZONE:-"America/New_York"}
         else
             CREATE_TIME_ACCESS="false"
         fi
@@ -1182,6 +1189,9 @@ configure_access_policies() {
         if [[ "$MANAGED_ACCESS_LEVELS" == *"expire"* ]]; then
              echo -e "${GREEN}Found existing MANAGED Access Level 'expire'. Preserving.${NC}"
              CREATE_EXPIRE_ACCESS="true"
+             if [[ -f "gemini-stage-0/terraform.tfvars" ]]; then
+                 ACCESS_EXPIRATION_TIMESTAMP=$(grep '^access_expiration_timestamp' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
+             fi
         else
              echo -e "${YELLOW}Access Level 'expire' already exists (Unmanaged). Skipping.${NC}"
              CREATE_EXPIRE_ACCESS="false"
