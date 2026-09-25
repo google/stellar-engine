@@ -120,6 +120,16 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
         deploy_sh,
     )
 
+  def test_deploy_sh_uses_existing_compatible_terraform_before_tfenv(self):
+    """Ensure check_dependencies uses an existing compatible terraform (>= 1.7.4) before tfenv (#114)."""
+    deploy_sh = (
+        REPO_ROOT / "blueprints/fedramp-high/gemini-enterprise/deploy.sh"
+    ).read_text(encoding="utf-8")
+    self.assertIn('local tf_compatible="false"', deploy_sh)
+    self.assertIn('printf "%s\\n1.7.4\\n" "$tf_ver" | sort -V | head -n 1', deploy_sh)
+    self.assertIn('if [[ "$tf_compatible" != "true" ]]; then', deploy_sh)
+
+
 
 if __name__ == "__main__":
   unittest.main()

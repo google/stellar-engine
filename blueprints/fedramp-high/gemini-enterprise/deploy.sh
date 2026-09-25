@@ -51,59 +51,75 @@ normalize_environment() {
 check_dependencies() {
     echo ""
     echo -e "${BLUE}--- Check Dependencies ---${NC}"
-    echo "Validating required dependencies: tfenv, gcloud, terraform, pip3, python3, jq..."
-    
-    # Ensure ~/.tfenv/bin is in PATH early if it exists (resolves precedence issues)
-    if [[ -d "$HOME/.tfenv/bin" ]] && [[ ":$PATH:" != *":$HOME/.tfenv/bin:"* ]]; then
-        export PATH="$HOME/.tfenv/bin:$PATH"
-        hash -r 2>/dev/null || true
+    echo "Validating required dependencies: gcloud, terraform, pip3, python3, jq..."
+
+    local tf_compatible="false"
+    if command -v terraform &> /dev/null; then
+        local tf_ver
+        tf_ver=$(terraform version 2>/dev/null | head -n 1 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+" || true)
+        if [[ -n "$tf_ver" ]]; then
+            local lowest
+            lowest=$(printf "%s\n1.7.4\n" "$tf_ver" | sort -V | head -n 1)
+            if [[ "$lowest" == "1.7.4" ]]; then
+                echo -e "${GREEN}Compatible Terraform version (${tf_ver}) is already installed.${NC}"
+                tf_compatible="true"
+            fi
+        fi
     fi
 
-    if command -v tfenv &> /dev/null; then
-        echo -e "${GREEN}tfenv is installed. Setting Terraform version to 1.12.2...${NC}"
-        tfenv install 1.12.2
-        tfenv use 1.12.2
-    else
-        echo -e "${YELLOW}tfenv is not installed. Checking OS...${NC}"
-        if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
-            echo -e "${RED}Windows detected.${NC}"
-            echo "Please manually install Terraform v1.12.2:"
-            echo "1. Download the binary from: https://releases.hashicorp.com/terraform/1.12.2/terraform_1.12.2_windows_amd64.zip"
-            echo "2. Extract the zip file."
-            echo "3. Add the dir containing terraform.exe to your system's PATH environment variable."
-            exit 1
-        elif [[ "$OSTYPE" == "darwin"* || "$OSTYPE" == "linux-gnu"* ]]; then
-            echo -e "${YELLOW}MacOS/Linux detected. Installing tfenv manually...${NC}"
-            if [[ ! -d "$HOME/.tfenv" ]]; then
-                git clone --depth=1 https://github.com/tfutils/tfenv.git ~/.tfenv
-            else
-                echo -e "${GREEN}tfenv directory already exists at $HOME/.tfenv. Skipping clone.${NC}"
-            fi
-            
-            # Add to bashrc/bash_profile to ensure Linux/MacOS compat
-            for PROFILE in ~/.bash_profile ~/.bashrc; do
-                if [[ -f "$PROFILE" ]] && ! grep -q 'export PATH="$HOME/.tfenv/bin:$PATH"' "$PROFILE" 2>/dev/null; then
-                    echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> "$PROFILE"
-                fi
-            done
-            # If neither file existed, just create .bashrc for Linux
-            if [[ ! -f ~/.bash_profile && ! -f ~/.bashrc ]]; then
-                echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> ~/.bashrc
-            fi
-            
+    if [[ "$tf_compatible" != "true" ]]; then
+        # Ensure ~/.tfenv/bin is in PATH early if it exists (resolves precedence issues)
+        if [[ -d "$HOME/.tfenv/bin" ]] && [[ ":$PATH:" != *":$HOME/.tfenv/bin:"* ]]; then
             export PATH="$HOME/.tfenv/bin:$PATH"
             hash -r 2>/dev/null || true
-            echo -e "${GREEN}tfenv installed. Setting Terraform version to 1.12.2...${NC}"
+        fi
+
+        if command -v tfenv &> /dev/null; then
+            echo -e "${GREEN}tfenv is installed. Setting Terraform version to 1.12.2...${NC}"
             tfenv install 1.12.2
             tfenv use 1.12.2
-            
-            if [[ "$CLOUD_SHELL" == "true" ]]; then
-                echo -e "${YELLOW}IMPORTANT: You are running in Google Cloud Shell.${NC}"
-                echo -e "${YELLOW}To use the 'tfenv' or 'terraform' commands in your terminal AFTER this script finishes, you MUST run: ${GREEN}source ~/.bashrc${NC}"
-            fi
         else
-            echo -e "${RED}Unsupported OS: $OSTYPE. Please install Terraform 1.12.2 manually before running this script.${NC}"
-            exit 1
+            echo -e "${YELLOW}Compatible Terraform (>= 1.7.4) and tfenv not found. Checking OS...${NC}"
+            if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" || "$OSTYPE" == "win32" ]]; then
+                echo -e "${RED}Windows detected.${NC}"
+                echo "Please manually install Terraform v1.12.2:"
+                echo "1. Download the binary from: https://releases.hashicorp.com/terraform/1.12.2/terraform_1.12.2_windows_amd64.zip"
+                echo "2. Extract the zip file."
+                echo "3. Add the dir containing terraform.exe to your system's PATH environment variable."
+                exit 1
+            elif [[ "$OSTYPE" == "darwin"* || "$OSTYPE" == "linux-gnu"* ]]; then
+                echo -e "${YELLOW}MacOS/Linux detected. Installing tfenv manually...${NC}"
+                if [[ ! -d "$HOME/.tfenv" ]]; then
+                    git clone --depth=1 https://github.com/tfutils/tfenv.git ~/.tfenv
+                else
+                    echo -e "${GREEN}tfenv directory already exists at $HOME/.tfenv. Skipping clone.${NC}"
+                fi
+                
+                # Add to bashrc/bash_profile to ensure Linux/MacOS compat
+                for PROFILE in ~/.bash_profile ~/.bashrc; do
+                    if [[ -f "$PROFILE" ]] && ! grep -q 'export PATH="$HOME/.tfenv/bin:$PATH"' "$PROFILE" 2>/dev/null; then
+                        echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> "$PROFILE"
+                    fi
+                done
+                # If neither file existed, just create .bashrc for Linux
+                if [[ ! -f ~/.bash_profile && ! -f ~/.bashrc ]]; then
+                    echo 'export PATH="$HOME/.tfenv/bin:$PATH"' >> ~/.bashrc
+                fi
+                
+                export PATH="$HOME/.tfenv/bin:$PATH"
+                hash -r 2>/dev/null || true
+                echo -e "${GREEN}tfenv installed. Setting Terraform version to 1.12.2...${NC}"
+                tfenv install 1.12.2
+                tfenv use 1.12.2
+                
+                if [[ "$CLOUD_SHELL" == "true" ]]; then
+                    echo -e "${YELLOW}IMPORTANT: You are running in Google Cloud Shell.${NC}"
+                    echo -e "${YELLOW}To use the 'tfenv' or 'terraform' commands in your terminal AFTER this script finishes, you MUST run: ${GREEN}source ~/.bashrc${NC}"
+                fi
+            else
+                echo -e "${RED}Unsupported OS: $OSTYPE. Please install Terraform 1.12.2 manually before running this script.${NC}"
+                exit 1
+            fi
         fi
     fi
 
