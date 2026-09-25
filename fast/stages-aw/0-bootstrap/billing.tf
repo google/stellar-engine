@@ -66,6 +66,7 @@ module "billing-export-project" {
     "bigquerydatatransfer.googleapis.com",
     "storage.googleapis.com"
   ]
+  depends_on = [module.organization-logging]
 }
 
 resource "google_compute_project_metadata" "metadata-billing" {

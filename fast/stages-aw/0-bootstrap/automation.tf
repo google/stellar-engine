@@ -159,6 +159,7 @@ module "automation-project" {
       "container.googleapis.com",
     ]
   )
+  depends_on = [module.organization-logging]
 }
 
 resource "google_compute_project_metadata" "metadata-automation" {
