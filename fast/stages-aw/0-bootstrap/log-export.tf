@@ -70,6 +70,13 @@ module "log-export-project" {
   depends_on = [module.organization-logging]
 }
 
+# Read project-level Cloud Logging settings to provision the project's
+# CMEK service agent before granting KMS permissions and creating CMEK buckets.
+data "google_logging_project_settings" "log_export" {
+  count   = contains(local.log_types, "logging") ? 1 : 0
+  project = module.log-export-project.project_id
+}
+
 resource "google_compute_project_metadata" "metadata-log-export" {
   project = module.log-export-project.project_id
   metadata = {
@@ -114,8 +121,12 @@ module "log-export-logbucket" {
   log_analytics = { enable = true }
   kms_key_name  = coalesce(var.logging_kms_key, module.logging-kms.key_ids["log-sink"])
   retention     = var.logging_bucket_retention
-  # org-level logging settings ready before we create any logging buckets
-  depends_on = [module.organization-logging, module.logging-kms]
+  # org-level and project-level logging settings ready before we create any logging buckets
+  depends_on = [
+    module.organization-logging,
+    module.logging-kms,
+    data.google_logging_project_settings.log_export,
+  ]
 }
 
 module "log-export-pubsub" {

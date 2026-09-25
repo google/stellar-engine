@@ -74,7 +74,26 @@ class TestBootstrapLoggingOrder(unittest.TestCase):
         org_tf,
     )
 
+  def test_log_export_project_settings_provisioned_before_cmek(self):
+    log_export_tf = (_BOOTSTRAP_DIR / 'log-export.tf').read_text(
+        encoding='utf-8'
+    )
+    kms_tf = (_BOOTSTRAP_DIR / 'kms.tf').read_text(encoding='utf-8')
+    self.assertIn(
+        'data "google_logging_project_settings" "log_export"',
+        log_export_tf,
+    )
+    self.assertIn(
+        'data.google_logging_project_settings.log_export',
+        log_export_tf,
+    )
+    self.assertIn(
+        'data.google_logging_project_settings.log_export[0].kms_service_account_id',
+        kms_tf,
+    )
+
 
 if __name__ == '__main__':
   unittest.main()
+
 

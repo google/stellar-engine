@@ -33,7 +33,7 @@ module "logging-kms" {
       version_template = local.version_template
       iam_bindings_additive = contains(local.log_types, "logging") ? {
         "logging" = {
-          member = "serviceAccount:service-${module.log-export-project.number}@gcp-sa-logging.iam.gserviceaccount.com"
+          member = "serviceAccount:${data.google_logging_project_settings.log_export[0].kms_service_account_id}"
           role   = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
         }
       } : {}
@@ -60,6 +60,8 @@ module "logging-kms" {
       }
     } : {}
   )
+
+  depends_on = [data.google_logging_project_settings.log_export]
 }
 
 module "gcs-kms" {
