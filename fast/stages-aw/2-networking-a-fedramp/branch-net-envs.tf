@@ -154,6 +154,10 @@ resource "time_sleep" "peering_delay" {
 
   create_duration = "${index(keys(var.envs_folders), each.key) * 30}s"
 
+  triggers = {
+    local_network = module.env-spoke-vpc[each.key].self_link
+  }
+
   depends_on = [module.env-spoke-vpc]
 }
 
@@ -162,7 +166,7 @@ module "peering-envs" {
   for_each = var.envs_folders
 
   prefix        = lower("${each.key}-peering-0")
-  local_network = module.env-spoke-vpc[each.key].self_link
+  local_network = time_sleep.peering_delay[each.key].triggers["local_network"]
   peer_network  = module.vdss-vpc.self_link
   routes_config = {
     local = {
@@ -172,10 +176,6 @@ module "peering-envs" {
       public_export = true
     }
   }
-
-  depends_on = [
-    time_sleep.peering_delay
-  ]
 }
 
 # DNS

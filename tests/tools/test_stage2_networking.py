@@ -39,7 +39,21 @@ class TestStage2Networking(unittest.TestCase):
         )
         self.assertIn('firewall_policy_name  = optional(string)', vars_tf)
 
+  def test_peering_envs_depends_on_per_instance_sleep(self):
+    for stage_dir in (_FEDRAMP_NET_DIR, _IL5_NET_DIR):
+      with self.subTest(stage=stage_dir.name):
+        branch_tf = (stage_dir / 'branch-net-envs.tf').read_text(
+            encoding='utf-8'
+        )
+        self.assertIn(
+            'local_network ='
+            ' time_sleep.peering_delay[each.key].triggers["local_network"]',
+            branch_tf,
+        )
+        self.assertNotIn('depends_on = [\n    time_sleep.peering_delay\n  ]', branch_tf)
+
 
 if __name__ == '__main__':
   unittest.main()
+
 
