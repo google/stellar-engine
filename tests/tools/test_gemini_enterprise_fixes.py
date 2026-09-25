@@ -72,6 +72,15 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
     self.assertIn("is_regulated = compliance_regime not in ('4', 'NONE')", py_content)
     self.assertNotIn("updateMask=agentConfigs", py_content)
 
+  def test_deploy_sh_validates_observability_and_assistant_patch_responses(self):
+    """Ensure deploy.sh validates HTTP status and sensitiveLoggingEnabled on PATCH (#182)."""
+    deploy_sh = (
+        REPO_ROOT / "blueprints/fedramp-high/gemini-enterprise/deploy.sh"
+    ).read_text(encoding="utf-8")
+    self.assertIn("OBS_RESPONSE=$(curl -s -w", deploy_sh)
+    self.assertIn(".observabilityConfig.sensitiveLoggingEnabled", deploy_sh)
+    self.assertIn("ASST_RESPONSE=$(curl -s -w", deploy_sh)
+
 
 if __name__ == "__main__":
   unittest.main()

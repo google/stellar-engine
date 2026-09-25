@@ -2561,20 +2561,27 @@ deploy_stage_0() {
                 # A. Configure Observability Config (Audit Logs)
                 if [[ "$ENABLE_AUDIT" == "true" ]]; then
                     echo "Enabling conversation audit logging for Engine: ${ENG_ID}..."
-                    curl -s -o /dev/null -X PATCH \
-                        -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-                        -H "Content-Type: application/json" \
-                        -H "X-Goog-User-Project: ${PROJECT_ID}" \
-                        "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}?updateMask=observabilityConfig" \
-                        -d '{"observabilityConfig": {"observabilityEnabled": true, "sensitiveLoggingEnabled": true}}'
+                    OBS_Payload='{"observabilityConfig": {"observabilityEnabled": true, "sensitiveLoggingEnabled": true}}'
                 else
                     echo "Disabling conversation audit logging for Engine: ${ENG_ID}..."
-                    curl -s -o /dev/null -X PATCH \
-                        -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-                        -H "Content-Type: application/json" \
-                        -H "X-Goog-User-Project: ${PROJECT_ID}" \
-                        "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}?updateMask=observabilityConfig" \
-                        -d '{"observabilityConfig": {"observabilityEnabled": false, "sensitiveLoggingEnabled": false}}'
+                    OBS_Payload='{"observabilityConfig": {"observabilityEnabled": false, "sensitiveLoggingEnabled": false}}'
+                fi
+                OBS_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
+                    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+                    -H "Content-Type: application/json" \
+                    -H "X-Goog-User-Project: ${PROJECT_ID}" \
+                    "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}?updateMask=observabilityConfig" \
+                    -d "${OBS_Payload}")
+                OBS_HTTP_CODE=$(echo "$OBS_RESPONSE" | tail -n1)
+                OBS_BODY=$(echo "$OBS_RESPONSE" | sed '$d')
+                if [[ "$OBS_HTTP_CODE" != "200" ]]; then
+                    echo -e "${RED}Warning: Failed to update observabilityConfig for Engine ${ENG_ID} (HTTP ${OBS_HTTP_CODE}):${NC}"
+                    echo "$OBS_BODY"
+                elif [[ "$ENABLE_AUDIT" == "true" ]]; then
+                    SENSITIVE_ENABLED=$(echo "$OBS_BODY" | jq -r '.observabilityConfig.sensitiveLoggingEnabled // false' 2>/dev/null || echo "false")
+                    if [[ "$SENSITIVE_ENABLED" != "true" ]]; then
+                        echo -e "${YELLOW}Warning: observabilityConfig PATCH succeeded for Engine ${ENG_ID}, but sensitiveLoggingEnabled was not confirmed in the API response.${NC}"
+                    fi
                 fi
 
                 # B. Configure Default Assistant Compliance
@@ -2608,12 +2615,18 @@ deploy_stage_0() {
                      ASSISTANT_BODY="$BASE_JSON"
                 fi
 
-                curl -s -o /dev/null -X PATCH \
+                ASST_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
                     -H "Authorization: Bearer ${ACCESS_TOKEN}" \
                     -H "Content-Type: application/json" \
                     -H "X-Goog-User-Project: ${PROJECT_ID}" \
                     "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}/assistants/default_assistant?updateMask=${MASK}" \
-                    -d "${ASSISTANT_BODY}"
+                    -d "${ASSISTANT_BODY}")
+                ASST_HTTP_CODE=$(echo "$ASST_RESPONSE" | tail -n1)
+                ASST_BODY=$(echo "$ASST_RESPONSE" | sed '$d')
+                if [[ "$ASST_HTTP_CODE" != "200" ]]; then
+                    echo -e "${RED}Warning: Failed to update default assistant for Engine ${ENG_ID} (HTTP ${ASST_HTTP_CODE}):${NC}"
+                    echo "$ASST_BODY"
+                fi
             fi
         done < <(echo "$AUDIT_LOGS_MAP" | jq -r --argjson ma "$MODEL_ARMOR_MAP" 'to_entries[] | "\(.key)\t\(.value)\t\(($ma[.key]) // false)"')
     fi
