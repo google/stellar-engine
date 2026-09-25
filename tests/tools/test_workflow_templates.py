@@ -34,9 +34,9 @@ class TestWorkflowTemplatesSecurity(unittest.TestCase):
       with self.subTest(template=str(template_path.relative_to(_REPO_ROOT))):
         content = template_path.read_text(encoding='utf-8')
         self.assertIn(
-            'VALIDATE: $${{steps.tf-validate.outputs.stdout}}', content
+            'tf_validate: $${{steps.tf-validate.outputs.stdout}}', content
         )
-        self.assertIn('$${process.env.VALIDATE}', content)
+        self.assertIn('$${process.env.tf_validate}', content)
         self.assertNotIn(
             '            $${{steps.tf-validate.outputs.stdout}}', content
         )

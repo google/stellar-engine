@@ -140,7 +140,7 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           PLAN: $${{steps.tf-plan.outputs.stdout}}\n$${{steps.tf-plan.outputs.stderr}}
-          VALIDATE: $${{steps.tf-validate.outputs.stdout}}
+          tf_validate: $${{steps.tf-validate.outputs.stdout}}
         with:
           script: |
             const output = `### Terraform Initialization \`$${{steps.tf-init.outcome}}\`
@@ -150,7 +150,7 @@ jobs:
             <details><summary>Validation Output</summary>
 
             \`\`\`\n
-            $${process.env.VALIDATE}
+            $${process.env.tf_validate}
             \`\`\`
 
             </details>
