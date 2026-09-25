@@ -1417,10 +1417,9 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
     # Engine: Update FRH authorized features and disable Private Knowledge Graph (People Connectors are not yet authorized for FRH)
     engine_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}"
     engine_patch_body = {
-        "features": engine_features.get('features'),
-        "disableAnalytics": True
+        "features": engine_features.get('features')
     }
-    engine_update_mask = "features,disableAnalytics"
+    engine_update_mask = "features"
 
     engine_request = service.projects().locations().collections().engines().patch(
         name=engine_name,
@@ -1433,7 +1432,8 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         click.echo(f"Engine {engine_id} configured for FedRAMP High.")
     except Exception as e:
         click.echo(f"An error occurred while configuring the engine for FedRAMP High: {e}")
-        # Do not exit, as this may not be a critical failure.
+        click.echo(click.style("Exiting Onboarding process...", fg="red"))
+        sys.exit(1)
 
     # Default Search Widget: Disable User Event Collection
     disable_user_event_collection(credentials, project_id, engine_id)
@@ -1446,9 +1446,9 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         token_process = subprocess.run(['gcloud', 'auth', 'print-access-token'], check=True, capture_output=True, text=True)
         access_token = token_process.stdout.strip()
     except subprocess.CalledProcessError as e:
-        click.echo(f"Error getting access token not critical, but noted: {e}")
-        pass
-        access_token = ""
+        click.echo(f"Error getting access token: {e}")
+        click.echo(click.style("Exiting Onboarding process...", fg="red"))
+        sys.exit(1)
 
     if access_token:
         url = f"https://us-discoveryengine.googleapis.com/v1alpha/{assistant_name}?updateMask=agentConfigs,generationConfig,disableLocationContext,webGroundingType,defaultWebGroundingToggleOff"
@@ -1485,11 +1485,13 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
                  click.echo("An error occurred while configuring the default assistant for FedRAMP High:")
                  click.echo(result.stderr)
                  click.echo(result.stdout)
-                 # Do not exit
+                 click.echo(click.style("Exiting Onboarding process...", fg="red"))
+                 sys.exit(1)
 
         except Exception as e:
             click.echo(f"An error occurred while configuring the default assistant for FedRAMP High: {e}")
-            # Do not exit
+            click.echo(click.style("Exiting Onboarding process...", fg="red"))
+            sys.exit(1)
 
     # Project: Disable Implicit Model Caching
     try:
@@ -1530,10 +1532,9 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
     # Engine: Update IL4 authorized features and disable Private Knowledge Graph (People Connectors are not yet authorized for IL4)
     engine_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}"
     engine_patch_body = {
-        "features": engine_features.get('features'),
-        "disableAnalytics": True
+        "features": engine_features.get('features')
     }
-    engine_update_mask = "features,disableAnalytics"
+    engine_update_mask = "features"
 
     engine_request = service.projects().locations().collections().engines().patch(
         name=engine_name,
@@ -1642,10 +1643,9 @@ def configure_gemini_enterprise_for_il5(credentials, project_id, engine_id):
     # Engine: Update IL5 authorized features and disable Private Knowledge Graph (People Connectors are not yet authorized for IL5)
     engine_name = f"projects/{project_id}/locations/us/collections/default_collection/engines/{engine_id}"
     engine_patch_body = {
-        "features": engine_features.get('features'),
-        "disableAnalytics": True
+        "features": engine_features.get('features')
     }
-    engine_update_mask = "features,disableAnalytics"
+    engine_update_mask = "features"
 
     engine_request = service.projects().locations().collections().engines().patch(
         name=engine_name,
