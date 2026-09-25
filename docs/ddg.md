@@ -656,6 +656,23 @@ Perform the following steps when adding or removing tenants projects for an exis
 - `./sa_lockdown.sh`
 
 
+### Cross-Stage IAM Impersonation and Troubleshooting 403 Errors
+
+Each FAST deployment stage uses a dedicated least-privilege automation service account configured in its generated `*-providers.tf` file:
+
+| Stage | Expected Service Account Pattern | Primary Scope |
+| :--- | :--- | :--- |
+| `0-bootstrap` | `${FAST_PREFIX}-prod-bootstrap-0@${FAST_PREFIX}-prod-iac-core-0.iam.gserviceaccount.com` | Organization IAM, Assured Workloads, Stage 0 projects |
+| `1-resman` | `${FAST_PREFIX}-prod-resman-0@${FAST_PREFIX}-prod-iac-core-0.iam.gserviceaccount.com` | Stage folders, automation service accounts, CI/CD repositories |
+| `2-networking` | `${FAST_PREFIX}-prod-networking-0@${FAST_PREFIX}-prod-iac-core-0.iam.gserviceaccount.com` | Shared VPCs, firewall policies, interconnect/VPN, DNS |
+| `3-security` | `${FAST_PREFIX}-prod-security-0@${FAST_PREFIX}-prod-iac-core-0.iam.gserviceaccount.com` | KMS keys, VPC Service Controls, security projects |
+
+If you encounter `403 Forbidden` or `Permission 'iam.serviceAccounts.getAccessToken' denied` errors when transitioning between stages:
+
+1. **Clear stale shell impersonation variables**: If `GOOGLE_IMPERSONATE_SERVICE_ACCOUNT` or `CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT` was exported while debugging a previous stage, it overrides the provider block in the current stage. Run `../../stage-links.sh <OUTPUTS_PATH>` (or `unset GOOGLE_IMPERSONATE_SERVICE_ACCOUNT CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT`) so Terraform uses the stage's `*-providers.tf` configuration.
+2. **Verify service account lockdown status**: Ensure `./sa_lockdown.sh --enable` has been executed in `fast/stages-aw/3-security` if the deployment service accounts were previously disabled.
+3. **Verify token creator permissions**: Confirm your active `gcloud auth list` identity is a member of the organization admins or devops group granted `roles/iam.serviceAccountTokenCreator` on the target stage service account.
+
 ### Additional Notes
 
 - When modifying modules is necessary, please copy the entire module over, and
