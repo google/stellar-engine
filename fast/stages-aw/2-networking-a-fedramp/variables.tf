@@ -107,6 +107,13 @@ variable "gcp_ranges" {
   }
 }
 
+variable "nva_spot_vms" {
+  description = "Whether to provision NVA instances as Spot VMs. Defaults to false (standard on-demand instances with automatic restart)."
+  type        = bool
+  default     = false
+  nullable    = false
+}
+
 variable "organization" {
   # tfdoc:variable:source 0-bootstrap
   description = "Organization details."

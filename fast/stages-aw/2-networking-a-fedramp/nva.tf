@@ -87,8 +87,8 @@ module "nva-template" {
   options = {
     allow_stopping_for_update = true
     deletion_protection       = false
-    spot                      = true
-    termination_action        = "STOP"
+    spot                      = var.nva_spot_vms
+    termination_action        = var.nva_spot_vms ? "STOP" : null
   }
   metadata = {
     user-data              = module.nva-cloud-config.cloud_config

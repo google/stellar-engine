@@ -52,8 +52,19 @@ class TestStage2Networking(unittest.TestCase):
         )
         self.assertNotIn('depends_on = [\n    time_sleep.peering_delay\n  ]', branch_tf)
 
+  def test_nva_defaults_to_standard_on_demand_vms(self):
+    nva_tf = (_FEDRAMP_NET_DIR / 'nva.tf').read_text(encoding='utf-8')
+    vars_tf = (_FEDRAMP_NET_DIR / 'variables.tf').read_text(encoding='utf-8')
+    self.assertIn('spot                      = var.nva_spot_vms', nva_tf)
+    self.assertIn(
+        'termination_action        = var.nva_spot_vms ? "STOP" : null', nva_tf
+    )
+    self.assertIn('variable "nva_spot_vms"', vars_tf)
+    self.assertIn('default     = false', vars_tf)
+
 
 if __name__ == '__main__':
   unittest.main()
+
 
 
