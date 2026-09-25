@@ -156,14 +156,14 @@ check_os_environment() {
     case "${os_name}:${ostype}" in
         MINGW*|MSYS*|CYGWIN*|*:msys*|*:cygwin*|*:win32*)
             log_error "Unsupported native Windows shell environment detected (${os_name})."
-            log_error "Please run Stellar Engine scripts inside WSL2 (Windows Subsystem for Linux) or the repository DevContainer (.devcontainer/devcontainer.json)."
+            log_error "Please run Stellar Engine scripts inside WSL2 (Windows Subsystem for Linux) or Google Cloud Shell."
             return 1
             ;;
     esac
 
     if [[ "${OS:-}" == "Windows_NT" && -z "${WSL_DISTRO_NAME:-}" && ! -f "/proc/sys/fs/binfmt_misc/WSLInterop" ]]; then
         log_error "Unsupported native Windows environment detected (OS=Windows_NT without WSL2)."
-        log_error "Please run Stellar Engine scripts inside WSL2 or the repository DevContainer (.devcontainer/devcontainer.json)."
+        log_error "Please run Stellar Engine scripts inside WSL2 (Windows Subsystem for Linux) or Google Cloud Shell."
         return 1
     fi
 

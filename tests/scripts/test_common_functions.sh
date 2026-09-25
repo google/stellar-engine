@@ -123,16 +123,8 @@ assert_false "check_os_environment fails on MINGW64" 'check_os_environment "MING
 assert_false "check_os_environment fails on CYGWIN" 'check_os_environment "CYGWIN_NT-10.0" "cygwin" 2>/dev/null'
 assert_true "check_os_environment succeeds when OS=Windows_NT inside WSL2" 'OS="Windows_NT" WSL_DISTRO_NAME="Ubuntu" check_os_environment "Linux" "linux-gnu"'
 assert_false "check_os_environment fails when OS=Windows_NT outside WSL2" 'OS="Windows_NT" WSL_DISTRO_NAME="" check_os_environment "Windows_NT" "win32" 2>/dev/null'
-
-# 12. Test DevContainer configuration uses Google Cloud SDK image and includes standard utilities
-DEVCONTAINER_DIR="${REPO_ROOT}/.devcontainer"
-assert_true "devcontainer.json exists" '[[ -f "${DEVCONTAINER_DIR}/devcontainer.json" ]]'
-assert_true "Dockerfile exists in .devcontainer" '[[ -f "${DEVCONTAINER_DIR}/Dockerfile" ]]'
-assert_true "Dockerfile uses official Google Cloud SDK GCR image" 'grep -q "^FROM gcr.io/google.com/cloudsdktool/google-cloud-cli:stable" "${DEVCONTAINER_DIR}/Dockerfile"'
-assert_true "Dockerfile verifies SHA-256 checksums for downloaded binaries" 'grep -q "sha256sum -c -" "${DEVCONTAINER_DIR}/Dockerfile"'
-for pkg in bash-completion curl git gnupg2 iproute2 jq less lsof openssh-client procps python3-pip python3-venv rsync shellcheck sudo tree unzip wget zip zsh terraform tflint terragrunt; do
-  assert_true "Dockerfile includes utility: ${pkg}" "grep -q '${pkg}' '${DEVCONTAINER_DIR}/Dockerfile'"
-done
+OS_ERR_OUTPUT=$(check_os_environment "MINGW64_NT-10.0" "msys" 2>&1 || true)
+assert_true "check_os_environment error recommends WSL2" '[[ "$OS_ERR_OUTPUT" == *"WSL2"* ]]'
 
 echo ""
 echo "Summary: ${TEST_COUNT} shell unit tests run, ${FAIL_COUNT} failures."
