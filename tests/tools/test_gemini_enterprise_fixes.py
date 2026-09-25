@@ -102,6 +102,24 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
     self.assertIn("grep '^access_time_zone' gemini-stage-0/terraform.tfvars", deploy_sh)
     self.assertIn("grep '^access_expiration_timestamp' gemini-stage-0/terraform.tfvars", deploy_sh)
 
+  def test_deploy_sh_prioritizes_tenant_iac_state_bucket(self):
+    """Ensure deploy.sh checks the tenant IaC state bucket before falling back to the core bucket (#230)."""
+    deploy_sh = (
+        REPO_ROOT / "blueprints/fedramp-high/gemini-enterprise/deploy.sh"
+    ).read_text(encoding="utf-8")
+    iac_idx = deploy_sh.find('IAC_STATE_BUCKET="${PREFIX}-${ENVIRONMENT}-${TENANT}-iac-0"')
+    core_idx = deploy_sh.find('LEGACY_CORE_BUCKET="${PREFIX}-tn-${ENVIRONMENT}-${TENANT}-0"')
+    self.assertNotEqual(iac_idx, -1)
+    self.assertNotEqual(core_idx, -1)
+    self.assertIn(
+        'if gcloud storage buckets describe "gs://${IAC_STATE_BUCKET}"',
+        deploy_sh,
+    )
+    self.assertIn(
+        'elif gcloud storage buckets describe "gs://${LEGACY_CORE_BUCKET}"',
+        deploy_sh,
+    )
+
 
 if __name__ == "__main__":
   unittest.main()

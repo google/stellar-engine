@@ -579,16 +579,21 @@ discover_infrastructure() {
         fi
 
         # 3. Check State Bucket
-        # 1-resman names the tenant state bucket <prefix>-tn-<env>-<tenant>-0
-        # (branch-tenants.tf, module tenant-core-gcs).
-        POTENTIAL_BUCKET="${PREFIX}-tn-${ENVIRONMENT}-${TENANT}-0"
-        echo "Checking for Terraform State Bucket: ${POTENTIAL_BUCKET}..."
-        if gcloud storage buckets describe "gs://${POTENTIAL_BUCKET}" &>/dev/null; then
-            STATE_BUCKET="${POTENTIAL_BUCKET}"
+        # 1-resman creates the dedicated tenant IaC state bucket <prefix>-<env>-<tenant>-iac-0
+        # (branch-tenants.tf, module tenant-iac-gcs), as well as the tenant core bucket
+        # <prefix>-tn-<env>-<tenant>-0 (module tenant-core-gcs).
+        IAC_STATE_BUCKET="${PREFIX}-${ENVIRONMENT}-${TENANT}-iac-0"
+        LEGACY_CORE_BUCKET="${PREFIX}-tn-${ENVIRONMENT}-${TENANT}-0"
+        echo "Checking for Terraform State Bucket: ${IAC_STATE_BUCKET}..."
+        if gcloud storage buckets describe "gs://${IAC_STATE_BUCKET}" &>/dev/null; then
+            STATE_BUCKET="${IAC_STATE_BUCKET}"
+            echo -e "Found Terraform State Bucket: ${GREEN}${STATE_BUCKET}${NC}"
+        elif gcloud storage buckets describe "gs://${LEGACY_CORE_BUCKET}" &>/dev/null; then
+            STATE_BUCKET="${LEGACY_CORE_BUCKET}"
             echo -e "Found Terraform State Bucket: ${GREEN}${STATE_BUCKET}${NC}"
         else
-             echo -e "${YELLOW}Terraform State Bucket not found (Will be created).${NC}"
-             STATE_BUCKET=""
+            echo -e "${YELLOW}Terraform State Bucket not found (Will be created).${NC}"
+            STATE_BUCKET=""
         fi
 
         # 4. Check Keyrings and Keys
