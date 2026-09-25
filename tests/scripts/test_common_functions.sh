@@ -129,6 +129,7 @@ DEVCONTAINER_DIR="${REPO_ROOT}/.devcontainer"
 assert_true "devcontainer.json exists" '[[ -f "${DEVCONTAINER_DIR}/devcontainer.json" ]]'
 assert_true "Dockerfile exists in .devcontainer" '[[ -f "${DEVCONTAINER_DIR}/Dockerfile" ]]'
 assert_true "Dockerfile uses official Google Cloud SDK GCR image" 'grep -q "^FROM gcr.io/google.com/cloudsdktool/google-cloud-cli:stable" "${DEVCONTAINER_DIR}/Dockerfile"'
+assert_true "Dockerfile verifies SHA-256 checksums for downloaded binaries" 'grep -q "sha256sum -c -" "${DEVCONTAINER_DIR}/Dockerfile"'
 for pkg in bash-completion curl git gnupg2 iproute2 jq less lsof openssh-client procps python3-pip python3-venv rsync shellcheck sudo tree unzip wget zip zsh terraform tflint terragrunt; do
   assert_true "Dockerfile includes utility: ${pkg}" "grep -q '${pkg}' '${DEVCONTAINER_DIR}/Dockerfile'"
 done
