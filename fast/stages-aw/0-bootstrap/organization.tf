@@ -200,6 +200,7 @@ resource "google_assured_workloads_workload" "primary" {
   }
 
   violation_notifications_enabled = true
+  depends_on                      = [module.organization-logging]
   lifecycle {
     create_before_destroy = true
     ignore_changes        = [billing_account]
@@ -207,10 +208,14 @@ resource "google_assured_workloads_workload" "primary" {
 }
 
 module "no-compliance-folder" {
-  count  = var.assured_workloads.regime == "COMPLIANCE_REGIME_UNSPECIFIED" ? 1 : 0
-  source = "../../../modules/folder"
-  parent = "organizations/${var.organization.id}"
-  name   = "StellarEngine-${var.prefix}"
+  count      = var.assured_workloads.regime == "COMPLIANCE_REGIME_UNSPECIFIED" ? 1 : 0
+  source     = "../../../modules/folder"
+  parent     = module.organization-logging.id
+  name       = "StellarEngine-${var.prefix}"
+  depends_on = [module.organization-logging]
+  logging_settings = {
+    storage_location = local.locations.logging
+  }
 }
 
 locals {
@@ -226,9 +231,13 @@ locals {
 }
 
 module "branch-common-services-folder" {
-  source = "../../../modules/folder"
-  parent = local.assured_workload_folder
-  name   = "${lookup(var.regime_mapping, var.assured_workloads.regime, var.assured_workloads.regime)} Common Services"
+  source     = "../../../modules/folder"
+  parent     = local.assured_workload_folder
+  name       = "${lookup(var.regime_mapping, var.assured_workloads.regime, var.assured_workloads.regime)} Common Services"
+  depends_on = [module.organization-logging]
+  logging_settings = {
+    storage_location = local.locations.logging
+  }
 }
 
 
