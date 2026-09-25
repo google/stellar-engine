@@ -12,8 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+resource "google_project_service" "appengine" {
+  project            = var.main_project_id
+  service            = "appengine.googleapis.com"
+  disable_on_destroy = false
+}
+
 module "app-engine" {
   source      = "../../../modules/app-engine"
   project     = var.main_project_id
   location_id = var.region
+  depends_on  = [google_project_service.appengine]
 }

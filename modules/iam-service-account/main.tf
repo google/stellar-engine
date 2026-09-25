@@ -49,4 +49,11 @@ resource "google_service_account" "service_account" {
   account_id   = trimsuffix(replace(substr("${local.prefix}${local.name}", 0, 30), "_", "-"), "-")
   display_name = var.display_name
   description  = var.description
+
+  lifecycle {
+    precondition {
+      condition     = length("${local.prefix}${local.name}") <= 30
+      error_message = "Service account ID '${local.prefix}${local.name}' is ${length("${local.prefix}${local.name}")} characters long, exceeding the 30-character GCP service account ID limit."
+    }
+  }
 }

@@ -73,6 +73,10 @@ resource "google_project" "project" {
       condition     = var.skip_delete == null
       error_message = "skip_delete is deprecated. Use deletion_policy."
     }
+    precondition {
+      condition     = length("${local.prefix}${var.name}") <= 30
+      error_message = "Project ID '${local.prefix}${var.name}' is ${length("${local.prefix}${var.name}")} characters long, exceeding the 30-character GCP project ID limit."
+    }
     ignore_changes = [auto_create_network]
   }
 }
