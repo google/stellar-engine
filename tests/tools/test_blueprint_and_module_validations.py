@@ -40,6 +40,20 @@ class TestBlueprintAndModuleValidations(unittest.TestCase):
     self.assertIn('service            = "sqladmin.googleapis.com"', pg_tf)
     self.assertIn("google_project_service.sqladmin", pg_tf)
 
+  def test_modules_enforce_30_char_id_preconditions(self):
+    """Ensure project and iam-service-account modules enforce 30-character ID preconditions (#228)."""
+    proj_tf = (REPO_ROOT / "modules/project/main.tf").read_text(encoding="utf-8")
+    self.assertIn('condition     = length("${local.prefix}${var.name}") <= 30', proj_tf)
+    self.assertIn("exceeding the 30-character GCP project ID limit", proj_tf)
+
+    sa_tf = (REPO_ROOT / "modules/iam-service-account/main.tf").read_text(
+        encoding="utf-8"
+    )
+    self.assertIn('condition     = length("${local.prefix}${local.name}") <= 30', sa_tf)
+    self.assertIn(
+        "exceeding the 30-character GCP service account ID limit", sa_tf
+    )
+
 
 if __name__ == "__main__":
   unittest.main()
