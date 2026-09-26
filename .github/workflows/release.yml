@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -11,6 +12,7 @@ permissions:
 
 jobs:
   release-please:
+    if: github.repository == 'google/stellar-engine'
     runs-on: ubuntu-latest
     steps:
       - name: Generate Release
