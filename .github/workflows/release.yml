@@ -17,12 +17,10 @@ jobs:
         id: release
         uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
         with:
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.RELEASE_PAT }}
+          config-file: .github/release-please-config.json
+          manifest-file: .github/.release-please-manifest.json
           target-branch: main
-          git-user-name: "Calvin Cheng"
-          git-user-email: "calcheng@google.com"
-
 
       - name: On Release Created
         if: ${{ steps.release.outputs.release_created }}
