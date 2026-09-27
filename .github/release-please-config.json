@@ -1,8 +1,9 @@
 {
+  "pull-request-header": "<!-- release-please -->",
   "packages": {
     ".": {
       "release-type": "simple",
-      "pr-title-pattern": "release: v${version}",
+      "pull-request-title-pattern": "release: v${version}",
       "changelog-path": "CHANGELOG.md",
       "changelog-sections": [
         {"type": "feat", "section": "Features"},
