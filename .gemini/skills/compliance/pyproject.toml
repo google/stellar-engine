@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compliance-engine"
+version = "1.1.0"
+description = "Public Sector & Regulated Cloud Compliance Engine (NIST SP 800-53 Rev. 5, FedRAMP, DoD RMF, StateRAMP, CJIS)"
+readme = "README.md"
+# 3.9 is the floor because the codebase relies on PEP 585 builtin generics only via
+# typing aliases and on dict ordering guarantees. Do not lower without re-testing.
+requires-python = ">=3.9"
+
+# Versions are pinned exactly so that an authorization package is reproducible across
+# the operator, ISSO, and assessor environments (NIST SP 800-53 SA-10, SR-3, SR-4).
+# See requirements.txt for the full supply-chain policy and lock-file guidance.
+dependencies = [
+    "PyYAML==6.0.3",
+    "openpyxl==3.1.5",
+    # Terraform HCL2 AST extraction. Required, not optional: it determines how much of
+    # the operator's infrastructure-as-code lands inside the assessed accreditation
+    # boundary. The major version is load-bearing -- src/compliance_engine/hcl_parser.py rejects the
+    # 8.x output shape and checkov's bc-python-hcl2 fork via a canary parse, and falls
+    # back to the in-repo parser, which covers substantially less Terraform syntax.
+    "python-hcl2==7.3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+]
+# Independently audited third-party parser. When installed, safe_xml
+# delegates to it; otherwise the in-repo hardened fallback is used. This is a genuine
+# PyPI distribution - the engine no longer vendors a package under this name, which
+# previously shadowed it on sys.path.
+hardened-parsers = [
+    "defusedxml==0.7.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["compliance_engine*"]
+
+[tool.setuptools.package-data]
+"compliance_engine" = ["py.typed"]
