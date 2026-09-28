@@ -4,9 +4,9 @@ Cloud Foundation Fabric Detailed Deployment Guide
 
 | <strong>Created:</strong>             | June 04, 2023 |
 | :------------------------------------ | :------------ |
-| <strong>Updated:</strong>             | September 18, 2026 |
-| <strong>Version:</strong>             | v4.0.1        |
-| <strong>Most recent changes:</strong> | Refresh to v4.0.1 |
+| <strong>Updated:</strong>             | September 28, 2026 |
+| <strong>Version:</strong>             | v4.1.0        |
+| <strong>Most recent changes:</strong> | [CHANGELOG.md](../CHANGELOG.md) |
 
 ##
 
