@@ -108,9 +108,15 @@ def format_pull(pull):
   prefix = ''
   if 'incompatible change' in pull.labels:
     prefix = '**incompatible change:** '
+  safe_title = (
+      pull.title.replace('[', '\\[')
+      .replace(']', '\\]')
+      .replace('<', '&lt;')
+      .replace('>', '&gt;')
+  )
   return (f'- [[#{pull.id}]({pull_url}/{pull.id})] '
           f'{prefix}'
-          f'{pull.title} '
+          f'{safe_title} '
           f'([{pull.author}]({url}/{pull.author})) <!-- {pull.merged_at} -->')
 
 
@@ -152,14 +158,16 @@ def get_pulls(api):
 
 def get_release_pulls(api, releases):
   'Get and add pull requests for releases.'
+  if not releases:
+    return releases
   i = 0
   for p in get_pulls(api):
     if releases[i].published and p.merged_at >= releases[i].published:
       continue
-    if releases[i].since and p.merged_at <= releases[i].since:
+    while i < len(releases) and releases[i].since and p.merged_at <= releases[i].since:
       i += 1
-      if i == len(releases):
-        break
+    if i == len(releases):
+      break
     releases[i].pulls.append(p)
   return releases
 

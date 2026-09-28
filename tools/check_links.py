@@ -20,7 +20,9 @@ destinations. Its main use is in CI pipelines triggered by pull requests.
 '''
 
 import collections
+import ipaddress
 import pathlib
+import socket
 import requests
 import urllib.parse
 
@@ -39,16 +41,26 @@ def check_link(link, readme_path, external):
   # If the link is public, say the link is anyway valid
   # if --external is not set; check the link otherwise
   if url.scheme:
+    if url.scheme not in ('http', 'https'):
+      return LINK(link.dest, False)
     link_valid = True
     if external:
       try:
-        response = requests.get(link.dest)
+        hostname = url.hostname
+        if not hostname:
+          return LINK(link.dest, False)
+        for info in socket.getaddrinfo(hostname, None):
+          ip = ipaddress.ip_address(info[4][0])
+          if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+            return LINK(link.dest, False)
+        response = requests.get(link.dest, timeout=10)
         link_valid = response.ok
-      except requests.exceptions.RequestException:
+      except (requests.exceptions.RequestException, socket.gaierror, ValueError):
         link_valid = False
   # The link is private
   else:
-    link_valid = (readme_path.parent / url.path).exists()
+    target = (readme_path.parent / url.path).resolve()
+    link_valid = target.is_relative_to(BASEDIR.resolve()) and target.exists()
   return LINK(link.dest, link_valid)
 
 

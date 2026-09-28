@@ -46,10 +46,13 @@ def main(base_dirs):
       for fname in files:
         if fname in _MATCH_FILES or os.path.splitext(fname)[1] in _MATCH_FILES:
           fpath = os.path.abspath(os.path.join(root, fname))
-          content = open(fpath).read()
-          if _EXCLUDE_RE.search(content):
+          if os.path.islink(fpath):
             continue
           try:
+            with open(fpath, encoding='utf-8', errors='replace') as f:
+              content = f.read(8192)
+            if _EXCLUDE_RE.search(content):
+              continue
             if not _MATCH_RE.search(content):
               errors.append(fpath)
           except (IOError, OSError):
