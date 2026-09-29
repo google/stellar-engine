@@ -129,6 +129,24 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
     self.assertIn('printf "%s\\n1.7.4\\n" "$tf_ver" | sort -V | head -n 1', deploy_sh)
     self.assertIn('if [[ "$tf_compatible" != "true" ]]; then', deploy_sh)
 
+  def test_cloudarmor_and_cli_token_handling(self):
+    """Ensure Cloud Armor rules deny matches and CLI passes tokens via stdin."""
+    cloudarmor_tf = (
+        REPO_ROOT
+        / "blueprints/fedramp-high/gemini-enterprise/gemini-stage-0/cloudarmor.tf"
+    ).read_text(encoding="utf-8")
+    self.assertNotIn(
+        'action   = "allow"\n      priority = rules.value.priority',
+        cloudarmor_tf,
+    )
+    self.assertIn(
+        'action   = "deny(403)"\n      priority = rules.value.priority',
+        cloudarmor_tf,
+    )
+
+    py_content = GEM4GOV_PATH.read_text(encoding="utf-8")
+    self.assertNotIn("'-H', f\"Authorization: Bearer {access_token}\"", py_content)
+    self.assertIn("'-H', '@-'", py_content)
 
 
 if __name__ == "__main__":

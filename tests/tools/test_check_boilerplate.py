@@ -44,6 +44,18 @@ print('Hello World')
     self.assertIn('.tf', check_boilerplate._MATCH_FILES)
     self.assertIn('.yaml', check_boilerplate._MATCH_FILES)
 
+  def test_skips_symlinks(self):
+    import os
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+      target = os.path.join(tmpdir, 'unlicensed.txt')
+      with open(target, 'w', encoding='utf-8') as f:
+        f.write('no boilerplate here\n')
+      link_py = os.path.join(tmpdir, 'linked.py')
+      os.symlink(target, link_py)
+      # Should not raise SystemExit(1) because symlinks are skipped
+      check_boilerplate.main([tmpdir])
+
 
 if __name__ == '__main__':
   unittest.main()

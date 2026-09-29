@@ -72,6 +72,21 @@ output "vpc_id" {
     self.assertEqual(item["name"], "vpc_id")
     self.assertIn("The VPC network self link.", "".join(item["description"]))
 
+  def test_parse_files_skips_symlinks(self):
+    import os
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+      real_tf = os.path.join(tmpdir, "main.tf")
+      with open(real_tf, "w", encoding="utf-8") as f:
+        f.write("# main\n")
+      ext_tf = os.path.join(tmpdir, "external.txt")
+      with open(ext_tf, "w", encoding="utf-8") as f:
+        f.write("# external\n")
+      os.symlink(ext_tf, os.path.join(tmpdir, "linked.tf"))
+      files = list(tfdoc.parse_files(tmpdir))
+      self.assertEqual(len(files), 1)
+      self.assertEqual(files[0].name, "main.tf")
+
 
 if __name__ == '__main__':
   unittest.main()

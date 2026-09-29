@@ -81,6 +81,26 @@ class TestStateIam(unittest.TestCase):
     self.assertFalse(b.authoritative)
     self.assertEqual(b.resource_id, "proj-1")
 
+  def test_get_bindings_multi_underscore_resource_type(self):
+    resources = [
+        {
+            "type": "google_kms_crypto_key_iam_member",
+            "instances": [
+                {
+                    "attributes": {
+                        "crypto_key_id": "projects/p1/locations/us/keyRings/kr1/cryptoKeys/k1",
+                        "role": "roles/cloudkms.cryptoKeyEncrypterDecrypter",
+                        "member": "serviceAccount:sa@p1.iam.gserviceaccount.com",
+                        "condition": []
+                    }
+                }
+            ]
+        }
+    ]
+    bindings = list(state_iam.get_bindings(resources))
+    self.assertEqual(len(bindings), 1)
+    self.assertEqual(bindings[0].resource_type, "kms_crypto_key")
+
 
 if __name__ == '__main__':
   unittest.main()
