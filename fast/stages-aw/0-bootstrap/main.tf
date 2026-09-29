@@ -30,7 +30,7 @@ locals {
   locations = {
     bq      = var.regions.primary
     gcs     = var.regions.primary
-    logging = coalesce(try(local.checklist.location, null), var.regions.primary)
+    logging = coalesce(try(local._cl_data.logging.sinks[0].destination.location, null), var.regions.primary)
     pubsub  = [var.regions.primary]
     kms     = var.regions.primary
   }

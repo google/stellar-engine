@@ -38,12 +38,12 @@ locals {
   )
   # check that files are for the correct organization and ignore them if not
   _cl_data = (
-    try(local._cl_data_raw.cloud_setup_config.organization.id, null) != tostring(var.organization.id)
+    tostring(try(local._cl_data_raw.cloud_setup_config.organization.id, "")) != tostring(var.organization.id)
     ? null
     : local._cl_data_raw.cloud_setup_config
   )
   _cl_org = (
-    try(local._cl_org_raw.cloud_setup_org_iam.organization.id, null) != tostring(var.organization.id)
+    tostring(try(local._cl_org_raw.cloud_setup_org_iam.organization.id, "")) != tostring(var.organization.id)
     ? null
     : local._cl_org_raw.cloud_setup_org_iam
   )
@@ -86,9 +86,9 @@ locals {
     location = try(local._cl_data.logging.sinks[0].destination.location, null)
   }
   uses_checklist = (
-    var.factories_config.checklist_data != null
+    local._cl_data != null
     ||
-    var.factories_config.checklist_org_iam != null
+    local._cl_org != null
   )
 }
 check "checklist" {
@@ -112,14 +112,14 @@ check "checklist" {
   assert {
     condition = (
       var.factories_config.checklist_data == null ||
-      try(local._cl_data_raw.cloud_setup_config.organization.id, null) == tostring(var.organization.id)
+      tostring(try(local._cl_data_raw.cloud_setup_config.organization.id, "")) == tostring(var.organization.id)
     )
     error_message = "Checklist data organization id mismatch, file ignored."
   }
   assert {
     condition = (
       var.factories_config.checklist_org_iam == null ||
-      try(local._cl_org_raw.cloud_setup_org_iam.organization.id, null) == tostring(var.organization.id)
+      tostring(try(local._cl_org_raw.cloud_setup_org_iam.organization.id, "")) == tostring(var.organization.id)
     )
     error_message = "Checklist org IAM organization id mismatch, file ignored."
   }
@@ -140,14 +140,14 @@ module "automation-tf-checklist-gcs" {
 }
 
 resource "google_storage_bucket_object" "checklist_data" {
-  count  = var.factories_config.checklist_data != null ? 1 : 0
+  count  = local._cl_data != null ? 1 : 0
   bucket = module.automation-tf-checklist-gcs[0].name
   name   = "checklist/data.tfvars.json"
   source = var.factories_config.checklist_data
 }
 
 resource "google_storage_bucket_object" "checklist_org_iam" {
-  count  = var.factories_config.checklist_org_iam != null ? 1 : 0
+  count  = local._cl_org != null ? 1 : 0
   bucket = module.automation-tf-checklist-gcs[0].name
   name   = "checklist/org-iam.tfvars.json"
   source = var.factories_config.checklist_org_iam

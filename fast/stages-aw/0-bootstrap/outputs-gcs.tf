@@ -20,29 +20,29 @@ resource "google_storage_bucket_object" "providers" {
   for_each = local.providers
   bucket   = module.automation-tf-output-gcs.name
   # provider suffix allows excluding via .gitignore when linked from stages
-  name    = "providers/${each.key}-providers.tf"
-  content = each.value
-  # kms_key_name = module.gcs-kms.keys.gcs.id # may need to add back in
+  name         = "providers/${each.key}-providers.tf"
+  content      = sensitive(each.value)
+  kms_key_name = module.gcs-kms.keys.gcs.id
 }
 
 resource "google_storage_bucket_object" "tfvars" {
-  bucket  = module.automation-tf-output-gcs.name
-  name    = "tfvars/0-bootstrap.auto.tfvars.json"
-  content = jsonencode(local.tfvars)
-  # kms_key_name = module.gcs-kms.keys.gcs.id # may need to add back in
+  bucket       = module.automation-tf-output-gcs.name
+  name         = "tfvars/0-bootstrap.auto.tfvars.json"
+  content      = sensitive(jsonencode(local.tfvars))
+  kms_key_name = module.gcs-kms.keys.gcs.id
 }
 
 resource "google_storage_bucket_object" "tfvars_globals" {
-  bucket  = module.automation-tf-output-gcs.name
-  name    = "tfvars/0-globals.auto.tfvars.json"
-  content = jsonencode(local.tfvars_globals)
-  # kms_key_name = module.gcs-kms.keys.gcs.id # may need to add back in
+  bucket       = module.automation-tf-output-gcs.name
+  name         = "tfvars/0-globals.auto.tfvars.json"
+  content      = sensitive(jsonencode(local.tfvars_globals))
+  kms_key_name = module.gcs-kms.keys.gcs.id
 }
 
 resource "google_storage_bucket_object" "workflows" {
-  for_each = local.cicd_workflows
-  bucket   = module.automation-tf-output-gcs.name
-  name     = "workflows/${each.key}-workflow.yaml"
-  content  = each.value
-  # kms_key_name = module.gcs-kms.keys.gcs.id # may need to add back in
+  for_each     = local.cicd_workflows
+  bucket       = module.automation-tf-output-gcs.name
+  name         = "workflows/${each.key}-workflow.yaml"
+  content      = sensitive(each.value)
+  kms_key_name = module.gcs-kms.keys.gcs.id
 }
