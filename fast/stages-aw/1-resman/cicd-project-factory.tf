@@ -28,8 +28,12 @@ module "branch-pf-dev-cicd-repo" {
   project_id = var.automation.project_id
   name       = each.value.name
   iam = {
-    "roles/source.admin"  = [module.branch-pf-dev-sa[0].iam_email]
-    "roles/source.reader" = [module.branch-pf-dev-sa-cicd[0].iam_email]
+    "roles/source.admin" = compact([
+      try(module.branch-pf-dev-sa[0].iam_email, "")
+    ])
+    "roles/source.reader" = compact([
+      try(module.branch-pf-dev-sa-cicd[0].iam_email, "")
+    ])
   }
   triggers = {
     fast-03-pf-dev = {
@@ -41,7 +45,7 @@ module "branch-pf-dev-cicd-repo" {
       substitutions   = {}
       template = {
         project_id  = null
-        branch_name = each.value.branch
+        branch_name = each.value.branch == null ? null : "^${trim(each.value.branch, "^$")}$"
         repo_name   = each.value.name
         tag_name    = null
       }
@@ -60,8 +64,12 @@ module "branch-pf-prod-cicd-repo" {
   project_id = var.automation.project_id
   name       = each.value.name
   iam = {
-    "roles/source.admin"  = [module.branch-pf-prod-sa[0].iam_email]
-    "roles/source.reader" = [module.branch-pf-prod-sa-cicd[0].iam_email]
+    "roles/source.admin" = compact([
+      try(module.branch-pf-prod-sa[0].iam_email, "")
+    ])
+    "roles/source.reader" = compact([
+      try(module.branch-pf-prod-sa-cicd[0].iam_email, "")
+    ])
   }
   triggers = {
     fast-03-pf-prod = {
@@ -73,7 +81,7 @@ module "branch-pf-prod-cicd-repo" {
       substitutions   = {}
       template = {
         project_id  = null
-        branch_name = each.value.branch
+        branch_name = each.value.branch == null ? null : "^${trim(each.value.branch, "^$")}$"
         repo_name   = each.value.name
         tag_name    = null
       }
@@ -103,20 +111,18 @@ module "branch-pf-dev-sa-cicd" {
     }
     # impersonated via workload identity federation for external repos
     : {
-      "roles/iam.workloadIdentityUser" = [
+      "roles/iam.workloadIdentityUser" = (
         each.value.branch == null
-        ? format(
-          local.identity_providers[each.value.identity_provider].principal_repo,
-          var.automation.federated_identity_pool,
-          each.value.name
-        )
-        : format(
-          local.identity_providers[each.value.identity_provider].principal_branch,
-          var.automation.federated_identity_pool,
-          each.value.name,
-          each.value.branch
-        )
-      ]
+        ? []
+        : [
+          format(
+            local.identity_providers[each.value.identity_provider].principal_branch,
+            var.automation.federated_identity_pool,
+            each.value.name,
+            each.value.branch
+          )
+        ]
+      )
     }
   )
   iam_project_roles = {
@@ -146,20 +152,18 @@ module "branch-pf-prod-sa-cicd" {
     }
     # impersonated via workload identity federation for external repos
     : {
-      "roles/iam.workloadIdentityUser" = [
+      "roles/iam.workloadIdentityUser" = (
         each.value.branch == null
-        ? format(
-          local.identity_providers[each.value.identity_provider].principal_repo,
-          var.automation.federated_identity_pool,
-          each.value.name
-        )
-        : format(
-          local.identity_providers[each.value.identity_provider].principal_branch,
-          var.automation.federated_identity_pool,
-          each.value.name,
-          each.value.branch
-        )
-      ]
+        ? []
+        : [
+          format(
+            local.identity_providers[each.value.identity_provider].principal_branch,
+            var.automation.federated_identity_pool,
+            each.value.name,
+            each.value.branch
+          )
+        ]
+      )
     }
   )
   iam_project_roles = {

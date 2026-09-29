@@ -96,12 +96,9 @@ module "branch-gcve-prod-sa" {
   display_name = "Terraform GCVE production service account."
   prefix       = var.prefix
   iam = {
-    "roles/iam.serviceAccountTokenCreator" = concat(
-      [local.principals.gcp-devops],
-      compact([
-        try(module.branch-gcve-prod-sa-cicd[0].iam_email, null)
-      ])
-    )
+    "roles/iam.serviceAccountTokenCreator" = compact([
+      try(module.branch-gcve-prod-sa-cicd[0].iam_email, null)
+    ])
   }
   iam_project_roles = {
     (var.automation.project_id) = ["roles/serviceusage.serviceUsageConsumer"]

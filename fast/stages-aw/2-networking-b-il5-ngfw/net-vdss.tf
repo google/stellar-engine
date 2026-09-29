@@ -65,8 +65,11 @@ module "dmz-vpc" {
     inbound = true
     logging = var.dns.enable_logging
   }
-  create_googleapis_routes = null
-  subnets                  = try(var.subnets.dmz, [])
+  create_googleapis_routes = {
+    private    = true
+    restricted = true
+  }
+  subnets = try(var.subnets.dmz, [])
 }
 
 module "dmz-firewall" {
@@ -199,6 +202,8 @@ module "landing-dns-policy-googleapis" {
   name       = "googleapis"
   rules      = var.dns_policy_rules
   networks = {
+    dmz     = module.dmz-vpc.self_link
     landing = module.vdss-vpc.self_link
+    mgmt    = module.mgmt-vpc.self_link
   }
 }

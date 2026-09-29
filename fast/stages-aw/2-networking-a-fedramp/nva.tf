@@ -214,7 +214,6 @@ module "kms" {
 
   iam = {
     "roles/cloudkms.cryptoKeyEncrypterDecrypter" = [
-      google_service_account.compute.member,
       module.vdss-host-project.service_agents.compute.iam_email
     ]
   }

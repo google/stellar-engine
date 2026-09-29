@@ -68,6 +68,15 @@ variable "common_services_folder" {
   default     = null
 }
 
+variable "custom_roles" {
+  # tfdoc:variable:source 0-bootstrap
+  description = "Custom roles defined at the org level, in key => id format."
+  type = object({
+    service_project_network_admin = string
+  })
+  default = null
+}
+
 variable "dns" {
   description = "DNS configuration."
   type = object({
@@ -177,6 +186,14 @@ variable "force_destroy" {
 variable "groups" {
   description = "IAM groups mapping."
   type        = any
+  default     = null
+}
+
+variable "kms_protection_level" {
+  # tfdoc:variable:source 0-bootstrap
+  description = "KMS protection level."
+  type        = string
+  nullable    = true
   default     = null
 }
 
