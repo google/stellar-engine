@@ -62,7 +62,7 @@ variable "kms_key_names" {
   default = {
     "default" = {
       destroy_scheduled_duration    = null
-      rotation_period               = null
+      rotation_period               = "7776000s"
       labels                        = null
       purpose                       = "ENCRYPT_DECRYPT"
       skip_initial_version_creation = false

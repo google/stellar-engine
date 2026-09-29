@@ -127,5 +127,6 @@ resource "google_compute_firewall" "default" {
   log_config {
     metadata = "INCLUDE_ALL_METADATA"
   }
-  source_ranges = var.source_ranges_allowed
+  target_service_accounts = [google_service_account.compute.email]
+  source_ranges           = var.source_ranges_allowed
 }

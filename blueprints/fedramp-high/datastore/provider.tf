@@ -20,7 +20,8 @@ terraform {
       version = ">= 3.53, < 6"
     }
     null = {
-      source = "hashicorp/null"
+      source  = "hashicorp/null"
+      version = "~> 3.2"
     }
   }
 }

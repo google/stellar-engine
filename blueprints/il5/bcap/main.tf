@@ -47,6 +47,7 @@ resource "google_compute_network" "vpc_network" {
   project                 = var.hub_project_id
   name                    = var.network_name
   auto_create_subnetworks = false
+  routing_mode            = "GLOBAL"
   mtu                     = 1460
   description             = "VPC Network for BCAP deployment"
 }
@@ -67,7 +68,7 @@ resource "google_compute_subnetwork" "bcap_subnets" {
     for_each = var.subnet_enable_flow_logs ? [1] : []
     content {
       aggregation_interval = "INTERVAL_5_SEC"
-      flow_sampling        = 0.5
+      flow_sampling        = 1.0
       metadata             = "INCLUDE_ALL_METADATA"
       filter_expr          = "true"
     }

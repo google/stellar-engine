@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-data "google_project" "current" {}
+data "google_project" "current" {
+  project_id = var.main_project_id
+}
 
 # Only uncomment if no organization policies enforce the below
 # resource "google_compute_project_metadata" "default" {
@@ -33,12 +35,6 @@ resource "google_service_account" "gatekeeper_sa" {
   project      = var.main_project_id
   account_id   = var.gatekeeper_sa
   display_name = "GSA for GKE Policy Controller/Gatekeeper"
-}
-
-resource "google_project_iam_member" "gke_cluster_admin" {
-  project = data.google_project.current.project_id
-  role    = "roles/container.developer"
-  member  = "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com"
 }
 
 resource "google_project_iam_member" "gatekeeper_monitoring_writer" {
@@ -102,7 +98,6 @@ module "kms" {
   iam = {
     "roles/cloudkms.cryptoKeyEncrypterDecrypter" = [
       google_service_account.gke.member,
-      "serviceAccount:${data.google_project.current.number}-compute@developer.gserviceaccount.com",
       "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com",
       "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com"
     ]
@@ -307,7 +302,7 @@ resource "google_compute_router_nat" "nat" {
 
   log_config {
     enable = true
-    filter = "ERRORS_ONLY"
+    filter = "ALL"
   }
   depends_on = [module.vpc]
 }

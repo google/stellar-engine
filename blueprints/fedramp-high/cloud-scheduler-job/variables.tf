@@ -16,6 +16,7 @@ variable "data" {
   description = "The base64-encoded data to be sent as the Pub/Sub message payload."
   type        = string
   default     = null
+  sensitive   = true
 }
 
 variable "description" {

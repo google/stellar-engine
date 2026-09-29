@@ -24,6 +24,12 @@ variable "file" {
   default     = "code/example.yaml"
 }
 
+variable "kms_key_self_link" {
+  description = "The full self-link of the existing KMS key to use for Workflow encryption (CMEK)."
+  type        = string
+  default     = null
+}
+
 variable "main_project_id" {
   description = "The Google Project ID."
   type        = string

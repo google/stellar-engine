@@ -44,6 +44,11 @@ resource "google_compute_subnetwork" "gemini_enterprise_vpc_subnet" {
   region                   = var.region
   network                  = google_compute_network.gemini_enterprise_vpc[0].id
   private_ip_google_access = true
+  log_config {
+    aggregation_interval = "INTERVAL_5_SEC"
+    flow_sampling        = 1.0
+    metadata             = "INCLUDE_ALL_METADATA"
+  }
 }
 
 resource "google_compute_subnetwork" "gemini_enterprise_vpc_proxy_subnet" {

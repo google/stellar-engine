@@ -62,8 +62,9 @@ variable "gitlab_config" {
     }), null)
     ha_required = optional(bool, false)
   })
-  default  = {}
-  nullable = false
+  default   = {}
+  nullable  = false
+  sensitive = true
 }
 
 variable "gitlab_instance_config" {
@@ -84,6 +85,8 @@ variable "gitlab_instance_config" {
       replica_zone = optional(string)
     }), {})
   })
+  default  = {}
+  nullable = false
 }
 
 variable "network_config" {

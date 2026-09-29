@@ -46,7 +46,7 @@ gke_cluster_master_global_access  = false
 # that can access the GKE master endpoint. This should be scoped as tightly
 # as possible.
 master_authorized_ranges = {
-  "management-subnet" = "xxx.xxx.xxx.xxx/xx"
+  "management-subnet" = "10.0.0.0/24"
 }
 
 

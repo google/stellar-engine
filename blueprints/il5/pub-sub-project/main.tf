@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-data "google_project" "current" {}
+data "google_project" "current" {
+  project_id = var.main_project_id
+}
 
 # Explicitly enable the Pub/Sub API
 resource "google_project_service" "pubsub_api" {

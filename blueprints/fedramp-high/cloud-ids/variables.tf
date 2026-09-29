@@ -59,7 +59,7 @@ variable "region" {
 variable "severity" {
   description = "Impact of an incident on a system."
   type        = string
-  default     = "MEDIUM"
+  default     = "INFORMATIONAL"
 }
 
 variable "subnetwork_list" {

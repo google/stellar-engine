@@ -72,7 +72,7 @@ module "vpc_networks" {
         aggregation_interval = "INTERVAL_5_SEC"
         flow_sampling        = 1.0
         metadata             = "INCLUDE_ALL_METADATA"
-        filter_expression    = "false"
+        filter_expression    = "true"
       }
     },
     {
@@ -85,7 +85,7 @@ module "vpc_networks" {
         aggregation_interval = "INTERVAL_5_SEC"
         flow_sampling        = 1.0
         metadata             = "INCLUDE_ALL_METADATA"
-        filter_expression    = "false"
+        filter_expression    = "true"
       }
     },
     {
@@ -101,7 +101,7 @@ module "vpc_networks" {
         aggregation_interval = "INTERVAL_5_SEC"
         flow_sampling        = 1.0
         metadata             = "INCLUDE_ALL_METADATA"
-        filter_expression    = "false"
+        filter_expression    = "true"
       }
     }
   ]

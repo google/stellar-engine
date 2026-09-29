@@ -38,6 +38,12 @@ variable "attachment_configs" {
     ])
     error_message = "The router_key must be either 'router1' or 'router2'."
   }
+  validation {
+    condition = length(distinct([
+      for k, v in var.attachment_configs : "${v.router_key}-${v.edge_availability_domain}"
+    ])) == 4
+    error_message = "The four attachments must cover all four unique (router_key, edge_availability_domain) combinations for 99.99% SLA."
+  }
 }
 
 variable "dod_base_cidr_block" {

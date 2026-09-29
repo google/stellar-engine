@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-data "google_project" "project" {}
+data "google_project" "project" {
+  project_id = var.project_id
+}
 
 resource "google_service_account" "gitlab-sa" {
   account_id   = var.sa
@@ -36,28 +38,28 @@ resource "google_project_iam_member" "gke_host_agent_use" {
   member  = "serviceAccount:service-${data.google_project.project.number}@container-engine-robot.iam.gserviceaccount.com" # Use project where the GKE cluster is being created
 }
 
-resource "google_project_iam_binding" "compute_agent_subnet_user" {
+resource "google_project_iam_member" "compute_agent_subnet_user" {
+  for_each = {
+    compute_agent = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
+    gke_agent     = "serviceAccount:service-${data.google_project.project.number}@container-engine-robot.iam.gserviceaccount.com"
+    cloudservices = "serviceAccount:${data.google_project.project.number}@cloudservices.gserviceaccount.com"
+    gitlab_sa     = "serviceAccount:${google_service_account.gitlab-sa.email}"
+  }
   project = var.net_project
   role    = "roles/compute.networkUser"
-  members = [
-    "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com",
-    "serviceAccount:service-${data.google_project.project.number}@container-engine-robot.iam.gserviceaccount.com",
-    "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com",
-    "serviceAccount:${data.google_project.project.number}@cloudservices.gserviceaccount.com",
-    "serviceAccount:${google_service_account.gitlab-sa.email}"
-  ]
+  member  = each.value
 }
 
-resource "google_kms_crypto_key_iam_binding" "compute_service_agent_kms_permissions" {
+resource "google_kms_crypto_key_iam_member" "compute_service_agent_kms_permissions" {
+  for_each = {
+    compute_agent = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
+    gke_agent     = "serviceAccount:service-${data.google_project.project.number}@container-engine-robot.iam.gserviceaccount.com"
+    cloudservices = "serviceAccount:${data.google_project.project.number}@cloudservices.gserviceaccount.com"
+    gitlab_sa     = "serviceAccount:${google_service_account.gitlab-sa.email}"
+  }
   crypto_key_id = var.kms_key
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  members = [
-    "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com",
-    "serviceAccount:service-${data.google_project.project.number}@container-engine-robot.iam.gserviceaccount.com",
-    "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com",
-    "serviceAccount:${data.google_project.project.number}@cloudservices.gserviceaccount.com",
-    "serviceAccount:${google_service_account.gitlab-sa.email}"
-  ]
+  member        = each.value
 }
 
 resource "google_compute_instance_group" "umig" {
@@ -159,7 +161,7 @@ sudo EXTERNAL_URL="${var.gitlab_uri}" apt install gitlab-ee -y
       EOT
   }
 
-  depends_on = [google_kms_crypto_key_iam_binding.compute_service_agent_kms_permissions]
+  depends_on = [google_kms_crypto_key_iam_member.compute_service_agent_kms_permissions]
 }
 
 // This creates a self signed certificate
@@ -253,7 +255,7 @@ module "cluster" {
     }
   }
   deletion_protection = false
-  depends_on          = [google_kms_crypto_key_iam_binding.compute_service_agent_kms_permissions, google_project_iam_binding.compute_agent_subnet_user, google_project_iam_member.gke_host_agent_use, google_project_iam_member.gke_cluster_admin]
+  depends_on          = [google_kms_crypto_key_iam_member.compute_service_agent_kms_permissions, google_project_iam_member.compute_agent_subnet_user, google_project_iam_member.gke_host_agent_use, google_project_iam_member.gke_cluster_admin]
 }
 
 module "gke_node_pool" {

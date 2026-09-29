@@ -103,7 +103,6 @@ module "datafusion" {
     google_project_service.datafusion_apis,
     google_project_iam_member.datafusion_agent_network_user_main_project,
     google_project_iam_member.datafusion_agent_network_user_network_project,
-    google_project_iam_member.datafusion_agent_spanner_viewer,
     google_project_iam_member.datafusion_service_agent,
     google_project_iam_member.dataproc_service_agent,
     google_kms_crypto_key_iam_member.datafusion_agent_kms_access,

@@ -58,13 +58,15 @@ module "db" {
 
 # https://docs.gitlab.com/ee/install/requirements.html#redis
 resource "google_redis_instance" "cache" {
-  project            = module.project.project_id
-  region             = var.region
-  name               = var.redis_config.name
-  tier               = var.redis_config.tier
-  memory_size_gb     = var.redis_config.memory_size_gb
-  authorized_network = var.network_config.network_self_link
-  connect_mode       = "PRIVATE_SERVICE_ACCESS"
+  project                 = module.project.project_id
+  region                  = var.region
+  name                    = var.redis_config.name
+  tier                    = var.redis_config.tier
+  memory_size_gb          = var.redis_config.memory_size_gb
+  authorized_network      = var.network_config.network_self_link
+  connect_mode            = "PRIVATE_SERVICE_ACCESS"
+  auth_enabled            = true
+  transit_encryption_mode = "SERVER_AUTHENTICATION"
 
   redis_version = var.redis_config.version
   display_name  = "Gitlab Redis Instance"

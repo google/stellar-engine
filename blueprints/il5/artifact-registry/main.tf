@@ -54,6 +54,7 @@ resource "google_project_service" "api" {
 }
 
 resource "google_artifact_registry_repository" "yum-repos" {
+  project       = data.google_project.project.project_id
   location      = var.region
   for_each      = local.repositories.yum
   repository_id = each.key
@@ -77,6 +78,7 @@ resource "google_artifact_registry_repository" "yum-repos" {
 }
 
 resource "google_artifact_registry_repository" "docker-hub" {
+  project       = data.google_project.project.project_id
   location      = var.region
   repository_id = "docker-hub"
   description   = "Pull through registry for Docker Hub"
@@ -98,6 +100,7 @@ resource "google_artifact_registry_repository" "docker-hub" {
 }
 
 resource "google_artifact_registry_repository" "docker-repos" {
+  project       = data.google_project.project.project_id
   location      = var.region
   for_each      = local.repositories.docker
   repository_id = each.key
@@ -122,6 +125,7 @@ resource "google_artifact_registry_repository" "docker-repos" {
 resource "google_artifact_registry_repository" "docker-repos-developer" {
   for_each = var.developer_registries
 
+  project       = data.google_project.project.project_id
   location      = var.region
   repository_id = each.key
   description   = "Developer repo for ${each.key}"

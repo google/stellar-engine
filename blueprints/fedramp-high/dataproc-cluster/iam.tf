@@ -37,13 +37,14 @@ resource "google_project_iam_member" "dataproc_compute_viewer" {
   member  = "serviceAccount:service-${data.google_project.current.number}@dataproc-accounts.iam.gserviceaccount.com"
 }
 
-resource "google_kms_crypto_key_iam_binding" "dataproc_kms" {
+resource "google_kms_crypto_key_iam_member" "dataproc_kms" {
+  for_each = {
+    dataproc_vm    = google_service_account.dataproc_vm.member
+    gcs_agent      = "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com"
+    dataproc_agent = "serviceAccount:service-${data.google_project.current.number}@dataproc-accounts.iam.gserviceaccount.com"
+    compute_agent  = "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com"
+  }
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  members = [
-    google_service_account.dataproc_vm.member,
-    "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com",
-    "serviceAccount:service-${data.google_project.current.number}@dataproc-accounts.iam.gserviceaccount.com",
-    "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com"
-  ]
+  member        = each.value
 }

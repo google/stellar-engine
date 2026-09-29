@@ -23,15 +23,13 @@ resource "google_project_service" "cloudscheduler_api" {
 }
 
 # Grant Pub/Sub service account permissions on the KMS key for CMEK of the Pub/Sub topic
-resource "google_kms_crypto_key_iam_binding" "pubsub" {
+resource "google_kms_crypto_key_iam_member" "pubsub" {
   count = var.kms_key_name != null ? 1 : 0
   # This grants permission to the Pub/Sub service account to use the KMS key
   # for the *existing* Pub/Sub topic.
   crypto_key_id = var.kms_key_name # Full self-link of the existing KMS key
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  members = [
-    "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
-  ]
+  member        = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
   # Depend on google_project_service_identity if we were creating it in this blueprint
   # but here, we just need to ensure the API is enabled.
   depends_on = [google_project_service.cloudscheduler_api] # Ensure API is enabled before IAM
@@ -60,7 +58,7 @@ module "pubsub_job" {
   }
   depends_on = [
     google_project_service.cloudscheduler_api,
-    google_kms_crypto_key_iam_binding.pubsub, # Ensure Pub/Sub SA has KMS permission if new topic is CMEK'd
+    google_kms_crypto_key_iam_member.pubsub, # Ensure Pub/Sub SA has KMS permission if new topic is CMEK'd
   ]
 }
 

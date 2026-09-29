@@ -96,7 +96,7 @@ resource "tls_locally_signed_cert" "gitlab_server_singed_cert" {
   ca_private_key_pem = tls_private_key.gitlab_ca_private_key[0].private_key_pem
   ca_cert_pem        = tls_self_signed_cert.gitlab_ca_cert[0].cert_pem
 
-  validity_period_hours = 43800
+  validity_period_hours = 9552
 
   allowed_uses = [
     "digital_signature",

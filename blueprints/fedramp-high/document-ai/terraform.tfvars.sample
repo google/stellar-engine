@@ -4,3 +4,4 @@ name                = "document-ai-processor-name-00"
 type                = "OCR_PROCESSOR" # https://cloud.google.com/document-ai/docs/processors-list (look for "Type in API" field)
 deletion_protection = false
 region              = "us-east4"
+kms_key_name        = "projects/xxxx-xxxx-xxxx-iac-core-0/locations/us-east4/keyRings/xxxx-xxxx-keyring/cryptoKeys/default"

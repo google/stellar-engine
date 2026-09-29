@@ -31,7 +31,7 @@ resource "google_compute_region_security_policy" "gemini_enterprise_policy" {
   dynamic "rules" {
     for_each = local.waf.basic_rules
     content {
-      action   = "allow"
+      action   = "deny(403)"
       priority = rules.value.priority
       preview  = rules.value.preview
       match {

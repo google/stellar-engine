@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-data "google_project" "project" {}
+data "google_project" "project" {
+  project_id = var.main_project_id
+}
 
 resource "google_project_service" "bigtable_api" {
   project            = var.main_project_id
@@ -51,7 +53,7 @@ resource "google_kms_crypto_key_iam_member" "bigtable_sa_kms_access" {
 resource "google_kms_crypto_key_iam_member" "bigtable_agent_kms_access" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-bigtable.iam.gserviceaccount.com"
+  member        = google_project_service_identity.bigtable_sa.member
 }
 
 module "bigtable-instance" {
@@ -68,5 +70,5 @@ module "bigtable-instance" {
     }
   }
   tables              = var.table
-  deletion_protection = false
+  deletion_protection = var.deletion_protection
 }

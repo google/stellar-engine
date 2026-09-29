@@ -23,12 +23,6 @@ resource "google_project_iam_member" "consumer-readonly" {
   member  = google_service_account.consumer.member
 }
 
-resource "google_kms_crypto_key_iam_member" "consumer_sa_kms_access" {
-  crypto_key_id = data.google_kms_crypto_key.default.id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = google_service_account.consumer.member
-}
-
 resource "google_kms_crypto_key_iam_member" "compute_agent_kms_access" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"

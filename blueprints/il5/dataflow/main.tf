@@ -68,7 +68,8 @@ resource "google_compute_firewall" "dataflow" {
   log_config {
     metadata = "INCLUDE_ALL_METADATA"
   }
-  source_ranges = var.allowed_source_ranges
+  target_service_accounts = [google_service_account.dataflow_worker.email]
+  source_ranges           = var.allowed_source_ranges
 }
 
 resource "google_compute_subnetwork_iam_member" "dataflow_sa_compute_network_user" {

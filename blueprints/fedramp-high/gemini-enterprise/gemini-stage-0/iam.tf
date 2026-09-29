@@ -51,10 +51,3 @@ resource "google_project_iam_member" "users_discoveryengine_user" {
   role     = "roles/discoveryengine.user"
   member   = each.value
 }
-
-resource "google_project_iam_member" "users_serviceusage_consumer" {
-  for_each = toset(var.user_groups)
-  project  = var.main_project_id
-  role     = "roles/serviceusage.serviceUsageConsumer"
-  member   = each.value
-}

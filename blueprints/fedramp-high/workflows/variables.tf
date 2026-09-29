@@ -28,6 +28,7 @@ variable "env_vars" {
   description = "Environment variables made available to your workflow execution."
   type        = map(string)
   default     = null
+  sensitive   = true
 }
 
 variable "file" {
@@ -43,9 +44,9 @@ variable "logging_level" {
 
   validation {
     # Check if the provided value is one of the allowed options
-    condition = contains(["CALL_LOG_LEVEL_UNSPECIFIED", "LOG_ALL_CALLS", "LOG_ERRORS_ONLY", "LOG_NONE"], var.logging_level)
+    condition = contains(["LOG_ALL_CALLS", "LOG_ERRORS_ONLY"], var.logging_level)
     # Provide a helpful error message if the condition is false
-    error_message = "Invalid value for var.logging_level. Must be one of: CALL_LOG_LEVEL_UNSPECIFIED, LOG_ALL_CALLS, LOG_ERRORS_ONLY, LOG_NONE."
+    error_message = "Invalid value for var.logging_level. Must be one of: LOG_ALL_CALLS, LOG_ERRORS_ONLY."
   }
 }
 

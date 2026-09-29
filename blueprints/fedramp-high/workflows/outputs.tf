@@ -20,5 +20,6 @@ output "service_account" {
 output "workflow" {
   description = "The newly created workflow."
   value       = module.workflows.workflow
+  sensitive   = true
 }
 

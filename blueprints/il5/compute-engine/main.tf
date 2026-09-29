@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-data "google_project" "current" {}
+data "google_project" "current" {
+  project_id = var.main_project_id
+}
 
 data "google_compute_network" "network" {
   name    = var.network_name
@@ -40,12 +42,6 @@ data "google_kms_crypto_key" "default" {
 resource "google_service_account" "compute" {
   account_id = var.compute_service_account_id
   project    = var.main_project_id
-}
-
-resource "google_kms_crypto_key_iam_member" "compute_sa_kms_access" {
-  crypto_key_id = data.google_kms_crypto_key.default.id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = google_service_account.compute.member
 }
 
 resource "google_kms_crypto_key_iam_member" "compute_agent_kms_access" {
@@ -116,7 +112,6 @@ module "compute-engine-vm" {
 
   depends_on = [
     google_service_account.compute,
-    google_kms_crypto_key_iam_member.compute_sa_kms_access,
     google_kms_crypto_key_iam_member.compute_agent_kms_access
   ]
 }

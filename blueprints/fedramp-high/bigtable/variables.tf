@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-variable "auto_delete" {
-  description = "Persistent Disk auto delete options."
+variable "deletion_protection" {
+  description = "Prevent Terraform from destroying the Bigtable instance."
   type        = bool
   default     = true
 }
@@ -77,11 +77,7 @@ variable "table" {
     split_keys      = optional(list(string))
     column_families = map(object({}))
   }))
-  default = {
-    "Test" = {
-      column_families = {}
-    }
-  }
+  default = null
 }
 
 variable "zone" {

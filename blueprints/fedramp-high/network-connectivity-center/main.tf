@@ -60,27 +60,18 @@ resource "google_network_connectivity_group" "default" {
   count = var.topology == "MESH" ? 1 : 0
   hub   = google_network_connectivity_hub.hub.id
   name  = "default"
-  auto_accept {
-    auto_accept_projects = local.spoke_projects
-  }
 }
 
 resource "google_network_connectivity_group" "center" {
   count = var.topology == "STAR" ? 1 : 0
   hub   = google_network_connectivity_hub.hub.id
   name  = "center"
-  auto_accept {
-    auto_accept_projects = [var.main_project_id]
-  }
 }
 
 resource "google_network_connectivity_group" "edge" {
   count = var.topology == "STAR" ? 1 : 0
   hub   = google_network_connectivity_hub.hub.id
   name  = "edge"
-  auto_accept {
-    auto_accept_projects = local.spoke_projects
-  }
 }
 
 resource "google_network_connectivity_spoke" "spokes" {

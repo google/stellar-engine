@@ -24,8 +24,10 @@ locals {
   secrets = {
     for secret_id, secret_data in var.secrets :
     secret_id => {
-      locations = [secret_data.location]                       # Convert single string to list of strings
-      keys      = { (secret_data.location) = secret_data.key } # Convert single string to map of strings
+      locations           = [secret_data.location]                       # Convert single string to list of strings
+      keys                = { (secret_data.location) = secret_data.key } # Convert single string to map of strings
+      expire_time         = try(secret_data.expire_time, null)
+      version_destroy_ttl = try(secret_data.version_destroy_ttl, null)
     }
   }
 }
