@@ -39,6 +39,12 @@ variable "duration" {
   type        = string
 }
 
+variable "notification_channels" {
+  description = "Additional notification channels for alert policies."
+  type        = list(string)
+  default     = []
+}
+
 variable "per_series_aligner" {
   description = "Per series aligner."
   type        = string

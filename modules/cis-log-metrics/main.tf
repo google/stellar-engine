@@ -16,11 +16,11 @@ locals {
   log_filter = {
     project-owner-log = <<EOH
     (protoPayload.serviceName="cloudresourcemanager.googleapis.com") 
-    AND (ProjectOwnership OR projectOwnerInvitee) 
+    AND ((ProjectOwnership OR projectOwnerInvitee) 
     OR (protoPayload.serviceData.policyDelta.bindingDeltas.action="REMOVE" 
     AND protoPayload.serviceData.policyDelta.bindingDeltas.role="roles/owner") 
     OR (protoPayload.serviceData.policyDelta.bindingDeltas.action="ADD" 
-    AND protoPayload.serviceData.policyDelta.bindingDeltas.role="roles/owner")
+    AND protoPayload.serviceData.policyDelta.bindingDeltas.role="roles/owner"))
     EOH
 
     audit-config-change = <<EOH

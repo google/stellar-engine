@@ -32,7 +32,7 @@ resource "google_compute_global_address" "ids_private_ip" {
 
 # Create Private Connection: ####
 resource "google_service_networking_connection" "private_vpc_connection" {
-  count = var.create_service_networking_connection ? 0 : 1
+  count = var.create_service_networking_connection ? 1 : 0
 
   network                 = data.google_compute_network.vpc_network.id
   service                 = "servicenetworking.googleapis.com"

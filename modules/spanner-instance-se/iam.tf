@@ -45,6 +45,14 @@ resource "google_spanner_instance_iam_binding" "bindings" {
   instance = local.spanner_instance.id
   role     = each.value.role
   members  = each.value.members
+  dynamic "condition" {
+    for_each = try(each.value.condition, null) == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }
 
 resource "google_spanner_instance_iam_member" "bindings" {
