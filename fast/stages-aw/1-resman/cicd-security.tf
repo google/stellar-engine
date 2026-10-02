@@ -21,7 +21,7 @@
 module "branch-security-cicd-repo" {
   source = "../../../modules/source-repository"
   for_each = (
-    try(local.cicd_repositories.security.type, null) == "sourcerepo"
+    try(local.cicd_repositories.security.type, null) == "ssm"
     ? { 0 = local.cicd_repositories.security }
     : {}
   )
@@ -62,7 +62,7 @@ module "branch-security-sa-cicd" {
   display_name = "Terraform CI/CD stage 2 security service account."
   prefix       = var.prefix
   iam = (
-    each.value.type == "sourcerepo"
+    each.value.type == "ssm"
     # used directly from the cloud build trigger for source repos
     ? {
       "roles/iam.serviceAccountUser" = local.automation_resman_sa_iam
@@ -107,7 +107,7 @@ module "branch-security-r-sa-cicd" {
   display_name = "Terraform CI/CD stage 2 security service account (read-only)."
   prefix       = var.prefix
   iam = (
-    each.value.type == "sourcerepo"
+    each.value.type == "ssm"
     # build trigger for read-only SA is optionally defined by users
     ? {}
     # impersonated via workload identity federation for external repos
