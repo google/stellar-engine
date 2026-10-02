@@ -39,11 +39,11 @@ resource "google_monitoring_alert_policy" "alert_policy" {
   project  = var.project
 
   # notification_channels = var.notification_channels
-  notification_channels = [google_monitoring_notification_channel.email.name]
+  notification_channels = concat([google_monitoring_notification_channel.email.name], var.notification_channels)
   display_name          = each.key
   combiner              = var.combiner
   conditions {
-    display_name = "each.key"
+    display_name = each.key
     condition_threshold {
       filter     = each.value
       duration   = var.duration

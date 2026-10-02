@@ -251,5 +251,33 @@ class TestBlueprintAndModuleValidations(unittest.TestCase):
     )
 
 
+
+  def test_custom_stellar_engine_modules_validations(self):
+    """Verify hardening and logic fixes across custom Stellar Engine modules."""
+    alerts_main = (REPO_ROOT / "modules/cis-log-alerts/main.tf").read_text(encoding="utf-8")
+    self.assertIn("concat([google_monitoring_notification_channel.email.name], var.notification_channels)", alerts_main)
+    self.assertIn("display_name = each.key", alerts_main)
+    self.assertNotIn('display_name = "each.key"', alerts_main)
+
+    alerts_vars = (REPO_ROOT / "modules/cis-log-alerts/variables.tf").read_text(encoding="utf-8")
+    self.assertIn('variable "notification_channels"', alerts_vars)
+
+    metrics_main = (REPO_ROOT / "modules/cis-log-metrics/main.tf").read_text(encoding="utf-8")
+    self.assertIn("AND ((ProjectOwnership OR projectOwnerInvitee)", metrics_main)
+
+    ids_main = (REPO_ROOT / "modules/intrusion-detection-system/main.tf").read_text(encoding="utf-8")
+    self.assertIn("count = var.create_service_networking_connection ? 1 : 0", ids_main)
+
+    org_se_iam = (REPO_ROOT / "modules/organization-se/iam.tf").read_text(encoding="utf-8")
+    self.assertIn('"iam-bpa:${principal}//${role}"', org_se_iam)
+    org_se_vars = (REPO_ROOT / "modules/organization-se/variables.tf").read_text(encoding="utf-8")
+    self.assertIn('can(regex("^organizations/[0-9]+$", var.organization_id))', org_se_vars)
+
+    spanner_se_iam = (REPO_ROOT / "modules/spanner-instance-se/iam.tf").read_text(encoding="utf-8")
+    self.assertIn('dynamic "condition"', spanner_se_iam)
+    spanner_se_vars = (REPO_ROOT / "modules/spanner-instance-se/variables.tf").read_text(encoding="utf-8")
+    self.assertIn("condition = optional(object({", spanner_se_vars)
+
+
 if __name__ == "__main__":
   unittest.main()
