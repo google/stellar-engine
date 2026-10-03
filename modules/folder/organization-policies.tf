@@ -34,7 +34,7 @@ locals {
             all = try(r.allow.all, null)
             values = (
               can(r.allow.values)
-              ? [for x in r.allow.values : templatestring(x, var.factories_config.context.org_policies)]
+              ? [for x in r.allow.values : templatestring(x, var.context.condition_vars)]
               : null
             )
           } : null
@@ -42,7 +42,7 @@ locals {
             all = try(r.deny.all, null)
             values = (
               can(r.deny.values)
-              ? [for x in r.deny.values : templatestring(x, var.factories_config.context.org_policies)]
+              ? [for x in r.deny.values : templatestring(x, var.context.condition_vars)]
               : null
             )
           } : null
@@ -50,28 +50,28 @@ locals {
           condition = {
             description = (
               can(r.condition.description)
-              ? templatestring(r.condition.description, var.factories_config.context.org_policies)
+              ? templatestring(r.condition.description, var.context.condition_vars)
               : null
             )
             expression = (
               can(r.condition.expression)
-              ? templatestring(r.condition.expression, var.factories_config.context.org_policies)
+              ? templatestring(r.condition.expression, var.context.condition_vars)
               : null
             )
             location = (
               can(r.condition.location)
-              ? templatestring(r.condition.location, var.factories_config.context.org_policies)
+              ? templatestring(r.condition.location, var.context.condition_vars)
               : null
             )
             title = (
               can(r.condition.title)
-              ? templatestring(r.condition.title, var.factories_config.context.org_policies)
+              ? templatestring(r.condition.title, var.context.condition_vars)
               : null
             )
           }
           parameters = (
             can(r.parameters)
-            ? templatestring(r.parameters, var.factories_config.context.org_policies)
+            ? templatestring(r.parameters, var.context.condition_vars)
             : null
           )
         }
@@ -138,8 +138,12 @@ resource "google_org_policy_policy" "default" {
           dynamic "values" {
             for_each = rule.value.has_values ? [1] : []
             content {
-              allowed_values = try(rule.value.allow.values, null)
-              denied_values  = try(rule.value.deny.values, null)
+              allowed_values = try(rule.value.allow.values, null) == null ? null : [
+                for v in rule.value.allow.values : templatestring(v, var.context.condition_vars)
+              ]
+              denied_values = try(rule.value.deny.values, null) == null ? null : [
+                for v in rule.value.deny.values : templatestring(v, var.context.condition_vars)
+              ]
             }
           }
         }
@@ -177,8 +181,12 @@ resource "google_org_policy_policy" "default" {
           dynamic "values" {
             for_each = rule.value.has_values ? [1] : []
             content {
-              allowed_values = try(rule.value.allow.values, null)
-              denied_values  = try(rule.value.deny.values, null)
+              allowed_values = try(rule.value.allow.values, null) == null ? null : [
+                for v in rule.value.allow.values : templatestring(v, var.context.condition_vars)
+              ]
+              denied_values = try(rule.value.deny.values, null) == null ? null : [
+                for v in rule.value.deny.values : templatestring(v, var.context.condition_vars)
+              ]
             }
           }
         }

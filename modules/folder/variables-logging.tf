@@ -17,9 +17,9 @@
 variable "logging_data_access" {
   description = "Control activation of data access logs. The special 'allServices' key denotes configuration for all services."
   type = map(object({
-    ADMIN_READ = optional(object({ exempted_members = optional(list(string)) })),
-    DATA_READ  = optional(object({ exempted_members = optional(list(string)) })),
-    DATA_WRITE = optional(object({ exempted_members = optional(list(string)) }))
+    ADMIN_READ = optional(object({ exempted_members = optional(list(string), []) })),
+    DATA_READ  = optional(object({ exempted_members = optional(list(string), []) })),
+    DATA_WRITE = optional(object({ exempted_members = optional(list(string), []) }))
   }))
   default  = {}
   nullable = false
@@ -35,8 +35,8 @@ variable "logging_exclusions" {
 variable "logging_settings" {
   description = "Default settings for logging resources."
   type = object({
-    # TODO: add support for CMEK
     disable_default_sink = optional(bool)
+    kms_key_name         = optional(string)
     storage_location     = optional(string)
   })
   default = null
@@ -45,16 +45,16 @@ variable "logging_settings" {
 variable "logging_sinks" {
   description = "Logging sinks to create for the folder."
   type = map(object({
+    destination          = string
+    type                 = string
     bq_partitioned_table = optional(bool, false)
     description          = optional(string)
-    destination          = string
     disabled             = optional(bool, false)
     exclusions           = optional(map(string), {})
     filter               = optional(string)
     iam                  = optional(bool, true)
     include_children     = optional(bool, true)
     intercept_children   = optional(bool, false)
-    type                 = string
   }))
   default  = {}
   nullable = false
