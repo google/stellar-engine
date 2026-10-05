@@ -58,6 +58,7 @@ module "workflows" {
   deletion_protection = var.deletion_protection
   description         = "Translation LLM example workflow."
   file                = var.file
+  kms_key_self_link   = var.kms_key_self_link
   service_account     = google_service_account.workflow_sa.email
   env_vars = {
     input_bucket  = "${module.input_bucket.url}/*.txt"
@@ -72,11 +73,8 @@ module "workflows" {
     "roles/serviceusage.serviceUsageConsumer" = [google_service_account.workflow_sa.member],
     "roles/storage.objectViewer"              = [google_service_account.workflow_sa.member],
     "roles/storage.objectCreator"             = [google_service_account.workflow_sa.member],
-    "roles/storage.objectUser"                = [google_service_account.workflow_sa.member],
     "roles/storage.insightsCollectorService"  = [google_service_account.workflow_sa.member],
     "roles/cloudtranslate.user"               = [google_service_account.workflow_sa.member],
-    "roles/cloudtranslate.viewer"             = [google_service_account.workflow_sa.member],
-    "roles/cloudtranslate.editor"             = [google_service_account.workflow_sa.member],
   }
   depends_on = [
     google_project_service.translate,

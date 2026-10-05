@@ -23,7 +23,7 @@ locals {
   )
   # check that files are for the correct organization and ignore them if not
   _cl_data = (
-    try(local._cl_data_raw.cloud_setup_config.organization.id, null) != tostring(var.organization.id)
+    tostring(try(local._cl_data_raw.cloud_setup_config.organization.id, "")) != tostring(var.organization.id)
     ? null
     : local._cl_data_raw.cloud_setup_config
   )
@@ -65,7 +65,7 @@ check "checklist" {
   assert {
     condition = (
       var.factories_config.checklist_data == null ||
-      try(local._cl_data_raw.cloud_setup_config.organization.id, null) == tostring(var.organization.id)
+      tostring(try(local._cl_data_raw.cloud_setup_config.organization.id, "")) == tostring(var.organization.id)
     )
     error_message = "Checklist data organization id mismatch, file ignored."
   }

@@ -1,9 +1,9 @@
-gatekeeper_sa                       = "gatekeeper-XXX-XXX-sa"
+gatekeeper_sa                       = "gatekeeper-xxx-xxx-sa"
 gke_cluster_enable_private_endpoint = true
 gke_cluster_master_global_access    = true
-gke_cluster_name                    = "XXX-cluster"
+gke_cluster_name                    = "xxx-cluster"
 gke_initial_node_per_zone           = 1
-gke_nodepool_name                   = "XXX-nodepool"
+gke_nodepool_name                   = "xxx-nodepool"
 gke_vpc_master_ipv4_cidr_block      = "192.168.0.0/28"
 
 kms_keyring_name = {
@@ -28,14 +28,14 @@ kms_key_names = {
   }
 }
 
-local_admin_external_ip = ["X.X.X.X/32"]
+local_admin_external_ip = ["10.0.0.1/32"]
 
-main_project_id                    = "XXX-main-0"
+main_project_id                    = "xxx-main-0"
 master_authorized_ranges_ip_ranges = "10.0.0.0/8"
 
-nat_gateway_name  = "XXX-nat-gateway"
-nat_router_name   = "XXX-nat-router"
-network_name      = "XXX-gke-vpc"
+nat_gateway_name  = "xxx-nat-gateway"
+nat_router_name   = "xxx-nat-router"
+network_name      = "xxx-gke-vpc"
 node_config_tags  = ["node-config-gke", "intial-nodeconfig-gke"]
 node_disk_size_gb = 20
 nodepool_node_count = {

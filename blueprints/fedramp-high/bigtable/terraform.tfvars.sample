@@ -4,9 +4,9 @@ core_project_id    = "xxxx-xxxx-xxxx-iac-core-0"
 bigtable_service_account_id = "bigtable-sa"
 instance_name = "bigtable-instance-00"
 cluster_id    = "bigtable-cluster-00"
-num_nodes     = 3
-auto_delete   = true
-region        = "us-east4"
+num_nodes           = 3
+deletion_protection = false
+region              = "us-east4"
 zone          = "us-east4-a"
 
 kms_keyring_name = "xxxx-xxxx-keyring"

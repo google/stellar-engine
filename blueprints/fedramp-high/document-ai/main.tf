@@ -23,7 +23,9 @@ resource "google_project_service" "documentai" {
   disable_on_destroy = false
 }
 
-data "google_project" "project" {}
+data "google_project" "project" {
+  project_id = var.main_project_id
+}
 
 resource "google_document_ai_processor" "processor" {
   location     = "us"
@@ -94,7 +96,6 @@ module "workflows" {
     "roles/documentai.apiUser"                = [google_service_account.workflow_sa.member],
     "roles/storage.objectViewer"              = [google_service_account.workflow_sa.member],
     "roles/storage.objectCreator"             = [google_service_account.workflow_sa.member],
-    "roles/storage.objectUser"                = [google_service_account.workflow_sa.member],
   }
   depends_on = [
     google_project_service.documentai,

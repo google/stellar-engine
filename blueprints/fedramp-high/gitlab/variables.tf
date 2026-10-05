@@ -15,6 +15,10 @@
 variable "gitlab_uri" {
   description = "The URL hostname that the gitlab instance will be attached to."
   type        = string
+  validation {
+    condition     = can(regex("^https?://[a-zA-Z0-9.-]+(:[0-9]+)?/?$", var.gitlab_uri))
+    error_message = "gitlab_uri must be a valid HTTP/HTTPS URL without shell metacharacters."
+  }
 }
 
 variable "gke_initial_node_per_zone" {
@@ -113,4 +117,8 @@ variable "gitlab_install_script_sha256" {
   description = "Expected SHA-256 hash for the GitLab package repository install script."
   type        = string
   default     = "47c124527729776870cf09cd6bd46a9b94f55d40c7545ca26640c75de86b560d"
+  validation {
+    condition     = can(regex("^[a-fA-F0-9]{64}$", var.gitlab_install_script_sha256))
+    error_message = "gitlab_install_script_sha256 must be a valid 64-character hexadecimal SHA-256 digest."
+  }
 }

@@ -46,7 +46,7 @@ locals {
 
 resource "local_file" "tfvars" {
   for_each        = var.outputs_location == null ? {} : { 1 = 1 }
-  file_permission = "0644"
+  file_permission = "0600"
   filename        = "${try(pathexpand(var.outputs_location), "")}/tfvars/2-networking.auto.tfvars.json"
   content         = jsonencode(local.tfvars)
 }
@@ -54,7 +54,7 @@ resource "local_file" "tfvars" {
 resource "google_storage_bucket_object" "tfvars" {
   bucket  = var.automation.outputs_bucket
   name    = "tfvars/2-networking.auto.tfvars.json"
-  content = jsonencode(local.tfvars)
+  content = sensitive(jsonencode(local.tfvars))
 }
 
 # outputs
@@ -70,13 +70,15 @@ output "host_project_numbers" {
 }
 
 resource "local_file" "rsa-out" {
-  content  = nonsensitive(tls_private_key.ngfw-ssh.private_key_openssh)
-  filename = "${path.module}/id_rsa"
+  content         = tls_private_key.ngfw-ssh.private_key_openssh
+  file_permission = "0600"
+  filename        = "${path.module}/id_rsa"
 }
 
 resource "local_file" "rsa-pub-out" {
-  content  = nonsensitive(tls_private_key.ngfw-ssh.public_key_openssh)
-  filename = "${path.module}/id_rsa.pub"
+  content         = tls_private_key.ngfw-ssh.public_key_openssh
+  file_permission = "0600"
+  filename        = "${path.module}/id_rsa.pub"
 }
 
 output "ngfw_password" {

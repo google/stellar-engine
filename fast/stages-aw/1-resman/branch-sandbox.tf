@@ -36,15 +36,12 @@ locals {
 
 
 module "branch-sandbox-folder" {
-  source = "../../../modules/folder"
-  count  = var.fast_features.sandbox ? 1 : 0
-  parent = var.assured_workloads.folder
-  name   = "Sandbox"
-  iam    = local._sandbox_folder_iam
-  org_policies = {
-    "sql.restrictPublicIp"       = { rules = [{ enforce = false }] }
-    "compute.vmExternalIpAccess" = { rules = [{ allow = { all = true } }] }
-  }
+  source       = "../../../modules/folder"
+  count        = var.fast_features.sandbox ? 1 : 0
+  parent       = var.assured_workloads.folder
+  name         = "Sandbox"
+  iam          = local._sandbox_folder_iam
+  org_policies = {}
   tag_bindings = null
 }
 

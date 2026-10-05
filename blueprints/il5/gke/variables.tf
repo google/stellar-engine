@@ -136,7 +136,7 @@ variable "node_config_tags" {
 variable "remove_default_node_pool" {
   description = "Set to true to remove the default node pool created with the cluster. Requires at least one other node pool to be created."
   type        = bool
-  default     = false
+  default     = true
 }
 
 # --- Bastion Host Configuration ---

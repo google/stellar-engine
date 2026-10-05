@@ -1315,7 +1315,7 @@ def configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_
         # Use subprocess to run the curl command
         curl_command = [
             'curl', '-X', 'PATCH',
-            '-H', f"Authorization: Bearer {access_token}",
+            '-H', '@-',
             '-H', f"x-goog-user-project: {project_id}",
             '-H', "Content-Type: application/json",
             '-d', json.dumps(data),
@@ -1326,7 +1326,7 @@ def configure_idp_for_widget(credentials, project_id, engine_id, workforce_pool_
         # Retry logic for widget config availability
         max_retries = 5
         for attempt in range(max_retries):
-            result = subprocess.run(curl_command, capture_output=True, text=True)
+            result = subprocess.run(curl_command, input=f"Authorization: Bearer {access_token}\n", capture_output=True, text=True)
             
             if result.returncode == 0 and "error" not in result.stdout.lower():
                 click.echo("Successfully configured identity provider for the search widget.")
@@ -1371,7 +1371,7 @@ def disable_user_event_collection(credentials, project_id, engine_id):
         # Use subprocess to run the curl command
         curl_command = [
             'curl', '-X', 'PATCH',
-            '-H', f"Authorization: Bearer {access_token}",
+            '-H', '@-',
             '-H', f"x-goog-user-project: {project_id}",
             '-H', "Content-Type: application/json",
             '-d', json.dumps(data),
@@ -1382,7 +1382,7 @@ def disable_user_event_collection(credentials, project_id, engine_id):
         # Retry logic for widget config availability
         max_retries = 5
         for attempt in range(max_retries):
-            result = subprocess.run(curl_command, capture_output=True, text=True)
+            result = subprocess.run(curl_command, input=f"Authorization: Bearer {access_token}\n", capture_output=True, text=True)
             
             if result.returncode == 0 and "error" not in result.stdout.lower():
                 click.echo("Successfully disabled user event collection.")
@@ -1470,7 +1470,7 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         # Use subprocess to run the curl command
         curl_command = [
             'curl', '-X', 'PATCH',
-            '-H', f"Authorization: Bearer {access_token}",
+            '-H', '@-',
             '-H', f"x-goog-user-project: {project_id}",
             '-H', "Content-Type: application/json",
             '-d', json.dumps(assistant_patch_body),
@@ -1478,7 +1478,7 @@ def configure_gemini_enterprise_for_fedramp_high(credentials, project_id, engine
         ]
 
         try:
-            result = subprocess.run(curl_command, capture_output=True, text=True)
+            result = subprocess.run(curl_command, input=f"Authorization: Bearer {access_token}\n", capture_output=True, text=True)
             
             if result.returncode == 0 and "error" not in result.stdout.lower():
                  click.echo(f"Default assistant for engine {engine_id} configured for FedRAMP High.")
@@ -1581,7 +1581,7 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
     # Use subprocess to run the curl command
     curl_command = [
         'curl', '-X', 'PATCH',
-        '-H', f"Authorization: Bearer {access_token}",
+        '-H', '@-',
         '-H', f"x-goog-user-project: {project_id}",
         '-H', "Content-Type: application/json",
         '-d', json.dumps(assistant_patch_body),
@@ -1589,7 +1589,7 @@ def configure_gemini_enterprise_for_il4(credentials, project_id, engine_id):
     ]
 
     try:
-        result = subprocess.run(curl_command, capture_output=True, text=True)
+        result = subprocess.run(curl_command, input=f"Authorization: Bearer {access_token}\n", capture_output=True, text=True)
         
         if result.returncode == 0 and "error" not in result.stdout.lower():
              click.echo(f"Default assistant for engine {engine_id} configured for IL4.")
@@ -1692,7 +1692,7 @@ def configure_gemini_enterprise_for_il5(credentials, project_id, engine_id):
     # Use subprocess to run the curl command
     curl_command = [
         'curl', '-X', 'PATCH',
-        '-H', f"Authorization: Bearer {access_token}",
+        '-H', '@-',
         '-H', f"x-goog-user-project: {project_id}",
         '-H', "Content-Type: application/json",
         '-d', json.dumps(assistant_patch_body),
@@ -1700,7 +1700,7 @@ def configure_gemini_enterprise_for_il5(credentials, project_id, engine_id):
     ]
 
     try:
-        result = subprocess.run(curl_command, capture_output=True, text=True)
+        result = subprocess.run(curl_command, input=f"Authorization: Bearer {access_token}\n", capture_output=True, text=True)
         
         if result.returncode == 0 and "error" not in result.stdout.lower():
              click.echo(f"Default assistant for engine {engine_id} configured for IL5.")

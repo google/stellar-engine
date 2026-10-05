@@ -21,10 +21,10 @@ set -e
 # FOO and BAZ shell variables.
 # jq will ensure that the values are properly quoted
 # and escaped for consumption by the shell.
-eval "$(jq -r '@sh "ALGO=\(.algo) PLAINTEXT=\(.plaintext) SALT=\(.salt)"')"
+eval "$(jq -r '"ALGO=\(.algo | @sh) PLAINTEXT=\(.plaintext | @sh) SALT=\(.salt | @sh)"')"
 
-# Placeholder for whatever data-fetching logic your script implements
-hash=$(openssl passwd "-${ALGO}" -salt "${SALT}" "${PLAINTEXT}")
+# Compute password hash reading plaintext from standard input
+hash=$(printf '%s' "${PLAINTEXT}" | openssl passwd "-${ALGO}" -salt "${SALT}" -stdin)
 
 # Safely produce a JSON object containing the result value.
 # jq will ensure that the value is properly quoted

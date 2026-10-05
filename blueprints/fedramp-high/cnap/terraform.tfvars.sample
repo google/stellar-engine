@@ -6,7 +6,7 @@ network_project_id = "xxxx-xxxx-net-host"
 prefix               = "xxxx"
 region               = "us-east4"
 default_backend      = "easy"
-oauth_brand_number   = xxxxxxxxxxxx
-access_policy_number = xxxxxxxxxxxx
+oauth_brand_number   = 123456789012
+access_policy_number = 123456789012
 
 network_name = "xxxx-spoke-0"

@@ -26,6 +26,10 @@ variable "database_name" {
 variable "database_user" {
   description = "Database user or group. Must start with \"user:\" or \"group:\" or \"serviceAccount:\"."
   type        = string
+  validation {
+    condition     = can(regex("^(user|group|serviceAccount):", var.database_user))
+    error_message = "database_user must start with user:, group:, or serviceAccount:."
+  }
 }
 
 variable "display_name" {

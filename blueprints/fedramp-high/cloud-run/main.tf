@@ -49,12 +49,6 @@ resource "google_project_iam_member" "cloud_run_permissions" {
   member  = "serviceAccount:${google_service_account.cloud_run_service_account.email}"
 }
 
-resource "google_kms_crypto_key_iam_member" "cloud_run_sa_kms_access" {
-  crypto_key_id = data.google_kms_crypto_key.default.id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = google_service_account.cloud_run_service_account.member
-}
-
 resource "google_kms_crypto_key_iam_member" "cloud_run_service_agent_kms_permissions" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
@@ -91,5 +85,5 @@ module "cloud_run" {
     }
   }
   service_account     = google_service_account.cloud_run_service_account.email
-  deletion_protection = false
+  deletion_protection = true
 }

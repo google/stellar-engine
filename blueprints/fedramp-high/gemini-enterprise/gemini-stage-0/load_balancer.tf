@@ -45,7 +45,8 @@ resource "google_compute_region_backend_service" "gemini_enterprise_backend" {
 
   lifecycle {
     ignore_changes = [
-      iap
+      iap[0].oauth2_client_id,
+      iap[0].oauth2_client_secret,
     ]
   }
 }

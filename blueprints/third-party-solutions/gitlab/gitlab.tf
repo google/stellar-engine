@@ -57,7 +57,6 @@ module "gitlab-sa" {
     (module.project.project_id) = [
       "roles/logging.logWriter",
       "roles/monitoring.metricWriter",
-      "roles/storage.admin"
     ]
   }
 }
@@ -65,7 +64,7 @@ module "gitlab-sa" {
 module "gitlab-instance" {
   source        = "../../../modules/compute-vm"
   project_id    = module.project.project_id
-  zone          = var.gitlab_instance_config.zone
+  zone          = coalesce(var.gitlab_instance_config.zone, "${var.region}-a")
   name          = var.gitlab_instance_config.name
   instance_type = var.gitlab_instance_config.instance_type
   snapshot_schedules = {
@@ -132,7 +131,7 @@ module "ilb" {
   }
   group_configs = {
     gitlab = {
-      zone = var.gitlab_instance_config.zone
+      zone = coalesce(var.gitlab_instance_config.zone, "${var.region}-a")
       instances = [
         module.gitlab-instance.self_link
       ]

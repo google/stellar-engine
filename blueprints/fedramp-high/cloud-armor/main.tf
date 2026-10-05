@@ -49,6 +49,8 @@ resource "google_compute_region_security_policy" "policy" {
   provider = google-beta
   for_each = local.policies
 
+  project     = var.main_project_id
+  region      = var.region
   name        = each.key
   description = each.value.description
   type        = "CLOUD_ARMOR"
@@ -56,13 +58,14 @@ resource "google_compute_region_security_policy" "policy" {
 
 resource "google_compute_region_security_policy_rule" "policy_rule" {
   provider   = google-beta
-  for_each   = { for rule in local.indexed_rules : rule.priority => rule }
+  for_each   = { for rule in local.indexed_rules : "${rule.policy}-${rule.priority}" => rule }
   depends_on = [google_compute_region_security_policy.policy]
 
+  project         = var.main_project_id
   security_policy = each.value.policy
   region          = each.value.region
   priority        = each.value.priority
-  action          = try(each.value.action, "allow")
+  action          = try(each.value.action, "deny(403)")
 
   preview     = try(each.value.preview, null)
   description = try(each.value.description, null)
@@ -79,7 +82,7 @@ resource "google_compute_region_security_policy_rule" "policy_rule" {
     dynamic "config" {
       for_each = try(each.value.expression, null) != null ? [] : [1]
       content {
-        src_ip_ranges = ["*"]
+        src_ip_ranges = try(each.value.src_ip_ranges, ["*"])
       }
     }
   }

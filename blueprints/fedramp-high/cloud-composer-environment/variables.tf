@@ -60,7 +60,7 @@ variable "sa_display_name" {
 variable "service_agent_version" {
   description = "Composer Service Agent version. This must correspond to Composer version."
   type        = string
-  default     = "roles/composer.ServiceAgentV2Ext"
+  default     = "roles/composer.ServiceAgentV3Ext"
 }
 
 variable "subnetwork_name" {

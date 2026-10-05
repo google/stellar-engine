@@ -32,13 +32,6 @@ resource "google_project_iam_member" "datafusion_agent_network_user_network_proj
   depends_on = [time_sleep.datafusion_service_propagation]
 }
 
-resource "google_project_iam_member" "datafusion_agent_spanner_viewer" {
-  project    = var.main_project_id
-  role       = "roles/spanner.viewer"
-  member     = "serviceAccount:${google_project_service_identity.datafusion_agent.email}"
-  depends_on = [time_sleep.datafusion_service_propagation]
-}
-
 resource "google_kms_crypto_key_iam_member" "datafusion_agent_kms_access" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"

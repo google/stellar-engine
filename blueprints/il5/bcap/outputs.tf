@@ -45,6 +45,7 @@ output "pairing_keys" {
 output "vlan_attachments" {
   description = "Details of the created VLAN attachments."
   value       = google_compute_interconnect_attachment.attachments
+  sensitive   = true
 }
 
 output "vpc_network" {

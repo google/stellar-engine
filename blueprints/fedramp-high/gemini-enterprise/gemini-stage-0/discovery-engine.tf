@@ -62,7 +62,8 @@ resource "google_storage_bucket" "gemini_enterprise_gcs_bucket" {
   name                        = each.value.name
   location                    = var.geolocation
   uniform_bucket_level_access = true
-  force_destroy               = true # Set to true only for non-production/demo
+  public_access_prevention    = "enforced"
+  force_destroy               = false
 
   dynamic "encryption" {
     for_each = local.cmek_key_id != null ? [1] : []

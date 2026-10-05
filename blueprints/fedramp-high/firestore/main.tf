@@ -25,6 +25,7 @@ module "firestore" {
     location_id     = var.region
     type            = "FIRESTORE_NATIVE"
     deletion_policy = "DELETE"
+    kms_key_name    = var.kms_key_name
   }
 
   backup_schedule = var.backup_schedule

@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-data "google_project" "current" {}
+data "google_project" "current" {
+  project_id = var.main_project_id
+}
 
 data "google_compute_network" "network" {
   name    = var.network_name
@@ -66,7 +68,8 @@ module "bastion-vm" {
   confidential_compute = true # CIS Compliance Benchmark 4.11 - Must use compliant instance and image types
 
   metadata = {
-    block-project-ssh-keys = true # CIS Compliance Benchmark 4.3
+    block-project-ssh-keys = true   # CIS Compliance Benchmark 4.3
+    enable-oslogin         = "TRUE" # CIS Compliance Benchmark 4.4
   }
 
   shielded_config = {
@@ -104,9 +107,9 @@ module "bastion-vm" {
 
   attached_disks = [
     {
-      auto_delete = true
-      size        = 10
-      name        = var.disk_name
+      auto_delete       = true
+      size              = 10
+      name              = var.disk_name
       snapshot_schedule = ["daily-backup"]
       initialize_params = {
         image = var.image
@@ -122,14 +125,8 @@ module "bastion-vm" {
     }
   }
   depends_on = [
-    google_kms_crypto_key_iam_member.bastion_sa_kms_access
+    google_kms_crypto_key_iam_member.crypto_key
   ]
-}
-
-resource "google_kms_crypto_key_iam_member" "bastion_sa_kms_access" {
-  crypto_key_id = data.google_kms_crypto_key.default.id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = google_service_account.compute.member
 }
 
 resource "google_kms_crypto_key_iam_member" "crypto_key" {

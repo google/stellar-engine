@@ -22,8 +22,13 @@ locals {
         identities    = values(var.logging.writer_identities)
       }
       to = {
-        operations = [{ service_name = "*" }]
-        resources  = ["projects/${var.logging.project_number}"]
+        operations = [
+          { service_name = "bigquery.googleapis.com" },
+          { service_name = "logging.googleapis.com" },
+          { service_name = "pubsub.googleapis.com" },
+          { service_name = "storage.googleapis.com" },
+        ]
+        resources = ["projects/${var.logging.project_number}"]
       }
     }
   }

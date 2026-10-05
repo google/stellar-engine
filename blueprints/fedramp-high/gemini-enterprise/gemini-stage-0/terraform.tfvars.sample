@@ -15,6 +15,9 @@
 main_project_id = "prefx-main-xxx-x"
 prefix          = "prefx"
 environment     = "dev"
+tenant          = "tnt1"
+domain                 = "example.com"
+terraform_state_bucket = "prefx-iac-core-state-0"
 
 # Get your organization ID via `gcloud organizations list`
 # Then run `gcloud access-context-manager policies list --organization [ORGANIZATION_ID]`
@@ -105,8 +108,8 @@ gemini_apps = {
   "g4g-gem-ent-app-<random_suffix>": {
     "display_name": "gemini app display name",
     "company_name": "company name",
-    "gcs_data_store_keys": ["gcs-data-store-name"],
-    "bq_data_store_keys": ["bigquery-data-store-name"],
+    "gcs_data_store_keys": ["company-docs"],
+    "bq_data_store_keys": ["internal-wiki"],
     "enable_agent_sharing": false,
     "enable_agent_sharing_without_approval": false,
     "enable_audit_logs": false,

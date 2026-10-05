@@ -121,7 +121,6 @@ data "google_kms_crypto_key" "existing_kms_key" {
 # --- IAM Bindings ---
 resource "google_kms_crypto_key_iam_member" "gke_kms_access" {
   for_each = {
-    custom_sa = "serviceAccount:${google_service_account.gke_cluster_sa.email}",
     gke_agent = "serviceAccount:${google_project_service_identity.container_engine_robot.email}"
   }
   crypto_key_id = data.google_kms_crypto_key.existing_kms_key.id
@@ -169,6 +168,7 @@ resource "google_compute_firewall" "allow_gke_nodes_to_master" {
     protocol = "udp"
     ports    = ["10250", "443"]
   }
+  target_service_accounts = [google_service_account.gke_cluster_sa.email]
   log_config {
     metadata = "INCLUDE_ALL_METADATA"
   }
@@ -278,6 +278,7 @@ module "bastion_vm" {
   zone          = var.bastion_vm_zone
   instance_type = var.bastion_vm_machine_type
   service_account = {
+    email  = google_service_account.gke_cluster_sa.email
     scopes = ["cloud-platform"]
   }
   snapshot_schedules = {

@@ -1,5 +1,5 @@
 project_config = {
-  main_project_id = "xxxx-xxxx-main-0"
+  project_id = "xxxx-xxxx-main-0"
 }
 
 network_config = {
@@ -14,7 +14,7 @@ prefix       = "xxxx"
 region       = "us-central" # us-central1 is recommended
 
 notebooks = {
-  "<NOTEBOOK-NAME-00>" = {
+  "notebook-00" = {
     type = "USER_MANAGED"
   }
 }

@@ -153,7 +153,7 @@ def _parse(body, enum=VAR_ENUM, re=VAR_RE, template=VAR_TEMPLATE):
       if not item:
         continue
       context = m.group(m.lastindex - 1)
-      item[context].append(data)
+      item.setdefault(context, []).append(data)
     elif token == enum.SKIP:
       context = token
     elif token == enum.COMMENT:
@@ -162,7 +162,7 @@ def _parse(body, enum=VAR_ENUM, re=VAR_RE, template=VAR_TEMPLATE):
         item['tags'][k[6:]] = v
     elif token == enum.TXT:
       if context and context != enum.SKIP:
-        item[context].append(data)
+        item.setdefault(context, []).append(data)
 
 
 def create_toc(readme):
@@ -171,7 +171,17 @@ def create_toc(readme):
   lines = []
   headings = [x for x in doc.children if x.get_type() == 'Heading']
   for h in headings[1:]:
-    title = h.children[0].children
+    if not h.children:
+      continue
+    first_child = h.children[0]
+    title = (
+        first_child.children
+        if isinstance(getattr(first_child, 'children', None), str)
+        else ''.join(
+            c.children if isinstance(getattr(c, 'children', None), str) else ''
+            for c in h.children
+        )
+    )
     slug = title.lower().strip()
     slug = re.sub(r'[^\w\s-]', '', slug)
     slug = re.sub(r'[-\s]+', '-', slug)
@@ -327,7 +337,7 @@ def get_readme(readme_path):
 
 def get_tfref_parts(readme):
   'Check if README file is marked, and return current doc.'
-  m = re.search('(?sm)%s(.*)%s' % (MARK_BEGIN, MARK_END), readme)
+  m = re.search('(?sm)%s(.*?)%s' % (MARK_BEGIN, MARK_END), readme)
   if not m:
     return
   return {'doc': m.group(1).strip(), 'start': m.start(), 'end': m.end()}
@@ -350,7 +360,7 @@ def get_tfref_opts(readme):
 
 def get_toc_parts(readme):
   'Check if README file is marked, and return current toc.'
-  t = re.search('(?sm)%s(.*)%s' % (TOC_BEGIN, TOC_END), readme)
+  t = re.search('(?sm)%s(.*?)%s' % (TOC_BEGIN, TOC_END), readme)
   if not t:
     return
   return {'toc': t.group(1).strip(), 'start': t.start(), 'end': t.end()}
@@ -414,7 +424,7 @@ def parse_outputs(basepath, exclude_files=None):
     except (IOError, OSError):
       raise SystemExit(f'Cannot open outputs file {shortname}.')
     for item in _parse(body, enum=OUT_ENUM, re=OUT_RE, template=OUT_TEMPLATE):
-      description = ''.join(item['description'])
+      description = (''.join(item['description'])).replace('|', '\\|')
       sensitive = item['sensitive'] != []
       consumers = item['tags'].get('output:consumers', '')
       yield Output(name=item['name'], description=description,

@@ -38,10 +38,6 @@ module "automation-project" {
   )
   # human (groups) IAM bindings
   iam_by_principals = {
-    (local.principals.gcp-devops) = [
-      "roles/iam.serviceAccountAdmin",
-      "roles/iam.serviceAccountTokenCreator",
-    ]
     (local.principals.gcp-organization-admins) = [
       "roles/iam.serviceAccountTokenCreator",
       "roles/iam.workloadIdentityPoolAdmin"
@@ -62,9 +58,8 @@ module "automation-project" {
     "roles/cloudbuild.builds.viewer" = [
       module.automation-tf-resman-r-sa.iam_email
     ]
-    "roles/iam.serviceAccountAdmin" = [
-      module.automation-tf-resman-sa.iam_email
-    ]
+    # roles/iam.serviceAccountAdmin is granted conditionally in iam_bindings
+    # to prevent modifying the privileged bootstrap-0 service account
     "roles/iam.serviceAccountViewer" = [
       module.automation-tf-resman-r-sa.iam_email
     ]
@@ -100,8 +95,36 @@ module "automation-project" {
         title       = "resman_delegated_grant"
         description = "Resource manager service account delegated grant."
         expression = format(
-          "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly(['%s'])",
+          "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly(['%s'])",
           "roles/serviceusage.serviceUsageConsumer"
+        )
+      }
+    }
+    sa_admin_scoped = {
+      members = [
+        local.principals.gcp-devops,
+        module.automation-tf-resman-sa.iam_email,
+      ]
+      role = "roles/iam.serviceAccountAdmin"
+      condition = {
+        title       = "exclude_bootstrap_sa"
+        description = "Prevent modifying the privileged bootstrap service accounts."
+        expression = format(
+          "!resource.name.endsWith('/serviceAccounts/%s') && !resource.name.endsWith('/serviceAccounts/%s')",
+          module.automation-tf-bootstrap-sa.email,
+          module.automation-tf-bootstrap-r-sa.email
+        )
+      }
+    }
+    sa_token_creator_devops = {
+      members = [local.principals.gcp-devops]
+      role    = "roles/iam.serviceAccountTokenCreator"
+      condition = {
+        title       = "exclude_bootstrap_sa_impersonation"
+        description = "Prevent gcp-devops from impersonating the bootstrap service account."
+        expression = format(
+          "!resource.name.endsWith('/serviceAccounts/%s')",
+          module.automation-tf-bootstrap-sa.email
         )
       }
     }

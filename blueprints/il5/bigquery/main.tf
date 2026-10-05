@@ -15,6 +15,7 @@
  */
 
 data "google_bigquery_default_service_account" "bq_sa" {
+  project = var.main_project_id
   depends_on = [
     google_project_service.bigquery_api
   ]

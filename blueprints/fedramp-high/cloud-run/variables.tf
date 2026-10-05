@@ -27,8 +27,8 @@ variable "binary_authorization_policy" {
   type        = string
   default     = null
   validation {
-    condition     = var.binary_authorization_mode != "policy" || (var.binary_authorization_mode == "policy" && var.binary_authorization_policy != null)
-    error_message = "If binary_authorization_mode is set to 'policy', then binary_authorization_policy must be specified."
+    condition     = var.binary_authorization_policy == null || can(regex("^projects/[^/]+/policies/[^/]+$", var.binary_authorization_policy))
+    error_message = "If specified, binary_authorization_policy must match projects/PROJECT_ID/policies/POLICY_ID."
   }
 }
 
@@ -58,6 +58,7 @@ variable "env_vars" {
   description = "Environment variables for the Cloud Run service or job."
   type        = map(string)
   default     = {}
+  sensitive   = true
 }
 
 variable "ingress" {

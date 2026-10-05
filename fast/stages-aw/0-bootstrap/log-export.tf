@@ -73,8 +73,9 @@ module "log-export-project" {
 # Read project-level Cloud Logging settings to provision the project's
 # CMEK service agent before granting KMS permissions and creating CMEK buckets.
 data "google_logging_project_settings" "log_export" {
-  count   = contains(local.log_types, "logging") ? 1 : 0
-  project = module.log-export-project.project_id
+  count      = contains(local.log_types, "logging") ? 1 : 0
+  project    = module.log-export-project.project_id
+  depends_on = [module.log-export-project]
 }
 
 resource "google_compute_project_metadata" "metadata-log-export" {
