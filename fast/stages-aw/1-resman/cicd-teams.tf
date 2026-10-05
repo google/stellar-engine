@@ -38,7 +38,7 @@ module "branch-teams-team-cicd-repo" {
       substitutions   = {}
       template = {
         project_id  = null
-        branch_name = each.value.cicd.branch
+        branch_name = each.value.cicd.branch == null ? null : "^${trim(each.value.cicd.branch, "^$")}$"
         repo_name   = each.value.cicd.name
         tag_name    = null
       }
@@ -68,20 +68,18 @@ module "branch-teams-team-sa-cicd" {
     }
     # impersonated via workload identity federation for external repos
     : {
-      "roles/iam.workloadIdentityUser" = [
+      "roles/iam.workloadIdentityUser" = (
         each.value.cicd.branch == null
-        ? format(
-          local.identity_providers[each.value.cicd.identity_provider].principal_repo,
-          var.automation.federated_identity_pool,
-          each.value.cicd.name
-        )
-        : format(
-          local.identity_providers[each.value.cicd.identity_provider].principal_branch,
-          var.automation.federated_identity_pool,
-          each.value.cicd.name,
-          each.value.cicd.branch
-        )
-      ]
+        ? []
+        : [
+          format(
+            local.identity_providers[each.value.cicd.identity_provider].principal_branch,
+            var.automation.federated_identity_pool,
+            each.value.cicd.name,
+            each.value.cicd.branch
+          )
+        ]
+      )
     }
   )
   iam_project_roles = {

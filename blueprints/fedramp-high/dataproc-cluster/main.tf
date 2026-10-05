@@ -77,7 +77,8 @@ resource "google_compute_firewall" "dataproc" {
   log_config {
     metadata = "INCLUDE_ALL_METADATA"
   }
-  source_ranges = ["10.128.0.0/9"]
+  target_tags   = ["dataproc"]
+  source_ranges = [data.google_compute_subnetwork.subnetwork.ip_cidr_range]
 }
 
 module "gcs" {
@@ -105,7 +106,7 @@ module "gcs" {
   force_destroy = true
 
   depends_on = [
-    google_kms_crypto_key_iam_binding.dataproc_kms
+    google_kms_crypto_key_iam_member.dataproc_kms
   ]
 }
 
@@ -133,6 +134,6 @@ module "dataproc_cluster" {
     }
   }
   depends_on = [
-    google_kms_crypto_key_iam_binding.dataproc_kms
+    google_kms_crypto_key_iam_member.dataproc_kms
   ]
 }

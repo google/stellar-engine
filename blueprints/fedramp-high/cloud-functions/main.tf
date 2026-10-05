@@ -51,16 +51,17 @@ resource "google_project_iam_member" "cloud_invoker" {
   member  = module.service-account-runner.iam_email
 }
 
-resource "google_kms_crypto_key_iam_binding" "cloud_storage" {
-  crypto_key_id = var.kms_key_name
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  members = [
+resource "google_kms_crypto_key_iam_member" "cloud_storage" {
+  for_each = toset([
     "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com",
     "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com",
     "serviceAccount:service-${data.google_project.current.number}@gcf-admin-robot.iam.gserviceaccount.com",
     "serviceAccount:service-${data.google_project.current.number}@gcp-sa-artifactregistry.iam.gserviceaccount.com",
     "serviceAccount:service-${data.google_project.current.number}@serverless-robot-prod.iam.gserviceaccount.com"
-  ]
+  ])
+  crypto_key_id = var.kms_key_name
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = each.value
 }
 
 resource "google_project_iam_member" "artifactregistry_createOnPushWriter" {
@@ -94,21 +95,35 @@ resource "null_resource" "cloud_function_deploy" {
     source_code_hash = sha256(join("", [for f in fileset("./src-code", "**") : file("./src-code/${f}")]))
   }
   provisioner "local-exec" {
+    environment = {
+      CF_NAME              = var.function_name
+      CF_PROJECT           = var.main_project_id
+      CF_REGION            = var.region
+      CF_RUNTIME           = var.function_runtime
+      CF_ENTRY_POINT       = var.function_entry_point
+      CF_MEMORY            = "${var.function_memory_mb}MB"
+      CF_TIMEOUT           = "${var.function_timeout_seconds}s"
+      CF_MAX_INSTANCES     = tostring(var.function_instance_count)
+      CF_DOCKER_REPOSITORY = module.registry-docker.id
+      CF_KMS_KEY           = var.kms_key_name
+      CF_SERVICE_ACCOUNT   = coalesce(var.service_account, module.service-account-runner.email)
+    }
     command = <<EOT
-      gcloud functions deploy "${var.function_name}" \
-        --project="${var.main_project_id}" \
-        --region="${var.region}" \
-        --runtime="${var.function_runtime}" \
+      gcloud functions deploy "$CF_NAME" \
+        --project="$CF_PROJECT" \
+        --region="$CF_REGION" \
+        --runtime="$CF_RUNTIME" \
         --trigger-http \
         --source="./src-code" \
-        --entry-point="${var.function_entry_point}" \
-        --memory="${var.function_memory_mb}MB" \
-        --timeout="${var.function_timeout_seconds}s" \
+        --entry-point="$CF_ENTRY_POINT" \
+        --memory="$CF_MEMORY" \
+        --timeout="$CF_TIMEOUT" \
+        --max-instances="$CF_MAX_INSTANCES" \
         --ingress-settings="internal-and-gclb" \
-        --binary-authorization default \
-        --docker-repository="${module.registry-docker.id}" \
-        --kms-key="${var.kms_key_name}" \
-        --service-account="${module.service-account-runner.email}"
+        --binary-authorization="default" \
+        --docker-repository="$CF_DOCKER_REPOSITORY" \
+        --kms-key="$CF_KMS_KEY" \
+        --service-account="$CF_SERVICE_ACCOUNT"
     EOT
   }
 }
@@ -142,5 +157,5 @@ module "registry-docker" {
       }
     }
   }
-  depends_on = [google_kms_crypto_key_iam_binding.cloud_storage]
+  depends_on = [google_kms_crypto_key_iam_member.cloud_storage]
 }

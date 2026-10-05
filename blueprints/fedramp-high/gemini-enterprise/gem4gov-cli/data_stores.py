@@ -17,12 +17,13 @@ import json
 from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
 from google.api_core.client_options import ClientOptions
-import random
+import secrets
 import string
 
 def generate_id(prefix):
     """Generates a random 6-character alphanumeric string."""
-    return prefix + ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+    alphabet = string.ascii_lowercase + string.digits
+    return prefix + ''.join(secrets.choice(alphabet) for _ in range(6))
 
 
 def validate_data_store(credentials, project_id, data_store_id):

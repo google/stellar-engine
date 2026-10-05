@@ -1,6 +1,6 @@
 main_project_id = "xxxx-xxxx-xxxx-main-0"
 
-dataset_id          = "dataset-id-00"
+dataset_id          = "dataset_id_00"
 dataset_description = "dataset-description"
 tables              = {}
 region              = "us-east4"

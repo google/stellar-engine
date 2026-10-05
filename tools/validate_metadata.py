@@ -43,8 +43,14 @@ class ValidationResult:
 
 
 def _validate(path: Path, validator) -> ValidationResult:
-  with open(path) as f:
+  with open(path, encoding="utf-8") as f:
     metadata = yaml.safe_load(f)
+
+  if not isinstance(metadata, dict):
+    return ValidationResult(
+        state=State.INVALID,
+        errors={"$": "Metadata root must be a YAML mapping."},
+    )
 
   errors = {
       error.json_path: error.message
@@ -70,7 +76,9 @@ def main(dirs: list[str], verbose: bool, failed_only=False) -> int:
   validator = jsonschema.validators.Draft202012Validator(schema)
 
   failed_files = {}
-  for instance in instances:
+  for instance in sorted(instances):
+    if Path(instance).is_symlink():
+      continue
     result = _validate(instance, validator)
     if result.state == State.OK:
       if not failed_only:

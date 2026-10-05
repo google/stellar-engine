@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-data "google_project" "current" {}
+data "google_project" "current" {
+  project_id = var.main_project_id
+}
 
 locals {
   # Determine the KMS key region: use kms_key_location if provided, otherwise default to the workflow's region
@@ -54,9 +56,7 @@ resource "google_service_account" "workflow_sa" {
 resource "google_kms_crypto_key_iam_member" "workflows_agent_kms_access" {
   crypto_key_id = local.kms_key_self_link_calculated # Using the calculated local
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  # The Workflows service agent is typically in the format:
-  # service-${project_number}@gcp-sa-workflows.iam.gserviceaccount.com
-  member = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-workflows.iam.gserviceaccount.com"
+  member        = google_project_service_identity.workflows_si.member
 
   depends_on = [
     google_project_service.workflows_api,

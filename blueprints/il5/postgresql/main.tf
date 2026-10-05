@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-data "google_project" "current" {}
+data "google_project" "current" {
+  project_id = var.main_project_id
+}
 
 data "google_compute_network" "network" {
   name    = var.network_name

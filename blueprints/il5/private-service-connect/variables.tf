@@ -54,5 +54,9 @@ variable "region" {
 variable "service" {
   description = "Target resource to receive the matched traffic. Only `all-apis` and `vpc-sc` are valid."
   type        = string
-  default     = "all-apis"
+  default     = "vpc-sc"
+  validation {
+    condition     = contains(["all-apis", "vpc-sc"], var.service)
+    error_message = "The service variable must be either all-apis or vpc-sc."
+  }
 }

@@ -48,7 +48,7 @@ module "security_log_alerts" {
   project  = each.key
 
   combiner           = "OR"
-  duration           = "60s"
+  duration           = "0s"
   comparison         = "COMPARISON_GT"
   alignment_period   = "60s"
   per_series_aligner = "ALIGN_RATE"

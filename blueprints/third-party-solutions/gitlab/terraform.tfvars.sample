@@ -17,3 +17,4 @@ network_config = {
 }
 prefix     = "prefix"
 project_id = "prod-gitlab-0"
+region     = "us-east4"

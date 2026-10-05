@@ -39,7 +39,7 @@ data "google_compute_region_backend_service" "gemini_enterprise_backend" {
 
 # Data source to get the network created in stage-0 or Shared VPC
 data "google_compute_network" "gemini_enterprise_vpc" {
-  count   = data.terraform_remote_state.stage_0.outputs.deployment_type != "none" ? 1 : 0
+  count = data.terraform_remote_state.stage_0.outputs.deployment_type != "none" ? 1 : 0
   project = var.host_project_id != "" ? var.host_project_id : (
     try(data.terraform_remote_state.stage_0.outputs.use_shared_vpc, false) ? data.terraform_remote_state.stage_0.outputs.network_project_id : data.terraform_remote_state.stage_0.outputs.main_project_id
   )
@@ -94,7 +94,7 @@ resource "google_compute_region_url_map" "gemini_enterprise_load_balancer" {
           route_action {
             url_rewrite {
               host_rewrite        = "vertexaisearch.cloud.google.com"
-              path_prefix_rewrite = "/us/home/cid/${data.terraform_remote_state.stage_0.outputs.gemini_apps_widget_ids[route_rules.value]}?hl=en_US"
+              path_prefix_rewrite = "/us/home/cid/${data.terraform_remote_state.stage_0.outputs.gemini_apps_widget_ids[route_rules.value]}"
             }
           }
         }
@@ -110,7 +110,7 @@ resource "google_compute_region_url_map" "gemini_enterprise_load_balancer" {
         route_action {
           url_rewrite {
             host_rewrite        = "vertexaisearch.cloud.google.com"
-            path_prefix_rewrite = "/us/home/cid/${local.first_gemini_widget_id}?hl=en_US"
+            path_prefix_rewrite = "/us/home/cid/${local.first_gemini_widget_id}"
           }
         }
       }
@@ -133,7 +133,7 @@ resource "google_compute_region_url_map" "gemini_enterprise_load_balancer" {
             host_redirect          = "auth.cloud.google"
             path_redirect          = "/signin/${data.terraform_remote_state.stage_0.outputs.acl_workforce_pool_name}/providers/${data.terraform_remote_state.stage_0.outputs.acl_workforce_provider_id}?continueUrl=https%3A%2F%2Fvertexaisearch.cloud.google%2Fus%2Fhome%2Fcid%2F${data.terraform_remote_state.stage_0.outputs.gemini_apps_widget_ids[route_rules.value]}&hl=en_US"
             redirect_response_code = "FOUND"
-            strip_query            = false
+            strip_query            = true
             https_redirect         = true
           }
         }
@@ -145,7 +145,7 @@ resource "google_compute_region_url_map" "gemini_enterprise_load_balancer" {
         host_redirect          = "auth.cloud.google"
         path_redirect          = "/signin/${data.terraform_remote_state.stage_0.outputs.acl_workforce_pool_name}/providers/${data.terraform_remote_state.stage_0.outputs.acl_workforce_provider_id}?continueUrl=https%3A%2F%2Fvertexaisearch.cloud.google%2Fus%2Fhome%2Fcid%2F${local.first_gemini_widget_id}&hl=en_US"
         redirect_response_code = "FOUND"
-        strip_query            = false
+        strip_query            = true
       }
     }
   }
@@ -168,13 +168,13 @@ resource "google_certificate_manager_certificate" "gemini_enterprise_managed_cer
 
 # This resource creates the target HTTPS proxy for the load balancer.
 resource "google_compute_region_target_https_proxy" "gemini_enterprise_https_proxy" {
-  count            = data.terraform_remote_state.stage_0.outputs.deployment_type != "none" ? 1 : 0
-  project          = data.terraform_remote_state.stage_0.outputs.main_project_id
-  name             = "${data.terraform_remote_state.stage_0.outputs.prefix}-gemini-enterprise-https-proxy"
-  region           = data.terraform_remote_state.stage_0.outputs.region
-  url_map          = google_compute_region_url_map.gemini_enterprise_load_balancer[0].id
-  
-  ssl_certificates = var.cert_management_choice == "self_managed" ? [data.google_compute_region_ssl_certificate.gemini_enterprise_cert[0].self_link] : null
+  count   = data.terraform_remote_state.stage_0.outputs.deployment_type != "none" ? 1 : 0
+  project = data.terraform_remote_state.stage_0.outputs.main_project_id
+  name    = "${data.terraform_remote_state.stage_0.outputs.prefix}-gemini-enterprise-https-proxy"
+  region  = data.terraform_remote_state.stage_0.outputs.region
+  url_map = google_compute_region_url_map.gemini_enterprise_load_balancer[0].id
+
+  ssl_certificates                 = var.cert_management_choice == "self_managed" ? [data.google_compute_region_ssl_certificate.gemini_enterprise_cert[0].self_link] : null
   certificate_manager_certificates = var.cert_management_choice == "google_managed" ? [google_certificate_manager_certificate.gemini_enterprise_managed_cert[0].id] : null
 }
 
@@ -195,7 +195,7 @@ resource "google_compute_forwarding_rule" "gemini_enterprise_forwarding_rule" {
 
 # Data source to get the subnet created in stage-0 or Shared VPC
 data "google_compute_subnetwork" "gemini_enterprise_vpc_subnet" {
-  count   = data.terraform_remote_state.stage_0.outputs.deployment_type == "internal" ? 1 : 0
+  count = data.terraform_remote_state.stage_0.outputs.deployment_type == "internal" ? 1 : 0
   project = var.host_project_id != "" ? var.host_project_id : (
     try(data.terraform_remote_state.stage_0.outputs.use_shared_vpc, false) ? data.terraform_remote_state.stage_0.outputs.network_project_id : data.terraform_remote_state.stage_0.outputs.main_project_id
   )

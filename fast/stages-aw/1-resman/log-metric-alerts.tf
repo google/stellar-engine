@@ -48,7 +48,7 @@ module "core_log_alerts" {
 
   project            = module.tenant-self-iac-projects[each.key].id
   combiner           = "OR"
-  duration           = "60s"
+  duration           = "0s"
   comparison         = "COMPARISON_GT"
   alignment_period   = "60s"
   per_series_aligner = "ALIGN_RATE"
@@ -64,7 +64,7 @@ module "main_log_alerts" {
 
   project            = module.tenant-self-main-projects[each.key].id
   combiner           = "OR"
-  duration           = "60s"
+  duration           = "0s"
   comparison         = "COMPARISON_GT"
   alignment_period   = "60s"
   per_series_aligner = "ALIGN_RATE"

@@ -29,7 +29,7 @@ output "cloud_build_iam_member" {
 
 output "kms_crypto_key_iam_binding_members" {
   description = "IAM members assigned to roles/cloudkms.cryptoKeyEncrypterDecrypter for the specified KMS key."
-  value       = google_kms_crypto_key_iam_binding.cloud_storage.members
+  value       = [for m in google_kms_crypto_key_iam_member.cloud_storage : m.member]
 }
 
 output "logging_iam_member" {

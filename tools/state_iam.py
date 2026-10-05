@@ -15,6 +15,7 @@
 'Parse and output IAM bindings from Terraform state file.'
 
 import collections
+import csv
 import json
 import itertools
 import re
@@ -26,7 +27,7 @@ FIELDS = ('authoritative', 'resource_type', 'resource_id', 'role',
           'member_type', 'member_id', 'conditions')
 ORG_IDS = {}
 RESOURCE_SORT = {'organization': 0, 'folder': 1, 'project': 2}
-RESOURCE_TYPE_RE = re.compile(r'^google_([^_]+)_iam_([^_]+)$')
+RESOURCE_TYPE_RE = re.compile(r'^google_(.+?)_iam_(binding|member|policy)$')
 
 Binding = collections.namedtuple('Binding', ' '.join(FIELDS))
 Folder = collections.namedtuple('Folder', 'id name parent_id')
@@ -52,7 +53,7 @@ def get_bindings(resources, prefix=None, folders=None):
       if resource_type == 'organization':
         resource_id = _org_id(attrs['org_id'])
       else:
-        resource_id = attrs[resource_type]
+        resource_id = attrs.get(resource_type) or attrs.get('name') or attrs.get('id', '')
         if prefix and resource_id.startswith(prefix):
           resource_id = resource_id[len(prefix) + 1:]
       role = attrs['role']
@@ -111,9 +112,10 @@ def get_folders(resources):
 
 def output_csv(bindings):
   'Output bindings in CSV format.'
-  print(','.join(FIELDS))
+  writer = csv.writer(sys.stdout, lineterminator='\n')
+  writer.writerow(FIELDS)
   for b in bindings:
-    print(','.join(str(getattr(b, f)) for f in FIELDS))
+    writer.writerow([getattr(b, f) for f in FIELDS])
 
 
 def output_principals(bindings):

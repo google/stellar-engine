@@ -8,7 +8,7 @@ region1 = "us-central1"
 region2 = "us-east4"
 
 # DoD Base CIDR Block (to be split into two /25s) - Replace with your DoD NIC assigned /24 CIDR
-dod_base_cidr_block = "x.x.x.0/24"
+dod_base_cidr_block = "10.0.0.0/24"
 
 # Subnet Configurations
 subnet_configs = {

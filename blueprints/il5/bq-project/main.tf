@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-data "google_bigquery_default_service_account" "bq_sa" {}
+data "google_bigquery_default_service_account" "bq_sa" {
+  project = var.main_project_id
+}
 
 module "bigquery-dataset" {
   source         = "../../../modules/bigquery-dataset"

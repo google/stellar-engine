@@ -2882,12 +2882,12 @@ update_app_compliance() {
         return 1
     fi
 
-    CMD="gem4gov app update-compliance --project-id ${PROJECT_ID} --engine-id ${ENGINE_ID} --compliance-regime ${COMPLIANCE_REGIME}"
+    local cmd=(gem4gov app update-compliance --project-id "${PROJECT_ID}" --engine-id "${ENGINE_ID}" --compliance-regime "${COMPLIANCE_REGIME}")
     
-    echo "Running: $CMD"
+    echo "Running: ${cmd[*]}"
     export GOOGLE_CLOUD_PROJECT="${PROJECT_ID}"
     export GOOGLE_CLOUD_QUOTA_PROJECT="${PROJECT_ID}"
-    if ! $CMD; then
+    if ! "${cmd[@]}"; then
         echo -e "${RED}ERROR: Failed to update compliance regime.${NC}"
         return 1
     fi
@@ -3709,22 +3709,22 @@ deploy_analytics_dashboard() {
     
     # Deploy to Cloud Run
     echo "Deploying to Cloud Run..."
-    local deploy_cmd="gcloud run deploy gemini-analytics-dashboard \
-        --image \"$image_name\" \
-        --project \"$state_project_id\" \
-        --region \"$region\" \
-        --no-allow-unauthenticated \
-        --binary-authorization=default \
-        --ingress internal-and-cloud-load-balancing \
-        --set-env-vars PROJECT_ID=\"$state_project_id\",DATASET_ID=\"$state_dataset_id\""
+    local deploy_cmd=(
+        gcloud run deploy gemini-analytics-dashboard
+        --image "$image_name"
+        --project "$state_project_id"
+        --region "$region"
+        --no-allow-unauthenticated
+        --binary-authorization=default
+        --ingress internal-and-cloud-load-balancing
+        --set-env-vars "PROJECT_ID=${state_project_id},DATASET_ID=${state_dataset_id}"
+    )
 
-
-        
     if [[ -n "$state_sa_email" ]]; then
-        deploy_cmd="$deploy_cmd --service-account \"$state_sa_email\""
+        deploy_cmd+=(--service-account "$state_sa_email")
     fi
     
-    if eval "$deploy_cmd"; then
+    if "${deploy_cmd[@]}"; then
         echo -e "${GREEN}Dashboard deployed successfully.${NC}"
     else
         echo -e "${RED}Failed to deploy dashboard.${NC}"

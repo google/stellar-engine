@@ -50,7 +50,9 @@ resource "google_project_service" "workstations" {
   disable_on_destroy = false
 }
 
-data "google_project" "project" {}
+data "google_project" "project" {
+  project_id = var.main_project_id
+}
 
 module "workstations" {
   source         = "../../../modules/workstation-cluster"
@@ -58,9 +60,9 @@ module "workstations" {
   project_id     = var.main_project_id
   location       = var.region
   network_config = local.network_config
-  # private_cluster_config = {
-  #   enable_private_endpoint = true
-  # }
+  private_cluster_config = {
+    enable_private_endpoint = true
+  }
   workstation_configs = {
     (var.config_id) = {
       container = var.image == null ? null : {

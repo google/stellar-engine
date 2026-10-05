@@ -21,11 +21,11 @@ import yaml
 
 from pathlib import Path
 
+BASEDIR = Path(__file__).resolve().parents[1]
 try:
   import fixtures
 except ImportError:
-  BASEDIR = Path(__file__).parents[1]
-  sys.path.append(str(BASEDIR / 'tests'))
+  sys.path.insert(0, str(BASEDIR / 'tests'))
   import fixtures
 
 
@@ -34,6 +34,7 @@ except ImportError:
 @click.argument('module', type=click.Path(), nargs=1)
 @click.argument('tfvars', type=click.Path(exists=True), nargs=-1)
 def main(example, module, tfvars):
+  tmp_dir = None
   try:
     if example:
       tmp_dir = tempfile.TemporaryDirectory()
@@ -44,7 +45,10 @@ def main(example, module, tfvars):
       (tmp_path / 'fabric').symlink_to(BASEDIR)
       module = tmp_path
     else:
-      module = BASEDIR / module
+      resolved = (BASEDIR / module).resolve()
+      if not resolved.is_relative_to(BASEDIR.resolve()):
+        raise SystemExit(f'Module path must be within {BASEDIR}')
+      module = resolved
 
     summary = fixtures.plan_summary(module, Path(), tfvars)
     print(yaml.dump({'values': summary.values}))
@@ -54,7 +58,7 @@ def main(example, module, tfvars):
     }
     print(yaml.dump({'outputs': outputs}))
   finally:
-    if example:
+    if tmp_dir is not None:
       tmp_dir.cleanup()
 
 

@@ -31,6 +31,7 @@ resource "google_notebooks_runtime" "runtime" {
   }
   software_config {
     enable_health_monitoring = true
+    idle_shutdown            = var.notebooks[each.key].idle_shutdown
   }
   virtual_machine {
     virtual_machine_config {
@@ -43,6 +44,11 @@ resource "google_notebooks_runtime" "runtime" {
         content {
           kms_key = var.service_encryption_keys.notebooks
         }
+      }
+      shielded_instance_config {
+        enable_secure_boot          = true
+        enable_vtpm                 = true
+        enable_integrity_monitoring = true
       }
       metadata = {
         notebook-disable-nbconvert = "false"
@@ -80,6 +86,24 @@ resource "google_workbench_instance" "playground" {
       disk_type       = "PD_SSD"
       disk_encryption = var.service_encryption_keys.notebooks != null ? "CMEK" : null
       kms_key         = var.service_encryption_keys.notebooks
+    }
+
+    data_disks {
+      disk_size_gb    = 100
+      disk_type       = "PD_STANDARD"
+      disk_encryption = var.service_encryption_keys.notebooks != null ? "CMEK" : null
+      kms_key         = var.service_encryption_keys.notebooks
+    }
+
+    shielded_instance_config {
+      enable_secure_boot          = true
+      enable_vtpm                 = true
+      enable_integrity_monitoring = true
+    }
+
+    metadata = {
+      notebook-disable-downloads = "true"
+      notebook-disable-root      = "true"
     }
 
     network_interfaces {

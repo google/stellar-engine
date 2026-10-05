@@ -35,6 +35,7 @@ variable "oauth_client_id" {
 variable "oauth_client_secret" {
   description = "OAuth Client Secret for IAP."
   type        = string
+  sensitive   = true
 }
 
 variable "organization_id" {

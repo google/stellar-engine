@@ -137,16 +137,16 @@ locals {
           } : null
           enforce = try(r.enforce, null)
           parameters = (
-            can(r.parameters) && r.parameters != null
+            try(r.parameters, null) != null
             ? try(tostring(r.parameters), jsonencode(r.parameters))
             : null
           )
-          condition = {
+          condition = can(r.condition) ? {
             description = try(r.condition.description, null)
             expression  = try(r.condition.expression, null)
             location    = try(r.condition.location, null)
             title       = try(r.condition.title, null)
-          }
+          } : null
         }
       ]
     }
@@ -278,7 +278,7 @@ module "organization" {
         role    = module.organization.custom_role_id["organization_iam_admin"]
         condition = {
           expression = format(
-            "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
+            "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
             join(",", formatlist("'%s'", [
               "roles/accesscontextmanager.policyAdmin",
               "roles/cloudasset.viewer",
@@ -301,7 +301,7 @@ module "organization" {
         role    = module.organization.custom_role_id["organization_iam_admin"]
         condition = {
           expression = format(
-            "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
+            "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
             join(",", formatlist("'%s'", [
               "roles/billing.admin",
               "roles/billing.costsManager",

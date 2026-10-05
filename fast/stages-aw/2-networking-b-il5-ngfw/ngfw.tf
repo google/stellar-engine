@@ -68,7 +68,7 @@ resource "google_project_iam_custom_role" "ngfw-custom-role" {
   description = "Many of the permissions required for the Palo Alto NGFW, not including compute.viewer"
   permissions = [
     "storage.buckets.get",
-    "logging.buckets.write",
+    "logging.logEntries.create",
     "opsconfigmonitoring.resourceMetadata.write",
     "autoscaling.sites.writeMetrics",
     "monitoring.metricDescriptors.create",
@@ -122,7 +122,7 @@ module "ngfw-bootstrap-bucket" {
 resource "google_storage_bucket_iam_binding" "binding" {
   bucket   = module.ngfw-bootstrap-bucket[each.key].name
   for_each = var.regions
-  role     = "roles/storage.objectUser"
+  role     = "roles/storage.objectViewer"
   members = [
     "serviceAccount:service-${module.vdss-host-project.number}@compute-system.iam.gserviceaccount.com",
     module.ngfw-service-account.service_account.member

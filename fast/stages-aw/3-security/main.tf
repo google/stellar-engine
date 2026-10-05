@@ -23,6 +23,7 @@ locals {
       description = "Automation service account delegated grants."
       expression = format(
         <<-EOT
+           api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 &&
            api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s]) &&
            resource.type == 'cloudkms.googleapis.com/CryptoKey'
         EOT

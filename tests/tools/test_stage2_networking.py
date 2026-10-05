@@ -62,6 +62,16 @@ class TestStage2Networking(unittest.TestCase):
     self.assertIn('variable "nva_spot_vms"', vars_tf)
     self.assertIn('default     = false', vars_tf)
 
+  def test_nva_and_ngfw_service_account_and_helper_hardening(self):
+    nva_tf = (_FEDRAMP_NET_DIR / 'nva.tf').read_text(encoding='utf-8')
+    self.assertNotIn('google_service_account_key', nva_tf)
+
+    ngfw_tf = (_IL5_NET_DIR / 'ngfw.tf').read_text(encoding='utf-8')
+    self.assertNotIn('-compute@developer.gserviceaccount.com', ngfw_tf)
+
+    openssl_sh = (_IL5_NET_DIR / 'openssl-helper.sh').read_text(encoding='utf-8')
+    self.assertIn('-stdin', openssl_sh)
+
 
 if __name__ == '__main__':
   unittest.main()

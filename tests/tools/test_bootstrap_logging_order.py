@@ -70,6 +70,10 @@ class TestBootstrapLoggingOrder(unittest.TestCase):
         'org_policies should not unconditionally jsonencode string parameters',
     )
     self.assertIn(
+        'try(r.parameters, null) != null',
+        org_tf,
+    )
+    self.assertIn(
         'try(tostring(r.parameters), jsonencode(r.parameters))',
         org_tf,
     )
@@ -84,12 +88,45 @@ class TestBootstrapLoggingOrder(unittest.TestCase):
         log_export_tf,
     )
     self.assertIn(
+        'depends_on = [module.log-export-project]',
+        log_export_tf,
+    )
+    self.assertIn(
         'data.google_logging_project_settings.log_export',
         log_export_tf,
     )
     self.assertIn(
         'data.google_logging_project_settings.log_export[0].kms_service_account_id',
         kms_tf,
+    )
+
+  def test_logging_location_avoids_checklist_cycle(self):
+    main_tf = (_BOOTSTRAP_DIR / 'main.tf').read_text(encoding='utf-8')
+    self.assertNotIn('local.checklist.location', main_tf)
+    self.assertIn(
+        'try(local._cl_data.logging.sinks[0].destination.location, null)',
+        main_tf,
+    )
+
+  def test_delegated_iam_conditions_guard_empty_grant_list(self):
+    for rel_path in (
+        'fast/stages-aw/0-bootstrap/organization.tf',
+        'fast/stages-aw/0-bootstrap/automation.tf',
+        'fast/stages-aw/3-security/main.tf',
+    ):
+      content = (_REPO_ROOT / rel_path).read_text(encoding='utf-8')
+      self.assertIn(
+          "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0",
+          content,
+      )
+
+  def test_automation_project_protects_bootstrap_service_accounts(self):
+    automation_tf = (_BOOTSTRAP_DIR / 'automation.tf').read_text(encoding='utf-8')
+    self.assertIn('sa_admin_scoped', automation_tf)
+    self.assertIn('sa_token_creator_devops', automation_tf)
+    self.assertIn(
+        "!resource.name.endsWith('/serviceAccounts/%s')",
+        automation_tf,
     )
 
 

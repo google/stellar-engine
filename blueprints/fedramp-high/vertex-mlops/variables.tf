@@ -30,7 +30,7 @@ variable "dataset_name" {
 variable "deletion_protection" {
   description = "Prevent Terraform from destroying data storage resources (storage buckets, GKE clusters, CloudSQL instances) in this blueprint. When this field is set in Terraform state, a terraform destroy or terraform apply that would delete data storage resources will fail."
   type        = bool
-  default     = false
+  default     = true
   nullable    = false
 }
 
@@ -60,7 +60,7 @@ variable "notebooks" {
     type             = string
     machine_type     = optional(string, "n1-standard-4")
     internal_ip_only = optional(bool, true)
-    idle_shutdown    = optional(bool, false)
+    idle_shutdown    = optional(bool, true)
     owner            = optional(string)
   }))
   validation {
@@ -72,6 +72,11 @@ variable "notebooks" {
     condition = alltrue([
     for k, v in var.notebooks : (v.type == "MANAGED" && try(v.owner != null, false) || v.type == "USER_MANAGED")])
     error_message = "`owner` must be set for `MANAGED` instances."
+  }
+  validation {
+    condition = alltrue([
+    for k, v in var.notebooks : v.internal_ip_only == true])
+    error_message = "All notebooks must have `internal_ip_only` set to `true`."
   }
 }
 

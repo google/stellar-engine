@@ -44,7 +44,7 @@ module "vdss_log_alerts" {
 
   project            = module.vdss-host-project.id
   combiner           = "OR"
-  duration           = "60s"
+  duration           = "0s"
   comparison         = "COMPARISON_GT"
   alignment_period   = "60s"
   per_series_aligner = "ALIGN_RATE"
@@ -60,7 +60,7 @@ module "spoke_log_alerts" {
   project  = module.env-spoke-projects[each.key].id
 
   combiner           = "OR"
-  duration           = "60s"
+  duration           = "0s"
   comparison         = "COMPARISON_GT"
   alignment_period   = "60s"
   per_series_aligner = "ALIGN_RATE"

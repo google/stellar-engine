@@ -52,7 +52,7 @@ variable "region" {
 variable "tables" {
   description = "BigQuery tables."
   type = map(object({
-    deletion_protection      = optional(bool)
+    deletion_protection      = optional(bool, true)
     description              = optional(string, "Terraform managed.")
     friendly_name            = optional(string)
     labels                   = optional(map(string), {})

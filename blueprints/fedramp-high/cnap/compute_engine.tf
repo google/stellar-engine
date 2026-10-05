@@ -82,7 +82,7 @@ resource "google_compute_region_instance_template" "cos-template" {
 
   # CIS Compliance Benchmark 4.11
   confidential_instance_config {
-    enable_confidential_compute = false # This is rejecting my instance type, n2d-highcpu-2 which is supported. I think it's a bug
+    enable_confidential_compute = true
   }
   shielded_instance_config {
     enable_secure_boot          = true
@@ -155,7 +155,7 @@ module "kms" {
   iam = {
     "roles/cloudkms.cryptoKeyEncrypterDecrypter" = [
       google_service_account.compute.member,
-      data.google_compute_default_service_account.default.member
+      "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
     ]
   }
   keyring = {

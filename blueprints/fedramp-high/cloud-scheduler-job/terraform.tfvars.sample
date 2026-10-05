@@ -10,8 +10,8 @@ gcp_region      = "us-east4"    # The Google Cloud region where the Cloud Schedu
 topic_id        = "projects/YOUR_PUBSUB_PROJECT_ID/topics/YOUR_PUBSUB_TOPIC_NAME" # Full resource path of the existing Pub/Sub topic.
 # Example: "projects/my-pubsub-project/topics/my-existing-topic"
 
-data            = base64encode("YOUR_MESSAGE_HERE") # Base64-encoded data to be sent as the Pub/Sub message payload.
-# Example: base64encode("{\"key\": \"value\"}") or base64encode("My message")
+data            = "YOUR_MESSAGE_HERE" # Message payload to be base64-encoded and sent to the Pub/Sub topic.
+# Example: "{\"key\": \"value\"}" or "My message"
 
 # --- Cloud KMS for Pub/Sub Topic Encryption (CMEK) ---
 # This blueprint assumes your Pub/Sub topic is already encrypted with CMEK.

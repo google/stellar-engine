@@ -62,24 +62,24 @@ resource "google_access_context_manager_access_levels" "access-levels" {
     }
   }
 
-  # Access level for "moderate" service, including US Region, Time (7AM-9PM Monday-Friday) & Expiring Access by end of 2024.
+  # Access level for "moderate" service, including US Region & Time (7AM-9PM Monday-Friday).
   access_levels {
     name  = "accessPolicies/${var.access_policy_number}/accessLevels/moderate_device"
     title = "Moderate Device Policy"
     basic {
       conditions {
-        required_access_levels = ["accessPolicies/${var.access_policy_number}/accessLevels/us", "accessPolicies/${var.access_policy_number}/accessLevels/time", "accessPolicies/${var.access_policy_number}/accessLevels/expire"]
+        required_access_levels = ["accessPolicies/${var.access_policy_number}/accessLevels/us", "accessPolicies/${var.access_policy_number}/accessLevels/time"]
       }
     }
   }
 
-  # Access level for "strict" service, including Mac/Windows OS, Encryption enabled, Corp owned device, Expiring Access by end of 2024, Time (7AM-9PM Monday-Friday), & US Region.
+  # Access level for "strict" service, including Mac/Windows OS, Encryption enabled, Corp owned device, Time (7AM-9PM Monday-Friday), & US Region.
   access_levels {
     name  = "accessPolicies/${var.access_policy_number}/accessLevels/strict_device"
     title = "Strict Device Policy"
     basic {
       conditions {
-        required_access_levels = ["accessPolicies/${var.access_policy_number}/accessLevels/us", "accessPolicies/${var.access_policy_number}/accessLevels/time", "accessPolicies/${var.access_policy_number}/accessLevels/expire"]
+        required_access_levels = ["accessPolicies/${var.access_policy_number}/accessLevels/us", "accessPolicies/${var.access_policy_number}/accessLevels/time"]
         device_policy {
           require_screen_lock = true
           os_constraints {
