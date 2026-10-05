@@ -104,7 +104,7 @@ class TestBootstrapLoggingOrder(unittest.TestCase):
     main_tf = (_BOOTSTRAP_DIR / 'main.tf').read_text(encoding='utf-8')
     self.assertNotIn('local.checklist.location', main_tf)
     self.assertIn(
-        'try(local._cl_data.logging.sinks[0].destination.location, null)',
+        'logging = var.regions.primary',
         main_tf,
     )
 
