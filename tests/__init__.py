@@ -18,7 +18,7 @@ import sys
 from unittest.mock import MagicMock
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-GEM4GOV_PATH = os.path.join(REPO_ROOT, 'blueprints', 'fedramp-high', 'gemini-enterprise', 'gem4gov-cli')
+GEM4GOV_PATH = os.path.join(REPO_ROOT, 'blueprints', 'gemini-enterprise', 'gem4gov-cli')
 TOOLS_PATH = os.path.join(REPO_ROOT, 'tools')
 
 if GEM4GOV_PATH not in sys.path:

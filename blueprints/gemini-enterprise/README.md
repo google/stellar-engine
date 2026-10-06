@@ -1,7 +1,7 @@
-# Gemini Enterprise for FedRAMP High - Comprehensive Documentation
+# Gemini Enterprise Blueprint - Comprehensive Documentation
 
-**Version:** 1.2.0
-**Compliance:** FedRAMP High / IL4+
+**Version:** 1.3.0
+**Compliance:** FedRAMP Moderate, FedRAMP High, IL4, IL5
 **Scope:** Full System Documentation
 
 ---
@@ -22,7 +22,7 @@
 
 ## 1. Executive Overview
 
-This blueprint deploys a secure and compliant environment for hosting Gemini Enterprise on Google Cloud Platform, specifically tailored for FedRAMP High requirements. It leverages the Vertex AI Search and Discovery Engine APIs. The deployment is divided into two main Terraform stages (`gemini-stage-0` and `gemini-stage-1`).
+This blueprint deploys a secure and compliant environment for hosting Gemini Enterprise on Google Cloud Platform across regulated Assured Workloads boundaries (`FEDRAMP_MODERATE`, `FEDRAMP_HIGH`, `IL4`, `IL5`) as well as standard commercial environments (`NONE`). It leverages the Vertex AI Search and Discovery Engine APIs. The deployment is divided into two main Terraform stages (`gemini-stage-0` and `gemini-stage-1`).
 
 **This blueprint supports both EXTERNAL and INTERNAL load balancer deployments, configurable via the `deployment_type` variable in `gemini-stage-0/terraform.tfvars`.**
 

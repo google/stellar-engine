@@ -31,7 +31,7 @@ NC='\033[0m' # No Color
 
 print_header() {
     echo -e "${GREEN}============================================================${NC}"
-    echo -e "${GREEN}   Gemini Enterprise FedRAMP High Blueprint Manager         ${NC}"
+    echo -e "${GREEN}   Gemini Enterprise Blueprint Manager                      ${NC}"
     echo -e "${GREEN}============================================================${NC}"
     echo ""
 }
@@ -1418,7 +1418,7 @@ prompt_gemini_apps() {
         fi
 
         ENABLE_MODEL_ARMOR_FLAG="false"
-        if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_HIGH" || "$COMPLIANCE_REGIME" == "NONE" ]]; then
+        if [[ "$COMPLIANCE_REGIME" != "IL4" && "$COMPLIANCE_REGIME" != "IL5" ]]; then
             echo ""
             echo -e "${YELLOW}Model Armor Feature:${NC}"
             echo -e "${YELLOW}When enabled, Model Armor enhances the security and safety of your AI applications by proactively screening the prompts and responses given by the Gemini Enterprise assistant.${NC}"
@@ -1431,7 +1431,7 @@ prompt_gemini_apps() {
                 echo -e "${BLUE}--- Model Armor ---${NC}"
                 echo -e "${YELLOW}Model Armor enhances the security and safety of your AI applications by proactively screening the prompts and responses given by the Gemini Enterprise assistant.${NC}"
                 echo ""
-                echo -e "Please review the configuration in: ${BLUE}blueprints/fedramp-high/gemini-enterprise/gemini-stage-0/model_armor.tf${NC}"
+                echo -e "Please review the configuration in: ${BLUE}blueprints/gemini-enterprise/gemini-stage-0/model_armor.tf${NC}"
                 echo -e "For more information on configuring Model Armor templatees, visit: ${BLUE}https://docs.cloud.google.com/model-armor/manage-templates#create-ma-template${NC}"
                 echo ""
                 read -p "Press Enter to acknowledge and continue..."
@@ -1559,9 +1559,10 @@ configure_stage_0() {
     echo ""
     echo -e "${BLUE}--- Compliance Regime (Assured Workloads) ---${NC}"
     echo "1. FedRAMP High (Default)"
-    echo "2. IL4"
-    echo "3. IL5"
-    echo "4. None"
+    echo "2. FedRAMP Moderate"
+    echo "3. IL4"
+    echo "4. IL5"
+    echo "5. None"
     read -p "What compliance regime will you be using? [1]: " REGIME_CHOICE
     REGIME_CHOICE=${REGIME_CHOICE:-1}
 
@@ -1569,20 +1570,24 @@ configure_stage_0() {
     REGIME_DISPLAY=""
 
     case $REGIME_CHOICE in
-        1)
+        1|FEDRAMP_HIGH)
             COMPLIANCE_REGIME="FEDRAMP_HIGH"
             REGIME_DISPLAY="FedRAMP High"
             ;;
-        2)
+        2|FEDRAMP_MODERATE)
+            COMPLIANCE_REGIME="FEDRAMP_MODERATE"
+            REGIME_DISPLAY="FedRAMP Moderate"
+            ;;
+        3|IL4)
             COMPLIANCE_REGIME="IL4"
             REGIME_DISPLAY="IL4"
             ;;
-        3)
+        4|IL5)
             COMPLIANCE_REGIME="IL5"
             REGIME_DISPLAY="IL5"
             ;;
-        4)
-            echo -e "${RED}WARNING: Gemini for Government currently only supports deployment within FedRAMP High / IL4 Assured Workloads folders.${NC}"
+        5|NONE)
+            echo -e "${RED}WARNING: Deploying without an Assured Workloads compliance boundary disables regulatory guardrails.${NC}"
             echo -e "${RED}Proceed at your own risk.${NC}"
             echo ""
             read -p "Press Enter to acknowledge and continue..."
@@ -1619,7 +1624,7 @@ configure_stage_0() {
         fi
     fi
 
-    if [[ -n "$COMPLIANCE_REGIME" ]]; then
+    if [[ -n "$COMPLIANCE_REGIME" && "$COMPLIANCE_REGIME" != "NONE" ]]; then
         read -p "Is this project deployed in a ${REGIME_DISPLAY} Assured Workloads folder? (y/N): " IS_ASSURED
         if [[ "$IS_ASSURED" == "y" || "$IS_ASSURED" == "Y" ]]; then
             read -p "Enter the region (e.g., us-east4): " WORKLOAD_REGION
@@ -1647,7 +1652,7 @@ configure_stage_0() {
         fi
     fi
     # 2. Access Transparency (Conditional on Compliance Regime)
-    if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_HIGH" || "$COMPLIANCE_REGIME" == "IL4" || "$COMPLIANCE_REGIME" == "IL5" ]]; then
+    if [[ -n "$COMPLIANCE_REGIME" && "$COMPLIANCE_REGIME" != "NONE" ]]; then
         echo ""
         echo -e "${BLUE}--- Access Transparency ---${NC}"
         echo -e "${YELLOW}Access Transparency is highly recommended/required for this compliance regime.${NC}"
@@ -2072,7 +2077,7 @@ configure_stage_0() {
         echo -e "${YELLOW}Cloud Armor will act as a Web Application Firewall (WAF) for your Gemini Enterprise application.${NC}"
         echo -e "It will be deployed with predefined rules and sensitivity levels."
         echo ""
-        echo -e "Please review the configuration in: ${BLUE}blueprints/fedramp-high/gemini-enterprise/gemini-stage-0/data/cloudarmor.yaml${NC}"
+        echo -e "Please review the configuration in: ${BLUE}blueprints/gemini-enterprise/gemini-stage-0/data/cloudarmor.yaml${NC}"
         echo -e "For more information on predefined WAF rules, visit: ${BLUE}https://docs.cloud.google.com/armor/docs/waf-rules${NC}"
         echo ""
         read -p "Press Enter to acknowledge and continue..."
@@ -2149,13 +2154,17 @@ configure_stage_0() {
                 echo -e "Keyring: ${YELLOW}${_KEYRING_NAME}${NC}"
                 
                 if ! gcloud kms keys describe "${_FULL_KEY_NAME}" &>/dev/null; then
-                     echo "Creating Key '${_KEY_NAME}'..."
+                     _KMS_PROTECTION_LEVEL="hsm"
+                     if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_MODERATE" ]]; then
+                         _KMS_PROTECTION_LEVEL="software"
+                     fi
+                     echo "Creating Key '${_KEY_NAME}' (${_KMS_PROTECTION_LEVEL})..."
                      gcloud kms keys create "${_KEY_NAME}" \
                          --keyring="${_KEYRING_NAME}" \
                          --location="${_LOCATION}" \
                          --project="${_TARGET_KMS_PROJECT}" \
                          --purpose="encryption" \
-                         --protection-level="hsm" \
+                         --protection-level="${_KMS_PROTECTION_LEVEL}" \
                          --rotation-period="7776000s" \
                          --next-rotation-time="$(date -v+90d -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '+90 days' +%Y-%m-%dT%H:%M:%SZ)"
                 else
@@ -2377,7 +2386,11 @@ configure_stage_0() {
 
         # Check/Create Key
         if ! gcloud kms keys describe "$KEY_NAME" --keyring="$KEYRING_NAME" --location="$KEYRING_LOCATION" --project="$PROJECT_ID" &>/dev/null; then
-            echo "Creating Key ${KEY_NAME} (HSM, 90-day rotation)..."
+            _GF_PROTECTION_LEVEL="hsm"
+            if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_MODERATE" ]]; then
+                _GF_PROTECTION_LEVEL="software"
+            fi
+            echo "Creating Key ${KEY_NAME} (${_GF_PROTECTION_LEVEL}, 90-day rotation)..."
             # Calculate next rotation time (90 days from now) using Python for portability
             NEXT_ROTATION_TIME=$(python3 -c 'import datetime; print((datetime.datetime.utcnow() + datetime.timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ"))')
             
@@ -2385,7 +2398,7 @@ configure_stage_0() {
                 --keyring="$KEYRING_NAME" \
                 --location="$KEYRING_LOCATION" \
                 --purpose="encryption" \
-                --protection-level="hsm" \
+                --protection-level="${_GF_PROTECTION_LEVEL}" \
                 --rotation-period="7776000s" \
                 --next-rotation-time="$NEXT_ROTATION_TIME" \
                 --project="$PROJECT_ID"
@@ -2617,7 +2630,7 @@ deploy_stage_0() {
 
                 # B. Configure Default Assistant Compliance
                 echo "Applying compliance settings to default assistant for Engine: ${ENG_ID}..."
-                if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_HIGH" || "$COMPLIANCE_REGIME" == "IL4" || "$COMPLIANCE_REGIME" == "IL5" ]]; then
+                if [[ -n "$COMPLIANCE_REGIME" && "$COMPLIANCE_REGIME" != "NONE" ]]; then
                      BASE_JSON='{
   "displayName": "Default Assistant",
   "webGroundingType": "WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
@@ -2869,18 +2882,30 @@ update_app_compliance() {
 
     echo "Select Compliance Regime:"
     echo "1. FedRAMP High"
-    echo "2. IL4"
-    read -p "Select an option [1-2]: " COMPLIANCE_SEL
+    echo "2. FedRAMP Moderate"
+    echo "3. IL4"
+    echo "4. IL5"
+    read -p "Select an option [1-4]: " COMPLIANCE_SEL
 
     COMPLIANCE_REGIME=""
-    if [[ "$COMPLIANCE_SEL" == "1" ]]; then
-        COMPLIANCE_REGIME="FEDRAMP_HIGH"
-    elif [[ "$COMPLIANCE_SEL" == "2" ]]; then
-        COMPLIANCE_REGIME="IL4"
-    else
-        echo -e "${RED}Invalid selection.${NC}"
-        return 1
-    fi
+    case "$COMPLIANCE_SEL" in
+        1|FEDRAMP_HIGH)
+            COMPLIANCE_REGIME="FEDRAMP_HIGH"
+            ;;
+        2|FEDRAMP_MODERATE)
+            COMPLIANCE_REGIME="FEDRAMP_MODERATE"
+            ;;
+        3|IL4)
+            COMPLIANCE_REGIME="IL4"
+            ;;
+        4|IL5)
+            COMPLIANCE_REGIME="IL5"
+            ;;
+        *)
+            echo -e "${RED}Invalid selection.${NC}"
+            return 1
+            ;;
+    esac
 
     local cmd=(gem4gov app update-compliance --project-id "${PROJECT_ID}" --engine-id "${ENGINE_ID}" --compliance-regime "${COMPLIANCE_REGIME}")
     
