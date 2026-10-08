@@ -50,6 +50,20 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
     self.assertNotIn('"disableAnalytics": True', func_src)
     self.assertIn("sys.exit(1)", func_src)
 
+    for wrapper_name in (
+        "configure_gemini_enterprise_for_fedramp_high",
+        "configure_gemini_enterprise_for_il4",
+        "configure_gemini_enterprise_for_il5",
+    ):
+      wrapper_node = next(
+          node
+          for node in tree.body
+          if isinstance(node, ast.FunctionDef) and node.name == wrapper_name
+      )
+      wrapper_src = ast.get_source_segment(content, wrapper_node)
+      self.assertIn("configure_gemini_enterprise_for_regime(", wrapper_src)
+      self.assertNotIn('"disableAnalytics": True', wrapper_src)
+
   def test_compliance_regime_respected_in_terraform_and_cli(self):
     """Ensure discovery-engine.tf and gem4gov.py respect compliance_regime (#190)."""
     tf_path = (
@@ -192,6 +206,11 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
     ).read_text(encoding="utf-8")
     self.assertIn('!contains(["IL4", "IL5"], var.compliance_regime)', main_tf)
     self.assertIn('!contains(["IL4", "IL5"], var.compliance_regime)', model_armor_tf)
+    self.assertIn('_STATE_PROTECTION_LEVEL="software"', deploy_sh)
+    self.assertLess(
+        deploy_sh.index("--- Compliance Regime (Assured Workloads) ---"),
+        deploy_sh.index("if ! ensure_prerequisites; then"),
+    )
 
 
 if __name__ == "__main__":

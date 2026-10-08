@@ -819,13 +819,17 @@ ensure_prerequisites() {
         # Create Key if not exists
         FULL_KEY_NAME="${CMEK_US_KEYRING}/cryptoKeys/${KEY_NAME}"
         if ! gcloud kms keys describe "${FULL_KEY_NAME}" &>/dev/null; then
+             local _STATE_PROTECTION_LEVEL="hsm"
+             if [[ "${COMPLIANCE_REGIME}" == "FEDRAMP_MODERATE" ]]; then
+                 _STATE_PROTECTION_LEVEL="software"
+             fi
              echo "Creating Key '${KEY_NAME}'..."
              gcloud kms keys create "${KEY_NAME}" \
                  --keyring="${KEYRING_NAME}" \
                  --location="${LOCATION}" \
                  --project="${TARGET_KMS_PROJECT}" \
                  --purpose="encryption" \
-                 --protection-level="hsm" \
+                 --protection-level="${_STATE_PROTECTION_LEVEL}" \
                  --rotation-period="7776000s" \
                  --next-rotation-time="$(date -v+90d -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '+90 days' +%Y-%m-%dT%H:%M:%SZ)"
         fi
@@ -1548,13 +1552,6 @@ configure_stage_0() {
         fi
     fi
     
-    # Ensure Prerequisites (Bucket, CMEK)
-    if ! ensure_prerequisites; then
-        echo -e "${RED}Prerequisite check failed.${NC}"
-        pause
-        return
-    fi
-
     # 1. Assured Workloads Check
     echo ""
     echo -e "${BLUE}--- Compliance Regime (Assured Workloads) ---${NC}"
@@ -1600,6 +1597,13 @@ configure_stage_0() {
             REGIME_DISPLAY="FedRAMP High"
             ;;
     esac
+
+    # Ensure Prerequisites (Bucket, CMEK)
+    if ! ensure_prerequisites; then
+        echo -e "${RED}Prerequisite check failed.${NC}"
+        pause
+        return
+    fi
 
     # Enable APIs based on compliance regime
     if [[ "$COMPLIANCE_REGIME" == "IL5" ]]; then

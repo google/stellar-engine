@@ -27,3 +27,11 @@
 "Framework - IL5":
   - changed-files:
       - any-glob-to-any-file: 'blueprints/il5/**'
+
+"Gemini - Enterprise":
+  - changed-files:
+      - any-glob-to-any-file: 'blueprints/gemini-enterprise/**'
+
+"Gemini - Government":
+  - changed-files:
+      - any-glob-to-any-file: 'blueprints/gemini-enterprise/**'

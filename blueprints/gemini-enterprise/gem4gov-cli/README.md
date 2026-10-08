@@ -38,7 +38,7 @@ Follow these steps to install the `gem4gov` command-line tool.
 
 ### 1. Install the Package
 
-From the root of the project directory (`gemini-enterprise/gem4gov-cli`), install the package in editable mode:
+From the root of the project directory (`blueprints/gemini-enterprise/gem4gov-cli`), install the package in editable mode:
 
 ```bash
 pip3 install -e .
