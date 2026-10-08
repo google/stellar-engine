@@ -581,7 +581,6 @@ environment.) A subset of the file structure containing IaC is listed below.
     - **document-ai**
     - **firestore**
     - **gcs-project**
-    - **gemini-enterprise**
     - **gitlab**
     - **gke**
     - **gke-hardened**
@@ -594,6 +593,7 @@ environment.) A subset of the file structure containing IaC is listed below.
     - **shielded-vm-project**
     - **vertex-mlops**
     - **workflows**
+  - **gemini-enterprise**
   - **il5**
     - **artifact-registry**
     - **bastion-pattern**

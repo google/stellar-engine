@@ -78,12 +78,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r tools/requirements.txt
-          pip install -r blueprints/fedramp-high/gemini-enterprise/gem4gov-cli/requirements.txt
+          pip install -r blueprints/gemini-enterprise/gem4gov-cli/requirements.txt
           pip install pytest pyflakes
 
       - name: CodeQL py/unused-local-variable Check (pyflakes)
         run: |
-          pyflakes tools/ blueprints/fedramp-high/gemini-enterprise/gem4gov-cli/ tests/
+          pyflakes tools/ blueprints/gemini-enterprise/gem4gov-cli/ tests/
 
       - name: Run Python Unit Tests
         run: |
