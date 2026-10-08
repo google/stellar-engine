@@ -1,5 +1,19 @@
 # Changelog
 
+## [4.2.0](https://github.com/google/stellar-engine/compare/v4.1.0...v4.2.0) (2026-10-08)
+
+
+### Features
+
+* **gemini-enterprise:** relocate blueprint and add multi-regime compliance support ([#279](https://github.com/google/stellar-engine/issues/279)) ([22ca406](https://github.com/google/stellar-engine/commit/22ca406e867289f2e0738f0c8f6ed79372bdbd91))
+
+
+### Bug Fixes
+
+* logging circular dependency in bootstrap ([#278](https://github.com/google/stellar-engine/issues/278)) ([ae0838f](https://github.com/google/stellar-engine/commit/ae0838fccf0063120e0d13b1febf8279546a0d64))
+* **modules:** fix IAM key delimiters, log filters, and conditions in custom modules ([#275](https://github.com/google/stellar-engine/issues/275)) ([c4f60fb](https://github.com/google/stellar-engine/commit/c4f60fb7207ac03803cb1a9c19237d8cbc8250cd))
+* **security:** harden IAM conditions, Terraform modules, FAST stages, and blueprints ([#274](https://github.com/google/stellar-engine/issues/274)) ([c7353a3](https://github.com/google/stellar-engine/commit/c7353a3991d1e2fedf065f2fb3588c8e10dc5779))
+
 ## [4.1.0](https://github.com/google/stellar-engine/compare/v4.0.1...v4.1.0) (2026-09-28)
 
 
