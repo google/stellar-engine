@@ -34,6 +34,7 @@ For more information, please see the individual README files in each blueprint's
 |  [Document AI](./fedramp-high/document-ai/)                                  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |
 |  [Firestore](./fedramp-high/firestore/)                                      |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |
 |  [GCS Project](./il5/gcs-project/)                                           |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
+|  [Gemini Enterprise](./gemini-enterprise/)                                   |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [GitLab](./fedramp-high/gitlab/)                                            |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |
 |  [GKE](./il5/gke/)                                                           |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [GKE Hardened](./il5/gke-hardened/)                                         |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |

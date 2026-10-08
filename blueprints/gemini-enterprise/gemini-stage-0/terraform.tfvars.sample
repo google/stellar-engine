@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-main_project_id = "prefx-main-xxx-x"
-prefix          = "prefx"
-environment     = "dev"
-tenant          = "tnt1"
+main_project_id        = "prefx-main-xxx-x"
+prefix                 = "prefx"
+environment            = "dev"
+tenant                 = "tnt1"
+# Compliance regime ("FEDRAMP_MODERATE", "FEDRAMP_HIGH", "IL4", "IL5", or "NONE")
+compliance_regime      = "FEDRAMP_HIGH"
 domain                 = "example.com"
 terraform_state_bucket = "prefx-iac-core-state-0"
 

@@ -1,7 +1,7 @@
-# Gemini Enterprise for FedRAMP High - Comprehensive Documentation
+# Gemini Enterprise Blueprint - Comprehensive Documentation
 
-**Version:** 1.2.0
-**Compliance:** FedRAMP High / IL4+
+**Version:** 1.3.0
+**Compliance:** FedRAMP Moderate, FedRAMP High, IL4, IL5
 **Scope:** Full System Documentation
 
 ---
@@ -22,7 +22,7 @@
 
 ## 1. Executive Overview
 
-This blueprint deploys a secure and compliant environment for hosting Gemini Enterprise on Google Cloud Platform, specifically tailored for FedRAMP High requirements. It leverages the Vertex AI Search and Discovery Engine APIs. The deployment is divided into two main Terraform stages (`gemini-stage-0` and `gemini-stage-1`).
+This blueprint deploys a secure and compliant environment for hosting Gemini Enterprise on Google Cloud Platform across regulated Assured Workloads boundaries (`FEDRAMP_MODERATE`, `FEDRAMP_HIGH`, `IL4`, `IL5`) as well as standard commercial environments (`NONE`). It leverages the Vertex AI Search and Discovery Engine APIs. The deployment is divided into two main Terraform stages (`gemini-stage-0` and `gemini-stage-1`).
 
 **This blueprint supports both EXTERNAL and INTERNAL load balancer deployments, configurable via the `deployment_type` variable in `gemini-stage-0/terraform.tfvars`.**
 
@@ -667,7 +667,7 @@ Stellar Engine implements **Solution 2 (NAT)** through its **VDSS (Virtual Data 
 
 **Configuration:**
 
-The Stellar Engine `2-networking-a-fedramp-high` stage automatically provisions these components (defined in `nva.tf` and `net-vdss.tf`). You simply need to configure the specific NAT rules and routes on the NVA to match your on-premise addressing requirements. This pre-built architecture ensures that you can deploy Gemini Enterprise into a Brownfield environment with overlapping IPs without needing to re-architect your entire network.
+The Stellar Engine `2-networking-a-fedramp` and `2-networking-b-il5-ngfw` stages automatically provision these components (defined in `nva.tf` and `net-vdss.tf`). You simply need to configure the specific NAT rules and routes on the NVA to match your on-premise addressing requirements. This pre-built architecture ensures that you can deploy Gemini Enterprise into a Brownfield environment with overlapping IPs without needing to re-architect your entire network.
 
 ### Stellar Engine Spoke Architecture
 
@@ -770,7 +770,7 @@ Terraform:
 
 ## 6. Stage 0: Infrastructure Foundation
 
-This blueprint deploys the necessary infrastructure to host a Gemini Enterprise application on Google Cloud Platform, adhering to FedRAMP High compliance standards. It provisions a secure environment with networking, load balancing, access controls, and data stores for Vertex AI Search.
+This blueprint deploys the necessary infrastructure to host a Gemini Enterprise application on Google Cloud Platform, adhering to the selected compliance regime (`FedRAMP High`, `FedRAMP Moderate`, `IL4`, or `IL5`). It provisions a secure environment with networking, load balancing, access controls, and data stores for Vertex AI Search.
 
 ### Prerequisites & Manual Steps Before Apply
 
@@ -802,11 +802,11 @@ Before applying this Terraform module, ensure the following manual steps and con
 
 5.  **CMEK Configuration:**
     - The `deploy.sh` script automatically handles the creation of a Customer-Managed Encryption Key (CMEK) for the Terraform state bucket and passes this key to Terraform for use with Discovery Engine resources.
-    - **Greenfield:** The key is created with a **90-day rotation period** and **HSM protection level** to meet FedRAMP High requirements.
+    - **Greenfield:** The key is created with a **90-day rotation period** and a regime-appropriate protection level (**HSM** for `FedRAMP High`, `IL4`, and `IL5`; **Software** for `FedRAMP Moderate`).
     - **Brownfield:** The script discovers and reuses the existing Tenant `iac-core` key.
     - Ensure your project has sufficient quota for Cloud KMS keys and HSM usage.
 
-**IMPORTANT:** This blueprint is designed to be deployed in a **FedRAMP High GCP project**, to ensure a clean slate for meeting stringent FedRAMP High security and compliance requirements.
+**IMPORTANT:** This blueprint is designed to be deployed in an **Assured Workloads GCP project** matching your target compliance regime (`FedRAMP High`, `FedRAMP Moderate`, `IL4`, or `IL5`), ensuring a clean slate for meeting stringent security and compliance requirements.
 
 ### IAM Permissions for Deployment
 
@@ -816,7 +816,7 @@ The user or service account applying this Terraform configuration needs the foll
 
 - `roles/accesscontextmanager.policyAdmin`: To manage Access Context Manager policies and levels.
 - `roles/orgpolicy.policyAdmin`: To set organization policies.
-- `roles/assuredworkloads.reader`: To determine if project is within Assured Workloads FedRAMP High boundary
+- `roles/assuredworkloads.reader`: To determine if project is within the target Assured Workloads boundary
 - `roles/iam.workforcePoolAdmin`: To create Workforce Identity Pools / Providers (if using Third-Party Identity Provider)
 
 **Project Level:**
@@ -904,7 +904,7 @@ The blueprint sets up the following key components:
         - `access_end_hour`: End hour (0-23 ET, default: 17)
         - `access_start_day`: Start day (0=Sun, 6=Sat, default: 1 for Monday)
         - `access_end_day`: End day (0=Sun, 6=Sat, default: 5 for Friday)
-    - **Model Armor:** Template defined in `model_armor.tf` and optionally configured for the FedRAMP High compliance regime to provide an extra layer of security by filtering user prompts and model responses to conform to responsible AI practices.
+    - **Model Armor:** Template defined in `model_armor.tf` and optionally configured for supported compliance regimes (`FedRAMP High`, `FedRAMP Moderate`, and `None`; skipped for `IL4` and `IL5` where the regional endpoint is unavailable) to provide an extra layer of security by filtering user prompts and model responses to conform to responsible AI practices.
 
 4.  **Data Stores:** CMEK-encrypted GCS buckets and BigQuery datasets for Vertex AI Search, managed by the `discovery-engine` module.
 
@@ -917,7 +917,7 @@ The blueprint sets up the following key components:
     -   **Context:** Script detects Project/Tenant/Environment.
     -   **Access Policies:** Configure Time, Location, and Device trust levels.
     -   **Data Stores:** Interactively add GCS Buckets or BigQuery Datasets.
-    -   **Compliance:** Select FedRAMP High (Default) or IL4.
+    -   **Compliance:** Select FedRAMP High (Default), FedRAMP Moderate, IL4, IL5, or None.
 3.  **Apply**: The script runs `terraform init` and `apply` automatically.
 
 ### Post-Deployment (Data Ingestion)
@@ -998,7 +998,7 @@ Follow these steps to install the `gem4gov` command-line tool.
 
 #### 1. Install the Package
 
-From the root of the project directory (`gemini-enterprise/gem4gov-cli`), install the package in editable mode:
+From the root of the project directory (`blueprints/gemini-enterprise/gem4gov-cli`), install the package in editable mode:
 
 ```bash
 pip3 install -e .
@@ -1058,7 +1058,7 @@ gem4gov app update-compliance --project-id <PROJECT_ID> --engine-id <ENGINE_ID> 
 **Options:**
 *   `--project-id`: (Required) GCP Project ID.
 *   `--engine-id`: (Required) The ID of the Gemini Enterprise Engine.
-*   `--compliance-regime`: (Required) `FEDRAMP_HIGH` or `IL4`.
+*   `--compliance-regime`: (Required) `FEDRAMP_MODERATE`, `FEDRAMP_HIGH`, `IL4`, or `IL5`.
 
 **Actions:**
 *   Disables unauthorized features (e.g., Private Knowledge Graph, Location Context).

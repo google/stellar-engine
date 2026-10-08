@@ -27,7 +27,7 @@ It is recommended to use a Python virtual environment to isolate dependencies.
 
 ```bash
 # Navigate to this directory
-cd blueprints/fedramp-high/gemini-enterprise/analytics
+cd blueprints/gemini-enterprise/analytics
 
 # Create a virtual environment
 python3 -m venv .venv
