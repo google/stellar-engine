@@ -73,6 +73,32 @@ class TestStage2Networking(unittest.TestCase):
     self.assertIn('-stdin', openssl_sh)
 
 
+
+  def test_stage2_and_ato_documentation_coherence(self):
+    """Verify ATO baseline guidance (#232), Stage 2a TDD and regional docs (#195), and firewall policy docs (#117)."""
+    ato_doc = (_REPO_ROOT / "docs/path-to-authorization.md").read_text(encoding="utf-8")
+    self.assertIn("FedRAMP High", ato_doc)
+    self.assertIn("FedRAMP Moderate", ato_doc)
+    self.assertIn("IL5", ato_doc)
+
+    tdd_doc = (_REPO_ROOT / "docs/tdd.md").read_text(encoding="utf-8")
+    self.assertIn("2-networking-a-fedramp", tdd_doc)
+    self.assertIn("us-east4", tdd_doc)
+    self.assertIn("us-west1", tdd_doc)
+    self.assertIn("IL2", tdd_doc)
+
+    stage2a_readme = (_REPO_ROOT / "fast/stages-aw/2-networking-a-fedramp/README.md").read_text(encoding="utf-8")
+    self.assertIn("FedRAMP Moderate", stage2a_readme)
+    self.assertIn("IL2", stage2a_readme)
+    self.assertIn("hierarchical firewall policy", stage2a_readme)
+
+    for bp in ["fedramp-high/postgresql", "il5/postgresql"]:
+      bp_readme = (_REPO_ROOT / f"blueprints/{bp}/README.md").read_text(encoding="utf-8")
+      self.assertEqual(bp_readme.count("## Firewall Policy Coexistence and Auditing"), 1)
+      self.assertIn("gcloud compute firewall-policies rules list", bp_readme)
+      self.assertIn("gcloud compute firewall-rules list", bp_readme)
+
+
 if __name__ == '__main__':
   unittest.main()
 
