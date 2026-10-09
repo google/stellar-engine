@@ -85,3 +85,12 @@ provider "google-beta" {
 |---|---|:---:|
 | [connection_internal_ip](outputs.tf#L17) | Connection internal IP address. |  |
 <!-- END TFDOC -->
+
+## Firewall Policy Coexistence and Auditing
+
+This blueprint creates a classic VPC firewall rule (`google_compute_firewall.rules` in `main.tf`) directly in the Shared VPC host project (`network_project_id`) rather than mutating Stage 2's folder-scoped hierarchical firewall policy (`module.firewall-policy-default`).
+
+- Hierarchical firewall policies attached to the `Networking` folder are evaluated first (`goto_next` delegates remaining traffic down the hierarchy), followed by network firewall policies and classic VPC firewall rules (`google_compute_firewall`). Keeping workload-specific port rules (`tcp:5432`) as VPC-scoped rules avoids cross-stage state coupling with Stage 2's folder policy.
+- Because classic VPC firewall rules do not appear in `gcloud compute firewall-policies rules list`, security auditors reviewing CM-6 and SC-7 controls should inspect both enforcement layers:
+  - Folder hierarchical policy rules: `gcloud compute firewall-policies rules list --firewall-policy=<policy-name> --organization=<org-id>`
+  - Host-project classic VPC firewall rules: `gcloud compute firewall-rules list --project=<network-project-id>`

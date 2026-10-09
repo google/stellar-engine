@@ -1,6 +1,19 @@
 # FedRAMP High / Moderate Network
 
-This stage deploys the networking infrastructure recommended with an Assured Workload FedRAMP High or FedRAMP Moderate environment.
+This stage deploys the networking infrastructure recommended with an Assured Workload FedRAMP High, FedRAMP Moderate, or DoD Impact Level 2 (IL2) environment.
+
+## Regime Coverage, Regional Support, and IL2 Placement
+
+- Earlier design material referenced a separate `2-networking-c-fedramp-mod` stage using Cloud NGFW endpoints in a single VPC. That pattern was superseded by consolidating FedRAMP Moderate, FedRAMP High, and IL2 into `2-networking-a-fedramp` so all three share a consistent VDSS (Landing + DMZ) topology (SC-7, AC-4), with `kms_protection_level` (`SOFTWARE` vs. `HSM`) controlling key protection (SC-12, SC-13).
+- While the Stage 0 `FEDRAMP_MODERATE` organization policy template only denies `in:asia-east2-locations` and `in:global`, this networking stage is validated and supported for US regions (`in:us-locations`, such as `us-east4`, `us-west1`, and `us-central1`).
+- `IL2` workloads land on `2-networking-a-fedramp`; `IL4` and `IL5` workloads use `2-networking-b-il5-ngfw`.
+
+## Firewall Governance Coexistence
+
+Stage 2 attaches a **hierarchical firewall policy** (`module.firewall-policy-default`) to the `Networking` folder to enforce baseline ingress governance across all environment spoke VPCs. Individual workload blueprints (such as `blueprints/fedramp-high/postgresql` and `blueprints/il5/postgresql`) may additionally provision blueprint-local **classic VPC firewall rules** (`google_compute_firewall`) directly in the Shared VPC host project (`network_project_id`).
+
+- Google Cloud evaluates hierarchical firewall policies first, followed by global/regional network firewall policies, and finally classic VPC firewall rules (unless an earlier rule explicitly short-circuits evaluation without `goto_next`).
+- When collecting CM-6 / SC-7 firewall evidence, inspect both the folder-level hierarchical policy (`gcloud compute firewall-policies rules list --firewall-policy=<policy-id> --organization=<org-id>`) and the host-project VPC firewall rules (`gcloud compute firewall-rules list --project=<network-project-id>`).
 
 <p align="center">
   <img src="/fast/stages-aw/2-networking-a-fedramp/images/Stellar-Engine-Network-FedRAMP.png" alt="Networking diagram">

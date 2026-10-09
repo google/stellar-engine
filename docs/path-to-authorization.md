@@ -1,6 +1,6 @@
 # Path to Authorization
 
-_Impact Level 5 (H-H-X), FedRAMP High & FedRAMP Moderate_
+_Impact Level 5 (H-H-X) and FedRAMP High Authorization Package Baselines (with FedRAMP Moderate Landing Zone Support)_
 
 **Created Date:**
 
@@ -67,8 +67,8 @@ privacy risks
     managed, and authorized for operation or use.
   - [Impact Level 5 Authorization
     Boundary](https://forms.gle/zdv7Gip4opmdhBqk7)
-  - [FedRAMP High & Moderate Authorization
-    Boundary](https://forms.gle/zdv7Gip4opmdhBqk7)
+  - [FedRAMP High Authorization
+    Boundary](https://forms.gle/zdv7Gip4opmdhBqk7) (FedRAMP High baseline; FedRAMP Moderate authorization boundary template is planned)
 - Regularly assess the security and privacy risks at the organization level
   and system level. Update risk assessment results on an on-going basis.
 
@@ -83,6 +83,7 @@ based on the impact analysis
   - [Categorization References](/docs/artifacts/categorization-references/)
   - [System Security Plan
     Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
+    (IL5 H-H-X and FedRAMP High Baselines; FedRAMP Moderate template is planned)
 
 [**Step 2;
 Select**](https://csrc.nist.gov/Projects/risk-management/about-rmf/select-step):
@@ -111,10 +112,10 @@ risk assessment(s)
     frequency in which the controls are monitored?
   - [Security Control Traceability Matrix (SCTM)
     Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
-    (IL5 H-H-X, FedRAMP High, and FedRAMP Moderate Baselines)
+    (IL5 H-H-X and FedRAMP High Baselines; FedRAMP Moderate baseline template is planned)
   - [Policies and Procedures
     Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
-    (IL5 HHX, FedRAMP High, and FedRAMP Moderate Baselines)
+    (IL5 H-H-X and FedRAMP High Baselines; FedRAMP Moderate baseline templates are planned)
 
 [**Step 3;
 Implement**](https://csrc.nist.gov/Projects/risk-management/about-rmf/implement-step):
