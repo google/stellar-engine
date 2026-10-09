@@ -54,12 +54,70 @@ module "bastion-vm" {
   }
 
   service_account = {
-    email = module.ngfw-service-account.email
+    email = module.bastion-service-account.email
   }
 
   metadata = {
     block-project-ssh-keys = true # CIS Compliance Benchmark 4.3
   }
 
+  depends_on = [module.kms]
+}
+
+module "bastion-service-account" {
+  name       = "management-bastion"
+  source     = "../../../modules/iam-service-account"
+  project_id = module.vdss-host-project.project_id
+  iam_project_roles = {
+    (module.vdss-host-project.project_id) = [
+      "roles/logging.logWriter",
+      "roles/monitoring.metricWriter"
+    ]
+  }
+}
+
+module "ngfw-ssh-secrets" {
+  source     = "../../../modules/secret-manager"
+  project_id = module.vdss-host-project.project_id
+  secrets = {
+    ngfw-ssh-private-key = {
+      locations = [var.regions.primary]
+      keys = {
+        (var.regions.primary) = module.kms.keys.default.id
+      }
+    }
+    ngfw-ssh-public-key = {
+      locations = [var.regions.primary]
+      keys = {
+        (var.regions.primary) = module.kms.keys.default.id
+      }
+    }
+  }
+  versions = {
+    ngfw-ssh-private-key = {
+      latest = {
+        enabled = true
+        data    = tls_private_key.ngfw-ssh.private_key_openssh
+      }
+    }
+    ngfw-ssh-public-key = {
+      latest = {
+        enabled = true
+        data    = tls_private_key.ngfw-ssh.public_key_openssh
+      }
+    }
+  }
+  iam = {
+    ngfw-ssh-private-key = {
+      "roles/secretmanager.secretAccessor" = [
+        module.bastion-service-account.iam_email
+      ]
+    }
+    ngfw-ssh-public-key = {
+      "roles/secretmanager.secretAccessor" = [
+        module.bastion-service-account.iam_email
+      ]
+    }
+  }
   depends_on = [module.kms]
 }

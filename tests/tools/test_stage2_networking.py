@@ -73,6 +73,44 @@ class TestStage2Networking(unittest.TestCase):
     self.assertIn('-stdin', openssl_sh)
 
 
+
+  def test_essential_contacts_spoke_iam_and_ngfw_secrets(self):
+    """Verify essential_contacts map support (#119), spoke_project_iam (#120), and NGFW Secret Manager keys (#20)."""
+    for stage in [
+        "0-bootstrap",
+        "2-networking-a-fedramp",
+        "2-networking-b-il5-ngfw",
+        "3-security",
+    ]:
+      var_text = (_REPO_ROOT / f"fast/stages-aw/{stage}/variables.tf").read_text(encoding="utf-8")
+      self.assertIn("can(tomap(var.essential_contacts))", var_text)
+      self.assertIn("can(tostring(var.essential_contacts))", var_text)
+
+    org_tf = (_REPO_ROOT / "fast/stages-aw/0-bootstrap/organization.tf").read_text(encoding="utf-8")
+    self.assertIn("contacts     = var.bootstrap_user != null ? {} : local.essential_contacts", org_tf)
+    self.assertIn('{ (tostring(var.essential_contacts)) = ["ALL"] }', org_tf)
+
+    for stage in ["2-networking-a-fedramp", "2-networking-b-il5-ngfw"]:
+      branch_tf = (_REPO_ROOT / f"fast/stages-aw/{stage}/branch-net-envs.tf").read_text(encoding="utf-8")
+      self.assertIn("lookup(var.spoke_project_iam, lower(each.key), lookup(var.spoke_project_iam, each.key, {}))", branch_tf)
+      stage_vars = (_REPO_ROOT / f"fast/stages-aw/{stage}/variables.tf").read_text(encoding="utf-8")
+      self.assertIn('variable "spoke_project_iam"', stage_vars)
+
+    bastion_tf = (_REPO_ROOT / "fast/stages-aw/2-networking-b-il5-ngfw/bastion.tf").read_text(encoding="utf-8")
+    ngfw_tf = (_REPO_ROOT / "fast/stages-aw/2-networking-b-il5-ngfw/ngfw.tf").read_text(encoding="utf-8")
+    outputs_tf = (_REPO_ROOT / "fast/stages-aw/2-networking-b-il5-ngfw/outputs.tf").read_text(encoding="utf-8")
+    readme_md = (_REPO_ROOT / "fast/stages-aw/2-networking-b-il5-ngfw/README.md").read_text(encoding="utf-8")
+    self.assertIn('module "ngfw-ssh-secrets"', bastion_tf)
+    self.assertIn('ngfw-ssh-private-key', bastion_tf)
+    self.assertIn('ngfw-ssh-public-key', bastion_tf)
+    self.assertIn("module.bastion-service-account.email", bastion_tf)
+    self.assertIn("roles/secretmanager.secretAccessor", bastion_tf)
+    self.assertIn("module.vdss-host-project.service_agents.secretmanager.iam_email", ngfw_tf)
+    self.assertNotIn('resource "local_file" "rsa-out"', outputs_tf)
+    self.assertIn('output "ngfw_ssh_private_key_secret_id"', outputs_tf)
+    self.assertIn("--secret=ngfw-ssh-private-key", readme_md)
+
+
 if __name__ == '__main__':
   unittest.main()
 

@@ -54,12 +54,22 @@ module "env-spoke-projects" {
     enabled = true
   }
   metric_scopes = [module.vdss-host-project.project_id]
-  iam = {
-    "roles/dns.admin" = compact([
-      try(local.service_accounts["gke-${lower(each.key)}"], null),
-      try(local.service_accounts["project-factory-${lower(each.key)}"], null),
-    ])
-  }
+  iam = merge(
+    lookup(var.spoke_project_iam, lower(each.key), lookup(var.spoke_project_iam, each.key, {})),
+    {
+      "roles/dns.admin" = distinct(concat(
+        compact([
+          try(local.service_accounts["gke-${lower(each.key)}"], null),
+          try(local.service_accounts["project-factory-${lower(each.key)}"], null),
+        ]),
+        lookup(
+          lookup(var.spoke_project_iam, lower(each.key), lookup(var.spoke_project_iam, each.key, {})),
+          "roles/dns.admin",
+          []
+        )
+      ))
+    }
+  )
   #   # allow specific service accounts to assign a set of roles
   #   iam_bindings = {
   #     sa_delegated_grants = {

@@ -32,9 +32,7 @@ module "automation-project" {
   )
   prefix = local.prefix
   contacts = (
-    var.bootstrap_user != null || var.essential_contacts == null
-    ? {}
-    : { (var.essential_contacts) = ["ALL"] }
+    var.bootstrap_user != null ? {} : local.essential_contacts
   )
   # human (groups) IAM bindings
   iam_by_principals = {
