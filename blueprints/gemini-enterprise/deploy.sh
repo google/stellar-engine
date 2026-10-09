@@ -616,45 +616,48 @@ discover_infrastructure() {
         # Prioritize US Multi-Region for CMEK_US_KEYRING
         echo "Searching for CMEK Keyring in the US multi-region..."
         
-        # Determine the target project for CMEK
+        # Determine the target project for CMEK (Stage 3 security project <prefix>-<env>-sec-core-0 first)
         if [[ "$IS_BROWNFIELD" == "true" ]]; then
-            echo "Searching for 'cmek-*' project under 'StellarEngine-*' Assured Workloads folder..."
-            STELLAR_FOLDER_ID=$(gcloud resource-manager folders list --organization="${ORG_ID}" --filter="displayName~^StellarEngine-" --format="value(name)" 2>/dev/null | head -n 1)
-            
-            if [[ -n "$STELLAR_FOLDER_ID" ]]; then
-                STELLAR_FOLDER_ID=$(basename "$STELLAR_FOLDER_ID")
-                FOUND_CMEK_PROJECT=$(gcloud projects list --filter="name:cmek-* AND parent.id:${STELLAR_FOLDER_ID}" --format="value(projectId)" 2>/dev/null | head -n 1)
-                
-                if [[ -n "$FOUND_CMEK_PROJECT" ]]; then
-                    echo -e "Found CMEK Project: ${GREEN}${FOUND_CMEK_PROJECT}${NC}"
-                    CMEK_PROJECT_ID="${FOUND_CMEK_PROJECT}"
+            POTENTIAL_SEC_PROJECT="${PREFIX}-${ENVIRONMENT}-sec-core-0"
+            echo "Checking for Stage 3 Security Core Project: ${POTENTIAL_SEC_PROJECT}..."
+            if gcloud projects describe "${POTENTIAL_SEC_PROJECT}" &>/dev/null; then
+                echo -e "Found Stage 3 Security Core Project: ${GREEN}${POTENTIAL_SEC_PROJECT}${NC}"
+                CMEK_PROJECT_ID="${POTENTIAL_SEC_PROJECT}"
+            else
+                FOUND_SEC_PROJECT=$(gcloud projects list --filter="projectId:${PREFIX}-${ENVIRONMENT}-sec-core-* OR projectId:*-${ENVIRONMENT}-sec-core-0" --format="value(projectId)" 2>/dev/null | head -n 1)
+                if [[ -n "$FOUND_SEC_PROJECT" ]]; then
+                    echo -e "Found Security Core Project: ${GREEN}${FOUND_SEC_PROJECT}${NC}"
+                    CMEK_PROJECT_ID="${FOUND_SEC_PROJECT}"
                 else
-                    echo -e "${YELLOW}Could not find 'cmek-*' project under StellarEngine folder. Defaulting to ${TENANT_IAC_PROJECT}.${NC}"
+                    echo -e "${YELLOW}Could not find '*-sec-core-0' security project. Defaulting to ${TENANT_IAC_PROJECT}.${NC}"
                     CMEK_PROJECT_ID="${TENANT_IAC_PROJECT}"
                 fi
-            else
-                echo -e "${YELLOW}Could not find 'StellarEngine-*' folder. Defaulting to ${TENANT_IAC_PROJECT}.${NC}"
-                CMEK_PROJECT_ID="${TENANT_IAC_PROJECT}"
             fi
         else
             CMEK_PROJECT_ID="${TENANT_IAC_PROJECT}"
         fi
-        # Capitalize first letter of Environment for KeyRing name (e.g. prod -> Prod)
-        US_KEYRING_NAME="${CAP_ENV}-${TENANT}-keyring"
-        US_KEYRING_ID="projects/${CMEK_PROJECT_ID}/locations/us/keyRings/${US_KEYRING_NAME}"
-        
-        # Check US Keyring
-        if gcloud kms keyrings describe "${US_KEYRING_ID}" &>/dev/null; then
-            echo -e "Found US Keyring: ${GREEN}${US_KEYRING_NAME}${NC}"
-            CMEK_US_KEYRING="${US_KEYRING_ID}"
-            
+
+        # Check Stage 3 standard keyring (<env>-us) first, then legacy (<Cap_Env>-<tenant>-keyring)
+        CMEK_US_KEYRING=""
+        for CANDIDATE_KR in "${ENVIRONMENT}-us" "${CAP_ENV}-${TENANT}-keyring"; do
+            CANDIDATE_KR_ID="projects/${CMEK_PROJECT_ID}/locations/us/keyRings/${CANDIDATE_KR}"
+            if gcloud kms keyrings describe "${CANDIDATE_KR_ID}" &>/dev/null; then
+                US_KEYRING_NAME="${CANDIDATE_KR}"
+                US_KEYRING_ID="${CANDIDATE_KR_ID}"
+                echo -e "Found US Keyring: ${GREEN}${US_KEYRING_NAME}${NC}"
+                CMEK_US_KEYRING="${US_KEYRING_ID}"
+                break
+            fi
+        done
+
+        if [[ -n "$CMEK_US_KEYRING" ]]; then
             # Check 'gcs' key in US Keyring
             GCS_KEY_ID="${CMEK_US_KEYRING}/cryptoKeys/gcs"
             if gcloud kms keys describe "${GCS_KEY_ID}" &>/dev/null; then
                  echo -e "Found US GCS Crypto Key: ${GREEN}gcs${NC}"
                  CMEK_STATE_KEY="${GCS_KEY_ID}"
             fi
-            
+
             # Check 'gemini-enterprise' key in US Keyring
             GEMINI_KEY_ID="${CMEK_US_KEYRING}/cryptoKeys/gemini-enterprise"
             if gcloud kms keys describe "${GEMINI_KEY_ID}" &>/dev/null; then
@@ -693,9 +696,18 @@ discover_infrastructure() {
              fi
         fi
 
-        # Ensure correct outputs
+        # Ensure correct outputs and allow operator override of discovered CMEK identifiers
         echo -e "Environment: ${YELLOW}${ENVIRONMENT}${NC}"
         echo -e "Tenant: ${YELLOW}${TENANT}${NC}"
+
+        read -p "Enter CMEK Project ID [${CMEK_PROJECT_ID}]: " INPUT_CMEK_PROJECT
+        CMEK_PROJECT_ID=${INPUT_CMEK_PROJECT:-$CMEK_PROJECT_ID}
+
+        read -p "Enter US Multi-Region Keyring ID (optional) [${CMEK_US_KEYRING}]: " INPUT_CMEK_KEYRING
+        CMEK_US_KEYRING=${INPUT_CMEK_KEYRING:-$CMEK_US_KEYRING}
+
+        read -p "Enter US Gemini Resources Key ID (optional) [${CMEK_US_RESOURCES_KEY}]: " INPUT_CMEK_GEMINI_KEY
+        CMEK_US_RESOURCES_KEY=${INPUT_CMEK_GEMINI_KEY:-$CMEK_US_RESOURCES_KEY}
 
     elif [[ "$IS_CUSTOM" == "true" ]]; then
         read -p "Enter Environment identifier (e.g., prod): " ENVIRONMENT
@@ -1927,9 +1939,11 @@ configure_stage_0() {
         ADMIN_EMAIL="${ADMIN_GROUP#group:}"
         USER_EMAIL="${USER_GROUP#group:}"
         
+        GROUP_CHECK_FAILED="false"
         if ! gcloud --quiet identity groups describe "$ADMIN_EMAIL" &>/dev/null; then
             echo -e "${RED}WARNING: Cannot access or find Admin Group: ${ADMIN_EMAIL}${NC}"
             echo -e "${YELLOW}Ensure the group exists and your account has directory read access.${NC}"
+            GROUP_CHECK_FAILED="true"
         else
             echo -e "${GREEN}Validated Admin Group access.${NC}"
         fi
@@ -1937,8 +1951,17 @@ configure_stage_0() {
         if ! gcloud --quiet identity groups describe "$USER_EMAIL" &>/dev/null; then
             echo -e "${RED}WARNING: Cannot access or find User Group: ${USER_EMAIL}${NC}"
             echo -e "${YELLOW}Ensure the group exists and your account has directory read access.${NC}"
+            GROUP_CHECK_FAILED="true"
         else
             echo -e "${GREEN}Validated User Group access.${NC}"
+        fi
+
+        if [[ "$GROUP_CHECK_FAILED" == "true" ]]; then
+            read -p "Confirm that the groups (${ADMIN_EMAIL}, ${USER_EMAIL}) exist in Cloud Identity to continue (y/N): " CONFIRM_IDENTITY_GROUPS
+            if [[ "$CONFIRM_IDENTITY_GROUPS" != "y" && "$CONFIRM_IDENTITY_GROUPS" != "Y" ]]; then
+                echo "Please create the required Cloud Identity groups and try again."
+                return 1
+            fi
         fi
     else
         echo ""
@@ -2137,7 +2160,7 @@ configure_stage_0() {
             CAP_ENV=${CAP_ENV:-"Prod"}
             TENANT=${TENANT:-"g4g"}
             
-            _KEYRING_NAME="${CAP_ENV}-${TENANT}-keyring"
+            _KEYRING_NAME="${ENVIRONMENT}-us"
             _KEY_NAME="gemini-enterprise"
             _LOCATION="us"
             
@@ -2149,13 +2172,29 @@ configure_stage_0() {
             if [[ -z "$_TARGET_KMS_PROJECT" ]]; then
                 _TARGET_KMS_PROJECT="${PROJECT_ID}"
             fi
-            
-            _CMEK_US_KEYRING="projects/${_TARGET_KMS_PROJECT}/locations/${_LOCATION}/keyRings/${_KEYRING_NAME}"
+
+            if [[ -n "$CMEK_US_KEYRING" ]]; then
+                if [[ "$CMEK_US_KEYRING" == projects/*/locations/*/keyRings/* ]]; then
+                    _CMEK_US_KEYRING="$CMEK_US_KEYRING"
+                    _TARGET_KMS_PROJECT=$(echo "$CMEK_US_KEYRING" | awk -F'/' '{print $2}')
+                    _LOCATION=$(echo "$CMEK_US_KEYRING" | awk -F'/' '{print $4}')
+                    _KEYRING_NAME=$(echo "$CMEK_US_KEYRING" | awk -F'/' '{print $6}')
+                else
+                    _KEYRING_NAME="$CMEK_US_KEYRING"
+                    _CMEK_US_KEYRING="projects/${_TARGET_KMS_PROJECT}/locations/${_LOCATION}/keyRings/${_KEYRING_NAME}"
+                fi
+            else
+                _CMEK_US_KEYRING="projects/${_TARGET_KMS_PROJECT}/locations/${_LOCATION}/keyRings/${_KEYRING_NAME}"
+            fi
             _FULL_KEY_NAME="${_CMEK_US_KEYRING}/cryptoKeys/${_KEY_NAME}"
             
             if [[ -z "$CMEK_US_RESOURCES_KEY" ]]; then
                 echo -e "Target Project: ${YELLOW}${_TARGET_KMS_PROJECT}${NC}"
                 echo -e "Keyring: ${YELLOW}${_KEYRING_NAME}${NC}"
+                if ! gcloud kms keyrings describe "${_KEYRING_NAME}" --location="${_LOCATION}" --project="${_TARGET_KMS_PROJECT}" &>/dev/null; then
+                    echo "Creating Keyring '${_KEYRING_NAME}' in ${_LOCATION}..."
+                    gcloud kms keyrings create "${_KEYRING_NAME}" --location="${_LOCATION}" --project="${_TARGET_KMS_PROJECT}"
+                fi
                 
                 if ! gcloud kms keys describe "${_FULL_KEY_NAME}" &>/dev/null; then
                      _KMS_PROTECTION_LEVEL="hsm"
@@ -2361,12 +2400,11 @@ configure_stage_0() {
     if [[ "$DEPLOYMENT_TYPE" != "none" ]]; then
         echo ""
         echo -e "${BLUE}--- Manual Steps ---${NC}"
-        echo -e "${YELLOW}IMPORTANT: Before proceeding, ensure you have completed the following manual prerequisites:${NC}"
+        echo -e "${YELLOW}IMPORTANT: Before proceeding, ensure you have completed the following manual prerequisite:${NC}"
         echo "1. OAuth Consent Screen: Configured as Internal."
         echo -e "   Link: ${BLUE}https://console.cloud.google.com/auth/branding?orgonly=true&project=${PROJECT_ID}&supportedpurview=organizationId${NC}"
-        echo "2. User Role Groups: Created admin/user groups in Cloud Identity / third-party identity provider (${ADMIN_GROUP}, ${USER_GROUP})."
         echo ""
-        read -p "Have you completed these steps? (y/N): " CONFIRM_PRE
+        read -p "Have you completed this step? (y/N): " CONFIRM_PRE
         if [[ "$CONFIRM_PRE" != "y" && "$CONFIRM_PRE" != "Y" ]]; then
             echo "Please complete the prerequisites and try again."
             return 1
@@ -4050,28 +4088,45 @@ configure_stage_1() {
         CUSTOM_DOMAIN=""
     fi
 
+    SSL_CERTIFICATE_PATH=""
+    SSL_PRIVATE_KEY_PATH=""
     if [[ "$CERT_MANAGEMENT_CHOICE" == "google_managed" ]]; then
         echo ""
         echo -e "${YELLOW}Google-managed certificate selected in Stage 0. Skipping manual SSL certificate selection.${NC}"
         SSL_CERT_NAME=""
     else
-        # Auto-discover SSL Certificates
         echo ""
-        echo "Discovering SSL Certificates in Region ${REGION}..."
-        CERTS_JSON=$(gcloud compute ssl-certificates list --filter="region:(${REGION})" --format="json" 2>/dev/null)
-        
-        if [[ -n "$CERTS_JSON" && "$CERTS_JSON" != "[]" ]]; then
-            echo "Available SSL Certificates:"
-            echo "$CERTS_JSON" | jq -r '.[] | "\(.name) (\(.type))"' | nl -w2 -s") "
-            
-            read -p "Select an SSL Certificate [1]: " CERT_SEL
-            CERT_SEL=${CERT_SEL:-1}
-            
-            SSL_CERT_NAME=$(echo "$CERTS_JSON" | jq -r ".[$((CERT_SEL-1))].name")
-            echo -e "Selected Certificate: ${YELLOW}${SSL_CERT_NAME}${NC}"
+        echo "Self-Managed SSL Certificate Options:"
+        echo "1) Provision a new regional SSL certificate via Terraform from local PEM files"
+        echo "2) Use an existing regional SSL certificate already uploaded to GCP"
+        read -p "Select an option [1-2, default 1]: " SSL_SOURCE_CHOICE
+        SSL_SOURCE_CHOICE=${SSL_SOURCE_CHOICE:-1}
+
+        if [[ "$SSL_SOURCE_CHOICE" == "1" ]]; then
+            read -p "Enter SSL Certificate Name (e.g., gemini-enterprise-cert): " SSL_CERT_NAME
+            read -p "Enter path to Certificate File (.crt/.pem): " SSL_CERTIFICATE_PATH
+            SSL_CERTIFICATE_PATH="${SSL_CERTIFICATE_PATH/#\~/$HOME}"
+            read -p "Enter path to Private Key File (.key/.pem): " SSL_PRIVATE_KEY_PATH
+            SSL_PRIVATE_KEY_PATH="${SSL_PRIVATE_KEY_PATH/#\~/$HOME}"
         else
-            echo -e "${YELLOW}No SSL Certificates found in region ${REGION}.${NC}"
-            read -p "Enter SSL Certificate Name (must exist in GCP): " SSL_CERT_NAME
+            # Auto-discover SSL Certificates
+            echo ""
+            echo "Discovering SSL Certificates in Region ${REGION}..."
+            CERTS_JSON=$(gcloud compute ssl-certificates list --filter="region:(${REGION})" --format="json" 2>/dev/null)
+            
+            if [[ -n "$CERTS_JSON" && "$CERTS_JSON" != "[]" ]]; then
+                echo "Available SSL Certificates:"
+                echo "$CERTS_JSON" | jq -r '.[] | "\(.name) (\(.type))"' | nl -w2 -s") "
+                
+                read -p "Select an SSL Certificate [1]: " CERT_SEL
+                CERT_SEL=${CERT_SEL:-1}
+                
+                SSL_CERT_NAME=$(echo "$CERTS_JSON" | jq -r ".[$((CERT_SEL-1))].name")
+                echo -e "Selected Certificate: ${YELLOW}${SSL_CERT_NAME}${NC}"
+            else
+                echo -e "${YELLOW}No SSL Certificates found in region ${REGION}.${NC}"
+                read -p "Enter SSL Certificate Name (must exist in GCP): " SSL_CERT_NAME
+            fi
         fi
     fi
 
@@ -4079,6 +4134,8 @@ configure_stage_1() {
 stage_0_state_bucket = "${BUCKET_NAME}"
 gemini_enterprise_domain = "${GEMINI_DOMAIN}"
 ssl_certificate_name = "${SSL_CERT_NAME}"
+ssl_certificate_path = "${SSL_CERTIFICATE_PATH}"
+ssl_private_key_path = "${SSL_PRIVATE_KEY_PATH}"
 cert_management_choice = "${CERT_MANAGEMENT_CHOICE}"
 EOF
 

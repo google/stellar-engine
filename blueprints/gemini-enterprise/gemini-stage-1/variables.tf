@@ -24,7 +24,19 @@ variable "gemini_enterprise_domain" {
 
 # Variable for the customer-provided SSL certificate name
 variable "ssl_certificate_name" {
-  description = "The name of the pre-uploaded SSL certificate in Google Cloud."
+  description = "The name of the regional SSL certificate in Google Cloud (either pre-uploaded or created by Terraform when ssl_certificate_path and ssl_private_key_path are set)."
+  type        = string
+  default     = ""
+}
+
+variable "ssl_certificate_path" {
+  description = "Optional local filesystem path to a PEM-encoded SSL certificate file. When set together with ssl_private_key_path, Terraform provisions the regional self-managed SSL certificate directly."
+  type        = string
+  default     = ""
+}
+
+variable "ssl_private_key_path" {
+  description = "Optional local filesystem path to a PEM-encoded SSL private key file. When set together with ssl_certificate_path, Terraform provisions the regional self-managed SSL certificate directly."
   type        = string
   default     = ""
 }
