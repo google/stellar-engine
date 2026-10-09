@@ -684,14 +684,26 @@ def datastore():
 @click.option('--source-type', required=True, type=click.Choice(['gcs', 'bigquery']), help='Source of the documents to import')
 @click.option('--data-store-id', required=False, help='Gemini Enterprise Data Store ID')
 @click.option('--gcs-bucket', required=False, help='Optional GCS Bucket name to simplify the prompt')
-def import_documents(project_id, source_type, data_store_id, gcs_bucket):
+@click.option('--dataset-id', required=False, help='BigQuery Dataset ID (for bigquery source-type)')
+@click.option('--table-id', required=False, help='BigQuery Table ID (for bigquery source-type)')
+@click.option('--id-field', required=False, help='BigQuery schema field for unique document ID, or "auto" to auto-generate IDs')
+def import_documents(project_id, source_type, data_store_id, gcs_bucket, dataset_id, table_id, id_field):
     """Import documents into a Gemini Enterprise data store."""
     credentials = get_credentials()
     
     # Set quota project
     credentials = credentials.with_quota_project(project_id)
     
-    import_documents_helper(credentials, project_id, source_type, data_store_id, gcs_bucket)
+    import_documents_helper(
+        credentials,
+        project_id,
+        source_type,
+        data_store_id=data_store_id,
+        gcs_bucket=gcs_bucket,
+        dataset_id=dataset_id,
+        table_id=table_id,
+        id_field=id_field,
+    )
 
 ##############################################################
 ################       gem4gov license        ################
@@ -803,10 +815,247 @@ def distribute_licenses(billing_account, config_id, target_project_number, locat
         click.echo(f"An unexpected error occurred: {e}")
 
 
+@license.command(name='retract')
+@click.option('--billing-account', required=True, help='The billing account ID.')
+@click.option('--config-id', required=True, help='The billing account license config ID.')
+@click.option('--target-project-number', required=False, help='The target project number to retract licenses from.')
+@click.option('--target-project-numbers', required=False, help='Comma-separated list of target project numbers for batch retraction.')
+@click.option('--location', default='global', type=click.Choice(['global', 'us', 'eu']), help='The location.')
+@click.option('--count', required=False, type=int, help='The number of licenses to retract (optional when --retract-all is set).')
+@click.option('--retract-all', is_flag=True, default=False, help='Retract all licenses distributed to the target project(s).')
+@click.option('--license-config-id', required=False, help='The project-level license config ID (optional; discovered from billing account distributions if omitted).')
+@click.option('--quota-project', required=False, help='The project ID to use for API quota.')
+def retract_licenses(billing_account, config_id, target_project_number, target_project_numbers, location, count, retract_all, license_config_id, quota_project):
+    """Retracts Gemini for Government licenses from one or more projects back to a billing account."""
+    credentials = get_credentials()
+    if quota_project:
+        credentials = credentials.with_quota_project(quota_project)
+    return _retract_project_licenses(
+        credentials,
+        billing_account=billing_account,
+        config_id=config_id,
+        target_project_number=target_project_number,
+        target_project_numbers=target_project_numbers,
+        location=location,
+        count=count,
+        retract_all=retract_all,
+        license_config_id=license_config_id,
+    )
 
 
+def _retract_project_licenses(credentials, billing_account, config_id, target_project_number=None, target_project_numbers=None, location='global', count=None, retract_all=False, license_config_id=None):
+    """Helper that retracts Gemini for Government licenses from one or more projects."""
 
-def import_documents_helper(credentials, project_id, source_type, data_store_id=None, gcs_bucket=None):
+    project_numbers = []
+    if target_project_number:
+        project_numbers.append(str(target_project_number).strip())
+    if target_project_numbers:
+        project_numbers.extend(
+            p.strip() for p in target_project_numbers.split(',') if p.strip()
+        )
+    # Deduplicate while preserving order
+    project_numbers = list(dict.fromkeys(project_numbers))
+
+    if not project_numbers:
+        click.echo(click.style("Error: Provide --target-project-number or --target-project-numbers.", fg='red'))
+        sys.exit(1)
+
+    if not retract_all and (count is None or count <= 0):
+        click.echo(click.style("Error: Provide a positive --count or set --retract-all.", fg='red'))
+        sys.exit(1)
+
+    endpoint = "https://discoveryengine.googleapis.com"
+    if location == 'us':
+        endpoint = "https://us-discoveryengine.googleapis.com"
+    elif location == 'eu':
+        endpoint = "https://eu-discoveryengine.googleapis.com"
+
+    client_options = ClientOptions(api_endpoint=endpoint)
+    service = build('discoveryengine', 'v1alpha', credentials=credentials, client_options=client_options)
+    name = f'billingAccounts/{billing_account}/billingAccountLicenseConfigs/{config_id}'
+
+    distributions = {}
+    if not license_config_id or len(project_numbers) > 1:
+        try:
+            list_service = build(
+                'discoveryengine',
+                'v1alpha',
+                credentials=credentials,
+                client_options=ClientOptions(api_endpoint="https://us-discoveryengine.googleapis.com"),
+            )
+            list_resp = list_service.billingAccounts().billingAccountLicenseConfigs().list(
+                parent=f'billingAccounts/{billing_account}'
+            ).execute()
+            for cfg in list_resp.get('billingAccountLicenseConfigs', []):
+                if cfg.get('name', '').endswith(f'/{config_id}'):
+                    distributions = cfg.get('licenseConfigDistributions', {})
+                    break
+        except Exception:
+            distributions = {}
+
+    results = []
+    for proj_num in project_numbers:
+        resolved_cfg_name = None
+        if license_config_id and len(project_numbers) == 1:
+            if license_config_id.startswith('projects/'):
+                resolved_cfg_name = license_config_id
+            else:
+                resolved_cfg_name = f'projects/{proj_num}/locations/{location}/licenseConfigs/{license_config_id}'
+        else:
+            prefix = f'projects/{proj_num}/locations/{location}/licenseConfigs/'
+            for dist_key in distributions:
+                if dist_key.startswith(prefix):
+                    resolved_cfg_name = dist_key
+                    break
+            if not resolved_cfg_name and license_config_id:
+                resolved_cfg_name = f'projects/{proj_num}/locations/{location}/licenseConfigs/{license_config_id}'
+
+        if not resolved_cfg_name:
+            click.echo(click.style(
+                f"Could not determine project licenseConfig for project {proj_num} in {location}. Provide --license-config-id.",
+                fg='red',
+            ))
+            sys.exit(1)
+
+        body = {
+            "licenseConfig": resolved_cfg_name,
+        }
+        if retract_all:
+            body["retractAllLicenses"] = True
+        else:
+            body["licenseCount"] = count
+
+        try:
+            ba_configs = service.billingAccounts().billingAccountLicenseConfigs()
+            request = ba_configs.retractLicenseConfig(
+                name=name,
+                body=body,
+            )
+            response = request.execute()
+            click.echo(f"Licenses retracted successfully from project {proj_num}!")
+            results.append(response)
+        except HttpError as e:
+            click.echo(f"An error occurred for project {proj_num}: {e}")
+            sys.exit(1)
+        except Exception as e:
+            click.echo(f"An unexpected error occurred for project {proj_num}: {e}")
+            sys.exit(1)
+
+    if len(results) == 1:
+        click.echo(json.dumps(results[0], indent=2))
+    else:
+        click.echo(json.dumps(results, indent=2))
+
+
+def _batch_update_user_licenses(credentials, project_id, location, users, license_config_id=None, unassign=False, user_store_id='default_user_store'):
+    """Wraps projects.locations.userStores.batchUpdateUserLicenses (Discovery Engine v1)."""
+    principals = [u.strip() for u in users.split(',') if u.strip()]
+    if not principals:
+        click.echo(click.style("Error: At least one user principal must be provided via --users.", fg='red'))
+        sys.exit(1)
+
+    if not unassign and not license_config_id:
+        click.echo(click.style("Error: --license-config-id is required when assigning licenses.", fg='red'))
+        sys.exit(1)
+
+    endpoint = "https://discoveryengine.googleapis.com"
+    if location == 'us':
+        endpoint = "https://us-discoveryengine.googleapis.com"
+    elif location == 'eu':
+        endpoint = "https://eu-discoveryengine.googleapis.com"
+
+    full_license_config = None
+    if license_config_id and not unassign:
+        if license_config_id.startswith('projects/'):
+            full_license_config = license_config_id
+        else:
+            full_license_config = f'projects/{project_id}/locations/{location}/licenseConfigs/{license_config_id}'
+
+    user_licenses = []
+    for principal in principals:
+        entry = {"userPrincipal": principal}
+        if full_license_config:
+            entry["licenseConfig"] = full_license_config
+        user_licenses.append(entry)
+
+    update_paths = ["userPrincipal"] if unassign else ["userPrincipal", "licenseConfig"]
+    body = {
+        "inlineSource": {
+            "userLicenses": user_licenses,
+            "updateMask": {
+                "paths": update_paths,
+            },
+        },
+        "deleteUnassignedUserLicenses": bool(unassign),
+    }
+
+    parent = f'projects/{project_id}/locations/{location}/userStores/{user_store_id}'
+    client_options = ClientOptions(api_endpoint=endpoint)
+    service = build('discoveryengine', 'v1', credentials=credentials, client_options=client_options)
+
+    try:
+        request = service.projects().locations().userStores().batchUpdateUserLicenses(
+            parent=parent,
+            body=body,
+        )
+        response = request.execute()
+        action_label = "unassigned" if unassign else "assigned"
+        click.echo(f"User licenses {action_label} successfully!")
+        click.echo(json.dumps(response, indent=2))
+        return response
+    except HttpError as e:
+        click.echo(f"An error occurred: {e}")
+        sys.exit(1)
+    except Exception as e:
+        click.echo(f"An unexpected error occurred: {e}")
+        sys.exit(1)
+
+
+@license.command(name='assign')
+@click.option('--project-id', required=True, help='The GCP project ID.')
+@click.option('--location', default='us', type=click.Choice(['global', 'us', 'eu']), help='The Discovery Engine location.')
+@click.option('--users', required=True, help='Comma-separated list of user principal emails to assign or unassign.')
+@click.option('--license-config-id', required=False, help='The project-level license config ID or full resource name (required unless --unassign is set).')
+@click.option('--unassign', is_flag=True, default=False, help='Unassign licenses from the specified user principals.')
+@click.option('--user-store-id', default='default_user_store', show_default=True, help='The userStore ID.')
+@click.option('--quota-project', required=False, help='The project ID to use for API quota.')
+def assign_licenses(project_id, location, users, license_config_id, unassign, user_store_id, quota_project):
+    """Assigns (or unassigns with --unassign) Gemini Enterprise licenses to users via batchUpdateUserLicenses."""
+    credentials = get_credentials()
+    credentials = credentials.with_quota_project(quota_project or project_id)
+    _batch_update_user_licenses(
+        credentials,
+        project_id=project_id,
+        location=location,
+        users=users,
+        license_config_id=license_config_id,
+        unassign=unassign,
+        user_store_id=user_store_id,
+    )
+
+
+@license.command(name='unassign')
+@click.option('--project-id', required=True, help='The GCP project ID.')
+@click.option('--location', default='us', type=click.Choice(['global', 'us', 'eu']), help='The Discovery Engine location.')
+@click.option('--users', required=True, help='Comma-separated list of user principal emails to unassign.')
+@click.option('--user-store-id', default='default_user_store', show_default=True, help='The userStore ID.')
+@click.option('--quota-project', required=False, help='The project ID to use for API quota.')
+def unassign_licenses(project_id, location, users, user_store_id, quota_project):
+    """Unassigns Gemini Enterprise licenses from users via batchUpdateUserLicenses."""
+    credentials = get_credentials()
+    credentials = credentials.with_quota_project(quota_project or project_id)
+    _batch_update_user_licenses(
+        credentials,
+        project_id=project_id,
+        location=location,
+        users=users,
+        license_config_id=None,
+        unassign=True,
+        user_store_id=user_store_id,
+    )
+
+
+def import_documents_helper(credentials, project_id, source_type, data_store_id=None, gcs_bucket=None, dataset_id=None, table_id=None, id_field=None):
     """Helper to import documents into a selected data store."""
     if not data_store_id:
         click.echo(nl=True)
@@ -864,8 +1113,54 @@ def import_documents_helper(credentials, project_id, source_type, data_store_id=
             click.echo(click.style("Import operation started successfully.", fg='green'))
             
     elif source_type == 'bigquery':
-        click.echo(click.style("BigQuery import via this command is not yet implemented.", fg='yellow'))
-        click.echo("Please use the 'onboard' command for BigQuery data store creation and initial import.")
+        click.echo(click.style("Importing from BigQuery.", fg='green'))
+
+        if not dataset_id:
+            dataset_id = click.prompt('Please enter the BigQuery dataset where the data is stored', type=str).strip()
+        if not table_id:
+            table_id = click.prompt('Please enter the BigQuery table where the data is stored', type=str).strip()
+
+        id_property = {'id': 'auto'}
+        if id_field:
+            if id_field.strip().lower() == 'auto':
+                id_property = {'id': 'auto'}
+            else:
+                id_property = {'id': id_field.strip()}
+        else:
+            bq_schema = get_bq_schema(credentials, project_id, dataset_id, table_id)
+            fields = [field['name'] for field in (bq_schema or {}).get('fields', [])] if bq_schema else []
+            if fields:
+                click.echo(click.style(
+                    'Each document (record) in the BigQuery table must have a unique ID. Select the schema field that should be used as the unique ID. If one does not exist, select "Auto".',
+                    fg="yellow",
+                ))
+                for i, field in enumerate(fields):
+                    click.echo(f"{i + 1}) {field}")
+                auto_option = len(fields) + 1
+                click.echo(f"{auto_option}) Auto")
+                field_choice = click.prompt(
+                    'Please enter the number for your response',
+                    type=click.IntRange(1, auto_option),
+                )
+                if field_choice != auto_option:
+                    selected_field = fields[field_choice - 1]
+                    id_property = {'id': selected_field}
+                    click.echo(f'Using schema field "{selected_field}" as the unique document ID.')
+                else:
+                    id_property = {'id': 'auto'}
+                    click.echo('Autogenerating unique document ID.')
+            else:
+                entered_id = click.prompt(
+                    'Please enter the schema field name for the unique document ID (or "auto" to auto-generate IDs)',
+                    type=str,
+                    default='auto',
+                ).strip()
+                id_property = {'id': 'auto' if entered_id.lower() == 'auto' else entered_id}
+
+        click.echo(f"Importing from BigQuery table: {project_id}.{dataset_id}.{table_id}")
+        if (dataset_id and table_id and id_field) or click.confirm("Proceed with import?"):
+            import_bq_documents(credentials, project_id, data_store_id, dataset_id, table_id, id_property)
+            click.echo(click.style("Import operation started successfully.", fg='green'))
 
 
 def create_application_logic(credentials, project_id, data_store_list, workforce_pool_id, workforce_provider_id, compliance_regime=None, engine_id=None, engine_display_name=None, company_name=None, enable_audit_logs=False):

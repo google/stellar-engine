@@ -912,7 +912,7 @@ The blueprint sets up the following key components:
 
 **Recommended:** Use the interactive `deploy.sh` script at the root of the repository.
 
-1.  **Run `deploy.sh`**: Select **Option 1**.
+1.  **Run `deploy.sh`: Select **Option 1**.
 2.  **Follow Prompts**:
     -   **Context:** Script detects Project/Tenant/Environment.
     -   **Access Policies:** Configure Time, Location, and Device trust levels.
@@ -1093,10 +1093,24 @@ gem4gov datastore import --project-id <PROJECT_ID> --source-type <SOURCE_TYPE> [
 *   `--project-id`: (Required) GCP Project ID.
 *   `--source-type`: (Required) Source of documents. Values: `gcs`, `bigquery`.
 *   `--data-store-id`: (Optional) The ID of the data store. If not provided, you will be prompted to select one.
+*   `--gcs-bucket`: (Optional) The GCS bucket name when `--source-type=gcs`.
+*   `--dataset-id`: (Optional) The BigQuery dataset ID when `--source-type=bigquery`.
+*   `--table-id`: (Optional) The BigQuery table ID when `--source-type=bigquery`.
+*   `--id-field`: (Optional) The BigQuery column name to use as the document ID, or `auto` to auto-generate IDs, when `--source-type=bigquery`.
 
 **Behavior:**
-*   **GCS**: Prompts for the GCS URI (`gs://bucket/path`) and imports documents.
-*   **BigQuery**: Not currently supported via this command (use `onboard`).
+*   **GCS**: Prompts for the GCS URI (`gs://bucket/path`) or relative path inside `--gcs-bucket` and imports documents via `import_gcs_documents`.
+*   **BigQuery**: Uses `--dataset-id`, `--table-id`, and `--id-field` when supplied, or prompts interactively for the dataset, table, and schema ID field, and imports documents via `import_bq_documents`.
+
+#### gem4gov license
+
+Manage Gemini for Government billing-account license distributions and project-level user license assignments.
+
+*   `gem4gov license list --billing-account <BILLING_ACCOUNT_ID>`: Lists available billing-account license configurations, total counts, and project distributions.
+*   `gem4gov license distribute --billing-account <BILLING_ACCOUNT_ID> --config-id <CONFIG_ID> --target-project-number <PROJECT_NUMBER> --count <COUNT> [--location global|us|eu] [--license-config-id <LICENSE_CONFIG_ID>]`: Distributes licenses from a billing account to a target project.
+*   `gem4gov license retract --billing-account <BILLING_ACCOUNT_ID> --config-id <CONFIG_ID> [--target-project-number <PROJECT_NUMBER> | --target-project-numbers <P1,P2>] [--count <COUNT> | --retract-all] [--location global|us|eu] [--license-config-id <LICENSE_CONFIG_ID>]`: Retracts distributed licenses from one or more projects back to the billing account pool.
+*   `gem4gov license assign --project-id <PROJECT_ID> --users <EMAIL1,EMAIL2> --license-config-id <LICENSE_CONFIG_ID> [--location global|us|eu] [--user-store-id default_user_store] [--unassign]`: Assigns (or unassigns when `--unassign` is set) project-level Gemini Enterprise licenses for user principals in `userStores`.
+*   `gem4gov license unassign --project-id <PROJECT_ID> --users <EMAIL1,EMAIL2> [--location global|us|eu] [--user-store-id default_user_store]`: Unassigns project-level Gemini Enterprise licenses from the specified user principals.
 
 ---
 
@@ -1200,23 +1214,23 @@ Although "Custom Brownfield" allows for flexible naming and discovery, your envi
 To successfully deploy to a custom environment, you must map the variables in `terraform.tfvars` to your existing Google Cloud resources.
 
 #### 1. Networking (Shared VPC or Standalone)
-*   **`use_shared_vpc`**: Set to `true`.
+*   **`use_shared_vpc`: Set to `true`.
 *   **`network_project_id`**:
     *   *Shared VPC:* The Project ID of your Host Project.
     *   *Standalone VPC:* The Project ID of your Service Project (where the VPC lives).
-*   **`shared_vpc_network_name`**: The name of your existing VPC network (e.g., `my-corp-network`).
-*   **`shared_vpc_subnet_name`**: The name of the subnet where Gemini Enterprise resources (like the Load Balancer) will be deployed.
-*   **`shared_vpc_proxy_subnet_name`**: The name of the **Regional Managed Proxy Subnet** required for Internal Load Balancers.
+*   **`shared_vpc_network_name`: The name of your existing VPC network (e.g., `my-corp-network`).
+*   **`shared_vpc_subnet_name`: The name of the subnet where Gemini Enterprise resources (like the Load Balancer) will be deployed.
+*   **`shared_vpc_proxy_subnet_name`: The name of the **Regional Managed Proxy Subnet** required for Internal Load Balancers.
     *   *Requirement:* Must be `purpose = REGIONAL_MANAGED_PROXY`.
     *   *Requirement:* Must be in the same region as `region`.
 
 #### 2. Security & Encryption
-*   **`kms_key_id`**: The full Resource ID of your existing Customer-Managed Encryption Key (CMEK).
+*   **`kms_key_id`: The full Resource ID of your existing Customer-Managed Encryption Key (CMEK).
     *   *Format:* `projects/PROJECT/locations/LOCATION/keyRings/RING/cryptoKeys/KEY`
     *   *Usage:* Used to encrypt BigQuery datasets, Discovery Engine stores, and Storage Buckets.
     *   *Permission:* The Service Agents for BigQuery, Discovery Engine, and Storage must have `cloudkms.cryptoKeyEncrypterDecrypter` on this key.
-*   **`create_resource_keys`**: (Optional) Set to `false` if you are providing an existing `kms_key_id` and do NOT want Terraform to attempt creating/managing it. Defaults to `true` for Custom Brownfield.
-*   **`access_policy_number`**: The numeric ID of your Access Context Manager policy.
+*   **`create_resource_keys`: (Optional) Set to `false` if you are providing an existing `kms_key_id` and do NOT want Terraform to attempt creating/managing it. Defaults to `true` for Custom Brownfield.
+*   **`access_policy_number`: The numeric ID of your Access Context Manager policy.
     *   *Find it:* Run `gcloud access-context-manager policies list --organization YOUR_ORG_ID`.
 
 #### 3. Identity & Access
@@ -1228,9 +1242,9 @@ To successfully deploy to a custom environment, you must map the variables in `t
     *   *THIRD_PARTY:* The Principal Set string (e.g., `principalSet://iam.googleapis.com/.../group/admins`).
 
 #### 4. General Settings
-*   **`main_project_id`**: The Project ID where Gemini Enterprise will be deployed.
-*   **`region`**: The GCP region for resources (e.g., `us-east4`).
-*   **`prefix`**: A short prefix for resource naming (e.g., `genai-`).
+*   **`main_project_id`: The Project ID where Gemini Enterprise will be deployed.
+*   **`region`: The GCP region for resources (e.g., `us-east4`).
+*   **`prefix`: A short prefix for resource naming (e.g., `genai-`).
 3.  **Provide State Bucket:**
     The script will check your `tfvars` for a `bucket` variable. If not found, it will prompt you to enter the name of your existing Terraform State Bucket.
 

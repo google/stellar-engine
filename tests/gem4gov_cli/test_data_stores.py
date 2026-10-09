@@ -108,5 +108,36 @@ class TestDataStores(unittest.TestCase):
     self.assertEqual(res['id'], 'ds-error')
 
 
+
+  @patch('data_stores.build')
+  def test_import_bq_documents_auto_and_custom_id_field(self, mock_build):
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_import = (
+        mock_service.projects()
+        .locations()
+        .collections()
+        .dataStores()
+        .branches()
+        .documents()
+        .import_
+    )
+    mock_import.return_value.execute.return_value = {'name': 'operations/op-1'}
+
+    data_stores.import_bq_documents(
+        MagicMock(), 'proj-1', 'ds-1', 'dataset_a', 'table_b', {'id': 'auto'}
+    )
+    _, kwargs_auto = mock_import.call_args
+    self.assertEqual(kwargs_auto['body']['autoGenerateIds'], True)
+    self.assertNotIn('idField', kwargs_auto['body'])
+
+    data_stores.import_bq_documents(
+        MagicMock(), 'proj-1', 'ds-1', 'dataset_a', 'table_b', {'id': 'doc_id'}
+    )
+    _, kwargs_field = mock_import.call_args
+    self.assertNotIn('autoGenerateIds', kwargs_field['body'])
+    self.assertEqual(kwargs_field['body']['idField'], 'doc_id')
+
+
 if __name__ == '__main__':
   unittest.main()

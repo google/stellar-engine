@@ -329,10 +329,11 @@ def import_bq_documents(credentials, project_id, data_store_id, dataset_id, tabl
         }
     }
 
-    if id_property == 'auto':
+    resolved_id_field = id_property.get('id') if isinstance(id_property, dict) else id_property
+    if not resolved_id_field or str(resolved_id_field).lower() == 'auto':
         import_request['autoGenerateIds'] = True
     else:
-        import_request['idField'] = id_property['id']
+        import_request['idField'] = resolved_id_field
 
     request = service.projects().locations().collections().dataStores().branches().documents().import_(
         parent=f'projects/{project_id}/locations/us/collections/default_collection/dataStores/{data_store_id}/branches/default_branch',
