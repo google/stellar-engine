@@ -80,10 +80,7 @@ compute.disableSerialPortAccess:
 # OS Login. GKE instances in public clusters do not currently support OS Login.
 # If this constraint is applied to a Project running public clusters, GKE
 # instances running in that Project may not function properly.
-# COULD HAVE
-compute.requireOsLogin:
-  rules:
-  - enforce: true
+# COULD HAVE (rendered conditionally via custom-org-policies/compute_policy.yaml for non-IL4/IL5 regimes)
 
 
 # This boolean constraint, when set to True, requires that all new Compute

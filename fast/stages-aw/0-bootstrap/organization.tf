@@ -100,11 +100,11 @@ locals {
   _org_policies_raw = merge(concat(
     [
       for f in try(fileset("./data/org-policies/", "*_policy.yaml"), []) :
-      yamldecode(file("./data/org-policies/${f}"))
+      try(coalesce(yamldecode(file("./data/org-policies/${f}")), {}), {})
     ],
     [
       for f in try(fileset("./data/custom-org-policies/", "*_policy.yaml"), []) :
-      yamldecode(templatefile("./data/custom-org-policies/${f}", {
+      try(coalesce(yamldecode(templatefile("./data/custom-org-policies/${f}", {
         # NOTE:
         # If there are more variables need to be substituted, put them
         # into a separate yaml file or map, use the following line to
@@ -116,7 +116,7 @@ locals {
         drs_tag_name : local.drs_tag_name
         allowed_domains : var.org_policies_config.constraints.allowed_policy_member_domains
         regime : var.assured_workloads.regime
-      }))
+      })), {}), {})
     ]
   )...)
   # formalize the policies
