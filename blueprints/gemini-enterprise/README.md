@@ -1144,7 +1144,9 @@ This Terraform module (`gemini-stage-1`) provisions the network frontend compone
       ```hcl
       stage_0_state_bucket     = "YOUR_STAGE_0_STATE_BUCKET"
       gemini_enterprise_domain = "gemini.yourdomain.com"
-      ssl_certificate_name     = "YOUR_CERTIFICATE_MANAGER_NAME"
+      ssl_certificate_name     = "YOUR_SSL_CERTIFICATE_NAME"
+      ssl_certificate_path     = "/path/to/certificate.pem" # Optional: let Terraform create the regional SSL certificate
+      ssl_private_key_path     = "/path/to/private_key.pem" # Optional: let Terraform create the regional SSL certificate
       ```
 
 ### Inputs

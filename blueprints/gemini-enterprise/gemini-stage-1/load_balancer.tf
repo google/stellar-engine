@@ -21,9 +21,32 @@ data "terraform_remote_state" "stage_0" {
   }
 }
 
-# Data source to get the details of the customer's pre-uploaded SSL certificate
+locals {
+  create_self_managed_ssl_cert = (
+    data.terraform_remote_state.stage_0.outputs.deployment_type != "none" &&
+    var.cert_management_choice == "self_managed" &&
+    var.ssl_certificate_path != "" &&
+    var.ssl_private_key_path != ""
+  )
+}
+
+# Provision regional self-managed SSL certificate via Terraform when certificate and key file paths are supplied (#161)
+resource "google_compute_region_ssl_certificate" "gemini_enterprise_uploaded_cert" {
+  count       = local.create_self_managed_ssl_cert ? 1 : 0
+  project     = data.terraform_remote_state.stage_0.outputs.main_project_id
+  name        = var.ssl_certificate_name != "" ? var.ssl_certificate_name : "${data.terraform_remote_state.stage_0.outputs.prefix}-gemini-ssl-cert"
+  region      = data.terraform_remote_state.stage_0.outputs.region
+  certificate = file(var.ssl_certificate_path)
+  private_key = file(var.ssl_private_key_path)
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Data source to get the details of the customer's pre-uploaded SSL certificate when local PEM paths are not supplied
 data "google_compute_region_ssl_certificate" "gemini_enterprise_cert" {
-  count   = data.terraform_remote_state.stage_0.outputs.deployment_type != "none" && var.cert_management_choice == "self_managed" ? 1 : 0
+  count   = data.terraform_remote_state.stage_0.outputs.deployment_type != "none" && var.cert_management_choice == "self_managed" && !local.create_self_managed_ssl_cert ? 1 : 0
   project = data.terraform_remote_state.stage_0.outputs.main_project_id
   name    = var.ssl_certificate_name
   region  = data.terraform_remote_state.stage_0.outputs.region
@@ -37,15 +60,28 @@ data "google_compute_region_backend_service" "gemini_enterprise_backend" {
   region  = data.terraform_remote_state.stage_0.outputs.region
 }
 
-# Data source to get the network created in stage-0 or Shared VPC
+# Data source to get the network created in stage-0 or Shared VPC (#111)
 data "google_compute_network" "gemini_enterprise_vpc" {
   count = data.terraform_remote_state.stage_0.outputs.deployment_type != "none" ? 1 : 0
   project = var.host_project_id != "" ? var.host_project_id : (
-    try(data.terraform_remote_state.stage_0.outputs.use_shared_vpc, false) ? data.terraform_remote_state.stage_0.outputs.network_project_id : data.terraform_remote_state.stage_0.outputs.main_project_id
+    data.terraform_remote_state.stage_0.outputs.use_shared_vpc ? data.terraform_remote_state.stage_0.outputs.network_project_id : data.terraform_remote_state.stage_0.outputs.main_project_id
   )
   name = var.network_name != "" ? var.network_name : (
-    try(data.terraform_remote_state.stage_0.outputs.use_shared_vpc, false) ? data.terraform_remote_state.stage_0.outputs.shared_vpc_network_name : "${data.terraform_remote_state.stage_0.outputs.prefix}-vpc"
+    data.terraform_remote_state.stage_0.outputs.use_shared_vpc ? data.terraform_remote_state.stage_0.outputs.shared_vpc_network_name : "${data.terraform_remote_state.stage_0.outputs.prefix}-vpc"
   )
+
+  lifecycle {
+    precondition {
+      condition = (
+        !data.terraform_remote_state.stage_0.outputs.use_shared_vpc ||
+        (
+          (var.host_project_id != "" || coalesce(data.terraform_remote_state.stage_0.outputs.network_project_id, "") != "") &&
+          (var.network_name != "" || coalesce(data.terraform_remote_state.stage_0.outputs.shared_vpc_network_name, "") != "")
+        )
+      )
+      error_message = "When Stage 0 use_shared_vpc is true, network_project_id and shared_vpc_network_name must be present in Stage 0 state outputs or explicitly provided via host_project_id and network_name."
+    }
+  }
 }
 
 # Data source to get the IP address created in stage-0
@@ -174,7 +210,9 @@ resource "google_compute_region_target_https_proxy" "gemini_enterprise_https_pro
   region  = data.terraform_remote_state.stage_0.outputs.region
   url_map = google_compute_region_url_map.gemini_enterprise_load_balancer[0].id
 
-  ssl_certificates                 = var.cert_management_choice == "self_managed" ? [data.google_compute_region_ssl_certificate.gemini_enterprise_cert[0].self_link] : null
+  ssl_certificates = var.cert_management_choice == "self_managed" ? (
+    local.create_self_managed_ssl_cert ? [google_compute_region_ssl_certificate.gemini_enterprise_uploaded_cert[0].self_link] : [data.google_compute_region_ssl_certificate.gemini_enterprise_cert[0].self_link]
+  ) : null
   certificate_manager_certificates = var.cert_management_choice == "google_managed" ? [google_certificate_manager_certificate.gemini_enterprise_managed_cert[0].id] : null
 }
 
@@ -193,16 +231,29 @@ resource "google_compute_forwarding_rule" "gemini_enterprise_forwarding_rule" {
   target                = google_compute_region_target_https_proxy.gemini_enterprise_https_proxy[0].id
 }
 
-# Data source to get the subnet created in stage-0 or Shared VPC
+# Data source to get the subnet created in stage-0 or Shared VPC (#111)
 data "google_compute_subnetwork" "gemini_enterprise_vpc_subnet" {
   count = data.terraform_remote_state.stage_0.outputs.deployment_type == "internal" ? 1 : 0
   project = var.host_project_id != "" ? var.host_project_id : (
-    try(data.terraform_remote_state.stage_0.outputs.use_shared_vpc, false) ? data.terraform_remote_state.stage_0.outputs.network_project_id : data.terraform_remote_state.stage_0.outputs.main_project_id
+    data.terraform_remote_state.stage_0.outputs.use_shared_vpc ? data.terraform_remote_state.stage_0.outputs.network_project_id : data.terraform_remote_state.stage_0.outputs.main_project_id
   )
   name = var.subnet_name != "" ? var.subnet_name : (
-    try(data.terraform_remote_state.stage_0.outputs.use_shared_vpc, false) ? data.terraform_remote_state.stage_0.outputs.shared_vpc_subnet_name : "${data.terraform_remote_state.stage_0.outputs.prefix}-vpc-subnet"
+    data.terraform_remote_state.stage_0.outputs.use_shared_vpc ? data.terraform_remote_state.stage_0.outputs.shared_vpc_subnet_name : "${data.terraform_remote_state.stage_0.outputs.prefix}-vpc-subnet"
   )
   region = data.terraform_remote_state.stage_0.outputs.region
+
+  lifecycle {
+    precondition {
+      condition = (
+        !data.terraform_remote_state.stage_0.outputs.use_shared_vpc ||
+        (
+          (var.host_project_id != "" || coalesce(data.terraform_remote_state.stage_0.outputs.network_project_id, "") != "") &&
+          (var.subnet_name != "" || coalesce(data.terraform_remote_state.stage_0.outputs.shared_vpc_subnet_name, "") != "")
+        )
+      )
+      error_message = "When Stage 0 use_shared_vpc is true, network_project_id and shared_vpc_subnet_name must be present in Stage 0 state outputs or explicitly provided via host_project_id and subnet_name."
+    }
+  }
 }
 
 # --- IAP Access Roles ---

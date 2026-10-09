@@ -213,5 +213,37 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
     )
 
 
+
+  def test_brownfield_cmek_discovery_and_stage1_hardening(self):
+    """Verify Brownfield CMEK discovery (#106, #132), single group check (#135), Stage 1 Shared-VPC preconditions (#111), and Terraform SSL cert upload (#161)."""
+    deploy_sh = (
+        REPO_ROOT / "blueprints/gemini-enterprise/deploy.sh"
+    ).read_text(encoding="utf-8")
+    self.assertIn('POTENTIAL_SEC_PROJECT="${PREFIX}-${ENVIRONMENT}-sec-core-0"', deploy_sh)
+    self.assertIn('for CANDIDATE_KR in "${ENVIRONMENT}-us" "${CAP_ENV}-${TENANT}-keyring"; do', deploy_sh)
+    self.assertNotIn("2. User Role Groups: Created admin/user groups", deploy_sh)
+    self.assertIn("CONFIRM_IDENTITY_GROUPS", deploy_sh)
+    self.assertIn("1) Provision a new regional SSL certificate via Terraform from local PEM files", deploy_sh)
+    self.assertIn('ssl_certificate_path = "${SSL_CERTIFICATE_PATH}"', deploy_sh)
+    self.assertIn('ssl_private_key_path = "${SSL_PRIVATE_KEY_PATH}"', deploy_sh)
+
+    lb_tf = (
+        REPO_ROOT / "blueprints/gemini-enterprise/gemini-stage-1/load_balancer.tf"
+    ).read_text(encoding="utf-8")
+    self.assertNotIn("try(data.terraform_remote_state.stage_0.outputs.use_shared_vpc", lb_tf)
+    self.assertIn('resource "google_compute_region_ssl_certificate" "gemini_enterprise_uploaded_cert"', lb_tf)
+    self.assertIn("create_before_destroy = true", lb_tf)
+    self.assertIn(
+        "When Stage 0 use_shared_vpc is true, network_project_id and shared_vpc_network_name must be present",
+        lb_tf,
+    )
+
+    stage1_vars = (
+        REPO_ROOT / "blueprints/gemini-enterprise/gemini-stage-1/variables.tf"
+    ).read_text(encoding="utf-8")
+    self.assertIn('variable "ssl_certificate_path"', stage1_vars)
+    self.assertIn('variable "ssl_private_key_path"', stage1_vars)
+
+
 if __name__ == "__main__":
   unittest.main()
