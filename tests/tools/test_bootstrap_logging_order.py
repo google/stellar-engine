@@ -130,6 +130,50 @@ class TestBootstrapLoggingOrder(unittest.TestCase):
     )
 
 
+
+  def test_kms_rotation_constraint_and_regime_oslogin_and_resman_org_policies(self):
+    """Verify custom.kmsRotation allows key destruction (#14), requireOsLogin skips IL4/IL5 (#9), and 1-resman supports org_policies (#197)."""
+    import yaml
+
+    kms_yaml_path = _REPO_ROOT / "fast/stages-aw/0-bootstrap/data/custom-constraint-policies/cloudkms.yaml"
+    kms_data = yaml.safe_load(kms_yaml_path.read_text(encoding="utf-8"))
+    self.assertIn("custom.kmsRotation", kms_data)
+    self.assertEqual(kms_data["custom.kmsRotation"]["method_types"], ["CREATE"])
+    self.assertEqual(
+        kms_data["custom.kmsRotation"]["resource_types"],
+        ["cloudkms.googleapis.com/CryptoKey"],
+    )
+    self.assertEqual(kms_data["custom.kmsRotation"]["action_type"], "ALLOW")
+
+    static_compute_path = _REPO_ROOT / "fast/stages-aw/0-bootstrap/data/org-policies/compute_policy.yaml"
+    static_compute = yaml.safe_load(static_compute_path.read_text(encoding="utf-8"))
+    self.assertNotIn("compute.requireOsLogin", static_compute)
+    self.assertIn("compute.requireShieldedVm", static_compute)
+
+    custom_compute_text = (
+        _REPO_ROOT / "fast/stages-aw/0-bootstrap/data/custom-org-policies/compute_policy.yaml"
+    ).read_text(encoding="utf-8")
+    self.assertIn("compute.requireOsLogin:", custom_compute_text)
+    for excluded_regime in ["IL4", "IL5", "ASSURED_WORKLOADS_IL4", "ASSURED_WORKLOADS_IL5"]:
+      self.assertIn(excluded_regime, custom_compute_text)
+    self.assertIn("%{ else ~}\n{}\n%{ endif ~}", custom_compute_text)
+
+    org_tf = (_REPO_ROOT / "fast/stages-aw/0-bootstrap/organization.tf").read_text(encoding="utf-8")
+    self.assertIn("try(coalesce(yamldecode(templatefile(", org_tf)
+
+    resman_vars = (_REPO_ROOT / "fast/stages-aw/1-resman/variables.tf").read_text(encoding="utf-8")
+    self.assertIn("org_policies_data_path = optional(string)", resman_vars)
+    self.assertIn("main_project_org_policies = optional(map(any), {})", resman_vars)
+
+    envs_tf = (_REPO_ROOT / "fast/stages-aw/1-resman/branch-envs.tf").read_text(encoding="utf-8")
+    self.assertIn("org_policies = coalesce(try(each.value.org_policies, null), {})", envs_tf)
+    self.assertIn("? { org_policies = each.value.org_policies_data_path }", envs_tf)
+
+    tenants_tf = (_REPO_ROOT / "fast/stages-aw/1-resman/branch-tenants.tf").read_text(encoding="utf-8")
+    self.assertIn("org_policies = coalesce(try(each.value.tenant_info.org_policies, null), {})", tenants_tf)
+    self.assertIn("? { org_policies = each.value.tenant_info.org_policies_data_path }", tenants_tf)
+
+
 if __name__ == '__main__':
   unittest.main()
 

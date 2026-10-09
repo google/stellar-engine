@@ -41,6 +41,12 @@ module "branch-envs-folders" {
   parent       = var.assured_workloads.folder
   name         = "${lookup(var.regime_mapping, var.assured_workloads.regime, var.assured_workloads.regime)} ${each.key}"
   iam          = local._envs_folder_iam
+  org_policies = coalesce(try(each.value.org_policies, null), {})
+  factories_config = (
+    try(each.value.org_policies_data_path, null) != null
+    ? { org_policies = each.value.org_policies_data_path }
+    : {}
+  )
   tag_bindings = null
 }
 
