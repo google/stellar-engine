@@ -19,5 +19,9 @@ stage_0_state_bucket = "sedev-gemini-enterprise-tf-state-sedev-test-mike-iac-cor
 # This domain will point to the Load Balancer's IP Address
 gemini_enterprise_domain = "gemini.yourdomain.gov"
 
-# Google Cloud Self-Managed SSL Cert Name (Pre-uploaded to Google Cloud Certificate Manager)
+# Google Cloud Self-Managed SSL Cert Name
 ssl_certificate_name = "your-cert-name-here"
+
+# Optional: Local PEM file paths to have Stage 1 Terraform create the regional SSL certificate (#161)
+# ssl_certificate_path = "/full/path/to/certificate.pem"
+# ssl_private_key_path = "/full/path/to/private-key.pem"

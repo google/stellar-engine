@@ -372,7 +372,7 @@ When "Brownfield - Stellar Engine Integration" is selected, the script automates
     -   *Crucial:* This ensures that Gemini Enterprise state lives alongside the rest of the tenant's infrastructure state.
 4.  **CMEK Inheritance:**
     -   **State Key:** Discovers the key protecting the State Bucket.
-    -   **Resource Key:** Scans the Tenant IaC Project for the `gcs` and `gemini-enterprise` (or `default`) keys in the `us` or `us-east4` keyrings.
+    -   **Resource Key:** Scans the Stage 3 Security Core Project (`<prefix>-<env>-sec-core-0`, falling back to the Tenant IaC Project) for the `gcs` and `gemini-enterprise` (or `default`) keys in the `us` or regional keyrings.
     -   *Benefit:* No need to create new keys; leverages the tenant's existing crypto-boundary.
 
 ### Dynamic Discovery Logic
@@ -381,9 +381,9 @@ The `discover_infrastructure` function in `deploy.sh` performs the following:
 
 1.  **Derive IaC Project:** `<prefix>-<env>-<tenant>-iac-core-0`
 2.  **Locate State Bucket:** Checks `gs://${PREFIX}-${ENVIRONMENT}-${TENANT}-iac-0`.
-3.  **Find Keys:**
-    -   Checks US Multi-Region Keyring: `projects/.../locations/us/keyRings/${Environment}-${Tenant}-keyring`
-    -   Checks Regional Keyring (fallback): `projects/.../locations/${REGION}/keyRings/${Environment}-${Tenant}-keyring`
+3.  **Find Keys (in `<prefix>-<env>-sec-core-0` or `<prefix>-<env>-<tenant>-iac-core-0`):**
+    -   Checks US Multi-Region Keyring: `projects/.../locations/us/keyRings/${ENVIRONMENT}-us` (then `${Environment}-${Tenant}-keyring`)
+    -   Checks Regional Keyring (fallback): `projects/.../locations/${REGION}/keyRings/${ENVIRONMENT}-${REGION}` (then `${Environment}-${Tenant}-keyring`)
 
 ### Network Integration (Shared VPC)
 
@@ -803,7 +803,7 @@ Before applying this Terraform module, ensure the following manual steps and con
 5.  **CMEK Configuration:**
     - The `deploy.sh` script automatically handles the creation of a Customer-Managed Encryption Key (CMEK) for the Terraform state bucket and passes this key to Terraform for use with Discovery Engine resources.
     - **Greenfield:** The key is created with a **90-day rotation period** and a regime-appropriate protection level (**HSM** for `FedRAMP High`, `IL4`, and `IL5`; **Software** for `FedRAMP Moderate`).
-    - **Brownfield:** The script discovers and reuses the existing Tenant `iac-core` key.
+    - **Brownfield:** The script discovers and reuses the existing Stage 3 `sec-core` (or Tenant `iac-core`) KMS keys, with optional operator override.
     - Ensure your project has sufficient quota for Cloud KMS keys and HSM usage.
 
 **IMPORTANT:** This blueprint is designed to be deployed in an **Assured Workloads GCP project** matching your target compliance regime (`FedRAMP High`, `FedRAMP Moderate`, `IL4`, or `IL5`), ensuring a clean slate for meeting stringent security and compliance requirements.
@@ -1135,16 +1135,18 @@ This Terraform module (`gemini-stage-1`) provisions the network frontend compone
       - Ensure the certificate name matches what you provide to Stage 1.
 
 3.  **Update `terraform.tfvars` for gemini-stage-1:**
-    - **Recommended:** Run `./deploy.sh` and select **Option 3 (Deploy Stage 1)**. The script will:
+    - **Recommended:** Run `./deploy.sh` and select **Option 2 (Deploy Stage 1)**. The script will:
       - Detect your Stage 0 remote state configuration.
       - Automatically retrieve `project_id`, `region`, and `domain`.
-      - Prompt you only for the `ssl_certificate_name`.
+      - Prompt you to either provide local `.crt`/`.key` PEM paths (for Terraform to provision the regional SSL certificate) or select an existing uploaded `ssl_certificate_name`.
       - Generate the `gemini-stage-1/terraform.tfvars` file for you.
     - **Manual:** Create or update the `terraform.tfvars` file in the `gemini-stage-1` directory with the following:
       ```hcl
       stage_0_state_bucket     = "YOUR_STAGE_0_STATE_BUCKET"
       gemini_enterprise_domain = "gemini.yourdomain.com"
-      ssl_certificate_name     = "YOUR_CERTIFICATE_MANAGER_NAME"
+      ssl_certificate_name     = "YOUR_SSL_CERTIFICATE_NAME"
+      ssl_certificate_path     = "/path/to/certificate.pem" # Optional: let Terraform create the regional SSL certificate
+      ssl_private_key_path     = "/path/to/private_key.pem" # Optional: let Terraform create the regional SSL certificate
       ```
 
 ### Inputs
