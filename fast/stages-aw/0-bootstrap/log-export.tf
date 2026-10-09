@@ -47,9 +47,7 @@ module "log-export-project" {
   prefix          = local.prefix
   billing_account = var.billing_account.id
   contacts = (
-    var.bootstrap_user != null || var.essential_contacts == null
-    ? {}
-    : { (var.essential_contacts) = ["ALL"] }
+    var.bootstrap_user != null ? {} : local.essential_contacts
   )
   iam = {
     "roles/owner"  = [module.automation-tf-bootstrap-sa.iam_email]

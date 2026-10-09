@@ -17,6 +17,14 @@
 # tfdoc:file:description Organization-level IAM.
 
 locals {
+  essential_contacts = (
+    var.essential_contacts == null
+    ? {}
+    : try(
+      { for k, v in tomap(var.essential_contacts) : k => tolist(v) },
+      tostring(var.essential_contacts) == "" ? {} : { (tostring(var.essential_contacts)) = ["ALL"] }
+    )
+  )
   # reassemble logical bindings into the formats expected by the module
   _iam_bindings = merge(
     local.iam_domain_bindings,
@@ -314,6 +322,7 @@ module "organization" {
       }
     }
   )
+  contacts     = var.bootstrap_user != null ? {} : local.essential_contacts
   custom_roles = var.custom_roles
   factories_config = {
     custom_roles = var.factories_config.custom_roles
