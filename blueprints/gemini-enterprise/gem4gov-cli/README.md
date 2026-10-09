@@ -179,7 +179,21 @@ gem4gov datastore import --project-id <PROJECT_ID> --source-type <SOURCE_TYPE> [
 *   `--project-id`: (Required) GCP Project ID.
 *   `--source-type`: (Required) Source of documents. Values: `gcs`, `bigquery`.
 *   `--data-store-id`: (Optional) The ID of the data store. If not provided, you will be prompted to select one.
+*   `--gcs-bucket`: (Optional) The GCS bucket name when `--source-type=gcs`.
+*   `--dataset-id`: (Optional) The BigQuery dataset ID when `--source-type=bigquery`.
+*   `--table-id`: (Optional) The BigQuery table ID when `--source-type=bigquery`.
+*   `--id-field`: (Optional) The BigQuery column name to use as the document ID, or `auto` to auto-generate IDs, when `--source-type=bigquery`.
 
 **Behavior:**
-*   **GCS**: Prompts for the GCS URI (`gs://bucket/path`) and imports documents.
-*   **BigQuery**: Not currently supported via this command (use `onboard`).
+*   **GCS**: Prompts for the GCS URI (`gs://bucket/path`) or relative path inside `--gcs-bucket` and imports documents via `import_gcs_documents`.
+*   **BigQuery**: Uses `--dataset-id`, `--table-id`, and `--id-field` when supplied, or prompts interactively for the dataset, table, and schema ID field, and imports documents via `import_bq_documents`.
+
+### gem4gov license
+
+Manage Gemini for Government billing-account license distributions and project-level user license assignments.
+
+*   `gem4gov license list --billing-account <BILLING_ACCOUNT_ID>`: Lists available billing-account license configurations, total counts, and project distributions.
+*   `gem4gov license distribute --billing-account <BILLING_ACCOUNT_ID> --config-id <CONFIG_ID> --target-project-number <PROJECT_NUMBER> --count <COUNT> [--location global|us|eu] [--license-config-id <LICENSE_CONFIG_ID>]`: Distributes licenses from a billing account to a target project.
+*   `gem4gov license retract --billing-account <BILLING_ACCOUNT_ID> --config-id <CONFIG_ID> [--target-project-number <PROJECT_NUMBER> | --target-project-numbers <P1,P2>] [--count <COUNT> | --retract-all] [--location global|us|eu] [--license-config-id <LICENSE_CONFIG_ID>]`: Retracts distributed licenses from one or more projects back to the billing account pool.
+*   `gem4gov license assign --project-id <PROJECT_ID> --users <EMAIL1,EMAIL2> --license-config-id <LICENSE_CONFIG_ID> [--location global|us|eu] [--user-store-id default_user_store] [--unassign]`: Assigns (or unassigns when `--unassign` is set) project-level Gemini Enterprise licenses for user principals in `userStores`.
+*   `gem4gov license unassign --project-id <PROJECT_ID> --users <EMAIL1,EMAIL2> [--location global|us|eu] [--user-store-id default_user_store]`: Unassigns project-level Gemini Enterprise licenses from the specified user principals.

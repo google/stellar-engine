@@ -213,5 +213,137 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
     )
 
 
+
+  def test_gem4gov_cli_subcommands_for_bigquery_and_licenses(self):
+    """Verify gem4gov datastore import BigQuery support (#122), license retract (#123), and license assign/unassign (#121)."""
+    from unittest.mock import MagicMock, patch
+    import sys
+
+    cli_dir = str(REPO_ROOT / "blueprints/gemini-enterprise/gem4gov-cli")
+    if cli_dir not in sys.path:
+      sys.path.insert(0, cli_dir)
+    import gem4gov
+
+    # Verify CLI command definitions in AST
+    content = GEM4GOV_PATH.read_text(encoding="utf-8")
+    self.assertIn("--dataset-id", content)
+    self.assertIn("--table-id", content)
+    self.assertIn("--id-field", content)
+    self.assertIn("@license.command(name='retract')", content)
+    self.assertIn("@license.command(name='assign')", content)
+    self.assertIn("@license.command(name='unassign')", content)
+
+    # 1. Test datastore import --source-type bigquery non-interactively (#122)
+    mock_creds = MagicMock()
+    with (
+        patch.object(
+            gem4gov, "validate_data_store", return_value={"valid": True}
+        ),
+        patch.object(gem4gov, "import_bq_documents") as mock_import_bq,
+    ):
+      gem4gov.import_documents_helper(
+          mock_creds,
+          project_id="proj-1",
+          source_type="bigquery",
+          data_store_id="ds-1",
+          dataset_id="my_ds",
+          table_id="my_tbl",
+          id_field="record_uuid",
+      )
+      mock_import_bq.assert_called_once_with(
+          mock_creds,
+          "proj-1",
+          "ds-1",
+          "my_ds",
+          "my_tbl",
+          {"id": "record_uuid"},
+      )
+
+    # 2. Test license retract single and batch (#123)
+    with patch.object(gem4gov, "build") as mock_build:
+      mock_service = MagicMock()
+      mock_build.return_value = mock_service
+      mock_ba = mock_service.billingAccounts().billingAccountLicenseConfigs()
+      mock_ba.list.return_value.execute.return_value = {
+          "billingAccountLicenseConfigs": [{
+              "name": (
+                  "billingAccounts/012345-6789AB-CDEF01/"
+                  "billingAccountLicenseConfigs/cfg-main"
+              ),
+              "licenseConfigDistributions": {
+                  "projects/111/locations/us/licenseConfigs/lic-111": 10,
+                  "projects/222/locations/us/licenseConfigs/lic-222": 5,
+              },
+          }]
+      }
+      mock_ba.retractLicenseConfig.return_value.execute.return_value = {
+          "retracted": True
+      }
+
+      gem4gov._retract_project_licenses(
+          mock_creds,
+          billing_account="012345-6789AB-CDEF01",
+          config_id="cfg-main",
+          target_project_numbers="111,222",
+          location="us",
+          retract_all=True,
+      )
+      self.assertEqual(mock_ba.retractLicenseConfig.call_count, 2)
+      first_call_body = mock_ba.retractLicenseConfig.call_args_list[0][1]["body"]
+      self.assertEqual(
+          first_call_body["licenseConfig"],
+          "projects/111/locations/us/licenseConfigs/lic-111",
+      )
+      self.assertTrue(first_call_body["retractAllLicenses"])
+
+    # 3. Test license assign and unassign (#121)
+    with patch.object(gem4gov, "build") as mock_build:
+      mock_service = MagicMock()
+      mock_build.return_value = mock_service
+      mock_us = mock_service.projects().locations().userStores()
+      mock_us.batchUpdateUserLicenses.return_value.execute.return_value = {
+          "name": "operations/batch-op-1"
+      }
+
+      gem4gov._batch_update_user_licenses(
+          mock_creds,
+          project_id="proj-1",
+          location="us",
+          users="alice@example.gov,bob@example.gov",
+          license_config_id="lic-abc",
+          unassign=False,
+      )
+      assign_kwargs = mock_us.batchUpdateUserLicenses.call_args[1]
+      self.assertEqual(
+          assign_kwargs["parent"],
+          "projects/proj-1/locations/us/userStores/default_user_store",
+      )
+      self.assertFalse(assign_kwargs["body"]["deleteUnassignedUserLicenses"])
+      self.assertEqual(
+          len(assign_kwargs["body"]["inlineSource"]["userLicenses"]), 2
+      )
+      self.assertEqual(
+          assign_kwargs["body"]["inlineSource"]["userLicenses"][0][
+              "licenseConfig"
+          ],
+          "projects/proj-1/locations/us/licenseConfigs/lic-abc",
+      )
+
+      gem4gov._batch_update_user_licenses(
+          mock_creds,
+          project_id="proj-1",
+          location="us",
+          users="alice@example.gov",
+          license_config_id=None,
+          unassign=True,
+      )
+      unassign_kwargs = mock_us.batchUpdateUserLicenses.call_args[1]
+      self.assertTrue(unassign_kwargs["body"]["deleteUnassignedUserLicenses"])
+      self.assertEqual(
+          unassign_kwargs["body"]["inlineSource"]["updateMask"]["paths"],
+          ["userPrincipal"],
+      )
+
+
 if __name__ == "__main__":
   unittest.main()
