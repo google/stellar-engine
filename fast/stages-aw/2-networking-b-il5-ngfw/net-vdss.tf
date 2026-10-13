@@ -35,7 +35,8 @@ module "vdss-host-project" {
     "networkmanagement.googleapis.com",
     "stackdriver.googleapis.com",
     "networkservices.googleapis.com",
-    "cloudkms.googleapis.com"
+    "cloudkms.googleapis.com",
+    "secretmanager.googleapis.com"
   ]
   shared_vpc_host_config = {
     enabled = true

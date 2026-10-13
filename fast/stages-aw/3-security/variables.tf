@@ -89,9 +89,17 @@ variable "envs_folders" {
 }
 
 variable "essential_contacts" {
-  description = "Email used for essential contacts, unset if null."
-  type        = string
-  default     = null
+  description = "Email or map of emails to notification category lists used for essential contacts, unset if null or empty."
+  type        = any
+  default     = {}
+  validation {
+    condition = (
+      var.essential_contacts == null ||
+      can(tostring(var.essential_contacts)) ||
+      can(tomap(var.essential_contacts))
+    )
+    error_message = "essential_contacts must be null, a single email string, or a map of email strings to notification category lists."
+  }
 }
 
 variable "factories_config" {

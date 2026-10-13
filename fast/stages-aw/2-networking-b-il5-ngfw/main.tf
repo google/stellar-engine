@@ -17,6 +17,14 @@
 # tfdoc:file:description Networking folder and hierarchical policy.
 
 locals {
+  essential_contacts = (
+    var.essential_contacts == null
+    ? {}
+    : try(
+      { for k, v in tomap(var.essential_contacts) : k => tolist(v) },
+      tostring(var.essential_contacts) == "" ? {} : { (tostring(var.essential_contacts)) = ["ALL"] }
+    )
+  )
   service_accounts = {
     for k, v in coalesce(var.service_accounts, {}) :
     k => "serviceAccount:${v}" if v != null
@@ -29,11 +37,7 @@ module "folder" {
   name          = "Networking"
   folder_create = var.folder_ids.networking == null
   id            = var.folder_ids.networking
-  contacts = (
-    var.essential_contacts == null
-    ? {}
-    : { (var.essential_contacts) = ["ALL"] }
-  )
+  contacts      = local.essential_contacts
   firewall_policy = {
     name   = "default"
     policy = module.firewall-policy-default.id

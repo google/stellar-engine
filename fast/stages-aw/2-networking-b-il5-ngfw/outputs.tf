@@ -69,16 +69,9 @@ output "host_project_numbers" {
   value       = local.host_project_numbers
 }
 
-resource "local_file" "rsa-out" {
-  content         = tls_private_key.ngfw-ssh.private_key_openssh
-  file_permission = "0600"
-  filename        = "${path.module}/id_rsa"
-}
-
-resource "local_file" "rsa-pub-out" {
-  content         = tls_private_key.ngfw-ssh.public_key_openssh
-  file_permission = "0600"
-  filename        = "${path.module}/id_rsa.pub"
+output "ngfw_ssh_private_key_secret_id" {
+  description = "Secret Manager secret ID storing the NGFW SSH private key."
+  value       = module.ngfw-ssh-secrets.ids["ngfw-ssh-private-key"]
 }
 
 output "ngfw_password" {

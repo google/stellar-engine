@@ -360,7 +360,7 @@ Use the following command to access the web portal `gcloud compute ssh managemen
 
 *Note*: Replace `<ZONE>` with the zone where your management bastion host was deployed. You can find this in the Terraform outputs or by running `terraform show | grep zone`.
 
-If you wish to ssh into the NGFWs, you can copy the `id_rsa` and `id_rsa.pub` files that are output by the terraform process over to the `.ssh/` folder on the bastion host.
+If you wish to SSH into the NGFWs from the management bastion host, retrieve the private key directly from Secret Manager on the bastion host by running `mkdir -p ~/.ssh && gcloud secrets versions access latest --secret=ngfw-ssh-private-key --project=<vdss-host-project-id> > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa`.
 
 ### Updating configuration
 
