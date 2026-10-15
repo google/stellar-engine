@@ -153,6 +153,69 @@ class TestBootstrapLoggingOrder(unittest.TestCase):
             automation_tf,
         )
 
+    def test_stage0_checklist_bucket_configures_cmek_and_force_destroy(self):
+        """Checklist GCS bucket configures CMEK encryption and force_destroy."""
+        # Arrange
+        checklist_tf = (_BOOTSTRAP_DIR / "checklist.tf").read_text(
+            encoding="utf-8"
+        )
+
+        # Act
+        match = re.search(
+            r'module\s+"automation-tf-checklist-gcs"\s*\{(.*?)^\}',
+            checklist_tf,
+            re.DOTALL | re.MULTILINE,
+        )
+
+        # Assert
+        self.assertIsNotNone(match)
+        block = match.group(1)
+        self.assertIn("encryption_key = module.gcs-kms.keys.gcs.id", block)
+        self.assertIn("force_destroy  = var.force_destroy", block)
+
+    def test_stage0_custom_firewall_constraint_blocks_any_open_cidr(self):
+        """Custom firewall constraint checks whether any source CIDR is open."""
+        # Arrange
+        net_constraint = (
+            _BOOTSTRAP_DIR / "data/custom-constraint-policies/networking.yaml"
+        ).read_text(encoding="utf-8")
+
+        # Act & Assert
+        self.assertIn(
+            (
+                "resource.sourceRanges.exists("
+                "range, range == '0.0.0.0/0' || range == '::/0')"
+            ),
+            net_constraint,
+        )
+
+    def test_stage0_storage_viewer_custom_role_excludes_object_create(self):
+        """Read-only storage_viewer role excludes storage.objects.create."""
+        # Arrange
+        storage_viewer = (
+            _BOOTSTRAP_DIR / "data/custom-roles/storage_viewer.yaml"
+        ).read_text(encoding="utf-8")
+
+        # Act & Assert
+        self.assertNotIn("storage.objects.create", storage_viewer)
+
+    def test_stage1_tenant_folder_iam_uses_tenant_key_and_merged_bindings(self):
+        """Stage 1 tenant IAM uses each.key and merges folder bindings."""
+        # Arrange
+        resman_dir = _REPO_ROOT / "fast" / "stages-aw" / "1-resman"
+        tenants_tf = (resman_dir / "branch-tenants.tf").read_text(
+            encoding="utf-8"
+        )
+
+        # Act & Assert
+        self.assertNotIn("each.value.tenant.name", tenants_tf)
+        self.assertNotIn(
+            'resource "google_folder_iam_binding" "tenant_core_iam"', tenants_tf
+        )
+        self.assertNotIn(
+            'resource "google_folder_iam_binding" "tenant_self_iam"', tenants_tf
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

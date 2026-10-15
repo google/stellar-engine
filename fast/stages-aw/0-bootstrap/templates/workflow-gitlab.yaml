@@ -28,13 +28,13 @@ workflow:
       variables:
         COMMAND: apply
         FAST_SERVICE_ACCOUNT: ${service_accounts.apply}
-        TF_PROVIDERS_FILE: 0-bootstrap-providers.tf
+        TF_PROVIDERS_FILE: ${tf_providers_files.apply}
     # pr / plan
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
       variables:
         COMMAND: plan
         FAST_SERVICE_ACCOUNT: ${service_accounts.plan}
-        TF_PROVIDERS_FILE: 0-bootstrap-r-providers.tf
+        TF_PROVIDERS_FILE: ${tf_providers_files.plan}
 
 stages:
   - gcp-setup

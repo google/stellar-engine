@@ -57,13 +57,19 @@ module "tenant-top-folders-iam" {
       "roles/cloudasset.owner"               = [module.tenant-core-sa[each.key].iam_email]
       "roles/compute.xpnAdmin"               = [module.tenant-core-sa[each.key].iam_email]
       "roles/logging.admin"                  = [module.tenant-core-sa[each.key].iam_email]
+      "roles/owner"                          = [module.tenant-core-sa[each.key].iam_email]
       "roles/resourcemanager.folderAdmin"    = [module.tenant-core-sa[each.key].iam_email]
       "roles/resourcemanager.projectCreator" = [module.tenant-core-sa[each.key].iam_email]
       "roles/resourcemanager.tagUser"        = [module.tenant-core-sa[each.key].iam_email]
+      "roles/viewer"                         = local.tenant_iam[each.key]
     },
     {
-      for k in var.tenants_config.top_folder_roles :
-      k => local.tenant_iam[each.value.tenant.name]
+      for k in distinct(concat(
+        var.tenants_config.top_folder_roles,
+        var.tenants_config.core_folder_roles,
+        var.tenants_config.tenant_folder_roles
+      )) :
+      k => local.tenant_iam[each.key]
     }
   )
 }
@@ -73,18 +79,7 @@ module "tenant-core-folders-iam" {
   for_each      = local.tenant_envs
   id            = module.tenant-top-folders[each.key].id
   folder_create = false
-  iam = merge(
-    {
-      "roles/owner" = [
-        module.tenant-core-sa[each.key].iam_email
-      ]
-      "roles/viewer" = local.tenant_iam[each.key]
-    },
-    {
-      for k in var.tenants_config.core_folder_roles :
-      k => local.tenant_iam[each.key]
-    }
-  )
+  iam           = {}
 }
 
 module "tenant-self-folders-iam" {
@@ -92,20 +87,7 @@ module "tenant-self-folders-iam" {
   for_each      = local.tenant_envs
   id            = module.tenant-top-folders[each.key].id
   folder_create = false
-  iam = merge(
-    {
-      "roles/cloudasset.owner"               = [module.tenant-core-sa[each.key].iam_email]
-      "roles/compute.xpnAdmin"               = [module.tenant-core-sa[each.key].iam_email]
-      "roles/resourcemanager.folderAdmin"    = [module.tenant-core-sa[each.key].iam_email]
-      "roles/resourcemanager.projectCreator" = [module.tenant-core-sa[each.key].iam_email]
-      "roles/resourcemanager.tagUser"        = [module.tenant-core-sa[each.key].iam_email]
-      "roles/owner"                          = [module.tenant-core-sa[each.key].iam_email]
-    },
-    {
-      for k in var.tenants_config.tenant_folder_roles :
-      k => local.tenant_iam[each.key]
-    }
-  )
+  iam           = {}
 }
 
 # Tenant IaC resources (core)
