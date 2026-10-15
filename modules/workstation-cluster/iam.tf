@@ -18,33 +18,33 @@
 
 locals {
   workstation_config_iam = merge([for k1, v1 in var.workstation_configs : { for k2, v2 in v1.iam :
-    "${k1}-${k2}" => {
+    "${k1}//${k2}" => {
       workstation_config_id = k1
       role                  = k2
       members               = v2
   } }]...)
   workstation_config_iam_bindings = merge([for k1, v1 in var.workstation_configs : { for k2, v2 in v1.iam_bindings :
-    "${k1}-${k2}" => merge(v2, {
+    "${k1}//${k2}" => merge(v2, {
       workstation_config_id = k1
   }) }]...)
   workstation_config_iam_bindings_additive = merge([for k1, v1 in var.workstation_configs : { for k2, v2 in v1.iam_bindings_additive :
-    "${k1}-${k2}" => merge(v2, {
+    "${k1}//${k2}" => merge(v2, {
       workstation_config_id = k1
   }) }]...)
   workstation_iam = merge(flatten([for k1, v1 in var.workstation_configs : [for k2, v2 in v1.workstations :
-    { for k3, v3 in v2.iam : "${k1}-${k2}-${k3}" => {
+    { for k3, v3 in v2.iam : "${k1}//${k2}//${k3}" => {
       workstation_config_id = k1
       workstation_id        = k2
       role                  = k3
       members               = v3
   } }]])...)
   workstation_iam_bindings = merge(flatten([for k1, v1 in var.workstation_configs : [for k2, v2 in v1.workstations :
-    { for k3, v3 in v2.iam_bindings : "${k1}-${k2}-${k3}" => merge(v3, {
+    { for k3, v3 in v2.iam_bindings : "${k1}//${k2}//${k3}" => merge(v3, {
       workstation_config_id = k1
       workstation_id        = k2
   }) }]])...)
   workstation_iam_bindings_additive = merge(flatten([for k1, v1 in var.workstation_configs : [for k2, v2 in v1.workstations :
-    { for k3, v3 in v2.iam_bindings_additive : "${k1}-${k2}-${k3}" => merge(v3, {
+    { for k3, v3 in v2.iam_bindings_additive : "${k1}//${k2}//${k3}" => merge(v3, {
       workstation_config_id = k1
       workstation_id        = k2
   }) }]])...)
@@ -70,6 +70,14 @@ resource "google_workstations_workstation_config_iam_binding" "bindings" {
   workstation_config_id  = google_workstations_workstation_config.configs[each.value.workstation_config_id].workstation_config_id
   role                   = each.value.role
   members                = each.value.members
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }
 
 resource "google_workstations_workstation_config_iam_member" "bindings" {
@@ -81,6 +89,14 @@ resource "google_workstations_workstation_config_iam_member" "bindings" {
   workstation_config_id  = google_workstations_workstation_config.configs[each.value.workstation_config_id].workstation_config_id
   role                   = each.value.role
   member                 = each.value.member
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }
 
 resource "google_workstations_workstation_iam_binding" "authoritative" {
@@ -105,6 +121,14 @@ resource "google_workstations_workstation_iam_binding" "bindings" {
   workstation_id         = google_workstations_workstation.workstations["${each.value.workstation_config_id}-${each.value.workstation_id}"].workstation_id
   role                   = each.value.role
   members                = each.value.members
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }
 
 resource "google_workstations_workstation_iam_member" "bindings" {
@@ -117,5 +141,13 @@ resource "google_workstations_workstation_iam_member" "bindings" {
   workstation_id         = google_workstations_workstation.workstations["${each.value.workstation_config_id}-${each.value.workstation_id}"].workstation_id
   role                   = each.value.role
   member                 = each.value.member
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }
 

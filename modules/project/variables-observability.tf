@@ -235,6 +235,7 @@ variable "notification_channels" {
       service_key = optional(string)
     }))
   }))
-  nullable = false
-  default  = {}
+  nullable  = false
+  default   = {}
+  sensitive = true
 }

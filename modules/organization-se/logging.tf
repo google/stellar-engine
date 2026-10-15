@@ -32,12 +32,17 @@ locals {
       name => sink if sink.iam && sink.type == type
     }
   }
+  sink_bucket_expressions = {
+    for k, v in local.sink_bindings["logging"] :
+    k => "locations/${split("/", v.destination)[3]}/buckets/${split("/", v.destination)[5]}"
+  }
 }
 
 resource "google_logging_organization_settings" "default" {
   count                = var.logging_settings != null ? 1 : 0
   organization         = local.organization_id_numeric
   disable_default_sink = var.logging_settings.disable_default_sink
+  kms_key_name         = var.logging_settings.kms_key_name
   storage_location     = var.logging_settings.storage_location
 }
 
@@ -119,7 +124,7 @@ resource "google_project_iam_member" "bucket-sinks-binding" {
   condition {
     title       = "${each.key} bucket writer"
     description = "Grants bucketWriter to ${google_logging_organization_sink.sink[each.key].writer_identity} used by log sink ${each.key} on ${var.organization_id}"
-    expression  = "resource.name.endsWith('${each.value.destination}')"
+    expression  = "resource.name.endsWith('${local.sink_bucket_expressions[each.key]}')"
   }
 }
 

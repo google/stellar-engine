@@ -19,7 +19,7 @@ locals {
     startswith(var.bundle_config.path, "gs://")
     ? "gcs"
     : (
-      try(fileexists(pathexpand(var.bundle_config.path)), null) != null &&
+      try(fileexists(pathexpand(var.bundle_config.path)), false) &&
       endswith(var.bundle_config.path, ".zip")
       ? "local-file"
       : "local-folder"
@@ -68,7 +68,7 @@ data "archive_file" "bundle" {
     ? pathexpand(var.bundle_config.folder_options.archive_path)
     : "/tmp/bundle-${var.project_id}-${var.name}.zip"
   )
-  output_file_mode = "0644"
+  output_file_mode = "0600"
   excludes         = var.bundle_config.folder_options.excludes
 }
 

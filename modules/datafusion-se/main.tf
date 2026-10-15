@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 resource "google_compute_firewall" "default" {
-  count         = var.firewall_create == true ? 1 : 0
+  count         = var.firewall_create == true && var.ip_allocation != null ? 1 : 0
   name          = "${var.name}-allow-ssh"
   project       = var.landing_project_id
   network       = var.network
@@ -32,7 +32,7 @@ resource "google_compute_firewall" "default" {
 
 resource "google_compute_network_attachment" "psc" {
   count                 = var.connection_type == "PRIVATE_SERVICE_CONNECT_INTERFACES" ? 1 : 0
-  name                  = "datafusion-psc-attachment"
+  name                  = "${var.name}-psc-attachment"
   project               = var.project_id
   region                = var.region
   connection_preference = "ACCEPT_AUTOMATIC"

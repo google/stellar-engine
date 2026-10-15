@@ -21,8 +21,8 @@ locals {
     {
       for f in try(fileset(local._folders_path, "**/*.yaml"), []) :
       basename(trimsuffix(f, ".yaml")) => merge(
-        { parent = dirname(f) == "." ? "default" : dirname(f) },
-        yamldecode(file("${local._folders_path}/${f}"))
+        yamldecode(file("${local._folders_path}/${f}")),
+        { parent = dirname(f) == "." ? "default" : dirname(f) }
       )
       if !endswith(f, "/_config.yaml")
     }
@@ -61,31 +61,31 @@ locals {
       factories_config = {
         custom_roles = try(
           coalesce(
-            var.data_overrides.factories_config.custom_roles,
+            try(var.data_overrides.factories_config.custom_roles, null),
             try(v.factories_config.custom_roles, null),
-            var.data_defaults.factories_config.custom_roles
+            try(var.data_defaults.factories_config.custom_roles, null)
           ),
           null
         )
         observability = try(
           coalesce(
-            var.data_overrides.factories_config.observability,
+            try(var.data_overrides.factories_config.observability, null),
             try(v.factories_config.observability, null),
-            var.data_defaults.factories_config.observability
+            try(var.data_defaults.factories_config.observability, null)
           ),
         null)
         org_policies = try(
           coalesce(
-            var.data_overrides.factories_config.org_policies,
+            try(var.data_overrides.factories_config.org_policies, null),
             try(v.factories_config.org_policies, null),
-            var.data_defaults.factories_config.org_policies
+            try(var.data_defaults.factories_config.org_policies, null)
           ),
         null)
         quotas = try(
           coalesce(
-            var.data_overrides.factories_config.quotas,
+            try(var.data_overrides.factories_config.quotas, null),
             try(v.factories_config.quotas, null),
-            var.data_defaults.factories_config.quotas
+            try(var.data_defaults.factories_config.quotas, null)
           ),
         null)
       }

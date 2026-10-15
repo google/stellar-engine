@@ -20,4 +20,5 @@ output "service_account" {
 output "workflow" {
   description = "The newly created workflow."
   value       = google_workflows_workflow.workflow
+  sensitive   = true
 }

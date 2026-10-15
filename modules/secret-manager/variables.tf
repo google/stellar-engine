@@ -48,6 +48,7 @@ variable "versions" {
     enabled = bool
     data    = string
   })))
-  default = {}
+  default   = {}
+  sensitive = true
 }
 

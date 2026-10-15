@@ -53,6 +53,14 @@ resource "google_secure_source_manager_instance_iam_binding" "bindings" {
   instance_id = local.iam_instance_values["instance_id"]
   role        = each.value.role
   members     = each.value.members
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }
 
 resource "google_secure_source_manager_instance_iam_member" "bindings" {
@@ -62,6 +70,14 @@ resource "google_secure_source_manager_instance_iam_member" "bindings" {
   instance_id = local.iam_instance_values["instance_id"]
   role        = each.value.role
   member      = each.value.member
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }
 
 resource "google_secure_source_manager_repository_iam_binding" "authoritative" {
@@ -80,6 +96,14 @@ resource "google_secure_source_manager_repository_iam_binding" "bindings" {
   repository_id = google_secure_source_manager_repository.repositories[each.value.repository].repository_id
   role          = each.value.role
   members       = each.value.members
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }
 
 resource "google_secure_source_manager_repository_iam_member" "bindings" {
@@ -89,4 +113,12 @@ resource "google_secure_source_manager_repository_iam_member" "bindings" {
   repository_id = google_secure_source_manager_repository.repositories[each.value.repository].repository_id
   role          = each.value.role
   member        = each.value.member
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }

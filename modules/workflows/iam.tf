@@ -12,9 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource "google_project_iam_binding" "bindings" {
-  for_each = var.iam
-  project  = var.project
-  role     = each.key
-  members  = each.value
+locals {
+  iam_members = flatten([
+    for role, members in coalesce(var.iam, {}) : [
+      for member in members : {
+        role   = role
+        member = member
+      }
+    ]
+  ])
+}
+
+resource "google_project_iam_member" "bindings" {
+  for_each = {
+    for binding in local.iam_members :
+    "${binding.role}-${binding.member}" => binding
+  }
+  project = var.project
+  role    = each.value.role
+  member  = each.value.member
 }

@@ -25,6 +25,11 @@ variable "iam_bindings" {
   type = map(object({
     role    = string
     members = list(string)
+    condition = optional(object({
+      expression  = string
+      title       = string
+      description = optional(string)
+    }))
   }))
   default = {}
 }
@@ -34,6 +39,11 @@ variable "iam_bindings_additive" {
   type = map(object({
     role   = string
     member = string
+    condition = optional(object({
+      expression  = string
+      title       = string
+      description = optional(string)
+    }))
   }))
   default = {}
 }

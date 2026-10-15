@@ -118,8 +118,12 @@ variable "oauth_config" {
     client_secret = optional(string, null)
     support_email = optional(string, null)
   })
+  sensitive = true
   validation {
-    condition     = (var.oauth_config.client_id == null && var.oauth_config.client_secret == null) != (var.oauth_config.support_email == null)
+    condition = (
+      (var.oauth_config.client_id != null && var.oauth_config.client_secret != null && var.oauth_config.support_email == null) ||
+      (var.oauth_config.client_id == null && var.oauth_config.client_secret == null && var.oauth_config.support_email != null)
+    )
     error_message = "Please specify either client_id and client_secret or support email."
   }
 }
