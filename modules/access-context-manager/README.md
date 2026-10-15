@@ -49,9 +49,9 @@ To check service perimeters: Go to VPC Service Control and it should be listed i
 | [access_policy_title](variables.tf#L31) | The title for the Access Context Manager policy. | <code>string</code> | ✓ |  |
 | [domain](variables.tf#L36) | Domain for ACM. | <code>string</code> | ✓ |  |
 | [organization_id](variables.tf#L41) | The organization ID. | <code>string</code> | ✓ |  |
-| [project_id](variables.tf#L46) | The project ID where the Access Context Manager resources will be created. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L51) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
-| [service_perimeters](variables.tf#L56) | List of service perimeters to create. Each service perimeter is a map containing 'name', 'description', 'status', and 'resources'. | <code title="list&#40;object&#40;&#123;&#10;  name        &#61; string&#10;  description &#61; string&#10;  status &#61; object&#40;&#123;&#10;    restricted_services &#61; list&#40;string&#41;&#10;    resources           &#61; list&#40;string&#41;&#10;  &#125;&#41;&#10;&#125;&#41;&#41;">list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [service_perimeters](variables.tf#L58) | List of service perimeters to create. Each service perimeter is a map containing 'name', 'description', 'status', and 'resources'. | <code title="list&#40;object&#40;&#123;&#10;  name        &#61; string&#10;  description &#61; string&#10;  status &#61; object&#40;&#123;&#10;    restricted_services &#61; list&#40;string&#41;&#10;    resources           &#61; list&#40;string&#41;&#10;  &#125;&#41;&#10;&#125;&#41;&#41;">list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [project_id](variables.tf#L46) | The project ID where the Access Context Manager resources will be created. | <code>string</code> |  | <code>null</code> |
+| [region](variables.tf#L52) | GCP Region to deploy into. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs
 
