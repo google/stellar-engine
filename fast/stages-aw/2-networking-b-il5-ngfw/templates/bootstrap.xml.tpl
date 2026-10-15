@@ -128,7 +128,7 @@
                 <dhcp-client>
                   <create-default-route>no</create-default-route>
                 </dhcp-client>
-                <interface-management-profile>ssh-https-ping</interface-management-profile>
+                <interface-management-profile>ping</interface-management-profile>
               </layer3>
             </entry>
           </ethernet>
@@ -142,6 +142,12 @@
             </entry>
           </monitor-profile>
           <interface-management-profile>
+            <entry name="ping">
+              <http>no</http>
+              <https>no</https>
+              <ssh>no</ssh>
+              <ping>yes</ping>
+            </entry>
             <entry name="ssh-https-ping">
               <http>no</http>
               <https>yes</https>
@@ -166,14 +172,16 @@
             <ike-crypto-profiles>
               <entry name="default">
                 <encryption>
-                  <member>aes-128-cbc</member>
-                  <member>3des</member>
+                  <member>aes-256-cbc</member>
+                  <member>aes-256-gcm</member>
                 </encryption>
                 <hash>
-                  <member>sha1</member>
+                  <member>sha256</member>
+                  <member>sha384</member>
                 </hash>
                 <dh-group>
-                  <member>group2</member>
+                  <member>group19</member>
+                  <member>group20</member>
                 </dh-group>
                 <lifetime>
                   <hours>8</hours>
@@ -212,14 +220,13 @@
               <entry name="default">
                 <esp>
                   <encryption>
-                    <member>aes-128-cbc</member>
-                    <member>3des</member>
+                    <member>aes-256-gcm</member>
                   </encryption>
                   <authentication>
-                    <member>sha1</member>
+                    <member>none</member>
                   </authentication>
                 </esp>
-                <dh-group>group2</dh-group>
+                <dh-group>group20</dh-group>
                 <lifetime>
                   <hours>1</hours>
                 </lifetime>
@@ -256,10 +263,10 @@
             <global-protect-app-crypto-profiles>
               <entry name="default">
                 <encryption>
-                  <member>aes-128-cbc</member>
+                  <member>aes-256-gcm</member>
                 </encryption>
                 <authentication>
-                  <member>sha1</member>
+                  <member>sha256</member>
                 </authentication>
               </entry>
             </global-protect-app-crypto-profiles>
@@ -487,6 +494,7 @@
                     <member>any</member>
                   </destination-hip>
                   <action>allow</action>
+                  <log-end>yes</log-end>
                 </entry>
               </rules>
             </security>

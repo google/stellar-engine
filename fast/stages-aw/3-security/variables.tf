@@ -37,6 +37,8 @@ variable "automation" {
   description = "Automation resources created by the bootstrap stage."
   type = object({
     outputs_bucket = string
+    project_id     = optional(string)
+    kms_keys       = optional(map(string), {})
   })
 }
 
@@ -200,7 +202,8 @@ variable "logging" {
   # tfdoc:variable:source 0-bootstrap
   description = "Log writer identities for organization / folders."
   type = object({
-    project_number    = string
+    project_id        = optional(string)
+    project_number    = optional(string)
     writer_identities = map(string)
   })
   default = null
@@ -256,6 +259,10 @@ variable "service_accounts" {
     data-platform-prod   = string
     project-factory-dev  = string
     project-factory-prod = string
+    gke-dev              = optional(string)
+    gke-prod             = optional(string)
+    gcve-dev             = optional(string)
+    gcve-prod            = optional(string)
   })
 }
 

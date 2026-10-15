@@ -22,11 +22,9 @@ import yaml
 from pathlib import Path
 
 BASEDIR = Path(__file__).resolve().parents[1]
-try:
-  import fixtures
-except ImportError:
+if str(BASEDIR / 'tests') not in sys.path:
   sys.path.insert(0, str(BASEDIR / 'tests'))
-  import fixtures
+import fixtures
 
 
 @click.command()
@@ -36,18 +34,18 @@ except ImportError:
 def main(example, module, tfvars):
   tmp_dir = None
   try:
+    resolved = (BASEDIR / module).resolve()
+    if not resolved.is_relative_to(BASEDIR.resolve()):
+      raise SystemExit(f'Module path must be within {BASEDIR}')
     if example:
       tmp_dir = tempfile.TemporaryDirectory()
       tmp_path = Path(tmp_dir.name)
       common_vars = BASEDIR / 'tests' / 'examples' / 'variables.tf'
-      (tmp_path / 'main.tf').symlink_to(module)
+      (tmp_path / 'main.tf').symlink_to(resolved)
       (tmp_path / 'variables.tf').symlink_to(common_vars)
       (tmp_path / 'fabric').symlink_to(BASEDIR)
       module = tmp_path
     else:
-      resolved = (BASEDIR / module).resolve()
-      if not resolved.is_relative_to(BASEDIR.resolve()):
-        raise SystemExit(f'Module path must be within {BASEDIR}')
       module = resolved
 
     summary = fixtures.plan_summary(module, Path(), tfvars)

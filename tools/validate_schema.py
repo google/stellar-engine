@@ -45,9 +45,13 @@ def main(directory=None, file=None, schema=None, recursive=False, quiet=False):
 
   files = list(file)
   for d in directory:
-    files = files + glob.glob(os.path.join(d, search), recursive=recursive)
+    files = files + glob.glob(
+        os.path.join(glob.escape(d), search), recursive=recursive
+    )
 
   for document in files:
+    if os.path.islink(document):
+      continue
     yamale_data = yamale.make_data(document)
     try:
       yamale.validate(yamale_schema, yamale_data)

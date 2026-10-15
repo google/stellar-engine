@@ -1,4 +1,17 @@
 #!/bin/bash
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 #### Use this script at your own risk. The author assumes no responsibility for any damages or losses incurred through its use.
 
@@ -407,11 +420,11 @@ if [ ! -f "$SCRIPT_DIR"/config.env ] || promptUser "Would you like to update/ove
         if [[ -n "$current_val" ]]; then
             read -r -p "$prompt_text [$current_val]: " input
             if [[ -n "$input" ]]; then
-                eval "$var_name=\"$input\""
+                printf -v "$var_name" '%s' "$input"
             fi
         else
             read -r -p "$prompt_text: " input
-            eval "$var_name=\"$input\""
+            printf -v "$var_name" '%s' "$input"
         fi
     }
 

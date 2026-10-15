@@ -66,7 +66,7 @@ module "dmz-vpc" {
     logging = var.dns.enable_logging
   }
   create_googleapis_routes = {
-    private    = true
+    private    = false
     restricted = true
   }
   subnets = try(var.subnets.dmz, [])
@@ -99,7 +99,7 @@ module "vdss-vpc" {
   }
   # Set explicit routes for googleapis in case the default route is deleted
   create_googleapis_routes = {
-    private    = true
+    private    = false
     restricted = true
   }
 }
@@ -130,7 +130,7 @@ module "mgmt-vpc" {
   }
   # Set explicit routes for googleapis in case the default route is deleted
   create_googleapis_routes = {
-    private    = true
+    private    = false
     restricted = true
   }
 }
@@ -157,25 +157,6 @@ module "dmz-nat-primary" {
   router_create  = true
   router_name    = "prod-nat-${var.regions.primary}"
   router_network = module.dmz-vpc.name
-}
-
-resource "google_compute_route" "mgmt-default" {
-  name             = "default-route-mgmt"
-  project          = module.vdss-host-project.project_id
-  dest_range       = "0.0.0.0/0"
-  network          = module.mgmt-vpc.name
-  next_hop_gateway = "default-internet-gateway"
-  priority         = 100
-}
-
-module "dmz-nat-mgmt" {
-  source         = "../../../modules/net-cloudnat"
-  project_id     = module.vdss-host-project.project_id
-  region         = var.regions.primary
-  name           = "nat-mgmt-${var.regions.primary}"
-  router_create  = true
-  router_name    = "prod-nat-mgmt-${var.regions.primary}"
-  router_network = module.mgmt-vpc.name
 }
 
 #DNS

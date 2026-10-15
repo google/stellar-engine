@@ -51,7 +51,7 @@ echo 'terraform {
   }
 }' | tee "${SCRIPT_DIR}"/fast/stages-aw/0-bootstrap/mock-versions.tf \
          "${SCRIPT_DIR}"/fast/stages-aw/1-resman/mock-versions.tf \
-         "${SCRIPT_DIR}"/fast/stages-aw/2-networking-a-fedramp-high/mock-versions.tf \
+         "${SCRIPT_DIR}"/fast/stages-aw/2-networking-a-fedramp/mock-versions.tf \
          "${SCRIPT_DIR}"/fast/stages-aw/2-networking-b-il5-ngfw/mock-versions.tf \
          "${SCRIPT_DIR}"/fast/stages-aw/3-security/mock-versions.tf
 
