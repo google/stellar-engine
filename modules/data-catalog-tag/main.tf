@@ -32,6 +32,7 @@ resource "google_data_catalog_tag" "engine" {
     for_each = each.value.fields
     content {
       field_name      = fields.key
+      bool_value      = try(fields.value.bool_value, null)
       double_value    = try(fields.value.double_value, null)
       enum_value      = try(fields.value.enum_value, null)
       string_value    = try(fields.value.string_value, null)

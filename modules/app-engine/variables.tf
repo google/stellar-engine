@@ -37,12 +37,14 @@ variable "feature_settings" {
 variable "iap" {
   description = "Settings for enabling Cloud Identity Aware Proxy."
   type = object({
+    enabled              = optional(bool, true)
     oauth2_client_id     = optional(string, "")
     oauth2_client_secret = optional(string, "")
   })
 
-  nullable = true
-  default  = {}
+  nullable  = true
+  default   = null
+  sensitive = true
 }
 
 variable "location_id" {

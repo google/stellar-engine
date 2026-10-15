@@ -34,12 +34,21 @@ resource "google_apigee_environment_iam_binding" "bindings" {
       environment = k1
       role        = v2.role
       members     = v2.members
+      condition   = v2.condition
     }
   }])...)
   org_id  = local.org_id
   env_id  = google_apigee_environment.environments[each.value.environment].name
   role    = each.value.role
   members = each.value.members
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }
 
 resource "google_apigee_environment_iam_member" "bindings" {
@@ -48,10 +57,19 @@ resource "google_apigee_environment_iam_member" "bindings" {
       environment = k1
       role        = v2.role
       member      = v2.member
+      condition   = v2.condition
     }
   }])...)
   org_id = local.org_id
   env_id = google_apigee_environment.environments[each.value.environment].name
   role   = each.value.role
   member = each.value.member
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }

@@ -61,10 +61,20 @@ variable "repositories" {
     iam_bindings = optional(map(object({
       role    = string
       members = list(string)
+      condition = optional(object({
+        expression  = string
+        title       = string
+        description = optional(string)
+      }))
     })), {})
     iam_bindings_additive = optional(map(object({
       role   = string
       member = string
+      condition = optional(object({
+        expression  = string
+        title       = string
+        description = optional(string)
+      }))
     })), {})
     initial_config = optional(object({
       default_branch = optional(string)

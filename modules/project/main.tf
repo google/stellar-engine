@@ -88,12 +88,15 @@ resource "null_resource" "delete_default_network" {
   }
 
   provisioner "local-exec" {
+    environment = {
+      PROJECT_ID = local.project.project_id
+    }
     command = <<EOT
-      if gcloud compute networks describe default --project ${local.project.project_id} --format=json >/dev/null 2>&1; then
-        for rule in $(gcloud compute firewall-rules list --project ${local.project.project_id} --filter="network=default" --format="value(name)"); do
-          gcloud compute firewall-rules delete "$rule" --project ${local.project.project_id} --quiet
+      if gcloud compute networks describe default --project "$PROJECT_ID" --format=json >/dev/null 2>&1; then
+        for rule in $(gcloud compute firewall-rules list --project "$PROJECT_ID" --filter="network=default" --format="value(name)"); do
+          gcloud compute firewall-rules delete "$rule" --project "$PROJECT_ID" --quiet
         done
-        gcloud compute networks delete default --project ${local.project.project_id} --quiet
+        gcloud compute networks delete default --project "$PROJECT_ID" --quiet
       fi
     EOT
   }

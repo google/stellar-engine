@@ -74,9 +74,16 @@ resource "google_data_fusion_instance" "default" {
   private_instance              = var.private_instance
   enable_stackdriver_logging    = var.enable_stackdriver_logging
   enable_stackdriver_monitoring = var.enable_stackdriver_monitoring
+  dataproc_service_account      = var.dataproc_service_account
   network_config {
     network       = var.network
     ip_allocation = local.ip_allocation
+  }
+  dynamic "crypto_key_config" {
+    for_each = var.kms_key != null ? [1] : []
+    content {
+      key_reference = var.kms_key
+    }
   }
 }
 

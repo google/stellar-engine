@@ -27,16 +27,17 @@ locals {
 # use only if the vpc-sc module has a lifecycle block to ignore resources
 
 resource "google_access_context_manager_service_perimeter_resource" "default" {
-  for_each = toset(
-    local.vpc_sc_dry_run ? [] : local.vpc_sc_perimeters
-  )
+  for_each = toset(concat(
+    local.vpc_sc_dry_run ? [] : compact([try(var.vpc_sc.perimeter_name, null)]),
+    try(var.vpc_sc.perimeter_bridges, [])
+  ))
   perimeter_name = each.key
   resource       = "projects/${local.project.number}"
 }
 
 resource "google_access_context_manager_service_perimeter_dry_run_resource" "default" {
   for_each = toset(
-    local.vpc_sc_dry_run ? local.vpc_sc_perimeters : []
+    local.vpc_sc_dry_run ? compact([try(var.vpc_sc.perimeter_name, null)]) : []
   )
   perimeter_name = each.key
   resource       = "projects/${local.project.number}"

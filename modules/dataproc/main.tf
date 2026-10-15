@@ -145,21 +145,21 @@ resource "google_dataproc_cluster" "cluster" {
           dynamic "kerberos_config" {
             for_each = try(var.dataproc_config.cluster_config.security_config.kerberos_config == null ? [] : [""], [])
             content {
-              cross_realm_trust_admin_server        = var.dataproc_config.cluster_config.kerberos_config.cross_realm_trust_admin_server
-              cross_realm_trust_kdc                 = var.dataproc_config.cluster_config.kerberos_config.cross_realm_trust_kdc
-              cross_realm_trust_realm               = var.dataproc_config.cluster_config.kerberos_config.cross_realm_trust_realm
-              cross_realm_trust_shared_password_uri = var.dataproc_config.cluster_config.kerberos_config.cross_realm_trust_shared_password_uri
-              enable_kerberos                       = var.dataproc_config.cluster_config.kerberos_config.enable_kerberos
-              kdc_db_key_uri                        = var.dataproc_config.cluster_config.kerberos_config.kdc_db_key_uri
-              key_password_uri                      = var.dataproc_config.cluster_config.kerberos_config.key_password_uri
-              keystore_uri                          = var.dataproc_config.cluster_config.kerberos_config.keystore_uri
-              keystore_password_uri                 = var.dataproc_config.cluster_config.kerberos_config.keystore_password_uri
-              kms_key_uri                           = var.dataproc_config.cluster_config.kerberos_config.kms_key_uri
-              realm                                 = var.dataproc_config.cluster_config.kerberos_config.realm
-              root_principal_password_uri           = var.dataproc_config.cluster_config.kerberos_config.root_principal_password_uri
-              tgt_lifetime_hours                    = var.dataproc_config.cluster_config.kerberos_config.tgt_lifetime_hours
-              truststore_password_uri               = var.dataproc_config.cluster_config.kerberos_config.truststore_password_uri
-              truststore_uri                        = var.dataproc_config.cluster_config.kerberos_config.truststore_uri
+              cross_realm_trust_admin_server        = var.dataproc_config.cluster_config.security_config.kerberos_config.cross_realm_trust_admin_server
+              cross_realm_trust_kdc                 = var.dataproc_config.cluster_config.security_config.kerberos_config.cross_realm_trust_kdc
+              cross_realm_trust_realm               = var.dataproc_config.cluster_config.security_config.kerberos_config.cross_realm_trust_realm
+              cross_realm_trust_shared_password_uri = var.dataproc_config.cluster_config.security_config.kerberos_config.cross_realm_trust_shared_password_uri
+              enable_kerberos                       = var.dataproc_config.cluster_config.security_config.kerberos_config.enable_kerberos
+              kdc_db_key_uri                        = var.dataproc_config.cluster_config.security_config.kerberos_config.kdc_db_key_uri
+              key_password_uri                      = var.dataproc_config.cluster_config.security_config.kerberos_config.key_password_uri
+              keystore_uri                          = var.dataproc_config.cluster_config.security_config.kerberos_config.keystore_uri
+              keystore_password_uri                 = var.dataproc_config.cluster_config.security_config.kerberos_config.keystore_password_uri
+              kms_key_uri                           = var.dataproc_config.cluster_config.security_config.kerberos_config.kms_key_uri
+              realm                                 = var.dataproc_config.cluster_config.security_config.kerberos_config.realm
+              root_principal_password_uri           = var.dataproc_config.cluster_config.security_config.kerberos_config.root_principal_password_uri
+              tgt_lifetime_hours                    = var.dataproc_config.cluster_config.security_config.kerberos_config.tgt_lifetime_hours
+              truststore_password_uri               = var.dataproc_config.cluster_config.security_config.kerberos_config.truststore_password_uri
+              truststore_uri                        = var.dataproc_config.cluster_config.security_config.kerberos_config.truststore_uri
             }
           }
         }

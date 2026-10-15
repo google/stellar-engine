@@ -87,7 +87,7 @@ module "automation-bucket" {
     each.value, "uniform_bucket_level_access", true
   )
   versioning = lookup(
-    each.value, "versioning", false
+    each.value, "versioning", true
   )
 }
 

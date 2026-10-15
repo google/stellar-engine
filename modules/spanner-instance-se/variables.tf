@@ -53,7 +53,7 @@ variable "databases" {
 
   validation {
     condition = alltrue(
-      [for k, v in var.databases : v.version_retention_period == null ? true : can(regex("\\d+[smhd]", v.version_retention_period))]
+      [for k, v in var.databases : v.version_retention_period == null ? true : can(regex("^\\d+[smhd]$", v.version_retention_period))]
     )
     error_message = "Invalid version_retention_period. If set, the format has to be: \\d+[smhd]"
   }
@@ -96,6 +96,11 @@ variable "iam_bindings_additive" {
   type = map(object({
     member = string
     role   = string
+    condition = optional(object({
+      expression  = string
+      title       = string
+      description = optional(string)
+    }))
   }))
   nullable = false
   default  = {}

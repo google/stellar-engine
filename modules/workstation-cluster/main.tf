@@ -62,9 +62,10 @@ resource "google_workstations_workstation_config" "configs" {
   running_timeout = (
     each.value.timeouts.running == null ? null : "${each.value.timeouts.running}s"
   )
-  replica_zones = each.value.replica_zones
-  annotations   = each.value.annotations
-  labels        = each.value.labels
+  replica_zones      = each.value.replica_zones
+  annotations        = each.value.annotations
+  labels             = each.value.labels
+  enable_audit_agent = each.value.enable_audit_agent
   dynamic "host" {
     for_each = each.value.gce_instance == null ? [] : [""]
     content {
@@ -126,10 +127,11 @@ resource "google_workstations_workstation_config" "configs" {
       dynamic "gce_pd" {
         for_each = persistent_directories.value.gce_pd == null ? [] : [""]
         content {
-          size_gb        = persistent_directories.value.gce_pd.size_gb
-          fs_type        = persistent_directories.value.gce_pd.fs_type
-          disk_type      = persistent_directories.value.gce_pd.disk_type
-          reclaim_policy = persistent_directories.value.gce_pd.reclaim_policy
+          size_gb         = persistent_directories.value.gce_pd.size_gb
+          fs_type         = persistent_directories.value.gce_pd.fs_type
+          disk_type       = persistent_directories.value.gce_pd.disk_type
+          source_snapshot = persistent_directories.value.gce_pd.source_snapshot
+          reclaim_policy  = persistent_directories.value.gce_pd.reclaim_policy
         }
       }
     }
