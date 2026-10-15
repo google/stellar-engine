@@ -25,5 +25,5 @@ custom.restrictFirewallRanges:
   method_types:
     - CREATE
     - UPDATE
-  condition: "resource.direction.matches('INGRESS') && resource.sourceRanges.all(range, range == '0.0.0.0/0') && resource.allowed.exists(entry, entry != null)"
+  condition: "resource.direction.matches('INGRESS') && resource.sourceRanges.exists(range, range == '0.0.0.0/0' || range == '::/0') && resource.allowed.exists(entry, entry != null)"
   description: Firewall rules must be more specific than 0.0.0.0/0.

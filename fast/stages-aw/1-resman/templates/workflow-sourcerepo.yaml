@@ -23,8 +23,10 @@ steps:
     - |-
       mkdir -p /builder/home/.local/bin
       wget https://releases.hashicorp.com/terraform/$${_TF_VERSION}/terraform_$${_TF_VERSION}_linux_amd64.zip
+      wget https://releases.hashicorp.com/terraform/$${_TF_VERSION}/terraform_$${_TF_VERSION}_SHA256SUMS
+      grep "terraform_$${_TF_VERSION}_linux_amd64.zip" terraform_$${_TF_VERSION}_SHA256SUMS | sha256sum -c -
       unzip terraform_$${_TF_VERSION}_linux_amd64.zip -d /builder/home/.local/bin
-      rm terraform_$${_TF_VERSION}_linux_amd64.zip
+      rm terraform_$${_TF_VERSION}_linux_amd64.zip terraform_$${_TF_VERSION}_SHA256SUMS
       chmod 755 /builder/home/.local/bin/terraform
   - name: alpine:3
     id: tf-check-format

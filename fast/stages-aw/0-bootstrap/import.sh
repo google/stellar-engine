@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -euo pipefail
+
 # Assign Organization ID: first argument, then ORGANIZATION_ID from the
 # environment, then gcloud - but only when exactly one organization is
 # visible. A deployer that can see several organizations gets a multi-line

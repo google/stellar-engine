@@ -1,20 +1,20 @@
-# /**
-#  * Copyright 2024 Google LLC
-#  *
-#  * Licensed under the Apache License, Version 2.0 (the "License");
-#  * you may not use this file except in compliance with the License.
-#  * You may obtain a copy of the License at
-#  *
-#  *      http://www.apache.org/licenses/LICENSE-2.0
-#  *
-#  * Unless required by applicable law or agreed to in writing, software
-#  * distributed under the License is distributed on an "AS IS" BASIS,
-#  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  * See the License for the specific language governing permissions and
-#  * limitations under the License.
-#  */
+/**
+ * Copyright 2024 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-# # tfdoc:file:description Lightweight tenant resources.
+# tfdoc:file:description Lightweight tenant resources.
 
 
 locals {
@@ -57,13 +57,19 @@ module "tenant-top-folders-iam" {
       "roles/cloudasset.owner"               = [module.tenant-core-sa[each.key].iam_email]
       "roles/compute.xpnAdmin"               = [module.tenant-core-sa[each.key].iam_email]
       "roles/logging.admin"                  = [module.tenant-core-sa[each.key].iam_email]
+      "roles/owner"                          = [module.tenant-core-sa[each.key].iam_email]
       "roles/resourcemanager.folderAdmin"    = [module.tenant-core-sa[each.key].iam_email]
       "roles/resourcemanager.projectCreator" = [module.tenant-core-sa[each.key].iam_email]
       "roles/resourcemanager.tagUser"        = [module.tenant-core-sa[each.key].iam_email]
+      "roles/viewer"                         = local.tenant_iam[each.key]
     },
     {
-      for k in var.tenants_config.top_folder_roles :
-      k => local.tenant_iam[each.value.tenant.name]
+      for k in distinct(concat(
+        var.tenants_config.top_folder_roles,
+        var.tenants_config.core_folder_roles,
+        var.tenants_config.tenant_folder_roles
+      )) :
+      k => local.tenant_iam[each.key]
     }
   )
 }
@@ -73,18 +79,7 @@ module "tenant-core-folders-iam" {
   for_each      = local.tenant_envs
   id            = module.tenant-top-folders[each.key].id
   folder_create = false
-  iam = merge(
-    {
-      "roles/owner" = [
-        module.tenant-core-sa[each.key].iam_email
-      ]
-      "roles/viewer" = local.tenant_iam[each.key]
-    },
-    {
-      for k in var.tenants_config.core_folder_roles :
-      k => local.tenant_iam[each.key]
-    }
-  )
+  iam           = {}
 }
 
 module "tenant-self-folders-iam" {
@@ -92,20 +87,7 @@ module "tenant-self-folders-iam" {
   for_each      = local.tenant_envs
   id            = module.tenant-top-folders[each.key].id
   folder_create = false
-  iam = merge(
-    {
-      "roles/cloudasset.owner"               = [module.tenant-core-sa[each.key].iam_email]
-      "roles/compute.xpnAdmin"               = [module.tenant-core-sa[each.key].iam_email]
-      "roles/resourcemanager.folderAdmin"    = [module.tenant-core-sa[each.key].iam_email]
-      "roles/resourcemanager.projectCreator" = [module.tenant-core-sa[each.key].iam_email]
-      "roles/resourcemanager.tagUser"        = [module.tenant-core-sa[each.key].iam_email]
-      "roles/owner"                          = [module.tenant-core-sa[each.key].iam_email]
-    },
-    {
-      for k in var.tenants_config.tenant_folder_roles :
-      k => local.tenant_iam[each.key]
-    }
-  )
+  iam           = {}
 }
 
 # Tenant IaC resources (core)
