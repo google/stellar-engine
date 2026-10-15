@@ -130,12 +130,20 @@ variable "access_time_zone" {
   description = "The timezone for time-based access controls (e.g. America/New_York)."
   type        = string
   default     = "America/New_York"
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+)*$", var.access_time_zone))
+    error_message = "access_time_zone must be a valid IANA timezone identifier without quotes or special characters."
+  }
 }
 
 variable "access_expiration_timestamp" {
   description = "The timestamp when access expires (RFC 3339 format, e.g. 2028-01-01T00:00:00Z)."
   type        = string
   default     = "2028-01-01T00:00:00Z"
+  validation {
+    condition     = can(regex("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$", var.access_expiration_timestamp))
+    error_message = "access_expiration_timestamp must be a valid RFC 3339 UTC timestamp (YYYY-MM-DDTHH:MM:SSZ)."
+  }
 }
 
 variable "kms_key_id" {

@@ -383,6 +383,62 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
           "userPrincipal,licenseConfig",
       )
 
+  def test_gemini_enterprise_and_gitlab_security_hardening(self):
+    """Verify Secret Manager secret delivery in GitLab and input/container hardening in Gemini Enterprise."""
+    gitlab_tf = (
+        REPO_ROOT / "blueprints/third-party-solutions/gitlab/gitlab.tf"
+    ).read_text(encoding="utf-8")
+    self.assertIn('resource "google_secret_manager_secret" "gitlab_rb"', gitlab_tf)
+    self.assertIn('resource "google_secret_manager_secret" "gitlab_ssl_key"', gitlab_tf)
+    self.assertIn("auth_string = google_redis_instance.cache.auth_string", gitlab_tf)
+    self.assertNotIn("gitlab_rb          = indent(6, local.gitlab_rb)", gitlab_tf)
+    self.assertNotIn("gitlab_ssl_key     = indent(6, base64encode(local.gitlab_ssl_key))", gitlab_tf)
+
+    gitlab_tpl = (
+        REPO_ROOT / "blueprints/third-party-solutions/gitlab/assets/config.rb.tpl"
+    ).read_text(encoding="utf-8")
+    self.assertIn("gitlab_rails['redis_password'] = '${redis.auth_string}'", gitlab_tpl)
+
+    cloud_cfg = (
+        REPO_ROOT / "blueprints/third-party-solutions/gitlab/assets/cloud-config.yaml"
+    ).read_text(encoding="utf-8")
+    self.assertIn("gcloud secrets versions access latest --secret='${gitlab_rb_secret_id}'", cloud_cfg)
+    self.assertIn("gcloud secrets versions access latest --secret='${gitlab_ssl_key_id}'", cloud_cfg)
+    self.assertIn('--hostname "${gitlab_config.hostname}"', cloud_cfg)
+
+    gitlab_vars = (
+        REPO_ROOT / "blueprints/third-party-solutions/gitlab/variables.tf"
+    ).read_text(encoding="utf-8")
+    self.assertIn("gitlab_config.hostname must be a valid RFC 1123 hostname", gitlab_vars)
+
+    dockerfile = (
+        REPO_ROOT / "blueprints/gemini-enterprise/analytics/Dockerfile"
+    ).read_text(encoding="utf-8")
+    self.assertNotIn("chown -R appuser:appuser /app", dockerfile)
+    self.assertIn("chmod -R a+rX /app", dockerfile)
+
+    app_py = (
+        REPO_ROOT / "blueprints/gemini-enterprise/analytics/app.py"
+    ).read_text(encoding="utf-8")
+    self.assertIn('re.fullmatch(r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$", PROJECT_ID)', app_py)
+    self.assertIn('re.fullmatch(r"^[A-Za-z0-9_]{1,1024}$", DATASET_ID)', app_py)
+
+    stage0_vars = (
+        REPO_ROOT / "blueprints/gemini-enterprise/gemini-stage-0/variables.tf"
+    ).read_text(encoding="utf-8")
+    self.assertIn('can(regex("^[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+)*$", var.access_time_zone))', stage0_vars)
+    self.assertIn("access_expiration_timestamp must be a valid RFC 3339 UTC timestamp", stage0_vars)
+
+    gem_py = GEM4GOV_PATH.read_text(encoding="utf-8")
+    self.assertIn("secrets.choice(string.ascii_lowercase + string.digits)", gem_py)
+    self.assertNotIn("random.choices(string.ascii_lowercase + string.digits, k=4)", gem_py)
+
+    deploy_sh = (
+        REPO_ROOT / "blueprints/gemini-enterprise/deploy.sh"
+    ).read_text(encoding="utf-8")
+    self.assertIn("secrets.choice(string.ascii_lowercase + string.digits)", deploy_sh)
+    self.assertIn("jq -n --arg proj \"$PROJECT_ID\" --arg ds \"$DATASET\" --arg tbl \"$TABLE\"", deploy_sh)
+
 
 if __name__ == "__main__":
   unittest.main()

@@ -3,6 +3,7 @@ import plotly.express as px
 from google.cloud import bigquery
 import datetime
 import os
+import re
 
 # ==========================================
 # CONFIGURATION & SETUP
@@ -12,6 +13,10 @@ st.set_page_config(page_title="G4G Usage Analytics", layout="wide")
 # Initialize BigQuery Client (Authentication inherited from GCP Compute/Run service account)
 PROJECT_ID = os.environ.get("PROJECT_ID", "your-gcp-project-id")
 DATASET_ID = os.environ.get("DATASET_ID", "your_dataset_id")
+if not re.fullmatch(r"^[a-z][a-z0-9-]{4,28}[a-z0-9]$", PROJECT_ID):
+    raise ValueError(f"Invalid GCP PROJECT_ID format: {PROJECT_ID!r}")
+if not re.fullmatch(r"^[A-Za-z0-9_]{1,1024}$", DATASET_ID):
+    raise ValueError(f"Invalid BigQuery DATASET_ID format: {DATASET_ID!r}")
 client = bigquery.Client(project=PROJECT_ID)
 
 # ==========================================
