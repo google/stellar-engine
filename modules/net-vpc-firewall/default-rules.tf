@@ -38,7 +38,11 @@ resource "google_compute_firewall" "allow-admins" {
 }
 
 resource "google_compute_firewall" "allow-tag-http" {
-  count         = length(local.default_rules.http_ranges) > 0 ? 1 : 0
+  count = (
+    length(local.default_rules.http_ranges) > 0 && length(local.default_rules.http_tags) > 0
+    ? 1
+    : 0
+  )
   name          = "${var.network}-ingress-tag-http"
   description   = "Allow http to machines with matching tags."
   network       = var.network
@@ -55,7 +59,11 @@ resource "google_compute_firewall" "allow-tag-http" {
 }
 
 resource "google_compute_firewall" "allow-tag-https" {
-  count         = length(local.default_rules.https_ranges) > 0 ? 1 : 0
+  count = (
+    length(local.default_rules.https_ranges) > 0 && length(local.default_rules.https_tags) > 0
+    ? 1
+    : 0
+  )
   name          = "${var.network}-ingress-tag-https"
   description   = "Allow http to machines with matching tags."
   network       = var.network
@@ -72,7 +80,11 @@ resource "google_compute_firewall" "allow-tag-https" {
 }
 
 resource "google_compute_firewall" "allow-tag-ssh" {
-  count         = length(local.default_rules.ssh_ranges) > 0 ? 1 : 0
+  count = (
+    length(local.default_rules.ssh_ranges) > 0 && length(local.default_rules.ssh_tags) > 0
+    ? 1
+    : 0
+  )
   name          = "${var.network}-ingress-tag-ssh"
   description   = "Allow SSH to machines with matching tags."
   network       = var.network

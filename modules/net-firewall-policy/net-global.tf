@@ -47,6 +47,7 @@ resource "google_compute_network_firewall_policy_rule" "net-global" {
   disabled                = local.rules[each.key].disabled
   enable_logging          = local.rules[each.key].enable_logging
   priority                = local.rules[each.key].priority
+  target_resources        = local.rules[each.key].target_resources
   target_service_accounts = local.rules[each.key].target_service_accounts
   tls_inspect             = local.rules[each.key].tls_inspect
   security_profile_group = try(

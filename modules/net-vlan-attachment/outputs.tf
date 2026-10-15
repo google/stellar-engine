@@ -33,6 +33,7 @@ output "md5_configuration" {
       key  = coalesce(var.router_config.md5_authentication_key.key, local.secret)
     } : {}
   )
+  sensitive = true
 }
 
 output "name" {
@@ -43,6 +44,7 @@ output "name" {
 output "pairing_key" {
   description = "Opaque identifier of an PARTNER attachment used to initiate provisioning with a selected partner."
   value       = google_compute_interconnect_attachment.default.pairing_key
+  sensitive   = true
 }
 
 output "router" {

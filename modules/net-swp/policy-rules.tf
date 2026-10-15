@@ -41,21 +41,24 @@ locals {
       for k, v in google_network_security_url_lists.default : k => v.id
     })
   }
-  policy_rules = merge(var.policy_rules, {
-    for k, v in local._policy_rules : k => {
-      priority            = v.priority
-      allow               = lookup(v, "allow", true)
-      description         = lookup(v, "description", null)
-      enabled             = lookup(v, "enable", true)
-      application_matcher = lookup(v, "application_matcher", null)
-      session_matcher     = lookup(v, "session_matcher", null)
-      tls_inspect         = lookup(v, "tls_inspect", null)
-      matcher_args = {
-        application = try(v.matcher_args.application, [])
-        session     = try(v.matcher_args.session, [])
+  policy_rules = merge(
+    {
+      for k, v in local._policy_rules : k => {
+        priority            = v.priority
+        allow               = lookup(v, "allow", true)
+        description         = lookup(v, "description", null)
+        enabled             = lookup(v, "enable", true)
+        application_matcher = lookup(v, "application_matcher", null)
+        session_matcher     = lookup(v, "session_matcher", null)
+        tls_inspect         = lookup(v, "tls_inspect", null)
+        matcher_args = {
+          application = try(v.matcher_args.application, [])
+          session     = try(v.matcher_args.session, [])
+        }
       }
-    }
-  })
+    },
+    var.policy_rules
+  )
 }
 
 resource "google_network_security_gateway_security_policy_rule" "default" {

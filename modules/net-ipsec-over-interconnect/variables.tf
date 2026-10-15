@@ -104,6 +104,7 @@ variable "tunnels" {
     shared_secret                   = optional(string)
     vpn_gateway_interface           = number
   }))
-  default  = {}
-  nullable = false
+  default   = {}
+  nullable  = false
+  sensitive = true
 }

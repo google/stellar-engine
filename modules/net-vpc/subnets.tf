@@ -98,7 +98,7 @@ locals {
   subnet_iam_bindings = merge([
     for s in concat(var.subnets, var.subnets_psc, var.subnets_proxy_only, values(local._factory_subnets)) : {
       for key, data in s.iam_bindings :
-      key => {
+      "${s.region}/${s.name}.${key}" => {
         role      = data.role
         subnet    = "${s.region}/${s.name}"
         members   = data.members
@@ -106,13 +106,10 @@ locals {
       }
     }
   ]...)
-  # note: all additive bindings share a single namespace for the key.
-  # In other words, if you have multiple additive bindings with the
-  # same name, only one will be used
   subnet_iam_bindings_additive = merge([
     for s in concat(var.subnets, var.subnets_psc, var.subnets_proxy_only, values(local._factory_subnets)) : {
       for key, data in s.iam_bindings_additive :
-      key => {
+      "${s.region}/${s.name}.${key}" => {
         role      = data.role
         subnet    = "${s.region}/${s.name}"
         member    = data.member

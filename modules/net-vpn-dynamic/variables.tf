@@ -83,6 +83,7 @@ variable "tunnels" {
     router            = optional(string)
     shared_secret     = optional(string)
   }))
-  default  = {}
-  nullable = false
+  default   = {}
+  nullable  = false
+  sensitive = true
 }

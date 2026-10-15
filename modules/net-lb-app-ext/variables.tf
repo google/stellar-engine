@@ -69,7 +69,7 @@ variable "forwarding_rules_config" {
     condition = alltrue([
       for k, v in var.forwarding_rules_config :
       v.ports == null || (
-        var.protocol == "HTTPS" && alltrue([
+        var.protocol == "HTTP" && alltrue([
           for p in coalesce(v.ports, []) : contains([80, 8080], p)
         ])
       )
@@ -236,8 +236,9 @@ variable "ssl_certificates" {
       description = optional(string)
     })), {})
   })
-  default  = {}
-  nullable = false
+  default   = {}
+  nullable  = false
+  sensitive = true
 }
 
 variable "use_classic_version" {

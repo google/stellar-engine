@@ -36,7 +36,7 @@ resource "google_access_context_manager_access_level" "endpoint_verified" {
   basic {
     conditions {
       device_policy {
-        allowed_encryption_statuses = ["ENCRYPTION_UNSUPPORTED", "ENCRYPTED"]
+        allowed_encryption_statuses = ["ENCRYPTED"]
         require_screen_lock         = true
       }
     }
@@ -61,4 +61,8 @@ resource "google_project_iam_member" "iap_user" {
   project = var.project_id
   role    = "roles/iap.httpsResourceAccessor"
   member  = var.iap_user_email
+  condition {
+    title      = "beyondcorp_endpoint_verified"
+    expression = "\"${google_access_context_manager_access_level.endpoint_verified.name}\" in request.auth.access_levels"
+  }
 }

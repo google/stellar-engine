@@ -58,4 +58,5 @@ variable "mysql_data_disk" {
 variable "mysql_password" {
   description = "MySQL root password. If an encrypted password is set, use the kms_config variable to specify KMS configuration."
   type        = string
+  sensitive   = true
 }

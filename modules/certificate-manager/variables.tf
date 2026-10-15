@@ -31,8 +31,9 @@ variable "certificates" {
       issuance_config    = optional(string)
     }))
   }))
-  default  = {}
-  nullable = false
+  default   = {}
+  nullable  = false
+  sensitive = true
 
   validation {
     condition = alltrue([for k, v in var.certificates : (
