@@ -47,6 +47,7 @@ module "cloud-spanner" {
 
   databases = {
     (var.database_name) = {
+      kms_key_name = var.kms_key_name
       iam = {
         "roles/spanner.databaseUser" = [
           var.database_user

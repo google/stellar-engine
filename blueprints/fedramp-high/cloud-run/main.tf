@@ -28,11 +28,13 @@ data "google_kms_crypto_key" "default" {
 }
 
 resource "google_project_service" "cloud_run" {
+  project            = var.main_project_id
   service            = "run.googleapis.com"
   disable_on_destroy = false
 }
 
 resource "google_project_service" "binary_authorization" {
+  project            = var.main_project_id
   service            = "binaryauthorization.googleapis.com"
   disable_on_destroy = false
 }
@@ -41,12 +43,6 @@ resource "google_service_account" "cloud_run_service_account" {
   account_id   = var.name
   display_name = "Cloud Run Service Account for ${var.name}"
   project      = var.main_project_id
-}
-
-resource "google_project_iam_member" "cloud_run_permissions" {
-  project = var.main_project_id
-  role    = "roles/run.invoker"
-  member  = "serviceAccount:${google_service_account.cloud_run_service_account.email}"
 }
 
 resource "google_kms_crypto_key_iam_member" "cloud_run_service_agent_kms_permissions" {

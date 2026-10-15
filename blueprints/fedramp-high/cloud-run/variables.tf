@@ -17,8 +17,8 @@ variable "binary_authorization_mode" {
   type        = string
   default     = "default"
   validation {
-    condition     = contains(["default", "policy", "disabled"], var.binary_authorization_mode)
-    error_message = "Allowed values for binary_authorization_mode are 'default', 'policy', or 'disabled'."
+    condition     = contains(["default", "policy"], var.binary_authorization_mode)
+    error_message = "Allowed values for binary_authorization_mode are 'default' or 'policy'."
   }
 }
 

@@ -164,7 +164,6 @@ module "kms" {
 
   iam = {
     "roles/cloudkms.cryptoKeyEncrypterDecrypter" = [
-      google_service_account.compute.member,
       "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
     ]
   }

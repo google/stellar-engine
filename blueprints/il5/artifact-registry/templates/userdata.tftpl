@@ -14,6 +14,6 @@ name=${repo.name}
 baseurl=https://${region}-yum.pkg.dev/remote/${project}/${repo.name}
 enabled=1
 repo_gpgcheck=0
-gpgcheck=0
+gpgcheck=1
 %{ endfor ~}
 EOF

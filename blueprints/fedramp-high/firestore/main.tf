@@ -24,7 +24,7 @@ module "firestore" {
     name            = var.firestore_database_name
     location_id     = var.region
     type            = "FIRESTORE_NATIVE"
-    deletion_policy = "DELETE"
+    deletion_policy = var.deletion_policy
     kms_key_name    = var.kms_key_name
   }
 

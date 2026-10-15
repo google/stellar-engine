@@ -22,6 +22,16 @@ variable "backup_schedule" {
   default = null
 }
 
+variable "deletion_policy" {
+  type        = string
+  description = "Deletion policy for the Firestore database (ABANDON or DELETE)."
+  default     = "ABANDON"
+  validation {
+    condition     = contains(["ABANDON", "DELETE"], var.deletion_policy)
+    error_message = "deletion_policy must be either ABANDON or DELETE."
+  }
+}
+
 variable "firestore_database_name" {
   type        = string
   description = "The name of the Firestore database instance."

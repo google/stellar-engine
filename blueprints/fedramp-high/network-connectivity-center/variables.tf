@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "center_spoke_names" {
+  description = "Optional list of spoke names in var.spokes to assign to the center group when topology is STAR."
+  type        = list(string)
+  default     = []
+}
+
 variable "gcp_region" {
   description = "The Google Cloud region to be used as the default for regional resources and the provider. Note: NCC Hubs are global resources."
   type        = string

@@ -22,8 +22,15 @@ moved {
 }
 
 resource "google_service_account" "gitlab_sa" {
+  project      = var.project_id
   account_id   = var.sa
   display_name = "gitlab-sa"
+}
+
+resource "google_service_account" "gke_node_sa" {
+  project      = var.project_id
+  account_id   = substr("${var.sa}-nodes", 0, 28)
+  display_name = "GitLab GKE Node Pool Service Account"
 }
 resource "google_project_iam_member" "gke_cluster_admin" {
   project = data.google_project.project.project_id
@@ -48,7 +55,6 @@ resource "google_project_iam_member" "compute_agent_subnet_user" {
     compute_agent = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
     gke_agent     = "serviceAccount:service-${data.google_project.project.number}@container-engine-robot.iam.gserviceaccount.com"
     cloudservices = "serviceAccount:${data.google_project.project.number}@cloudservices.gserviceaccount.com"
-    gitlab_sa     = "serviceAccount:${google_service_account.gitlab_sa.email}"
   }
   project = var.net_project
   role    = "roles/compute.networkUser"
@@ -142,7 +148,7 @@ module "compute-vm" {
     kms_key_self_link = var.kms_key
   }
   service_account = {
-    email = google_service_account.gitlab_sa.email
+    email = google_service_account.gke_node_sa.email
   }
   metadata = {
     startup-script = <<-EOT
@@ -200,13 +206,13 @@ module "application-lb" {
       backends = [
         { backend = google_compute_instance_group.umig.id }
       ]
-      protocol = "HTTP"
+      protocol = "HTTPS"
     }
   }
   health_check_configs = {
     default = {
       tcp = {
-        port = 80
+        port = 443
       }
     }
   }
@@ -218,7 +224,7 @@ module "application-lb" {
       }
     }
   }
-  protocol   = "HTTP"
+  protocol   = "HTTPS"
   depends_on = [google_compute_instance_group.umig]
 }
 
@@ -240,6 +246,7 @@ module "cluster" {
   }
   node_config = {
     boot_disk_kms_key = var.kms_key
+    service_account   = google_service_account.gke_node_sa.email
   }
   access_config = {
     private_nodes = true

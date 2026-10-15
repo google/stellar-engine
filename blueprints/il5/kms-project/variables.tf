@@ -52,3 +52,9 @@ variable "main_project_id" {
   description = "The Google Cloud Project ID where KMS-related IAM policies will be managed (i.e., the project where the existing KMS keys reside)."
   type        = string
 }
+
+variable "rotation_period_s" {
+  description = "Default key rotation period in seconds when not specified on an individual entry in existing_kms_keys."
+  type        = number
+  default     = 7776000
+}

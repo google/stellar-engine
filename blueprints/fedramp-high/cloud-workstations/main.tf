@@ -22,7 +22,6 @@ locals {
   }
   key = "projects/${local.kms_project}/locations/${var.region}/keyRings/${var.kms_keyring_name}/cryptoKeys/${var.kms_key_name}"
 
-  compute_default_sa     = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
   workstation_default_sa = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-workstations.iam.gserviceaccount.com"
 
   workstations = {
@@ -74,6 +73,7 @@ module "workstations" {
       }
       gce_instance = {
         machine_type                = var.machine_type
+        service_account             = google_service_account.workstation_vm.email
         disable_public_ip_addresses = true
         shielded_instance_config = {
           enable_secure_boot          = true
@@ -87,6 +87,6 @@ module "workstations" {
   depends_on = [
     google_kms_crypto_key_iam_member.workstations_sa_kms_permissions,
     google_project_iam_member.artifact_registry_reader,
-    google_project_iam_member.network_user
+    google_compute_subnetwork_iam_member.network_user
   ]
 }

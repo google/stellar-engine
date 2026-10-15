@@ -62,6 +62,23 @@ resource "google_composer_environment" "main" {
       image_version = var.composer_version
     }
 
+    dynamic "encryption_config" {
+      for_each = var.kms_key_name != null ? [var.kms_key_name] : []
+      content {
+        kms_key_name = encryption_config.value
+      }
+    }
+
+    web_server_network_access_control {
+      dynamic "allowed_ip_range" {
+        for_each = var.web_server_allowed_ip_ranges
+        content {
+          value       = allowed_ip_range.value.value
+          description = allowed_ip_range.value.description
+        }
+      }
+    }
+
     node_config {
       network         = data.google_compute_network.network.self_link
       subnetwork      = data.google_compute_subnetwork.subnetwork.self_link
@@ -73,7 +90,7 @@ resource "google_composer_environment" "main" {
     google_project_service.cloud_composer_api,
     google_project_iam_member.composer_worker,
     google_project_iam_member.composer_service_agent,
-    google_project_iam_member.composer_network_user,
+    google_compute_subnetwork_iam_member.composer_network_user,
     google_project_iam_member.composer_vpc_agent
   ]
 }
