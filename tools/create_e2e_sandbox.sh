@@ -48,7 +48,11 @@ if [ ! -f "${INFRA}/randomizer.auto.tfvars" ] ; then
 fi
 
 # TODO correct environment variable prefix
-export | sed -e 's/^declare -x //' | grep '^TFTEST_E2E_' | sed -e 's/^TFTEST_E2E_//' > "${INFRA}/terraform.tfvars"
+(
+  umask 077
+  export | sed -e 's/^declare -x //' | grep '^TFTEST_E2E_' | sed -e 's/^TFTEST_E2E_//' > "${INFRA}/terraform.tfvars"
+  chmod 600 "${INFRA}/terraform.tfvars"
+)
 (
   cd "${INFRA}"
   terraform init
@@ -56,4 +60,4 @@ export | sed -e 's/^declare -x //' | grep '^TFTEST_E2E_' | sed -e 's/^TFTEST_E2E
   ln -sfT "${INFRA}/e2e_tests.tfvars" "${DEST}/e2e_tests.auto.tfvars"
 )
 
-tocuh "${DEST}/main.tf"
+touch "${DEST}/main.tf"

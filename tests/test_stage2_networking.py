@@ -209,6 +209,107 @@ class TestStage2Networking(unittest.TestCase):
                 self.assertIn('region        = "<region>"', sample)
                 self.assertNotRegex(sample, r'region\s*=\s*"us-')
 
+    def test_stage2_outputs_data_and_psc_hardening(self):
+        """Verify Stage 2 outputs, policy factory data, and PSC gating."""
+        for stage_dir in (_FEDRAMP_NET_DIR, _IL5_NET_DIR):
+            with self.subTest(stage=stage_dir.name):
+                outputs_tf = (stage_dir / "outputs.tf").read_text(
+                    encoding="utf-8"
+                )
+                self.assertIn(
+                    "host_project_ids = [for k, v in "
+                    "module.env-spoke-projects : v.project_id]",
+                    outputs_tf,
+                )
+                self.assertTrue((stage_dir / "data/cidrs.yaml").is_file())
+                self.assertTrue(
+                    (
+                        stage_dir / "data/hierarchical-ingress-rules.yaml"
+                    ).is_file()
+                )
+                psc_tf = (stage_dir / "psc.tf").read_text(encoding="utf-8")
+                self.assertIn(
+                    "if length(try(var.psa_ranges[lower(k)], "
+                    "var.psa_ranges.dev)) == 0",
+                    psc_tf,
+                )
+
+        ngfw_tf = (_IL5_NET_DIR / "ngfw.tf").read_text(encoding="utf-8")
+        self.assertIn(
+            "module.vdss-vpc.subnets["
+            '"${each.value}/landing-default"].gateway_address',
+            ngfw_tf,
+        )
+        self.assertIn("region         = each.value", ngfw_tf)
+        self.assertIn("block-project-ssh-keys               = true", ngfw_tf)
+        self.assertIn("serial-port-enable                   = false", ngfw_tf)
+
+        bootstrap_xml = (
+            _IL5_NET_DIR / "templates/bootstrap.xml.tpl"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("<member>3des</member>", bootstrap_xml)
+        self.assertNotIn("<member>sha1</member>", bootstrap_xml)
+        self.assertNotIn("<member>group2</member>", bootstrap_xml)
+        self.assertIn(
+            "<interface-management-profile>ping</interface-management-profile>",
+            bootstrap_xml,
+        )
+        self.assertIn("<log-end>yes</log-end>", bootstrap_xml)
+
+    def test_stage3_security_and_tools_hardening(self):
+        """Verify Stage 3 KMS, VPC-SC, outputs, and script hardening."""
+        sec_dir = _REPO_ROOT / "fast/stages-aw/3-security"
+        sec_outputs = (sec_dir / "outputs.tf").read_text(encoding="utf-8")
+        self.assertIn('file_permission = "0600"', sec_outputs)
+        self.assertIn(
+            "content      = sensitive(jsonencode(local.tfvars))", sec_outputs
+        )
+        self.assertIn("kms_key_name =", sec_outputs)
+
+        vpc_sc = (sec_dir / "vpc-sc.tf").read_text(encoding="utf-8")
+        self.assertIn(
+            "coalesce(var.logging.project_number, var.logging.project_id)",
+            vpc_sc,
+        )
+        self.assertIn(
+            "status                    = local.vpc_sc_perimeter", vpc_sc
+        )
+
+        core_dev = (sec_dir / "core-dev.tf").read_text(encoding="utf-8")
+        self.assertNotIn("var.service_accounts.project-factory-prod", core_dev)
+        self.assertIn("var.service_accounts.gke-dev", core_dev)
+        self.assertIn("var.service_accounts.gcve-dev", core_dev)
+
+        core_prod = (sec_dir / "core-prod.tf").read_text(encoding="utf-8")
+        self.assertIn("var.service_accounts.gke-prod", core_prod)
+        self.assertIn("var.service_accounts.gcve-prod", core_prod)
+
+        sa_lockdown = (sec_dir / "sa_lockdown.sh").read_text(encoding="utf-8")
+        self.assertIn("shopt -s nullglob", sa_lockdown)
+        self.assertIn('"project-factory-prod"', sa_lockdown)
+
+        validation_sh = (sec_dir / "validation.sh").read_text(encoding="utf-8")
+        self.assertIn("projectId~'-iac-core-0$'", validation_sh)
+
+        destroy_sh = (_REPO_ROOT / "scripts/destroy.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('printf -v "$var_name" \'%s\' "$input"', destroy_sh)
+        self.assertNotIn('eval "$var_name=\\"$input\\""', destroy_sh)
+
+        sandbox_sh = (_REPO_ROOT / "tools/create_e2e_sandbox.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("umask 077", sandbox_sh)
+        self.assertIn('touch "${DEST}/main.tf"', sandbox_sh)
+        self.assertNotIn("tocuh", sandbox_sh)
+
+        mocks_sh = (_REPO_ROOT / "generate-mocks.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("2-networking-a-fedramp/mock-versions.tf", mocks_sh)
+        self.assertNotIn("2-networking-a-fedramp-high", mocks_sh)
+
 
 if __name__ == "__main__":
     unittest.main()

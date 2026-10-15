@@ -13,9 +13,12 @@
 # limitations under the License.
 
 resource "google_compute_global_address" "private_service_connect_ip" {
-  for_each = var.envs_folders
+  for_each = {
+    for k, v in var.envs_folders : k => v
+    if length(try(var.psa_ranges[lower(k)], var.psa_ranges.dev)) == 0
+  }
 
-  project       = module.env-spoke-vpc[each.key].project_id
+  project       = module.env-spoke-projects[each.key].project_id
   name          = "default-peering"
   purpose       = "VPC_PEERING"
   address_type  = "INTERNAL"
@@ -24,7 +27,10 @@ resource "google_compute_global_address" "private_service_connect_ip" {
 }
 
 resource "google_service_networking_connection" "default" {
-  for_each                = var.envs_folders
+  for_each = {
+    for k, v in var.envs_folders : k => v
+    if length(try(var.psa_ranges[lower(k)], var.psa_ranges.dev)) == 0
+  }
   network                 = module.env-spoke-vpc[each.key].self_link
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_service_connect_ip[each.key].name]

@@ -19,7 +19,15 @@
 #### You may still need to change the name of custom org policies in the yaml files for a succesful deployment
 #### Use this script at your own risk. The author assumes no responsibility for any damages or losses incurred through its use.
 
-terraform import "module.organization.google_org_policy_policy.default[\"{}\"]"     
+set -euo pipefail
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+# shellcheck source=scripts/common-functions.sh
+source "${SCRIPT_DIR}/common-functions.sh"
+if [[ -f "${SCRIPT_DIR}/config.env" ]]; then
+  # shellcheck source=/dev/null
+  source "${SCRIPT_DIR}/config.env"
+fi
 
 # Undelete Projects
 gcloud projects undelete "${PREFIX}"-net-vdss-host 
