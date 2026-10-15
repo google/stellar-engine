@@ -17,9 +17,17 @@ data "google_project" "project" {
 }
 
 resource "google_service_account" "gitlab-sa" {
+  project      = var.project_id
   account_id   = var.sa
   display_name = "gitlab-sa"
 }
+
+resource "google_service_account" "gke_node_sa" {
+  project      = var.project_id
+  account_id   = substr("${var.sa}-nodes", 0, 28)
+  display_name = "GitLab GKE Node Pool Service Account"
+}
+
 resource "google_project_iam_member" "gke_cluster_admin" {
   project = data.google_project.project.project_id
   role    = "roles/container.admin"
@@ -55,7 +63,6 @@ resource "google_kms_crypto_key_iam_member" "compute_service_agent_kms_permissio
     compute_agent = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
     gke_agent     = "serviceAccount:service-${data.google_project.project.number}@container-engine-robot.iam.gserviceaccount.com"
     cloudservices = "serviceAccount:${data.google_project.project.number}@cloudservices.gserviceaccount.com"
-    gitlab_sa     = "serviceAccount:${google_service_account.gitlab-sa.email}"
   }
   crypto_key_id = var.kms_key
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
@@ -195,13 +202,13 @@ module "application-lb" {
       backends = [
         { backend = google_compute_instance_group.umig.id }
       ]
-      protocol = "HTTP"
+      protocol = "HTTPS"
     }
   }
   health_check_configs = {
     default = {
       tcp = {
-        port = 80
+        port = 443
       }
     }
   }
@@ -213,7 +220,7 @@ module "application-lb" {
       }
     }
   }
-  protocol   = "HTTP"
+  protocol   = "HTTPS"
   depends_on = [google_compute_instance_group.umig]
 }
 
@@ -235,11 +242,11 @@ module "cluster" {
 
   }
   default_nodepool = {
-    remove_pool              = true
-    remove_default_node_pool = true
+    remove_pool = true
   }
   node_config = {
     boot_disk_kms_key = var.kms_key
+    service_account   = google_service_account.gke_node_sa.email
 
     machine_type = "n2d-standard-2"
     confidential_nodes = {
@@ -264,7 +271,7 @@ module "gke_node_pool" {
   location     = var.region
   cluster_name = var.gke_name
   service_account = {
-    email = google_service_account.gitlab-sa.email
+    email = google_service_account.gke_node_sa.email
   }
   name       = "nodes"
   node_count = var.nodepool_node_count

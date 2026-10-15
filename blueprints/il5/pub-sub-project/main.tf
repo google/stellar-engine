@@ -37,25 +37,30 @@ data "google_kms_crypto_key" "default" {
 }
 
 resource "google_service_account" "publisher" {
+  project      = var.main_project_id
   account_id   = var.publisher_account_id
   display_name = var.publisher_name
 }
 
 resource "google_service_account" "subscriber" {
+  project      = var.main_project_id
   account_id   = var.subscriber_account_id
   display_name = var.subscriber_name
 }
 
-resource "google_project_iam_member" "pubsub_publisher" {
+resource "google_pubsub_topic_iam_member" "pubsub_publisher" {
   project = var.main_project_id
+  topic   = module.pubsub.name
   role    = "roles/pubsub.publisher"
   member  = google_service_account.publisher.member
 }
 
-resource "google_project_iam_member" "pubsub_subscriber" {
-  project = var.main_project_id
-  role    = "roles/pubsub.subscriber"
-  member  = google_service_account.subscriber.member
+resource "google_pubsub_subscription_iam_member" "pubsub_subscriber" {
+  for_each     = module.pubsub.subscriptions
+  project      = var.main_project_id
+  subscription = each.value.name
+  role         = "roles/pubsub.subscriber"
+  member       = google_service_account.subscriber.member
 }
 
 module "pubsub" {
@@ -63,6 +68,9 @@ module "pubsub" {
   project_id = var.main_project_id
   name       = var.pubsub_topic
   regions    = var.allowed_persistence_regions
+  subscriptions = {
+    "${var.pubsub_topic}-sub" = {}
+  }
 
   kms_key = data.google_kms_crypto_key.default.id
   depends_on = [
@@ -73,8 +81,6 @@ module "pubsub" {
 
 resource "google_kms_crypto_key_iam_member" "kms_access" {
   for_each = toset([
-    google_service_account.subscriber.member,
-    google_service_account.publisher.member,
     "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
   ])
   crypto_key_id = data.google_kms_crypto_key.default.id

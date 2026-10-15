@@ -67,3 +67,18 @@ variable "subnetwork_name" {
   description = "The name of the existing subnetwork to use within the specified VPC network and region."
   type        = string
 }
+
+variable "kms_key_name" {
+  description = "The Cloud KMS key resource name used for CMEK encryption of the Composer environment."
+  type        = string
+  default     = null
+}
+
+variable "web_server_allowed_ip_ranges" {
+  description = "Allowed IP ranges for the Cloud Composer Airflow web server."
+  type = list(object({
+    value       = string
+    description = optional(string)
+  }))
+  default = []
+}

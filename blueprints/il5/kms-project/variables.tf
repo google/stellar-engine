@@ -53,3 +53,9 @@ variable "group_email" {
   default     = null # Made optional, as it might not always be used
 }
 
+variable "rotation_period_s" {
+  description = "Default key rotation period in seconds when not specified on an individual entry in existing_kms_keys."
+  type        = number
+  default     = 7776000
+}
+

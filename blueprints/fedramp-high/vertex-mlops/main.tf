@@ -54,6 +54,20 @@ module "gcs-bucket" {
   versioning     = false
   encryption_key = var.service_encryption_keys.storage
   force_destroy  = !var.deletion_protection
+  iam = {
+    "roles/storage.objectViewer" = [
+      module.service-account-mlops.iam_email,
+      module.service-account-notebook.iam_email,
+    ]
+    "roles/storage.objectCreator" = [
+      module.service-account-mlops.iam_email,
+      module.service-account-notebook.iam_email,
+    ]
+    "projects/${module.project.project_id}/roles/storage_iam" = [
+      module.service-account-notebook.iam_email,
+    ]
+  }
+  depends_on = [google_project_iam_custom_role.storage_role]
 }
 
 # Default bucket for Cloud Build to prevent error: "'us' violates constraint ‘gcp.resourceLocations’"
@@ -67,6 +81,16 @@ module "gcs-bucket-cloudbuild" {
   versioning     = false
   encryption_key = var.service_encryption_keys.storage
   force_destroy  = !var.deletion_protection
+  iam = {
+    "roles/storage.objectViewer" = [
+      module.service-account-mlops.iam_email,
+      module.service-account-notebook.iam_email,
+    ]
+    "roles/storage.objectCreator" = [
+      module.service-account-mlops.iam_email,
+      module.service-account-notebook.iam_email,
+    ]
+  }
 }
 
 module "bq-dataset" {
@@ -93,34 +117,6 @@ module "project" {
     aiplatform-user-notebook = {
       member = module.service-account-notebook.iam_email
       role   = "roles/aiplatform.user"
-    }
-    storage-viewer-mlops = {
-      member = module.service-account-mlops.iam_email
-      role   = "roles/storage.objectViewer"
-    }
-    storage-viewer-notebook = {
-      member = module.service-account-notebook.iam_email
-      role   = "roles/storage.objectViewer"
-    }
-    storage-creator-mlops = {
-      member = module.service-account-mlops.iam_email
-      role   = "roles/storage.objectCreator"
-    }
-    storage-creator-notebook = {
-      member = module.service-account-notebook.iam_email
-      role   = "roles/storage.objectCreator"
-    }
-    service-account-user-mlops = {
-      member = module.service-account-mlops.iam_email
-      role   = "roles/iam.serviceAccountUser"
-    }
-    service-account-user-notebook = {
-      member = module.service-account-notebook.iam_email
-      role   = "roles/iam.serviceAccountUser"
-    }
-    service-account-user-cloudbuild = {
-      member = module.project.service_agents.cloudbuild.iam_email,
-      role   = "roles/iam.serviceAccountUser"
     }
   }
   iam = {
@@ -191,6 +187,19 @@ module "service-account-mlops" {
   source     = "../../../modules/iam-service-account"
   name       = "${local.prefix}sa-mlops"
   project_id = module.project.project_id
+  iam = {
+    "roles/iam.serviceAccountUser" = [
+      module.service-account-mlops.iam_email,
+      module.service-account-notebook.iam_email,
+      module.project.service_agents.cloudbuild.iam_email,
+    ]
+  }
+}
+
+resource "google_service_account_iam_member" "notebook_sa_user" {
+  service_account_id = module.service-account-notebook.id
+  role               = "roles/iam.serviceAccountUser"
+  member             = module.service-account-notebook.iam_email
 }
 
 resource "google_project_iam_member" "shared_vpc" {
@@ -203,10 +212,6 @@ resource "google_project_iam_member" "service_permissions" {
   for_each = toset([
     "roles/notebooks.runner",
     "roles/aiplatform.user",
-    "roles/storage.objectViewer",
-    "roles/storage.objectCreator",
-    "roles/iam.serviceAccountUser",
-    "projects/${module.project.project_id}/roles/storage_iam",
   ])
   project = module.project.project_id
   role    = each.key

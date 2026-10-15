@@ -20,7 +20,14 @@ module "service-account-runner" {
   source       = "../../../modules/iam-service-account"
   name         = "cf-runner-sa"
   project_id   = var.main_project_id
-  display_name = "Cloud Functions Runner Service Account"
+  display_name = "Cloud Functions Builder Service Account"
+}
+
+module "service-account-runtime" {
+  source       = "../../../modules/iam-service-account"
+  name         = "cf-runtime-sa"
+  project_id   = var.main_project_id
+  display_name = "Cloud Functions Runtime Service Account"
 }
 
 resource "google_project_service" "cloud_functions_apis" {
@@ -45,12 +52,6 @@ resource "google_project_iam_member" "cloud_build" {
   member  = module.service-account-runner.iam_email
 }
 
-resource "google_project_iam_member" "cloud_invoker" {
-  project = var.main_project_id
-  role    = "roles/run.invoker"
-  member  = module.service-account-runner.iam_email
-}
-
 resource "google_kms_crypto_key_iam_member" "cloud_storage" {
   for_each = toset([
     "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com",
@@ -64,58 +65,61 @@ resource "google_kms_crypto_key_iam_member" "cloud_storage" {
   member        = each.value
 }
 
-resource "google_project_iam_member" "artifactregistry_createOnPushWriter" {
-  project = var.main_project_id
-  role    = "roles/artifactregistry.createOnPushWriter"
-  member  = module.service-account-runner.iam_email
-}
-
 resource "google_project_iam_member" "logging_logWriter" {
   project = var.main_project_id
   role    = "roles/logging.logWriter"
-  member  = module.service-account-runner.iam_email
-}
-
-resource "google_project_iam_member" "storage_objectUser" {
-  project = var.main_project_id
-  role    = "roles/storage.objectUser"
-  member  = module.service-account-runner.iam_email
+  member  = module.service-account-runtime.iam_email
 }
 
 resource "null_resource" "cloud_function_deploy" {
   depends_on = [module.bucket, module.registry-docker]
   triggers = {
-    project_id       = var.main_project_id
-    region           = var.region
-    function_name    = var.function_name
-    runtime          = var.function_runtime
-    entry_point      = var.function_entry_point
-    memory           = var.function_memory_mb
-    timeout          = var.function_timeout_seconds
-    source_code_hash = sha256(join("", [for f in fileset("./src-code", "**") : file("./src-code/${f}")]))
+    project_id            = var.main_project_id
+    region                = var.region
+    function_name         = var.function_name
+    description           = var.description
+    runtime               = var.function_runtime
+    entry_point           = var.function_entry_point
+    cpu                   = tostring(var.function_cpu)
+    memory                = var.function_memory_mb
+    timeout               = var.function_timeout_seconds
+    environment_variables = jsonencode(var.environment_variables)
+    labels                = jsonencode(var.labels)
+    secrets               = jsonencode(var.secrets)
+    bundle_config         = jsonencode(var.bundle_config)
+    source_code_hash      = sha256(join("", [for f in fileset("./src-code", "**") : file("./src-code/${f}")]))
   }
   provisioner "local-exec" {
     environment = {
-      CF_NAME              = var.function_name
-      CF_PROJECT           = var.main_project_id
-      CF_REGION            = var.region
-      CF_RUNTIME           = var.function_runtime
-      CF_ENTRY_POINT       = var.function_entry_point
-      CF_MEMORY            = "${var.function_memory_mb}MB"
-      CF_TIMEOUT           = "${var.function_timeout_seconds}s"
-      CF_MAX_INSTANCES     = tostring(var.function_instance_count)
-      CF_DOCKER_REPOSITORY = module.registry-docker.id
-      CF_KMS_KEY           = var.kms_key_name
-      CF_SERVICE_ACCOUNT   = coalesce(var.service_account, module.service-account-runner.email)
+      CF_NAME               = var.function_name
+      CF_DESCRIPTION        = var.description
+      CF_PROJECT            = var.main_project_id
+      CF_REGION             = var.region
+      CF_RUNTIME            = var.function_runtime
+      CF_ENTRY_POINT        = var.function_entry_point
+      CF_CPU                = tostring(var.function_cpu)
+      CF_MEMORY             = "${var.function_memory_mb}MB"
+      CF_TIMEOUT            = "${var.function_timeout_seconds}s"
+      CF_MAX_INSTANCES      = tostring(var.function_instance_count)
+      CF_DOCKER_REPOSITORY  = module.registry-docker.id
+      CF_KMS_KEY            = var.kms_key_name
+      CF_BUILDER_SA         = module.service-account-runner.id
+      CF_SERVICE_ACCOUNT    = coalesce(var.service_account, module.service-account-runtime.email)
+      CF_ENV_VARS           = join(",", [for k, v in var.environment_variables : "${k}=${v}"])
+      CF_LABELS             = join(",", [for k, v in var.labels : "${k}=${v}"])
+      CF_SECRETS            = join(",", [for k, v in var.secrets : "${k}=projects/${v.project_id}/secrets/${v.secret}:${v.versions[0]}"])
+      CF_SOURCE             = try(var.bundle_config.source, "./src-code")
     }
     command = <<EOT
       gcloud functions deploy "$CF_NAME" \
         --project="$CF_PROJECT" \
         --region="$CF_REGION" \
+        --description="$CF_DESCRIPTION" \
         --runtime="$CF_RUNTIME" \
         --trigger-http \
-        --source="./src-code" \
+        --source="$CF_SOURCE" \
         --entry-point="$CF_ENTRY_POINT" \
+        --cpu="$CF_CPU" \
         --memory="$CF_MEMORY" \
         --timeout="$CF_TIMEOUT" \
         --max-instances="$CF_MAX_INSTANCES" \
@@ -123,7 +127,11 @@ resource "null_resource" "cloud_function_deploy" {
         --binary-authorization="default" \
         --docker-repository="$CF_DOCKER_REPOSITORY" \
         --kms-key="$CF_KMS_KEY" \
-        --service-account="$CF_SERVICE_ACCOUNT"
+        --build-service-account="$CF_BUILDER_SA" \
+        --service-account="$CF_SERVICE_ACCOUNT" \
+        $${CF_ENV_VARS:+--set-env-vars="$CF_ENV_VARS"} \
+        $${CF_LABELS:+--update-labels="$CF_LABELS"} \
+        $${CF_SECRETS:+--set-secrets="$CF_SECRETS"}
     EOT
   }
 }
@@ -150,6 +158,11 @@ module "registry-docker" {
   location       = var.region
   name           = var.artifact_registry_name
   encryption_key = var.kms_key_name
+  iam = {
+    "roles/artifactregistry.repoAdmin" = [
+      module.service-account-runner.iam_email
+    ]
+  }
   format = {
     docker = {
       standard = {

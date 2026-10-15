@@ -51,3 +51,9 @@ variable "topology" {
   }
 }
 
+variable "center_spoke_names" {
+  description = "Optional list of spoke names in var.spokes to assign to the center group when topology is STAR."
+  type        = list(string)
+  default     = []
+}
+

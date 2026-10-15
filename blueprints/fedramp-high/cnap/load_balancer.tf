@@ -89,7 +89,7 @@ resource "tls_self_signed_cert" "default" {
   }
   dns_names = concat(
     [for app, values in try(local.apps, {}) : "${values.subdomain}.${var.domain}"],
-    [for mig, values in try(local.vms, {}) : " ${values.subdomain}.${var.domain}"]
+    [for mig, values in try(local.vms, {}) : "${values.subdomain}.${var.domain}"]
   )
   validity_period_hours = 720
   allowed_uses = [

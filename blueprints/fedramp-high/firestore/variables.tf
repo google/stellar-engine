@@ -42,3 +42,13 @@ variable "region" {
   type        = string
   description = "The location ID where the Firestore database will be created."
 }
+
+variable "deletion_policy" {
+  type        = string
+  description = "Deletion policy for the Firestore database (ABANDON or DELETE)."
+  default     = "ABANDON"
+  validation {
+    condition     = contains(["ABANDON", "DELETE"], var.deletion_policy)
+    error_message = "deletion_policy must be either ABANDON or DELETE."
+  }
+}

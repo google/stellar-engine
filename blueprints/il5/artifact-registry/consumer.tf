@@ -13,6 +13,7 @@
 # limitations under the License.
 
 resource "google_service_account" "consumer" {
+  project      = var.main_project_id
   account_id   = "compute-service-account"
   display_name = "Customized service account for consumer"
 }

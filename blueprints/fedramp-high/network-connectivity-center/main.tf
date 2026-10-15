@@ -29,8 +29,8 @@ locals {
         # If MESH, always assign to the default group
         google_network_connectivity_group.default[0].id
         ) : (
-        # If STAR, determine if it's center or edge based on project ID
-        regex("projects/([^/]+)/", spoke_self_link)[0] == var.main_project_id ?
+        # If STAR, determine if it's center or edge based on center_spoke_names or anchored project ID
+        (contains(var.center_spoke_names, spoke_name) || can(regex("(?:^|/)projects/${var.main_project_id}/global/networks/", spoke_self_link))) ?
         google_network_connectivity_group.center[0].id :
         google_network_connectivity_group.edge[0].id
       )

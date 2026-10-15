@@ -86,3 +86,9 @@ variable "storage_utilization_percent" {
   type        = number
   default     = 90
 }
+
+variable "kms_key_name" {
+  description = "Cloud KMS key name used for Cloud Spanner database CMEK encryption."
+  type        = string
+  default     = null
+}

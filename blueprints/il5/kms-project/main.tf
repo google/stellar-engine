@@ -32,6 +32,32 @@ data "google_kms_crypto_key" "existing_keys" {
   key_ring = data.google_kms_key_ring.existing_keyring.id
 }
 
+locals {
+  key_rotation_periods = {
+    for k, v in var.existing_kms_keys :
+    k => coalesce(v.rotation_period_s, var.rotation_period_s)
+  }
+  key_iam_bindings = merge([
+    for k, v in var.existing_kms_keys : merge([
+      for role, members in coalesce(v.iam_members, {}) : {
+        for member in members :
+        "${k}-${role}-${member}" => {
+          crypto_key_id = data.google_kms_crypto_key.existing_keys[k].id
+          role          = role
+          member        = member
+        }
+      }
+    ]...)
+  ]...)
+}
+
+resource "google_kms_crypto_key_iam_member" "key_iam_members" {
+  for_each      = local.key_iam_bindings
+  crypto_key_id = each.value.crypto_key_id
+  role          = each.value.role
+  member        = each.value.member
+}
+
 # Grant permissions (or manage existing IAM bindings) on existing CryptoKeys
 resource "google_kms_crypto_key_iam_member" "default_encrypter_decrypter" {
   # If var.email is null, for_each will be an empty map, and no resources will be created.

@@ -55,7 +55,8 @@ resource "google_project_service" "dataproc_api" {
 }
 
 resource "google_service_account" "dataproc_vm" {
-  account_id   = "dp-${var.main_project_id}"
+  project      = var.main_project_id
+  account_id   = substr("dp-${var.main_project_id}", 0, 28)
   display_name = "Dataproc Worker Service Account"
 }
 

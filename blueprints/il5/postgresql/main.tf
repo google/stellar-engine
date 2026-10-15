@@ -54,6 +54,7 @@ resource "google_compute_firewall" "postgres" {
     metadata = "INCLUDE_ALL_METADATA"
   }
   source_ranges = var.firewall_source_range
+  target_tags   = ["postgres"]
 }
 
 module "postgres" {
