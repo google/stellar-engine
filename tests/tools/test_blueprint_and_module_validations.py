@@ -299,6 +299,9 @@ class TestBlueprintAndModuleValidations(unittest.TestCase):
 
     spanner_iam = (REPO_ROOT / "modules/spanner-instance/iam.tf").read_text(encoding="utf-8")
     self.assertIn('dynamic "condition"', spanner_iam)
+    spanner_main = (REPO_ROOT / "modules/spanner-instance/main.tf").read_text(encoding="utf-8")
+    self.assertIn("deletion_protection      = coalesce(each.value.deletion_protection, true)", spanner_main)
+    self.assertIn("database_dialect         = each.value.database_dialect", spanner_main)
 
 
 if __name__ == "__main__":

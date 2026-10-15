@@ -93,10 +93,11 @@ resource "google_spanner_database" "spanner_databases" {
   project                  = var.project_id
   instance                 = local.spanner_instance.name
   name                     = each.key
+  database_dialect         = each.value.database_dialect
   ddl                      = each.value.ddl
   default_time_zone        = each.value.default_time_zone
   enable_drop_protection   = each.value.enable_drop_protection
-  deletion_protection      = false
+  deletion_protection      = coalesce(each.value.deletion_protection, true)
   version_retention_period = each.value.version_retention_period
   dynamic "encryption_config" {
     for_each = each.value.kms_key_name == null ? [] : [""]
