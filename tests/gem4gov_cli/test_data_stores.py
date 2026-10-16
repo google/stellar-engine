@@ -107,7 +107,60 @@ class TestDataStores(unittest.TestCase):
     self.assertFalse(res['valid'])
     self.assertEqual(res['id'], 'ds-error')
 
+  @patch('data_stores.build')
+  def test_validate_data_store_missing_name_falls_back_to_id(self, mock_build):
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_ds_req = mock_service.projects().locations().dataStores().get()
+    mock_ds_req.execute.return_value = {
+        'name': None,
+        'displayName': 'Unnamed DS',
+        'industryVertical': 'GENERIC',
+        'solutionTypes': ['SOLUTION_TYPE_SEARCH'],
+    }
 
+    res = data_stores.validate_data_store(MagicMock(), 'p1', 'ds-fallback')
+    self.assertTrue(res['valid'])
+    self.assertEqual(res['id'], 'ds-fallback')
+    self.assertIsNone(res['name'])
+
+  @patch('data_stores.click.prompt')
+  @patch('data_stores.build')
+  def test_list_data_stores_empty_returns_none_without_prompt(
+      self, mock_build, mock_prompt):
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_list_req = mock_service.projects().locations().dataStores().list()
+    mock_list_req.execute.return_value = {
+        'dataStores': [{
+            'name': 'projects/p1/locations/us/dataStores/ds-chat',
+            'displayName': 'Chat Only',
+            'solutionTypes': ['SOLUTION_TYPE_CHAT'],
+        }]
+    }
+
+    res = data_stores.list_data_stores(MagicMock(), 'p1')
+    self.assertIsNone(res)
+    mock_prompt.assert_not_called()
+
+  @patch('data_stores.click.prompt', return_value=1)
+  @patch('data_stores.build')
+  def test_list_data_stores_selects_valid_data_store(
+      self, mock_build, mock_prompt):
+    mock_service = MagicMock()
+    mock_build.return_value = mock_service
+    mock_list_req = mock_service.projects().locations().dataStores().list()
+    mock_list_req.execute.return_value = {
+        'dataStores': [{
+            'name': 'projects/p1/locations/us/dataStores/ds-search-1',
+            'displayName': 'Search DS 1',
+            'solutionTypes': ['SOLUTION_TYPE_SEARCH'],
+        }]
+    }
+
+    res = data_stores.list_data_stores(MagicMock(), 'p1')
+    self.assertEqual(res, 'ds-search-1')
+    mock_prompt.assert_called_once()
 
   @patch('data_stores.build')
   def test_import_bq_documents_auto_and_custom_id_field(self, mock_build):
