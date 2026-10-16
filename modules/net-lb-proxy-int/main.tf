@@ -237,7 +237,7 @@ resource "google_compute_service_attachment" "default" {
   region         = var.region
   name           = var.name
   description    = var.description
-  target_service = google_compute_forwarding_rule.default[var.service_attachment.forwarding_rule].id
+  target_service = google_compute_forwarding_rule.default[coalesce(var.service_attachment.forwarding_rule, "")].id
   nat_subnets = [
     for s in var.service_attachment.nat_subnets
     : lookup(local.ctx.subnets, s, s)

@@ -62,7 +62,7 @@ resource "google_kms_autokey_config" "default" {
   key_project = try(
     "projects/${local.ctx.project_ids[var.autokey_config.project]}",
     "projects/${local.ctx.project_numbers[var.autokey_config.project]}",
-    var.autokey_config.project
+    startswith(var.autokey_config.project, "projects/") ? var.autokey_config.project : "projects/${var.autokey_config.project}"
   )
 }
 

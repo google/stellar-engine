@@ -45,7 +45,7 @@ locals {
 
 resource "google_scc_v2_folder_mute_config" "scc_mute_configs" {
   for_each       = local.scc_mute_configs
-  folder         = replace(local.folder_id, "folders/", "")
+  folder         = local.folder_number
   location       = "global"
   mute_config_id = each.key
   description    = each.value.description

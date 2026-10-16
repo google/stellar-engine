@@ -51,7 +51,7 @@ resource "google_scc_management_folder_security_health_analytics_custom_module" 
   provider = google
 
   for_each     = local.scc_sha_custom_modules
-  folder       = replace(local.folder_id, "folders/", "")
+  folder       = local.folder_number
   location     = "global"
   display_name = each.value.name
   custom_config {
