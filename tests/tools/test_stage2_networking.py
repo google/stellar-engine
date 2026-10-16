@@ -108,7 +108,7 @@ class TestStage2Networking(unittest.TestCase):
         "3-security",
     ]:
       var_text = (_REPO_ROOT / f"fast/stages-aw/{stage}/variables.tf").read_text(encoding="utf-8")
-      self.assertIn("can(tomap(var.essential_contacts))", var_text)
+      self.assertIn("can({ for k, v in tomap(var.essential_contacts) : k => tolist(v) })", var_text)
       self.assertIn("can(tostring(var.essential_contacts))", var_text)
 
     org_tf = (_REPO_ROOT / "fast/stages-aw/0-bootstrap/organization.tf").read_text(encoding="utf-8")

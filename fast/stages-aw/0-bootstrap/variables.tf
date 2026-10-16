@@ -132,7 +132,7 @@ variable "essential_contacts" {
     condition = (
       var.essential_contacts == null ||
       can(tostring(var.essential_contacts)) ||
-      can(tomap(var.essential_contacts))
+      can({ for k, v in tomap(var.essential_contacts) : k => tolist(v) })
     )
     error_message = "essential_contacts must be null, a single email string, or a map of email strings to notification category lists."
   }

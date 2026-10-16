@@ -72,7 +72,7 @@ variable "essential_contacts" {
     condition = (
       var.essential_contacts == null ||
       can(tostring(var.essential_contacts)) ||
-      can(tomap(var.essential_contacts))
+      can({ for k, v in tomap(var.essential_contacts) : k => tolist(v) })
     )
     error_message = "essential_contacts must be null, a single email string, or a map of email strings to notification category lists."
   }
@@ -261,6 +261,13 @@ variable "regime_mapping" {
   default     = null
 }
 
+variable "spoke_project_iam" {
+  description = "Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role."
+  type        = map(map(list(string)))
+  default     = {}
+  nullable    = false
+}
+
 variable "subnets" {
   description = "VPC subnet configurations keyed by network name."
   type = map(list(object({
@@ -355,11 +362,4 @@ variable "firewall_rules" {
   }))
   default  = {}
   nullable = false
-}
-
-variable "spoke_project_iam" {
-  description = "Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role."
-  type        = map(map(list(string)))
-  default     = {}
-  nullable    = false
 }
