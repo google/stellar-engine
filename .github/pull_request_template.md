@@ -25,7 +25,7 @@ Fixes # (GitHub issue id)
 ### Code Quality & Reusability
 - [ ] My code adheres to the **Maximize Reusability** principle. I have not redefined common elements and have reused existing base configurations and modules where possible.
 - [ ] I have checked that no existing module or configuration in `modules/` or `fast/` can be leveraged for this change.
-- [ ] My code follows the established naming conventions outlined in `documentation/naming-convention.md`.
+- [ ] My code follows the established naming conventions outlined in `docs/naming-convention.md`.
 
 ### Documentation
 - [ ] I have updated the `README.md` of the modified module or blueprint.

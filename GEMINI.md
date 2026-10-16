@@ -31,7 +31,7 @@ complex deployments into smaller, reusable components.
 3.  **Documentation:** All new or modified modules and blueprints must include a `README.md` explaining their purpose, inputs (variables),
 outputs, and any dependencies.
 
-4.  **Naming Conventions:** Strictly follow the established naming conventions outlined in `documentation/naming-convention.md`.
+4.  **Naming Conventions:** Strictly follow the established naming conventions outlined in `docs/naming-convention.md`.
 Consistency in naming variables, resources, modules, and files is crucial.
 
 5.  **Security:** Adhere to GCP security best practices and the principle of least privilege in all configurations. Ensure compliance with
@@ -47,7 +47,7 @@ the targeted regime (FedRAMP Moderate, FedRAMP High, IL5, etc.).
     *   Firewall: `modules/net-vpc-firewall/`
     *   Subnets: Typically defined within the `modules/net-vpc/` module.
     *   Other networking components: See other modules starting with `net-` in the `modules/` directory.
-*   **Naming Convention Documentation:** `documentation/naming-convention.md`
+*   **Naming Convention Documentation:** `docs/naming-convention.md`
 *   **Examples of Well-Structured Blueprints:**
     *   `blueprints/il5/bigquery/`
     *   `blueprints/fedramp-high/cloud-run/`
@@ -63,7 +63,7 @@ When generating or modifying code within the Stellar Engine repository, especial
     *   Networking (VPCs, subnets, firewalls)
     *   Service Accounts and IAM
     *   Common variable patterns
-3.  **Follow Naming Conventions:** Adhere strictly to `documentation/naming-convention.md`.
+3.  **Follow Naming Conventions:** Adhere strictly to `docs/naming-convention.md`.
 4.  **Ask for Clarification:** If a request seems to require creating a new fundamental resource (e.g., a new base VPC, a new highly
 privileged service account), ask the user to confirm if this is truly necessary and why existing components cannot be used.
 5.  **Consult Module READMEs:** When using a module from `modules/`, always read its `README.md` to understand its usage, inputs, and
