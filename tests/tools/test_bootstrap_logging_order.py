@@ -159,18 +159,18 @@ class TestBootstrapLoggingOrder(unittest.TestCase):
     self.assertIn("%{ else ~}\n{}\n%{ endif ~}", custom_compute_text)
 
     org_tf = (_REPO_ROOT / "fast/stages-aw/0-bootstrap/organization.tf").read_text(encoding="utf-8")
-    self.assertIn("try(coalesce(yamldecode(templatefile(", org_tf)
+    self.assertIn("try({ for k, v in yamldecode(templatefile(", org_tf)
 
     resman_vars = (_REPO_ROOT / "fast/stages-aw/1-resman/variables.tf").read_text(encoding="utf-8")
     self.assertIn("org_policies_data_path = optional(string)", resman_vars)
     self.assertIn("main_project_org_policies = optional(map(any), {})", resman_vars)
 
     envs_tf = (_REPO_ROOT / "fast/stages-aw/1-resman/branch-envs.tf").read_text(encoding="utf-8")
-    self.assertIn("org_policies = coalesce(try(each.value.org_policies, null), {})", envs_tf)
+    self.assertIn("org_policies = each.value.org_policies == null ? {} : each.value.org_policies", envs_tf)
     self.assertIn("? { org_policies = each.value.org_policies_data_path }", envs_tf)
 
     tenants_tf = (_REPO_ROOT / "fast/stages-aw/1-resman/branch-tenants.tf").read_text(encoding="utf-8")
-    self.assertIn("org_policies = coalesce(try(each.value.tenant_info.org_policies, null), {})", tenants_tf)
+    self.assertIn("org_policies = each.value.tenant_info.org_policies == null ? {} : each.value.tenant_info.org_policies", tenants_tf)
     self.assertIn("? { org_policies = each.value.tenant_info.org_policies_data_path }", tenants_tf)
 
 

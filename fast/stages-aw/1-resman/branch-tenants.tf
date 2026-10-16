@@ -44,7 +44,7 @@ module "tenant-top-folders" {
   iam_by_principals = {
     (each.value.tenant_info.admin_principal) = ["roles/browser"]
   }
-  org_policies = coalesce(try(each.value.tenant_info.org_policies, null), {})
+  org_policies = each.value.tenant_info.org_policies == null ? {} : each.value.tenant_info.org_policies
   factories_config = (
     try(each.value.tenant_info.org_policies_data_path, null) != null
     ? { org_policies = each.value.tenant_info.org_policies_data_path }
@@ -165,7 +165,7 @@ module "tenant-self-iac-projects" {
   name         = lower("${each.key}-iac-core-0")
   parent       = module.tenant-top-folders[each.key].id
   prefix       = var.prefix
-  org_policies = coalesce(try(each.value.tenant_info.iac_project_org_policies, null), {})
+  org_policies = each.value.tenant_info.iac_project_org_policies == null ? {} : each.value.tenant_info.iac_project_org_policies
   iam_by_principals = {
     (each.value.tenant_info.admin_principal) = [
       "roles/iam.serviceAccountAdmin",
@@ -287,7 +287,7 @@ module "tenant-self-main-projects" {
   name         = lower("${each.key}-main-0")
   parent       = module.tenant-top-folders[each.key].id
   prefix       = var.prefix
-  org_policies = coalesce(try(each.value.tenant_info.main_project_org_policies, null), {})
+  org_policies = each.value.tenant_info.main_project_org_policies == null ? {} : each.value.tenant_info.main_project_org_policies
   iam_by_principals = {
     (each.value.tenant_info.admin_principal) = [
       "roles/iam.serviceAccountAdmin",
