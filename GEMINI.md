@@ -49,8 +49,8 @@ modules in this repository.
   in `modules/` provide the remaining networking components.
 * The naming convention documentation lives at `docs/naming-convention.md`.
 * `blueprints/il5/bigquery/` and `blueprints/fedramp-high/cloud-run/` are
-  examples of well-structured blueprints, and the `fast/` directory contains
-  staged blueprints for bootstrapping an organization.
+  examples of well-structured blueprints, and `fast/stages-aw/` contains the
+  landing zone stages for bootstrapping an organization.
 
 ## 4 Assistant guidance
 
@@ -58,9 +58,10 @@ Follow these steps when you generate or modify code in this repository,
 especially new blueprints or modules.
 
 1. Apply the core principles and key resources from the previous sections.
-2. Check whether an existing module or configuration in `modules/` or `fast/`
-   covers the need before you create any new resource, particularly for
-   networking, service accounts and IAM, and common variable patterns.
+2. Check whether an existing module in `modules/` or stage construct in
+   `fast/stages-aw/` covers the need before you create any new resource,
+   particularly for networking, service accounts and IAM, and common variable
+   patterns.
 3. Adhere strictly to the naming conventions in `docs/naming-convention.md`.
 4. Ask the user to confirm that a new fundamental resource, such as a new base
    VPC or a highly privileged service account, is necessary and why existing
