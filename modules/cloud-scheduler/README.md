@@ -53,20 +53,20 @@ module "http_job" {
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [description](variables.tf#L1) | Job description. | <code>string</code> | ✓ |  |
-| [http_target](variables.tf#L6) | HTTP Target for job. | <code title="object&#40;&#123;&#10;  http_method &#61; optional&#40;string&#41;&#10;  uri         &#61; optional&#40;string&#41;&#10;  body        &#61; optional&#40;string&#41;&#10;  headers     &#61; optional&#40;map&#40;string&#41;&#41;&#10;&#125;&#41;&#10;&#10;&#10;default &#61; null">object&#40;&#123;&#8230;default &#61; null</code> | ✓ |  |
-| [name](variables.tf#L24) | Job name. | <code>string</code> | ✓ |  |
-| [project_id](variables.tf#L29) | Project ID. | <code>string</code> | ✓ |  |
-| [pubsub_target](variables.tf#L34) | Pubsub target for job. | <code title="object&#40;&#123;&#10;  topic_id &#61; optional&#40;string&#41;&#10;  data     &#61; optional&#40;string&#41;&#10;  attributes &#61; optional&#40;map&#40;string&#41;&#41;&#10;  new_topic &#61; optional&#40;object&#40;&#123;&#10;    create       &#61; optional&#40;bool&#41;&#10;    name         &#61; optional&#40;string&#41;&#10;    kms_key_name &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#10;&#10;&#10;default &#61; &#123;&#10;  topic_id   &#61; null&#10;  data       &#61; null&#10;  new_topic  &#61; null&#10;  attributes &#61; null&#10;&#125;">object&#40;&#123;&#8230;&#125;</code> | ✓ |  |
-| [retry_config](variables.tf#L55) | Retry config. | <code title="object&#40;&#123;&#10;  retry_count          &#61; optional&#40;number, null&#41;&#10;  max_retry_duration   &#61; optional&#40;string, null&#41;&#10;  min_backoff_duration &#61; optional&#40;string, null&#41;&#10;  max_backoff_duration &#61; optional&#40;string, null&#41;&#10;  max_doublings        &#61; optional&#40;number, null&#41;&#10;&#125;&#41;&#10;&#10;&#10;default &#61; null">object&#40;&#123;&#8230;default &#61; null</code> | ✓ |  |
-| [schedule](variables.tf#L68) | Schedule to run job. | <code>string</code> | ✓ |  |
-| [trigger_type](variables.tf#L74) | Type of trigger for the function. Valid values are 'pubsub' or 'http'. | <code>string</code> | ✓ |  |
-| [kms_key](variables.tf#L18) | KMS key name. | <code>string</code> |  | <code>null</code> |
+| [description](variables.tf#L15) | Job description. | <code>string</code> | ✓ |  |
+| [http_target](variables.tf#L20) | HTTP Target for job. | <code title="object&#40;&#123;&#10;  http_method &#61; optional&#40;string&#41;&#10;  uri         &#61; optional&#40;string&#41;&#10;  body        &#61; optional&#40;string&#41;&#10;  headers     &#61; optional&#40;map&#40;string&#41;&#41;&#10;&#125;&#41;&#10;&#10;&#10;default &#61; null">object&#40;&#123;&#8230;default &#61; null</code> | ✓ |  |
+| [name](variables.tf#L38) | Job name. | <code>string</code> | ✓ |  |
+| [project_id](variables.tf#L43) | Project ID. | <code>string</code> | ✓ |  |
+| [pubsub_target](variables.tf#L48) | Pubsub target for job. | <code title="object&#40;&#123;&#10;  topic_id   &#61; optional&#40;string&#41;&#10;  data       &#61; optional&#40;string&#41;&#10;  attributes &#61; optional&#40;map&#40;string&#41;&#41;&#10;  new_topic &#61; optional&#40;object&#40;&#123;&#10;    create       &#61; optional&#40;bool&#41;&#10;    name         &#61; optional&#40;string&#41;&#10;    kms_key_name &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#10;&#10;&#10;default &#61; &#123;&#10;  topic_id   &#61; null&#10;  data       &#61; null&#10;  new_topic  &#61; null&#10;  attributes &#61; null&#10;&#125;">object&#40;&#123;&#8230;&#125;</code> | ✓ |  |
+| [retry_config](variables.tf#L69) | Retry config. | <code title="object&#40;&#123;&#10;  retry_count          &#61; optional&#40;number, null&#41;&#10;  max_retry_duration   &#61; optional&#40;string, null&#41;&#10;  min_backoff_duration &#61; optional&#40;string, null&#41;&#10;  max_backoff_duration &#61; optional&#40;string, null&#41;&#10;  max_doublings        &#61; optional&#40;number, null&#41;&#10;&#125;&#41;&#10;&#10;&#10;default &#61; null">object&#40;&#123;&#8230;default &#61; null</code> | ✓ |  |
+| [schedule](variables.tf#L82) | Schedule to run job. | <code>string</code> | ✓ |  |
+| [trigger_type](variables.tf#L88) | Type of trigger for the function. Valid values are 'pubsub' or 'http'. | <code>string</code> | ✓ |  |
+| [kms_key](variables.tf#L32) | KMS key name. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [id](outputs.tf#L1) | Job ID. |  |
-| [state](outputs.tf#L6) | Job state. |  |
+| [id](outputs.tf#L15) | Job ID. |  |
+| [state](outputs.tf#L20) | Job state. |  |
 <!-- END TFDOC -->

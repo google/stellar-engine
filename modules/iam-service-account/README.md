@@ -34,7 +34,7 @@ module "myproject-default-service-accounts" {
 | name | description | resources |
 |---|---|---|
 | [iam.tf](./iam.tf) | IAM bindings. | <code>google_billing_account_iam_member</code> · <code>google_folder_iam_member</code> · <code>google_organization_iam_member</code> · <code>google_project_iam_member</code> · <code>google_service_account_iam_binding</code> · <code>google_service_account_iam_member</code> · <code>google_storage_bucket_iam_member</code> |
-| [main.tf](./main.tf) | Module-level locals and resources. | <code>google_service_account</code> · <code>google_service_account_key</code> |
+| [main.tf](./main.tf) | Module-level locals and resources. | <code>google_service_account</code> |
 | [outputs.tf](./outputs.tf) | Module outputs. |  |
 | [variables.tf](./variables.tf) | Module variables. |  |
 | [versions.tf](./versions.tf) | Version pins. |  |
@@ -57,8 +57,7 @@ module "myproject-default-service-accounts" {
 | [iam_sa_roles](variables.tf#L94) | Service account roles granted to this service account, by service account name. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam_storage_roles](variables.tf#L101) | Storage roles granted to this service account, by bucket name. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [prefix](variables.tf#L113) | Prefix applied to service account names. | <code>string</code> |  | <code>null</code> |
-| [public_keys_directory](variables.tf#L128) | Path to public keys data files to upload to the service account (should have `.pem` extension). | <code>string</code> |  | <code>&#34;&#34;</code> |
-| [service_account_create](variables.tf#L134) | Create service account. When set to false, uses a data source to reference an existing service account. | <code>bool</code> |  | <code>true</code> |
+| [service_account_create](variables.tf#L128) | Create service account. When set to false, uses a data source to reference an existing service account. | <code>bool</code> |  | <code>true</code> |
 
 ## Outputs
 
@@ -69,5 +68,4 @@ module "myproject-default-service-accounts" {
 | [id](outputs.tf#L33) | Fully qualified service account id. |  |
 | [name](outputs.tf#L41) | Service account name. |  |
 | [service_account](outputs.tf#L49) | Service account resource. |  |
-| [service_account_credentials](outputs.tf#L54) | Service account json credential templates for uploaded public keys data. |  |
 <!-- END TFDOC -->

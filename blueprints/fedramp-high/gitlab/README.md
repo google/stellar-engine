@@ -146,29 +146,31 @@ The setup should now be complete and GitLab will now have HTTPS enabled.
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [gitlab_uri](variables.tf#L1) | The URL hostname that the gitlab instance will be attached to. | <code>string</code> | ✓ |  |
-| [kms_key](variables.tf#L24) | KMS key path. | <code>string</code> | ✓ |  |
-| [net_project](variables.tf#L35) | Project name of the spoke network. This project has the Stellar Engine deployed default VPC and is in the Networking folder. | <code>string</code> | ✓ |  |
-| [network](variables.tf#L40) | Network path to use for cluster, VM, and load balancer. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L45) | Network name to use for Firewall rules. E.G. test-net-spoke. | <code>string</code> | ✓ |  |
-| [nodepool_node_count](variables.tf#L50) | Number of node per zone in the Nodepool. | <code title="object&#40;&#123;&#10;  current &#61; optional&#40;number&#41;&#10;  initial &#61; number&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [project_id](variables.tf#L59) | Project ID where the GitLab cluster, VM, and load balancer will be deployed to. | <code>string</code> | ✓ |  |
-| [sa](variables.tf#L70) | Service account to run GKE and VM. | <code>string</code> | ✓ |  |
-| [subnetwork](variables.tf#L75) | Subnet path to use for cluster, VM, and load balancer. | <code>string</code> | ✓ |  |
-| [gke_initial_node_per_zone](variables.tf#L6) | Initial node amount per zone. | <code>number</code> |  | <code>1</code> |
-| [gke_name](variables.tf#L12) | Name of the GKE cluster. | <code>string</code> |  | <code>&#34;gitlab-cluster&#34;</code> |
-| [instance_name](variables.tf#L18) | Name of the vm. | <code>string</code> |  | <code>&#34;gitlab-instance&#34;</code> |
-| [lb_name](variables.tf#L29) | Application load balancer name. | <code>string</code> |  | <code>&#34;gitlab-load-balancer&#34;</code> |
-| [region](variables.tf#L64) | Region for deployment. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [vm_name](variables.tf#L80) | VM name. | <code>string</code> |  | <code>&#34;gitlab-vm&#34;</code> |
-| [zone](variables.tf#L86) | Zone to deploy to. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
+| [gitlab_uri](variables.tf#L31) | The URL hostname that the gitlab instance will be attached to. | <code>string</code> | ✓ |  |
+| [kms_key](variables.tf#L58) | KMS key path. | <code>string</code> | ✓ |  |
+| [net_project](variables.tf#L69) | Project name of the spoke network. This project has the Stellar Engine deployed default VPC and is in the Networking folder. | <code>string</code> | ✓ |  |
+| [network](variables.tf#L74) | Network path to use for cluster, VM, and load balancer. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L79) | Network name to use for Firewall rules. E.G. test-net-spoke. | <code>string</code> | ✓ |  |
+| [nodepool_node_count](variables.tf#L84) | Number of node per zone in the Nodepool. | <code title="object&#40;&#123;&#10;  current &#61; optional&#40;number&#41;&#10;  initial &#61; number&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [project_id](variables.tf#L93) | Project ID where the GitLab cluster, VM, and load balancer will be deployed to. | <code>string</code> | ✓ |  |
+| [sa](variables.tf#L104) | Service account to run GKE and VM. | <code>string</code> | ✓ |  |
+| [subnetwork](variables.tf#L109) | Subnet path to use for cluster, VM, and load balancer. | <code>string</code> | ✓ |  |
+| [compute_image](variables.tf#L15) | The image used to provision the compute instance. | <code>string</code> |  | <code>&#34;projects&#47;ubuntu-os-cloud&#47;global&#47;images&#47;ubuntu-2404-noble-amd64-v20241219&#34;</code> |
+| [gitlab_install_script_sha256](variables.tf#L21) | Expected SHA-256 hash for the GitLab package repository install script. | <code>string</code> |  | <code>&#34;47c124527729776870cf09cd6bd46a9b94f55d40c7545ca26640c75de86b560d&#34;</code> |
+| [gke_initial_node_per_zone](variables.tf#L40) | Initial node amount per zone. | <code>number</code> |  | <code>1</code> |
+| [gke_name](variables.tf#L46) | Name of the GKE cluster. | <code>string</code> |  | <code>&#34;gitlab-cluster&#34;</code> |
+| [instance_name](variables.tf#L52) | Name of the vm. | <code>string</code> |  | <code>&#34;gitlab-instance&#34;</code> |
+| [lb_name](variables.tf#L63) | Application load balancer name. | <code>string</code> |  | <code>&#34;gitlab-load-balancer&#34;</code> |
+| [region](variables.tf#L98) | Region for deployment. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [vm_name](variables.tf#L114) | VM name. | <code>string</code> |  | <code>&#34;gitlab-vm&#34;</code> |
+| [zone](variables.tf#L120) | Zone to deploy to. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [gke-cluster](outputs.tf#L1) | Deployed GKE cluster. | ✓ |
-| [lb](outputs.tf#L7) | Application Load Balancer. | ✓ |
-| [umig](outputs.tf#L13) | Unmanaged instance group. | ✓ |
-| [vm](outputs.tf#L19) | Deployed VM. | ✓ |
+| [gke-cluster](outputs.tf#L15) | Deployed GKE cluster. | ✓ |
+| [lb](outputs.tf#L21) | Application Load Balancer. | ✓ |
+| [umig](outputs.tf#L27) | Unmanaged instance group. | ✓ |
+| [vm](outputs.tf#L33) | Deployed VM. | ✓ |
 <!-- END TFDOC -->

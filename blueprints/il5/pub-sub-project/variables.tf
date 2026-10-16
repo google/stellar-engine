@@ -25,6 +25,11 @@ variable "core_project_id" {
   type        = string
 }
 
+variable "gcp_region" {
+  description = "The Google Cloud region to be used for Pub/Sub topic deployment and as the default for the provider."
+  type        = string
+}
+
 variable "kms_key_name" {
   description = "The full resource path of the existing Cloud KMS CryptoKey to use for Customer-Managed Encryption Keys (CMEK) on the Pub/Sub topic."
   type        = string
@@ -57,11 +62,6 @@ variable "pubsub_topic" {
   type        = string
 }
 
-variable "gcp_region" {
-  description = "The Google Cloud region to be used for Pub/Sub topic deployment and as the default for the provider."
-  type        = string
-}
-
 variable "subscriber_account_id" {
   description = "The ID for the custom service account created for the Pub/Sub subscriber (e.g., 'my-subscriber-sa')."
   type        = string
@@ -73,4 +73,3 @@ variable "subscriber_name" {
   type        = string
   default     = "Pub/Sub Subscriber Service Account"
 }
-

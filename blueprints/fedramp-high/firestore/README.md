@@ -55,19 +55,19 @@ Go to Firestore in the GCP Console. Select Firestore Studio to "Start Collection
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [firestore_database_name](variables.tf#L11) | The name of the Firestore database instance. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L22) | The main project ID of the Google Cloud project. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L27) | The location ID where the Firestore database will be created. | <code>string</code> | ✓ |  |
-| [backup_schedule](variables.tf#L1) | The Backup schedule - select daily or weekly in your tfvars. | <code title="object&#40;&#123;&#10;  retention         &#61; string&#10;  daily_recurrence  &#61; optional&#40;bool, false&#41;&#10;  weekly_recurrence &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [kms_key_name](variables.tf#L16) | The KMS key name used to encrypt the Firestore database. | <code>string</code> |  | <code>null</code> |
+| [firestore_database_name](variables.tf#L25) | The name of the Firestore database instance. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L36) | The main project ID of the Google Cloud project. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L41) | The location ID where the Firestore database will be created. | <code>string</code> | ✓ |  |
+| [backup_schedule](variables.tf#L15) | The Backup schedule - select daily or weekly in your tfvars. | <code title="object&#40;&#123;&#10;  retention         &#61; string&#10;  daily_recurrence  &#61; optional&#40;bool, false&#41;&#10;  weekly_recurrence &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [kms_key_name](variables.tf#L30) | The KMS key name used to encrypt the Firestore database. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [firestore_earliest_version_time](outputs.tf#L1) | The earliest timestamp at which older versions of the data can be read from the database. |  |
-| [firestore_etag](outputs.tf#L6) | This checksum is computed by the server based on the value of other fields. |  |
-| [firestore_id](outputs.tf#L11) | The identifier for the Firestore resource. |  |
-| [firestore_uid](outputs.tf#L16) | The system-generated UUID4 for this Database. |  |
-| [firestore_version_retention_period](outputs.tf#L22) | The period during which past versions of data are retained in the database. |  |
+| [firestore_earliest_version_time](outputs.tf#L15) | The earliest timestamp at which older versions of the data can be read from the database. |  |
+| [firestore_etag](outputs.tf#L20) | This checksum is computed by the server based on the value of other fields. |  |
+| [firestore_id](outputs.tf#L25) | The identifier for the Firestore resource. |  |
+| [firestore_uid](outputs.tf#L30) | The system-generated UUID4 for this Database. |  |
+| [firestore_version_retention_period](outputs.tf#L36) | The period during which past versions of data are retained in the database. |  |
 <!-- END TFDOC -->

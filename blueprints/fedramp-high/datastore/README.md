@@ -50,6 +50,6 @@ To confirm your deployment was successful, follow these steps in the GCP Console
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [main_project_id](variables.tf#L1) | The ID of your project. This project must contain an app engine instance. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L6) | The region of your project. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L15) | The ID of your project. This project must contain an app engine instance. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L20) | The region of your project. | <code>string</code> | ✓ |  |
 <!-- END TFDOC -->

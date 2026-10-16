@@ -2,7 +2,6 @@
 This blueprint schedules a cron job to publish messages to an *existing* Google Cloud Pub/Sub topic.
 
 <!-- BEGIN TOC -->
-- [Cloud Scheduler Job Blueprint](#cloud-scheduler-job-blueprint)
 - [Introduction](#introduction)
 - [Disclaimer](#disclaimer)
 - [Prerequisites](#prerequisites)
@@ -102,30 +101,29 @@ To verify a successful deployment:
 -   The `schedule` variable uses the [Crontab format](https://en.wikipedia.org/wiki/Cron#CRON_expression).
 -   Cloud Scheduler jobs are **regional resources**. Ensure `var.gcp_region` matches your desired deployment region.
 -   This blueprint configures a **Pub/Sub target**. Cloud Scheduler also supports HTTP and App Engine targets, which would require modifications to the `main.tf` if desired.
-
 <!-- BEGIN TFDOC -->
 ## Variables
+
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [data](variables.tf#L1) | The base64-encoded data to be sent as the Pub/Sub message payload. | <code>string</code> |  | <code>null</code> |
-| [description](variables.tf#L7) | Description of the Cloud Scheduler job. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L12) | The full resource path of the existing Cloud KMS CryptoKey used for CMEK on the Pub/Sub topic. This key is assumed to be in the `core_project_id`. | <code>string</code> |  | <code>null</code> |
-| [main_project_id](variables.tf#L18) | The Google Cloud Project ID where the Cloud Scheduler job will be created. | <code>string</code> | ✓ |  |
-| [max_backoff_duration](variables.tf#L23) | The maximum amount of time to wait before retrying a failed attempt, as a duration string (e.g., &#39;5s&#39;, &#39;2m&#39;, &#39;1h&#39;). | <code>string</code> |  | <code>null</code> |
-| [max_doublings](variables.tf#L29) | The maximum number of times to double the retry delay, up to `max_retry_duration`. | <code>number</code> |  | <code>null</code> |
-| [max_retry_duration](variables.tf#L35) | The maximum cumulative time in which retries are attempted, as a duration string. | <code>string</code> |  | <code>null</code> |
-| [min_backoff_duration](variables.tf#L41) | The minimum amount of time to wait before retrying a failed attempt, as a duration string. | <code>string</code> |  | <code>null</code> |
-| [name](variables.tf#L47) | The name of the Cloud Scheduler job. | <code>string</code> | ✓ |  |
-| [gcp_region](variables.tf#L52) | The Google Cloud region where the Cloud Scheduler job will be deployed. | <code>string</code> | ✓ |  |
-| [retry_count](variables.tf#L57) | The number of attempts that the system will make to run the job if the first attempt fails. Retries are attempted over a longer period of time than the schedule. | <code>number</code> |  | <code>null</code> |
-| [schedule](variables.tf#L63) | The schedule in the [Crontab format](https://en.wikipedia.org/wiki/Cron#CRON_expression) (e.g., &#39;*/2 * * * *&#39; for every two minutes). | <code>string</code> | ✓ |  |
-| [topic_id](variables.tf#L68) | The full resource path of the existing Pub/Sub topic (e.g., `projects/<PROJECT_ID>/topics/<TOPIC_NAME>`) to which messages will be published. | <code>string</code> | ✓ |  |
-| [core_project_id](variables.tf#L73) | The Google Cloud Project ID where shared core services like KMS keys are located. Used for referencing existing Pub/Sub topic KMS keys. | <code>string</code> | ✓ |  |
+| [description](variables.tf#L22) | Description of the Cloud Scheduler job. | <code>string</code> | ✓ |  |
+| [gcp_region](variables.tf#L27) | The Google Cloud region where the Cloud Scheduler job will be deployed. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L38) | The Google Cloud Project ID where the Cloud Scheduler job will be created. | <code>string</code> | ✓ |  |
+| [name](variables.tf#L67) | The name of the Cloud Scheduler job. | <code>string</code> | ✓ |  |
+| [schedule](variables.tf#L78) | The schedule in the [Crontab format](https://en.wikipedia.org/wiki/Cron#CRON_expression) (e.g., '*/2 * * * *' for every two minutes). | <code>string</code> | ✓ |  |
+| [topic_id](variables.tf#L83) | The full resource path of the existing Pub/Sub topic (e.g., `projects/<PROJECT_ID>/topics/<TOPIC_NAME>`) to which messages will be published. | <code>string</code> | ✓ |  |
+| [data](variables.tf#L15) | The base64-encoded data to be sent as the Pub/Sub message payload. | <code>string</code> |  | <code>null</code> |
+| [kms_key_name](variables.tf#L32) | The full resource path of the existing Cloud KMS CryptoKey used for CMEK on the Pub/Sub topic. This key is assumed to be in the `core_project_id`. | <code>string</code> |  | <code>null</code> |
+| [max_backoff_duration](variables.tf#L43) | The maximum amount of time to wait before retrying a failed attempt, as a duration string (e.g., '5s', '2m', '1h'). | <code>string</code> |  | <code>null</code> |
+| [max_doublings](variables.tf#L49) | The maximum number of times to double the retry delay, up to `max_retry_duration`. | <code>number</code> |  | <code>null</code> |
+| [max_retry_duration](variables.tf#L55) | The maximum cumulative time in which retries are attempted, as a duration string. | <code>string</code> |  | <code>null</code> |
+| [min_backoff_duration](variables.tf#L61) | The minimum amount of time to wait before retrying a failed attempt, as a duration string. | <code>string</code> |  | <code>null</code> |
+| [retry_count](variables.tf#L72) | The number of attempts that the system will make to run the job if the first attempt fails. Retries are attempted over a longer period of time than the schedule. | <code>number</code> |  | <code>null</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [id](outputs.tf#L1) | Job ID. |  |
-| [state](outputs.tf#L6) | Job state. |  |
+| [id](outputs.tf#L15) | Job ID. |  |
+| [state](outputs.tf#L20) | Job state. |  |
 <!-- END TFDOC -->

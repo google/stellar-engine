@@ -1,4 +1,4 @@
-# Copyright 2026 Google Inc.
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,15 +20,10 @@ setup(
     py_modules=['gem4gov', 'data_stores', 'auth'],
     include_package_data=True,
     install_requires=[
-        'click',
-        'google-api-python-client',
-        'google-auth',
-        'google-auth-oauthlib',
-        'PyYAML'
+        'click', 'google-api-python-client', 'google-auth',
+        'google-auth-oauthlib', 'PyYAML'
     ],
     entry_points={
-        'console_scripts': [
-            'gem4gov = gem4gov:cli',
-        ],
+        'console_scripts': ['gem4gov = gem4gov:cli',],
     },
 )

@@ -80,6 +80,8 @@ def main(dirs, prefix_length=None, failed_only=False):
   for dir_name in dirs:
     for name in get_names(dir_name):
       names.append(name)
+  if not names:
+    return 0
   names.sort()
   source_just = max(len(k) for k in MOD_LIMITS)
   name_just = max(len(n.name) for n in names)

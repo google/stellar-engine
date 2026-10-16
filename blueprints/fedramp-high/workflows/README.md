@@ -8,7 +8,6 @@
 - [Next Steps](#next-steps)
 - [Note](#note)
 - [Variables](#variables)
-- [Outputs](#outputs)
 <!-- END TOC -->
 
 # Workflows Blueprint

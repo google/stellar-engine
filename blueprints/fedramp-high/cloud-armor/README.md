@@ -58,15 +58,15 @@ A few examples are:
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [main_project_id](variables.tf#L1) | Main project ID for Cloud Armor policies. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L6) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [rules_file](variables.tf#L12) | Path to the YAML file containing the rules. | <code>string</code> |  | <code>&#34;rules.yaml&#34;</code> |
+| [main_project_id](variables.tf#L15) | Main project ID for Cloud Armor policies. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L20) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [rules_file](variables.tf#L26) | Path to the YAML file containing the rules. | <code>string</code> |  | <code>&#34;rules.yaml&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [policies](outputs.tf#L1) | All created policy resources. |  |
-| [policy_names](outputs.tf#L6) | All created policy names. |  |
-| [policy_rules](outputs.tf#L13) | All created policy rule resources. |  |
+| [policies](outputs.tf#L17) | All created policy resources. |  |
+| [policy_names](outputs.tf#L22) | All created policy names. |  |
+| [policy_rules](outputs.tf#L29) | All created policy rule resources. |  |
 <!-- END TFDOC -->

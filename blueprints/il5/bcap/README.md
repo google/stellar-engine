@@ -71,33 +71,32 @@ This blueprint creates the following resources:
 
 ## Disclaimer
 - The present GCP Terraform Blueprint in this project is set up and intended to be implemented in an Impact Level 4 (IL4) and Impact Level 5 (IL5) environments using the Assured Workloads within the Google Cloud Platform (GCP) organization.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [attachment_configs](variables.tf#L1) | Configuration map for the four Partner VLAN attachments required for 99.99% availability. The region for each attachment is derived from its associated `router_key`. | <code title="map&#40;object&#40;&#123;&#10;  name                     &#61; string&#10;  description              &#61; optional&#40;string, &#34;BCAP VLAN Attachment&#34;&#41;&#10;  router_key               &#61; string&#10;  edge_availability_domain &#61; string&#10;  mtu                      &#61; optional&#40;number, 1440&#41;&#10;  vlan_id                  &#61; optional&#40;number, null&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [dod_base_cidr_block](variables.tf#L29) | The base /24 CIDR block assigned by the Department of Defense Network Information Center (DoD NIC), which will be programmatically split into two /25 subnets. | <code>string</code> | ✓ |  |
-| [hub_project_id](variables.tf#L38) | The GCP project ID where BCAP resources (VPC, Subnets, Routers, Attachments) will be deployed. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L43) | The name for the Virtual Private Cloud (VPC) network to be created. | <code>string</code> | ✓ |  |
-| [region1](variables.tf#L48) | The primary GCP region for BCAP deployment (hosts router1, subnet1, and their associated VLAN attachments). | <code>string</code> | ✓ |  |
-| [region2](variables.tf#L53) | The secondary GCP region for BCAP deployment (hosts router2, subnet2, and their associated VLAN attachments). | <code>string</code> | ✓ |  |
-| [router_configs](variables.tf#L58) | Configuration map for the two Cloud Routers. Names are user-defined; regions are derived from `region1` (for router1) and `region2` (for router2). Keys must be 'router1' and 'router2'. | <code title="map&#40;object&#40;&#123;&#10;  name        &#61; string&#10;  description &#61; optional&#40;string, &#34;BCAP Cloud Router&#34;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [subnet_configs](variables.tf#L76) | Configuration map for the two DoD subnets. Names are user-defined; IP CIDRs are derived from 'dod_base_cidr_block'; regions are derived from `region1` (for subnet1) and `region2` (for subnet2). Keys must be 'subnet1' and 'subnet2'. | <code title="map&#40;object&#40;&#123;&#10;  name        &#61; string&#10;  description &#61; optional&#40;string, &#34;BCAP DoD Subnet&#34;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [router_google_asn](variables.tf#L70) | Autonomous System Number (ASN) for the Google side of the BGP sessions on Cloud Routers (should be 16550 for Partner Interconnect). | <code>number</code> |  | <code>16550</code> |
-| [subnet_enable_flow_logs](variables.tf#L88) | Enable VPC flow logs for the created DoD subnets. | <code>bool</code> |  | <code>true</code> |
-| [subnet_private_ip_google_access](variables.tf#L94) | Enable Private Google Access for the created DoD subnets. | <code>bool</code> |  | <code>true</code> |
+| [attachment_configs](variables.tf#L15) | Configuration map for the four Partner VLAN attachments required for 99.99% availability. The region for each attachment is derived from its associated `router_key`. | <code title="map&#40;object&#40;&#123;&#10;  name                     &#61; string&#10;  description              &#61; optional&#40;string, &#34;BCAP VLAN Attachment&#34;&#41;&#10;  router_key               &#61; string&#10;  edge_availability_domain &#61; string&#10;  mtu                      &#61; optional&#40;number, 1440&#41;&#10;  vlan_id                  &#61; optional&#40;number, null&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [dod_base_cidr_block](variables.tf#L49) | The base /24 CIDR block assigned by the Department of Defense Network Information Center (DoD NIC), which will be programmatically split into two /25 subnets. | <code>string</code> | ✓ |  |
+| [hub_project_id](variables.tf#L58) | The GCP project ID where BCAP resources (VPC, Subnets, Routers, Attachments) will be deployed. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L63) | The name for the Virtual Private Cloud (VPC) network to be created. | <code>string</code> | ✓ |  |
+| [region1](variables.tf#L68) | The primary GCP region for BCAP deployment (hosts router1, subnet1, and their associated VLAN attachments). | <code>string</code> | ✓ |  |
+| [region2](variables.tf#L73) | The secondary GCP region for BCAP deployment (hosts router2, subnet2, and their associated VLAN attachments). | <code>string</code> | ✓ |  |
+| [router_configs](variables.tf#L78) | Configuration map for the two Cloud Routers. Names are user-defined; regions are derived from `region1` (for router1) and `region2` (for router2). Keys must be 'router1' and 'router2'. | <code title="map&#40;object&#40;&#123;&#10;  name        &#61; string&#10;  description &#61; optional&#40;string, &#34;BCAP Cloud Router&#34;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [subnet_configs](variables.tf#L96) | Configuration map for the two DoD subnets. Names are user-defined; IP CIDRs are derived from 'dod_base_cidr_block'; regions are derived from `region1` (for subnet1) and `region2` (for subnet2). Keys must be 'subnet1' and 'subnet2'. | <code title="map&#40;object&#40;&#123;&#10;  name        &#61; string&#10;  description &#61; optional&#40;string, &#34;BCAP DoD Subnet&#34;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [router_google_asn](variables.tf#L90) | Autonomous System Number (ASN) for the Google side of the BGP sessions on Cloud Routers (should be 16550 for Partner Interconnect). | <code>number</code> |  | <code>16550</code> |
+| [subnet_enable_flow_logs](variables.tf#L108) | Enable VPC flow logs for the created DoD subnets. | <code>bool</code> |  | <code>true</code> |
+| [subnet_private_ip_google_access](variables.tf#L114) | Enable Private Google Access for the created DoD subnets. | <code>bool</code> |  | <code>true</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [attachment_names](outputs.tf#L1) | Names of the created VLAN attachments. |  |
-| [bcap_subnets](outputs.tf#L8) | Details of the created BCAP Subnets for DoD IP space (map keyed by 'subnet1', 'subnet2'). Includes calculated CIDRs. |  |
-| [cloud_routers](outputs.tf#L13) | Details of the created Cloud Routers (map keyed by 'router1', 'router2'). |  |
-| [dod_split_cidr_blocks](outputs.tf#L18) | The calculated /25 CIDR blocks for the two DoD subnets. |  |
-| [pairing_keys](outputs.tf#L23) | Pairing keys for each VLAN attachment. Provide these to the BCAP/DISA team. | ✓ |
-| [vlan_attachments](outputs.tf#L31) | Details of the created VLAN attachments. |  |
-| [vpc_network](outputs.tf#L36) | Details of the created VPC Network. |  |
+| [attachment_names](outputs.tf#L15) | Names of the created VLAN attachments. |  |
+| [bcap_subnets](outputs.tf#L22) | Details of the created BCAP Subnets for DoD IP space (map keyed by 'subnet1', 'subnet2'). Includes calculated CIDRs. |  |
+| [cloud_routers](outputs.tf#L27) | Details of the created Cloud Routers (map keyed by 'router1', 'router2'). |  |
+| [dod_split_cidr_blocks](outputs.tf#L32) | The calculated /25 CIDR blocks for the two DoD subnets. |  |
+| [pairing_keys](outputs.tf#L37) | Pairing keys for each VLAN attachment. Provide these to the BCAP/DISA team. | ✓ |
+| [vlan_attachments](outputs.tf#L45) | Details of the created VLAN attachments. | ✓ |
+| [vpc_network](outputs.tf#L51) | Details of the created VPC Network. |  |
 <!-- END TFDOC -->
