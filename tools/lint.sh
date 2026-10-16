@@ -39,7 +39,14 @@ run_check "Links" python3 tools/check_links.py --no-show-summary "$PWD"
 
 run_check "FAST Names" python3 tools/check_names.py --prefix-length=10 --failed-only fast/stages
 
-run_check "Python formatting" yapf --style="{based_on_style: google, indent_width: 2, SPLIT_BEFORE_NAMED_ASSIGNS: false}" -p -d -r \
+run_check "Python formatting" yapf --style="{based_on_style: google, indent_width: 2, SPLIT_BEFORE_NAMED_ASSIGNS: false}" \
+     --exclude '*/.git' \
+     --exclude '*/.terraform' \
+     --exclude '*/.venv' \
+     --exclude '*/venv' \
+     --exclude '*/node_modules' \
+     --exclude '*/__pycache__' \
+     -p -d -r \
      tools/*.py \
      blueprints
 
@@ -52,7 +59,7 @@ while IFS= read -r -d '' vfile; do
     echo "Invalid versions.tf (missing required_version or hashicorp/google): $vfile"
     version_failed=1
   fi
-done < <(find . -type f -name 'versions.tf' -print0)
+done < <(find . -type d \( -name .git -o -name .terraform -o -name .venv -o -name venv -o -name node_modules -o -name __pycache__ \) -prune -o -type f -name 'versions.tf' -print0)
 
 if [ $version_failed -eq 0 ]; then
   echo "[PASS] Version checks"
