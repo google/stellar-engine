@@ -47,8 +47,7 @@ modules in this repository.
 * The base networking modules are `modules/net-vpc/` for VPCs and subnets and
   `modules/net-vpc-firewall/` for firewall rules, and the other `net-` modules
   in `modules/` provide the remaining networking components.
-* The naming convention documentation is located at
-  `docs/naming-convention.md`.
+* The naming convention documentation lives at `docs/naming-convention.md`.
 * `blueprints/il5/bigquery/` and `blueprints/fedramp-high/cloud-run/` are
   examples of well-structured blueprints, and the `fast/` directory contains
   staged blueprints for bootstrapping an organization.
@@ -58,14 +57,13 @@ modules in this repository.
 Follow these steps when you generate or modify code in this repository,
 especially new blueprints or modules.
 
-1. Apply the core principles and key resources described in the previous
-   sections.
+1. Apply the core principles and key resources from the previous sections.
 2. Check whether an existing module or configuration in `modules/` or `fast/`
    covers the need before you create any new resource, particularly for
    networking, service accounts and IAM, and common variable patterns.
 3. Adhere strictly to the naming conventions in `docs/naming-convention.md`.
 4. Ask the user to confirm that a new fundamental resource, such as a new base
    VPC or a highly privileged service account, is necessary and why existing
-   components cannot be used.
+   components do not fit.
 5. Read the `README.md` of any module from `modules/` that you use to
    understand its usage, inputs, and outputs.
