@@ -36,7 +36,7 @@ modules in this repository.
    variables, resources, modules, and files stay consistent.
 5. Apply GCP security best practices and least privilege in all
    configurations, and ensure compliance with the targeted regime, such as
-   FedRAMP Moderate, FedRAMP High, or IL5.
+   FedRAMP Moderate, FedRAMP High, IL4, or IL5.
 
 ## 3 Key resources
 
