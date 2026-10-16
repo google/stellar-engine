@@ -3,7 +3,7 @@
 ## 1 Project overview
 
 Stellar Engine is a fork of the Google Cloud Foundation Fabric that provides
-Infrastructure as Code to help Google Cloud Platform (GCP) customers create
+Infrastructure as Code to help Google Cloud Platform customers create
 secure and compliant landing zones. It focuses on environments that require
 Assured Workloads overlays, such as FedRAMP Moderate, FedRAMP High, IL4, and
 IL5, and includes documentation that maps NIST 800-53r5 controls to accelerate
