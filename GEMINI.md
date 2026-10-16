@@ -21,12 +21,12 @@ modules in this repository.
    * Inherit from and extend the base variable definitions in the
      `variables.tf` file of each module and blueprint, such as
      `modules/net-vpc/variables.tf`, instead of hardcoding values.
-   * Reuse the existing service account definitions and IAM policies managed
-     through `modules/iam-service-account/`, avoid new service accounts with
+   * Reuse the existing service account definitions and IAM policies in
+     `modules/iam-service-account/`, avoid new service accounts with
      overlapping permissions, and always apply least privilege.
-   * Connect new blueprints to the VPCs, subnets, and firewall rules defined in
-     modules such as `modules/net-vpc/` and `modules/net-vpc-firewall/` rather
-     than creating parallel or redundant network structures.
+   * Connect new blueprints to the VPCs, subnets, and firewall rules that
+     modules such as `modules/net-vpc/` and `modules/net-vpc-firewall/`
+     provide rather than creating parallel or redundant network structures.
 2. Design blueprints to be modular and composable by building on the existing
    modules in `modules/` and breaking complex deployments into smaller,
    reusable components.
