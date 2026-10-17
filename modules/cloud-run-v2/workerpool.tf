@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Google LLC
+ * Copyright 2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-resource "google_tags_location_tag_binding" "binding" {
-  for_each = var.tag_bindings
-  parent = (
-    "//run.googleapis.com/projects/${var.project_id}/locations/europe-west1/services/${google_cloud_run_service.service.name}"
-  )
-  tag_value = each.value
-  location  = var.region
+resource "google_cloud_run_v2_worker_pool_iam_binding" "binding" {
+  for_each = var.type == "WORKERPOOL" ? var.iam : {}
+  project  = local.resource.project
+  location = local.resource.location
+  name     = local.resource.name
+  role     = lookup(local.ctx.custom_roles, each.key, each.key)
+  members  = [for member in each.value : lookup(local.ctx.iam_principals, member, member)]
 }

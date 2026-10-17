@@ -279,5 +279,27 @@ class TestBlueprintAndModuleValidations(unittest.TestCase):
     self.assertIn("condition = optional(object({", spanner_se_vars)
 
 
+
+  def test_synced_upstream_cff_modules_fixes(self):
+    """Verify upstream CFF fixes in synced folder, net-lb-int, net-lb-proxy-int, spanner-instance, and cloud-run-v2 modules."""
+    self.assertFalse((REPO_ROOT / "modules/cloud-run").exists())
+    self.assertTrue((REPO_ROOT / "modules/cloud-run-v2").exists())
+
+    folder_vars = (REPO_ROOT / "modules/folder/variables.tf").read_text(encoding="utf-8")
+    self.assertNotIn('"CA_PROTECTED_B, IL5, HIPAA, HITRUST"', folder_vars)
+    self.assertIn('"IL5"', folder_vars)
+
+    nlb_hc = (REPO_ROOT / "modules/net-lb-int/health-check.tf").read_text(encoding="utf-8")
+    self.assertIn("local.hc.http2.host", nlb_hc)
+    self.assertIn("local.hc.ssl.port", nlb_hc)
+
+    proxy_bs = (REPO_ROOT / "modules/net-lb-proxy-int/backend-service.tf").read_text(encoding="utf-8")
+    self.assertNotIn(" ar.backend_service_config", proxy_bs)
+    self.assertNotIn("local.bs_conntrack", proxy_bs)
+
+    spanner_iam = (REPO_ROOT / "modules/spanner-instance/iam.tf").read_text(encoding="utf-8")
+    self.assertIn('dynamic "condition"', spanner_iam)
+
+
 if __name__ == "__main__":
   unittest.main()
