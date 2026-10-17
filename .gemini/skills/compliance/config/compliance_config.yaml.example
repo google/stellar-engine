@@ -1,0 +1,372 @@
+# skip boilerplate check
+# ==============================================================================
+# Cloud Foundation Compliance Engine - RMF Compliance Personnel & Metadata Configuration
+# ==============================================================================
+# Copy or edit this file as 'compliance_config.yaml' to populate repeating
+# organizational metadata and personnel roles (AO, SO, ISSM, ISSO) across generated
+# System Security Plans (SSP), Policy manuals, and Excel workbooks.
+#
+# NOTE: Infrastructure components (VPCs, GKE, Databases, KMS, IAM, APIs) are
+# automatically discovered from deployed code and DO NOT need to be listed here.
+# ==============================================================================
+
+# System Compliance Regime Reference Cheat-Sheet (11 Supported Regimes):
+# - DoD IL6:          confidentiality_impact: "High", integrity_impact: "High", availability_impact: "High", impact_level: "IL6", baseline: "DoD Cloud SRG IL6", gsystem: "eMASS (SIPRNet)"
+# - DoD IL5:          confidentiality_impact: "High", integrity_impact: "High", availability_impact: "High", impact_level: "IL5", baseline: "DoD Cloud SRG IL5", gsystem: "eMASS"
+# - DoD IL4:          confidentiality_impact: "Moderate", integrity_impact: "Moderate", availability_impact: "Moderate", impact_level: "IL4", baseline: "DoD Cloud SRG IL4", gsystem: "eMASS"
+# - DoD IL2:          confidentiality_impact: "Low", integrity_impact: "Low", availability_impact: "Low", impact_level: "IL2", baseline: "DoD Cloud SRG IL2", gsystem: "eMASS"
+# - FedRAMP High:     confidentiality_impact: "High", integrity_impact: "High", availability_impact: "High", impact_level: "FedRAMP High", baseline: "FedRAMP High", gsystem: "FedRAMP Repository / CSAM"
+# - FedRAMP Moderate: confidentiality_impact: "Moderate", integrity_impact: "Moderate", availability_impact: "Moderate", impact_level: "FedRAMP Moderate", baseline: "FedRAMP Moderate", gsystem: "FedRAMP Repository / CSAM"
+# - FedRAMP Low:      confidentiality_impact: "Low", integrity_impact: "Low", availability_impact: "Low", impact_level: "FedRAMP Low", baseline: "FedRAMP Low", gsystem: "FedRAMP Repository / CSAM"
+# - FISMA High/Mod/Low: impact_level: "FISMA High" / "FISMA Moderate" / "FISMA Low", baseline: "NIST SP 800-53B", gsystem: "CSAM / Agency GRC"
+# - CJIS:             confidentiality_impact: "Moderate", integrity_impact: "Moderate", availability_impact: "Moderate", impact_level: "CJIS", baseline: "FBI CJIS Security Policy v5.9.4 / v6.0", gsystem: "State CSA / FBI CJIS ISO"
+# Note: GovRAMP (StateRAMP) and FedRAMP Tailored / LI-SaaS are unsupported and fail closed (exit 1).
+
+system_information:
+  organization: "[YOUR_ORGANIZATION_NAME]"
+
+  # Primary DNS domain of the organization, used to hydrate [ORGANIZATION_DOMAIN]
+  # in the incident-response runbooks and the IA/SC policy manuals. This must be a
+  # real, resolvable domain (for example "agency.gov" or "command.mil"). It is
+  # kept separate from `organization` above because that field may legitimately
+  # hold a display name; a display name is never machine-converted into a domain,
+  # since inventing an identity namespace inside an accreditation artifact is a
+  # fabrication. If omitted, dependent tokens render as
+  # [NOT DETERMINED FROM SOURCE] rather than being guessed.
+  organization_domain: "[YOUR_ORGANIZATION_DOMAIN]"
+
+  # Google Cloud organization resource ID (numeric), used to hydrate [ORG_ID] in
+  # the runbooks. Optional.
+  org_id: "[YOUR_GCP_ORG_ID]"
+
+  # Team or entity responsible for drafting compliance deliverables (hydrates {{ PREPARED_BY }}
+  # across policy authorization signature blocks and revision history). Optional.
+  # Defaults to "[YOUR_ORGANIZATION_NAME] Security Engineering Team" if omitted.
+  prepared_by: "[YOUR_PREPARED_BY_NAME_OR_TEAM]"
+
+  system_name: "[YOUR_SYSTEM_NAME]"
+  system_abbreviation: "[YOUR_SYSTEM_ABBREVIATION]"
+  confidentiality_impact: "High"    # FIPS 199 Impact Rating: High, Moderate, or Low
+  integrity_impact: "High"          # FIPS 199 Impact Rating: High, Moderate, or Low
+  availability_impact: "High"       # FIPS 199 Impact Rating: High, Moderate, or Low
+  impact_level: "[YOUR_IMPACT_LEVEL]"
+  rmf_governance_system: "Enterprise GRC System (eMASS / CSAM / Xacta / FedRAMP Portal)"
+  compliance_baseline: "NIST SP 800-53 Rev. 5 / DoD IL5"
+  # Authorization package effective date (ISO 8601, YYYY-MM-DD). This date anchors
+  # POA&M milestone scheduling and control-currency checks, so a stale value
+  # backdates the entire package. Leave as the placeholder to default to the
+  # generation date, or set it explicitly to the ISSM-approved effective date.
+  effective_date: "[YYYY-MM-DD]"
+
+  # Primary GCP region for the authorization boundary. This key name is
+  # load-bearing: the extractor deep-merges this block verbatim and reads
+  # `primary_location`, so a renamed key is silently ignored and the boundary
+  # renders as [CONFIG_REQUIRED: Primary Location] in every deliverable.
+  #
+  # Single region:      "us-east4"
+  # Dual region:        "us-east4 / us-central1"
+  # The slash-joined form is the same representation the extractor derives from
+  # `structure.regions.primary` / `.secondary` in variables.yaml, so it round-trips.
+  # Leave the placeholder to let discovery infer the region from Terraform.
+  primary_location: "[YOUR_PRIMARY_GCP_REGION]"
+
+  billing_account: "[YOUR_GCP_BILLING_ACCOUNT_ID]"
+
+  # FedRAMP Marketplace package identifier or DoD Provisional Authorization (PA)
+  # identifier for the cloud provider authorization this system inherits from
+  # (FedRAMP Certified / Agency ATO, legacy JAB P-ATO, or DoD PA). It is asserted
+  # verbatim in every SSP and SCTM inheritance narrative, and an assessor WILL
+  # look it up, so confirm it against marketplace.fedramp.gov before submission.
+  #
+  # Official GSA FedRAMP Marketplace package IDs are unhyphenated alphanumeric
+  # strings (for example "FR9999999999" or "F9999999999"). Leave as the
+  # [CONFIG_REQUIRED: ...] placeholder until verified so validate_compliance_artifacts.py
+  # flags an unedited configuration before assessor submission.
+  csp_pato_package_id: "[CONFIG_REQUIRED: CSP FedRAMP / DoD PA Package ID]"
+
+# ==============================================================================
+# Export Format Preferences (Dual-Format Support)
+# ==============================================================================
+export_preferences:
+  # Policies Export Format:
+  # - "both"     : Generates both .md and .docx for all 20 policy manuals (Default)
+  # - "docx"     : Generates Microsoft Word .docx files only
+  # - "markdown" : Generates Markdown .md files only
+  policy_formats: "both"
+
+  # Structured Data Matrices Export Format:
+  # - "both"     : Generates both .yaml and .xlsm workbooks for HWSW, POAM, PPSM, SCTM (Default)
+  # - "excel"    : Generates macro-enabled Excel .xlsm workbooks only
+  # - "yaml"     : Generates structured YAML files only
+  structured_data_formats: "both"
+
+  # NIST OSCAL Export Format:
+  # - "both"     : Generates both OSCAL JSON and YAML for SSP and Component Definition (Default)
+  # - "json"     : Generates OSCAL JSON only
+  # - "yaml"     : Generates OSCAL YAML only
+  # - "none"     : Skips OSCAL deliverable generation
+  oscal_formats: "both"
+
+  # Target NIST OSCAL specification version ("1.2.3" or "1.1.0", Default: "1.2.3"):
+  oscal_version: "1.2.3"
+
+# ==============================================================================
+# Infrastructure Architecture & Software Bill of Materials (SBOM) Sources (Optional)
+# ==============================================================================
+# The compliance engine automatically inspects Terraform plan/state outputs
+# via 'terraform show -json' or auto-discovers 'tfplan.json' / 'terraform.tfstate'
+# in your workspace, and extracts software packages via Syft / CycloneDX SBOM.
+# If you wish to explicitly point to specific plan, state, or SBOM files, configure them here:
+# terraform_plan_path: "terraform/tfplan.json"     # or binary 'tfplan'
+# terraform_state_path: "terraform/terraform.tfstate"
+# sbom_path: "app/sbom.json"                        # CycloneDX, SPDX, or Syft JSON
+
+personnel_roles:
+  authorizing_official:
+    name: "[AUTHORIZING_OFFICIAL_NAME]"
+    title: "Authorizing Official (AO)"
+    organization: "[AO_ORGANIZATION]"
+    email: "[AUTHORIZING_OFFICIAL_EMAIL]"
+    phone: "[AUTHORIZING_OFFICIAL_PHONE]"
+
+  system_owner:
+    name: "[SYSTEM_OWNER_NAME]"
+    title: "Information System Owner (SO)"
+    organization: "[SO_ORGANIZATION]"
+    email: "[SYSTEM_OWNER_EMAIL]"
+    phone: "[SYSTEM_OWNER_PHONE]"
+
+  issm:
+    name: "[ISSM_NAME]"
+    title: "Information System Security Manager (ISSM)"
+    organization: "[ISSM_ORGANIZATION]"
+    email: "[ISSM_EMAIL]"
+    phone: "[ISSM_PHONE]"
+
+  isso:
+    name: "[ISSO_NAME]"
+    title: "Information System Security Officer (ISSO)"
+    organization: "[ISSO_ORGANIZATION]"
+    email: "[ISSO_EMAIL]"
+    phone: "[ISSO_PHONE]"
+
+contingency_planning:
+  recovery_time_objective: "4 Hours"
+  recovery_point_objective: "1 Hour"
+
+continuous_monitoring:
+  review_frequency: "Annual / Continuous (24x7 via SCC)"
+  assessment_type: "Independent Third-Party Assessment (3PAO / SCA-R)"
+  grc_tool_reference: "eMASS / Enterprise GRC"
+
+# ==============================================================================
+# Security Operations & Threat Detection (SCC, Chronicle, CSSP, SIEM)
+# ==============================================================================
+security_operations:
+  # Google Cloud Security Command Center (SCC)
+  # - "auto"     : Automatically detected based on project/org services
+  # - true       : Enabled in narrative and SCTM controls
+  # - false      : Disabled
+  scc_enabled: "auto"
+  scc_tier: "premium"                    # "standard" | "premium" | "enterprise"
+  allow_unaccredited_scc_in_il5: false   # Set true if your Authorizing Official (AO) approved an Exception-to-Policy (ETP) for in-boundary SCC telemetry in DoD IL4/IL5
+
+  # Google Cloud SecOps (Chronicle SIEM & SOAR)
+  # - "auto"     : Automatically detected if 'chronicle.googleapis.com' or Chronicle sinks exist
+  # - true       : Enabled as primary or secondary SIEM/SOAR platform
+  # - false      : Disabled
+  secops_enabled: "auto"
+  secops_instance_name: "[CHRONICLE_INSTANCE_NAME]"
+
+  # Cloud Cybersecurity Service Provider (CSSP) / Security Operations Center (SOC)
+  # For DoD systems, specify the designated accredited CSSP provider.
+  # For Civilian/SLED/Commercial systems, specify your enterprise SOC or commercial provider.
+  # Options: "Enterprise SOC" | "DISA" | "C5ISR" | "Army Cyber" | "Navy Fleet Cyber" | "Marine Corps Cyberspace" | "Air Force CSSP" | "Commercial SOC" | "None" | custom
+  cssp_provider: "Enterprise SOC"
+
+  # External SIEM / Analytics Platform
+  # Name the SIEM product your CSSP or SOC operates, or "None".
+  external_siem_type: "SIEM Provider"
+  external_siem_destination: "[LOG_ROUTER_SINK_DESTINATION]"
+
+# ==============================================================================
+# External Enterprise Systems & Integrations (IdP, ACAS, ITSM, CI/CD, EDR)
+# ==============================================================================
+# Declares organizational dependencies outside the GCP core boundary that shape
+# NIST SP 800-53 Rev. 5 control statements across AC, IA, RA, IR, CM, and SI families.
+external_systems:
+  # Identity Provider (IdP) & Multi-Factor Authentication
+  # Name your identity provider and the MFA mechanism it enforces.
+  identity_provider: "[CONFIG_REQUIRED: Identity Provider]"
+  mfa_mechanism: "[CONFIG_REQUIRED: MFA Mechanism]"
+
+  # Vulnerability Assessment & Compliance Scanning
+  # Name the vulnerability scanner in use (for DoD systems, the ACAS instance).
+  vulnerability_scanner: "[CONFIG_REQUIRED: Vulnerability Scanner]"
+
+  # IT Service Management (ITSM) & Incident / POA&M Tracking
+  # Name the ticketing / ITSM system used for incidents and POA&M tracking.
+  itsm_system: "[CONFIG_REQUIRED: ITSM System]"
+
+  # DevSecOps CI/CD & Source Code Management (SCM)
+  # Name the CI/CD and source control platform.
+  cicd_platform: "CI/CD Platform"
+
+  # Host-Level Endpoint Detection & Response (EDR) / Antivirus
+  # Name the endpoint detection and response product, or "None".
+  edr_solution: "EDR Solution"
+
+  # Network Perimeter & Deep Packet Inspection Gateway
+  # Name the perimeter gateway actually deployed (for DoD IL5, the DISA Cloud Access Point path).
+  perimeter_gateway: "[CONFIG_REQUIRED: Perimeter Gateway]"
+
+# ==============================================================================
+# Security Scanners & Live Cloud Telemetry Configuration (Optional)
+# ==============================================================================
+# Scanner reporting options. Live scanners (Checkov IaC, Semgrep SAST, Trivy) run only
+# when the operator passes --run-scanners to the generator; this file cannot enable
+# them or choose what they scan. SARIF reports inside the target folder are ingested.
+# Note: Semgrep ruleset is configured via operator CLI --semgrep-config or COMPLIANCE_SEMGREP_CONFIG.
+security_scanners:
+  include_scanner_failures_in_poam: false  # Report scanner timeouts/errors as POA&M items (Default: false)
+  # Explicit in-boundary SARIF reports inside the target folder to ingest into the POA&M:
+  # sarif_reports:
+  #   - reports/app_security.sarif
+  query_live_cloud_telemetry: false        # Reconcile live Google Cloud SCC findings (Default: false)
+  # Trivy Container & Filesystem Scanner configuration (active when --run-scanners is passed):
+  # run_trivy: false                       # Enable Trivy scanner (Default: false)
+  # trivy_timeout: 300                     # Scanner timeout in seconds (Default: 300)
+
+# ==============================================================================
+# IAM Group Role Mappings (Optional)
+# ==============================================================================
+# Maps organizational Google Groups to descriptive operational roles and least-privilege
+# access justifications for System Security Plan (SSP) Access Control (AC-2, AC-3) documentation:
+# iam_groups:
+#   cloud-admins@your-org.example:
+#     - "Privileged Cloud Infrastructure Administrators (break-glass & maintenance)"
+#   security-auditors@your-org.example:
+#     - "Read-only Security Control Assessors & Compliance Auditors"
+
+# Independent Version Tracking per Document (Default: 1.0.0)
+document_versions:
+  default_version: "1.0.0"
+  ssp: "1.0.0"
+  pta: "1.0.0"
+  ppsm: "1.0.0"
+  hwsw_inventory: "1.0.0"
+  sctm: "1.0.0"
+  poam: "1.0.0"
+  fips_matrix: "1.0.0"
+  policies:
+    Access_Control: "1.0.0"
+    Awareness_and_Training: "1.0.0"
+    Audit_and_Accountability: "1.0.0"
+    Assessment_Authorization_and_Monitoring: "1.0.0"
+    Configuration_Management: "1.0.0"
+    Contingency_Plan: "1.0.0"
+    Identification_and_Authentication: "1.0.0"
+    Incident_Response: "1.0.0"
+    Maintenance: "1.0.0"
+    Media_Protection: "1.0.0"
+    Physical_and_Environmental_Protection: "1.0.0"
+    Planning: "1.0.0"
+    Program_Management: "1.0.0"
+    Personnel_Security: "1.0.0"
+    PII_Processing_and_Transparency: "1.0.0"
+    Risk_Assessment: "1.0.0"
+    System_and_Services_Acquisition: "1.0.0"
+    System_and_Communications_Protection: "1.0.0"
+    System_and_Information_Integrity: "1.0.0"
+    Supply_Chain_Risk_Management: "1.0.0"
+
+# ==============================================================================
+# Software & Cloud Licensing Contract Metadata (Optional)
+# ==============================================================================
+# Populates contract and UII columns in the Software tab of Hardware_Software_Inventory.xlsm
+# and Software_Inventory_Populated.yaml.
+contracts:
+  agreement_name: "[CONFIG_REQUIRED: Contract / Agreement Name]"
+  contract_number: "[CONFIG_REQUIRED: Contract Number]"
+  contract_year: "2026"
+  expiration_date: "[CONFIG_REQUIRED: Contract Expiration Date (YYYY-MM-DD)]"
+
+# ==============================================================================
+# Custom Services & Reference Mapping Overrides (Optional)
+# ==============================================================================
+# Add custom GCP APIs or third-party appliances here to override or extend
+# default service mapping in Hardware/Software & PPSM matrices without modifying code.
+# You can also override reference_mappings (military_ranks, civilian_honorifics,
+# known_suffixes, software_type_exact_map) loaded from config/reference_mappings.json.
+# custom_services:
+#   custom-engine.googleapis.com:
+#     category: "Custom Analytics Engine"
+#     display_name: "Internal Analytics API"
+#     sw_type: "API Service"
+#     purpose: "Specialized ETL pipeline processing sensor feeds"
+#   paloaltonetworks.com:
+#     category: "Next-Generation Firewall (NGFW)"
+#     display_name: "Palo Alto VM-Series NGFW"
+#     sw_type: "Firewall"
+#     purpose: "Perimeter Deep Packet Inspection & IPS/IDS Filtering"
+#
+# reference_mappings:
+#   software_type_exact_map:
+#     my-custom-service.googleapis.com: "API Service"
+
+# ==============================================================================
+# Plan of Action and Milestones (POA&M) - Pending Tasks & Security Concerns (Optional)
+# ==============================================================================
+# Declare real project-specific security concerns, pending remediation tasks, or
+# punch-list items that need to get done before or during authorization.
+# If empty, POA&M will dynamically reflect real architectural gaps detected in code,
+# or cleanly report 0 open items if the architecture is compliant.
+#
+# POA&M Generation Controls (top level):
+# include_unparsed_blueprints_in_poam: true  # Report Terraform files the parser could not read (Default: true)
+# Scanner failure reporting is security_scanners.include_scanner_failures_in_poam above.
+#
+# poam_items:
+#   - weakness_name: "Migrate Bastion to Private Service Connect"
+#     control_identifier: "AC-03 / SC-07"
+#     weakness_description: "Remove direct public IP allocation from bastion host and route administration traffic through Identity-Aware Proxy."
+#     severity_risk_level: "Moderate"
+#     scheduled_completion_date: "2026-10-31"
+#     source_of_weakness: "Internal Architecture Review"
+#     milestones:
+#       - step: 1
+#         description: "Deploy Cloud IAP TCP forwarding tunnel and remove external IP in Terraform."
+#         target_date: "2026-10-15"
+#         status: "Open"
+
+# ==============================================================================
+# DISA STIG & SRG Checklist Management & Dynamic Versioning (Optional)
+# ==============================================================================
+# The compliance engine dynamically maps discovered technologies to authoritative
+# DISA STIG and SRG benchmarks for STIG Viewer desktop application completion.
+# Configure active version overrides, dynamic update modes, or custom checklists here:
+disa_stigs:
+  # Operational update mode:
+  # - "auto"   : Uses cached active versions; probes remote feed if configured (Default)
+  # - "offline": Air-gapped mode; strictly relies on local cache and authoritative baseline
+  # - "online" : Actively pulls updated versions from catalog_source
+  update_mode: "auto"
+
+  # Optional remote HTTPS URL or local file path to pull updated STIG checklists from:
+  # catalog_source: "https://internal-repo.mil/stigs/catalog.json"
+
+  # Explicit active version overrides (highest precedence in resolution chain):
+  # version_overrides:
+  #   canonical_ubuntu_2204_lts: "v2R9"
+  #   cloud_computing_srg: "v1R5"
+  #   container_platform_srg: "v2R5"
+
+  # Custom mission or enclave checklists to enforce in the accreditation package:
+  # custom_checklists:
+  #   - title: "DISA Custom Enclave Boundary STIG"
+  #     slug: "custom_enclave_boundary"
+  #     version: "v1R1"
+  #     category: "Perimeter Security"
+  #     scope: "Custom mission perimeter firewall and cross-domain solution"
+  #     action: "Complete custom CKL in STIG Viewer desktop app"
+  #     url: "https://www.stigviewer.com/stigs/custom_enclave_boundary"

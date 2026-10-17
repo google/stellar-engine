@@ -1,0 +1,157 @@
+{
+ "hardware_assets": [
+  {
+   "approval_status": "Pending Assessment",
+   "asset_ip_address": "[NOT DETERMINED FROM SOURCE]",
+   "asset_name": "Google Cloud Platform (GCP) Projects & Hierarchy",
+   "component_type": "Server",
+   "critical_asset": "Yes",
+   "id": "1.0",
+   "location": "us-east4 (Ashburn, Northern Virginia, USA)",
+   "manufacturer": "Google Cloud Platform (GCP)",
+   "model_number": "Infrastructure-as-a-Service (IaaS)",
+   "nickname": "GCP Cloud Tenant (GKE)",
+   "os_fw_version": "Google Cloud managed hypervisor (inherited from CSP)",
+   "public_facing": "No",
+   "serial_number": "GCP-CSP-GKE-001",
+   "virtual_asset": "Yes"
+  },
+  {
+   "approval_status": "Pending Assessment",
+   "asset_ip_address": "[NOT DETERMINED FROM SOURCE]",
+   "asset_name": "Google Kubernetes Engine (GKE) Private Cluster",
+   "component_type": "Server - Application",
+   "critical_asset": "Yes",
+   "id": "2.0",
+   "location": "us-east4 (Ashburn, Northern Virginia, USA)",
+   "manufacturer": "Google Cloud Platform",
+   "model_number": "GKE Cluster ([NOT DETERMINED FROM SOURCE])",
+   "nickname": "cluster",
+   "os_fw_version": "Google Container-Optimized OS (COS) / K8s [NOT DETERMINED FROM SOURCE]",
+   "public_facing": "No",
+   "serial_number": "GCP-K8S-GKE-002",
+   "virtual_asset": "Yes"
+  },
+  {
+   "approval_status": "Pending Assessment",
+   "asset_ip_address": "cloudkms.googleapis.com",
+   "asset_name": "Cloud KMS Cloud HSM Key",
+   "component_type": "Virtual HSM Server",
+   "critical_asset": "Yes",
+   "id": "3.0",
+   "location": "us-east4 (Ashburn, Northern Virginia, USA)",
+   "manufacturer": "Google Cloud Platform / Marvell (formerly Cavium) HSM",
+   "model_number": "Cloud KMS (HSM)",
+   "nickname": "key-gke",
+   "os_fw_version": "FIPS 140-2 Level 3 (Cloud HSM)",
+   "public_facing": "No",
+   "serial_number": "GCP-KMS-GKE-003",
+   "virtual_asset": "No"
+  },
+  {
+   "approval_status": "Pending Assessment",
+   "asset_ip_address": "[NOT DETERMINED FROM SOURCE]",
+   "asset_name": "Google Compute Engine VM Instance",
+   "component_type": "Virtual Machine",
+   "critical_asset": "Yes",
+   "id": "4.0",
+   "location": "us-east4 (Ashburn, Northern Virginia, USA)",
+   "manufacturer": "Google Cloud Platform",
+   "model_number": "e2-medium",
+   "nickname": "bastion-vm",
+   "os_fw_version": "cos-105-17412-495-45",
+   "public_facing": "No",
+   "serial_number": "projects/GKE/zones/us-east4-a/instances/bastion-vm",
+   "virtual_asset": "Yes"
+  }
+ ],
+ "personnel_contacts": {
+  "isso_poc": {
+   "email": "[CONFIG_REQUIRED: ISSO Email]",
+   "name": "[CONFIG_REQUIRED: ISSO Name]",
+   "phone": "[CONFIG_REQUIRED: ISSO Phone]"
+  },
+  "system_owner": {
+   "email": "[CONFIG_REQUIRED: System Owner Email]",
+   "name": "[CONFIG_REQUIRED: System Owner Name]",
+   "phone": "[CONFIG_REQUIRED: System Owner Phone]"
+  }
+ },
+ "rmf_team_manual_action": {
+  "callout": "> [!IMPORTANT] **RMF TEAM ACTION REQUIRED**: Perform annual physical asset audits for local client workstations and confirm eMASS hardware barcode serial numbers."
+ },
+ "software_and_services_inventory": {
+  "software_assets": [
+   {
+    "approval_status": "Pending Assessment",
+    "category": "Key Management & HSM",
+    "id": "1",
+    "purpose": "Cloud HSM (FIPS 140-2 Level 3 hardware security modules manufactured by Marvell) & Software Key Management (FIPS 140-3 CMEK Level 1 Envelope Cryptography)",
+    "software_name": "Google Cloud KMS",
+    "software_type": "KMS",
+    "vendor": "Google Cloud Platform (GCP)",
+    "version": "GCP Managed Service API"
+   },
+   {
+    "approval_status": "Pending Assessment",
+    "category": "Infrastructure-as-a-Service (IaaS)",
+    "id": "2",
+    "purpose": "Hardened Virtual Machine Instances, Shielded VMs & Virtual Networking",
+    "software_name": "Google Compute Engine",
+    "software_type": "API Service",
+    "vendor": "Google Cloud Platform (GCP)",
+    "version": "GCP Managed Service API"
+   },
+   {
+    "approval_status": "Pending Assessment",
+    "category": "Container Orchestration Engine",
+    "id": "3",
+    "purpose": "Private Microservice Pod Scheduling, Control Plane & Auto-Upgrading Nodes",
+    "software_name": "Google Kubernetes Engine (GKE)",
+    "software_type": "Container Orchestration",
+    "vendor": "Google Cloud Platform (GCP)",
+    "version": "GCP Managed Service API"
+   },
+   {
+    "approval_status": "Pending Assessment",
+    "category": "Identity & Access Control",
+    "id": "4",
+    "purpose": "Role-Based Access Control (RBAC), Service Account Keys & Least Privilege",
+    "software_name": "Google Cloud IAM",
+    "software_type": "IAM",
+    "vendor": "Google Cloud Platform (GCP)",
+    "version": "GCP Managed Service API"
+   },
+   {
+    "approval_status": "Pending Assessment",
+    "category": "Storage & Persistence",
+    "id": "5",
+    "purpose": "Cloud Object & File Storage Persistence (storagetransfer.googleapis.com)",
+    "software_name": "Google Storagetransfer",
+    "software_type": "Blob Storage",
+    "vendor": "Google Cloud Platform (GCP)",
+    "version": "GCP Managed Service API"
+   },
+   {
+    "approval_status": "Pending Assessment",
+    "category": "Infrastructure as Code",
+    "id": "6",
+    "purpose": "Automated declarative IaC blueprint provisioning & drift detection",
+    "software_name": "HashiCorp Terraform / GCP Provider",
+    "software_type": "Terraform",
+    "vendor": "HashiCorp / Google Cloud Platform (GCP)",
+    "version": ">= 1.7.4 (google >= 6.21.0, < 7.0.0)"
+   }
+  ]
+ },
+ "system_metadata": {
+  "compliance_baseline": "NIST SP 800-53 Rev. 5 / DoD IL5",
+  "ditpr_emass_id": "[CONFIG_REQUIRED: DITPR ID]",
+  "document_version": "1.0.0",
+  "effective_date": "<TODAY+0>",
+  "impact_level": "IL5",
+  "organization": "[CONFIG_REQUIRED: Organization Name]",
+  "system_abbreviation": "GKE",
+  "system_name": "Google Kubernetes Engine (GKE) Standard Project"
+ }
+}

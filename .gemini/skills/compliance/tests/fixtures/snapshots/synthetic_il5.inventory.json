@@ -1,0 +1,358 @@
+{
+ "application_components": {
+  "applications": [],
+  "container_images": [],
+  "database_connectors": [],
+  "exposed_ports": [],
+  "frameworks": [],
+  "runtimes": [],
+  "software_packages": []
+ },
+ "authentication_summary": "Not determined from IaC",
+ "connectivity_summary": "Software-Defined Private VPC",
+ "contingency_planning": {},
+ "continuous_monitoring": {},
+ "contracts": {},
+ "custom_services": {},
+ "disa_stigs": {},
+ "document_versions": {},
+ "encryption_summary": "CMEK: Cloud HSM keys, FIPS 140-2 Level 3; Cloud KMS software keys, FIPS 140-3 Level 1 (BoringCrypto)",
+ "export_preferences": {},
+ "external_systems": {
+  "cicd_platform": "[CONFIG_REQUIRED: CI/CD Platform]",
+  "edr_solution": "[CONFIG_REQUIRED: Endpoint Detection and Response]",
+  "identity_provider": "Enterprise Identity Provider (DoD CAC / PIV)",
+  "itsm_system": "[CONFIG_REQUIRED: ITSM System]",
+  "mfa_mechanism": "[CONFIG_REQUIRED: MFA Mechanism]",
+  "perimeter_gateway": "[CONFIG_REQUIRED: Perimeter Gateway]",
+  "vulnerability_scanner": "[CONFIG_REQUIRED: Vulnerability Scanner]"
+ },
+ "iam_groups": {},
+ "ids_solution": "[CONFIG_REQUIRED: IDS/IPS Solution]",
+ "include_scanner_failures_in_poam": false,
+ "include_unparsed_blueprints_in_poam": true,
+ "infrastructure_components": {
+  "all_resources": [
+   {
+    "category": "Google Cloud Compute Network",
+    "file": "main.tf",
+    "name": "core",
+    "type": "google_compute_network"
+   },
+   {
+    "category": "Google Cloud Compute Subnetwork",
+    "file": "main.tf",
+    "name": "app",
+    "type": "google_compute_subnetwork"
+   },
+   {
+    "category": "Google Cloud Compute Firewall",
+    "file": "main.tf",
+    "name": "public_icmp",
+    "type": "google_compute_firewall"
+   },
+   {
+    "category": "Google Cloud Compute Firewall",
+    "file": "main.tf",
+    "name": "internal_https",
+    "type": "google_compute_firewall"
+   },
+   {
+    "category": "Google Cloud Compute Firewall",
+    "file": "main.tf",
+    "name": "deny_all",
+    "type": "google_compute_firewall"
+   },
+   {
+    "category": "Google Cloud Compute Instance",
+    "file": "main.tf",
+    "name": "bastion",
+    "type": "google_compute_instance"
+   },
+   {
+    "category": "Google Cloud Container Cluster",
+    "file": "main.tf",
+    "name": "gke",
+    "type": "google_container_cluster"
+   },
+   {
+    "category": "Google Cloud Sql Database Instance",
+    "file": "main.tf",
+    "name": "db",
+    "type": "google_sql_database_instance"
+   },
+   {
+    "category": "Google Cloud Kms Key Ring",
+    "file": "main.tf",
+    "name": "ring",
+    "type": "google_kms_key_ring"
+   },
+   {
+    "category": "Google Cloud Kms Crypto Key",
+    "file": "main.tf",
+    "name": "hsm_key",
+    "type": "google_kms_crypto_key"
+   },
+   {
+    "category": "Google Cloud Kms Crypto Key",
+    "file": "main.tf",
+    "name": "software_key",
+    "type": "google_kms_crypto_key"
+   },
+   {
+    "category": "Google Cloud Storage Bucket",
+    "file": "main.tf",
+    "name": "logs",
+    "type": "google_storage_bucket"
+   },
+   {
+    "category": "Google Cloud Cloud Run V2 Service",
+    "file": "main.tf",
+    "name": "api",
+    "type": "google_cloud_run_v2_service"
+   }
+  ],
+  "artifact_registries": [],
+  "assured_workloads": [],
+  "binary_authorization": [],
+  "cloud_functions": [],
+  "cloud_run_services": [
+   {
+    "file": "main.tf",
+    "image": "us-docker.pkg.dev/cloudrun/container/hello",
+    "kms_key": null,
+    "location": "us-east4",
+    "name": "api-service"
+   }
+  ],
+  "compute_instances": [
+   {
+    "customer_supplied_key": false,
+    "file": "main.tf",
+    "has_public_ip": false,
+    "image": "debian-cloud/debian-12",
+    "kms_key": null,
+    "machine_type": "e2-small",
+    "name": "bastion-vm",
+    "network_ip": null,
+    "self_link": "zones/us-east4-a/instances/bastion-vm",
+    "shielded_vm": null,
+    "subnetwork": "app",
+    "zone": "us-east4-a"
+   }
+  ],
+  "conditional_resources_undetermined": [],
+  "databases": [
+   {
+    "backup_enabled": false,
+    "cmek_key": null,
+    "database_version": "POSTGRES_15",
+    "file": "main.tf",
+    "has_public_ip": false,
+    "name": "app-db",
+    "private_network": null,
+    "region": "us-east4",
+    "require_ssl": false,
+    "tier": "db-custom-2-7680",
+    "type": "google_sql_database_instance"
+   }
+  ],
+  "dataproc_clusters": [],
+  "forwarding_rules": [],
+  "gke_clusters": [
+   {
+    "file": "main.tf",
+    "kms_key": null,
+    "location": "us-east4",
+    "master_ipv4_cidr_block": "172.16.0.0/28",
+    "master_version": null,
+    "name": "app-cluster",
+    "private_cluster": true,
+    "private_endpoint": true,
+    "workload_identity": false
+   }
+  ],
+  "iam_bindings": [],
+  "iam_roles_matrix": [],
+  "kms_keys": [
+   {
+    "algorithm": "EC_SIGN_P256_SHA256",
+    "file": "main.tf",
+    "key_ring": "ring",
+    "name": "hsm-sign-key",
+    "protection_level": "HSM",
+    "purpose": "ASYMMETRIC_SIGN",
+    "rotation_period": null,
+    "type": "google_kms_crypto_key"
+   },
+   {
+    "algorithm": "GOOGLE_SYMMETRIC_ENCRYPTION",
+    "file": "main.tf",
+    "key_ring": "ring",
+    "name": "software-data-key",
+    "protection_level": "SOFTWARE",
+    "purpose": "ENCRYPT_DECRYPT",
+    "rotation_period": null,
+    "type": "google_kms_crypto_key"
+   }
+  ],
+  "logging_sinks": [],
+  "modules_used": [],
+  "nat_gateways": [],
+  "provider_versions": {},
+  "pubsub_topics": [],
+  "secrets": [],
+  "security_policies": [],
+  "service_account_keys": [],
+  "service_accounts": [],
+  "service_perimeters": [],
+  "services_enabled": [
+   "cloudkms.googleapis.com",
+   "compute.googleapis.com",
+   "container.googleapis.com",
+   "run.googleapis.com",
+   "sqladmin.googleapis.com",
+   "storage.googleapis.com"
+  ],
+  "storage_buckets": [
+   {
+    "cmek_encrypted": false,
+    "file": "main.tf",
+    "kms_key": null,
+    "location": "US-EAST4",
+    "name": "app-logs-bucket",
+    "storage_class": "STANDARD",
+    "uniform_bucket_level_access": true,
+    "versioning": false
+   }
+  ],
+  "terraform_engine_version": null,
+  "unparsed_terraform_files": []
+ },
+ "network_architecture": {
+  "application_ports": [],
+  "firewall_rules": [
+   {
+    "action": "ALLOW",
+    "allowed": [
+     {
+      "ports": [],
+      "protocol": "icmp"
+     }
+    ],
+    "destination_ranges": [],
+    "direction": "INGRESS",
+    "name": "allow-icmp-public",
+    "network": "core",
+    "ports": "N/A",
+    "protocol": "icmp",
+    "source_ranges": [
+     "0.0.0.0/0"
+    ]
+   },
+   {
+    "action": "ALLOW",
+    "allowed": [
+     {
+      "ports": [
+       "443"
+      ],
+      "protocol": "tcp"
+     }
+    ],
+    "destination_ranges": [],
+    "direction": "INGRESS",
+    "name": "allow-internal-https",
+    "network": "core",
+    "ports": "443",
+    "protocol": "tcp",
+    "source_ranges": [
+     "10.10.0.0/24"
+    ]
+   },
+   {
+    "action": "DENY",
+    "destination_ranges": [],
+    "direction": "INGRESS",
+    "name": "deny-all-ingress",
+    "network": "core",
+    "ports": "all",
+    "protocol": "all",
+    "source_ranges": [
+     "0.0.0.0/0"
+    ]
+   }
+  ],
+  "subnets_cidrs": [
+   "10.10.0.0/24"
+  ],
+  "vpcs": [
+   "core-vpc"
+  ]
+ },
+ "personnel_roles": {
+  "authorizing_official": {},
+  "issm": {},
+  "isso": {},
+  "system_owner": {}
+ },
+ "poam_items": [],
+ "provenance": {
+  "external_module_files": [],
+  "module_root": "git work tree"
+ },
+ "security_operations": {
+  "allow_unaccredited_scc_in_il5": false,
+  "cssp_provider": "DISA",
+  "external_siem_destination": "",
+  "external_siem_type": "[CONFIG_REQUIRED: External SIEM]",
+  "scc_enabled": false,
+  "scc_tier": "premium",
+  "secops_enabled": false,
+  "secops_instance_name": "Not Deployed",
+  "telemetry_summary": "Cloud Logging export sinks streaming to DISA; external [CONFIG_REQUIRED: External SIEM] SIEM integration",
+  "threat_detection_engine": "DISA Threat Operations Center via Cloud Logging export sinks"
+ },
+ "security_scanners": {},
+ "system_information": {
+  "allow_unaccredited_scc_in_il5": false,
+  "availability_impact": "High",
+  "billing_account": "[CONFIG_REQUIRED: Billing Account ID]",
+  "cicd_platform": "[CONFIG_REQUIRED: CI/CD Platform]",
+  "cloud_provider": "Google Cloud Platform (GCP)",
+  "cloud_service_provider_abbr": "GCP",
+  "compliance_baseline": "NIST SP 800-53 Rev. 5 / DoD IL5",
+  "confidentiality_impact": "High",
+  "csp_pato_package_id": "FR1805751477",
+  "cssp_provider": "DISA",
+  "ditpr_id": "[CONFIG_REQUIRED: DITPR ID]",
+  "edr_solution": "[CONFIG_REQUIRED: Endpoint Detection and Response]",
+  "effective_date": null,
+  "emass_system_id": "[CONFIG_REQUIRED: eMASS System ID]",
+  "external_siem_type": "[CONFIG_REQUIRED: External SIEM]",
+  "identity_provider": "Enterprise Identity Provider (DoD CAC / PIV)",
+  "impact_level": "IL5",
+  "integrity_impact": "High",
+  "itsm_system": "[CONFIG_REQUIRED: ITSM System]",
+  "mfa_mechanism": "[CONFIG_REQUIRED: MFA Mechanism]",
+  "org_id": "",
+  "organization": "[CONFIG_REQUIRED: Organization Name]",
+  "organization_domain": "",
+  "perimeter_gateway": "[CONFIG_REQUIRED: Perimeter Gateway]",
+  "prepared_by": "",
+  "primary_location": "us-east4 (Ashburn, Northern Virginia, USA)",
+  "readme_source_path": "",
+  "readme_system_description": "",
+  "readme_title": "",
+  "rmf_governance_system": "Enterprise GRC System (eMASS / CSAM / Xacta / FedRAMP Portal)",
+  "scc_enabled": false,
+  "scc_tier": "premium",
+  "secops_enabled": false,
+  "system_abbreviation": "S",
+  "system_description": "",
+  "system_name": "Synthetic Platform",
+  "telemetry_summary": "Cloud Logging export sinks streaming to DISA; external [CONFIG_REQUIRED: External SIEM] SIEM integration",
+  "threat_detection_engine": "DISA Threat Operations Center via Cloud Logging export sinks",
+  "vulnerability_scanner": "[CONFIG_REQUIRED: Vulnerability Scanner]"
+ }
+}

@@ -1,0 +1,104 @@
+{
+  "generated_at": "2026-10-15",
+  "files": {
+    "fedramp_rev5_low.json": {
+      "regime_id": "fedramp_low",
+      "display_name": "FedRAMP Low",
+      "control_count": 156,
+      "base_control_count": 135,
+      "enhancement_count": 21,
+      "controls_with_parameters_count": 80,
+      "sha256": "9567992a29d832e928318593b9289adeec72d9d9831662ce4ad28dc575e20e3e"
+    },
+    "fedramp_rev5_moderate.json": {
+      "regime_id": "fedramp_moderate",
+      "display_name": "FedRAMP Moderate",
+      "control_count": 323,
+      "base_control_count": 181,
+      "enhancement_count": 142,
+      "controls_with_parameters_count": 137,
+      "sha256": "82ada0cc9e8603dfc163874500be7c9bacd3ff0e98f6783fe4b016470d2b546d"
+    },
+    "fedramp_rev5_high.json": {
+      "regime_id": "fedramp_high",
+      "display_name": "FedRAMP High",
+      "control_count": 410,
+      "base_control_count": 191,
+      "enhancement_count": 219,
+      "controls_with_parameters_count": 170,
+      "sha256": "771450feee1774449fe0902a16d3d24035aea2936f0158ef22209b3ba6d9df09"
+    },
+    "nist_800_53b_low.json": {
+      "regime_id": "fisma_low",
+      "display_name": "FISMA Low",
+      "control_count": 149,
+      "base_control_count": 131,
+      "enhancement_count": 18,
+      "controls_with_parameters_count": 108,
+      "sha256": "53ceecde4132ad29cf08c07de633e7a46a0df739a5023091fb8d4c21a89668f3"
+    },
+    "nist_800_53b_moderate.json": {
+      "regime_id": "fisma_moderate",
+      "display_name": "FISMA Moderate",
+      "control_count": 287,
+      "base_control_count": 177,
+      "enhancement_count": 110,
+      "controls_with_parameters_count": 198,
+      "sha256": "0ad0877973a09a0f4c74b5ce1f23e35d69d8d8f6ef7b968b2634dbd0051f28ae"
+    },
+    "nist_800_53b_high.json": {
+      "regime_id": "fisma_high",
+      "display_name": "FISMA High",
+      "control_count": 370,
+      "base_control_count": 188,
+      "enhancement_count": 182,
+      "controls_with_parameters_count": 254,
+      "sha256": "30441bf43b8387d9b407f8e5d9ca36f0ba8e672df3572550047bbb2f66162b9e"
+    },
+    "dod_il2.json": {
+      "regime_id": "dod_il2",
+      "display_name": "DoD IL2",
+      "control_count": 323,
+      "base_control_count": 181,
+      "enhancement_count": 142,
+      "controls_with_parameters_count": 137,
+      "sha256": "ae6b578afc944ae0bc361a5b1421c6494a2c48356b3a095fd124aafacde791f0"
+    },
+    "dod_il4.json": {
+      "regime_id": "dod_il4",
+      "display_name": "DoD IL4",
+      "control_count": 334,
+      "base_control_count": 182,
+      "enhancement_count": 152,
+      "controls_with_parameters_count": 149,
+      "sha256": "b28882b884a04d4855583de45e0bad21f9f7a15412da91d09dd5782513cece07"
+    },
+    "dod_il5.json": {
+      "regime_id": "dod_il5",
+      "display_name": "DoD IL5",
+      "control_count": 624,
+      "base_control_count": 238,
+      "enhancement_count": 386,
+      "controls_with_parameters_count": 216,
+      "sha256": "a2622505cfb3f821d69edb8a60577737c6b23a889bf69abdd040f60e70b45c5d"
+    },
+    "dod_il6.json": {
+      "regime_id": "dod_il6",
+      "display_name": "DoD IL6",
+      "control_count": 627,
+      "base_control_count": 238,
+      "enhancement_count": 389,
+      "controls_with_parameters_count": 216,
+      "sha256": "7b9012b39ad5d7e82f0aa9f6ace1a89613db4346b7b6483baaa8aa9cc964d8f6"
+    },
+    "cjis.json": {
+      "regime_id": "cjis",
+      "display_name": "CJIS",
+      "control_count": 323,
+      "base_control_count": 181,
+      "enhancement_count": 142,
+      "controls_with_parameters_count": 140,
+      "sha256": "8b07af1b31adda50b064bbea6099b45f8ea1e64a345d3a26fad070852c7a1fa9"
+    }
+  }
+}

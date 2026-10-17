@@ -1,0 +1,755 @@
+{
+  "catalog_version": "2026.10.0",
+  "library_edition": "U_SRG-STIG_Library_October_2026",
+  "description": "DISA STIG and SRG Baseline Checklist Catalog for Cloud Enclave Authorization. Official DISA source: https://public.cyber.mil/stigs/ (Note: stigviewer.com is an unofficial third-party mirror provided for reference only).",
+  "official_disa_source": "https://public.cyber.mil/stigs/",
+  "cyber_exchange_root": "https://public.cyber.mil/stigs/downloads/",
+  "stig_viewer_root": "https://www.stigviewer.com/stigs/",
+  "stigs": {
+    "cloud_computing_mo_os_srg": {
+      "title": "DISA Cloud Computing Mission Owner Operating System Security Requirements Guide (SRG)",
+      "slug": "cloud_computing_mo_os_srg",
+      "aliases": [
+        "cc_mo_os_srg",
+        "cloud_computing_mission_owner_operating_system_security_requirements_guide"
+      ],
+      "version": "V1R3",
+      "release_date": "2025-08-13",
+      "disa_library_file": "U_Cloud_Computing_Y26M06_SRG.zip",
+      "status": "active",
+      "category": "Cloud Foundation Baseline",
+      "scope": "Mission Owner Operating System SRG (V1R3) responsibilities for cloud enclaves, host configuration guardrails, and organization policies (inherited Cloud Service Provider responsibilities are assessed under DISA Cloud Service Provider SRG V1R7).",
+      "action": "Complete DISA Cloud Computing Mission Owner Operating System SRG checklist (.ckl); verify Assured Workloads boundary guardrails and organization policy constraints.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": true
+    },
+    "cloud_computing_mo_network_srg": {
+      "title": "DISA Cloud Computing Mission Owner Network Security Requirements Guide (SRG)",
+      "slug": "cloud_computing_mo_network_srg",
+      "aliases": [
+        "cc_mo_network_srg",
+        "cloud_computing_mission_owner_network_security_requirements_guide"
+      ],
+      "version": "V1R2",
+      "release_date": "2025-01-30",
+      "disa_library_file": "U_Cloud_Computing_Y26M06_SRG.zip",
+      "status": "active",
+      "category": "Cloud Foundation Baseline",
+      "scope": "Mission Owner Network SRG (V1R2) responsibilities for cloud enclave VPC topology, boundary segmentation, and network access controls (inherited CSP responsibilities assessed under DISA CSP SRG V1R7).",
+      "action": "Complete DISA Cloud Computing Mission Owner Network SRG checklist (.ckl); verify VPC network boundaries, ingress/egress routing, and perimeter segmentation.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": true
+    },
+    "canonical_ubuntu_2204_lts": {
+      "title": "DISA Canonical Ubuntu 22.04 LTS STIG",
+      "slug": "canonical_ubuntu_2204_lts",
+      "aliases": [
+        "canonical_ubuntu_22.04_lts",
+        "ubuntu_2204",
+        "ubuntu_22.04",
+        "ubuntu2204"
+      ],
+      "version": "V2R10",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_CAN_Ubuntu_22-04_LTS_V2R10_STIG.zip",
+      "status": "active",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened Ubuntu 22.04 LTS Linux Compute Engine instances and build worker bastions.",
+      "action": "Complete Canonical Ubuntu 22.04 LTS STIG CKL; apply Ubuntu Security Guide (USG) DISA profile in STIG Viewer desktop app.",
+      "url": "https://www.stigviewer.com/stigs/canonical_ubuntu_2204_lts",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "canonical_ubuntu_2004_lts": {
+      "title": "DISA Canonical Ubuntu 20.04 LTS STIG (Sunset)",
+      "slug": "canonical_ubuntu_2004_lts",
+      "aliases": [
+        "canonical_ubuntu_20.04_lts",
+        "ubuntu_2004",
+        "ubuntu_20.04"
+      ],
+      "version": "V2R4",
+      "release_date": "2025-10-01",
+      "disa_library_file": "U_CAN_Ubuntu_20-04_LTS_V2R4_STIG.zip",
+      "status": "sunset",
+      "sunset_date": "2025-10-01",
+      "successor_slug": "canonical_ubuntu_2204_lts",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Legacy Ubuntu Linux 20.04 LTS instances (Sunset by DISA on 2025-10-01; migrate to Ubuntu 22.04 LTS or 24.04 LTS STIG).",
+      "action": "Migrate legacy Ubuntu 20.04 LTS instances to an actively supported LTS release and complete Canonical Ubuntu 22.04 LTS or 24.04 LTS STIG CKL.",
+      "url": "https://www.stigviewer.com/stigs/canonical_ubuntu_2004_lts",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "canonical_ubuntu_2404_lts": {
+      "title": "DISA Canonical Ubuntu 24.04 LTS STIG",
+      "slug": "canonical_ubuntu_2404_lts",
+      "aliases": [
+        "canonical_ubuntu_24.04_lts",
+        "ubuntu_2404",
+        "ubuntu_24.04"
+      ],
+      "version": "V1R7",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_CAN_Ubuntu_24-04_LTS_V1R7_STIG.zip",
+      "status": "active",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened Ubuntu 24.04 LTS host compute instances.",
+      "action": "Complete Canonical Ubuntu 24.04 LTS STIG CKL; apply DISA profile in STIG Viewer.",
+      "url": "https://www.stigviewer.com/stigs/canonical_ubuntu_2404_lts",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "red_hat_enterprise_linux_9": {
+      "title": "DISA Red Hat Enterprise Linux 9 STIG",
+      "slug": "red_hat_enterprise_linux_9",
+      "aliases": [
+        "rhel9",
+        "redhat9"
+      ],
+      "version": "V2R10",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_RHEL_9_V2R10_STIG.zip",
+      "status": "active",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened Red Hat Enterprise Linux 9 Compute Engine VM hosts and administrative bastions.",
+      "action": "Complete Red Hat Enterprise Linux 9 STIG CKL; apply OpenSCAP/Ansible DISA STIG baseline.",
+      "url": "https://www.stigviewer.com/stigs/red_hat_enterprise_linux_9",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "red_hat_enterprise_linux_10": {
+      "title": "DISA Red Hat Enterprise Linux 10 STIG",
+      "slug": "red_hat_enterprise_linux_10",
+      "aliases": [
+        "rhel10",
+        "redhat10"
+      ],
+      "version": "V1R3",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_RHEL_10_V1R3_STIG.zip",
+      "status": "active",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened Red Hat Enterprise Linux 10 Compute Engine VM hosts and administrative bastions.",
+      "action": "Complete Red Hat Enterprise Linux 10 STIG CKL; apply OpenSCAP/Ansible DISA STIG baseline.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "red_hat_enterprise_linux_8": {
+      "title": "DISA Red Hat Enterprise Linux 8 STIG (Sunset)",
+      "slug": "red_hat_enterprise_linux_8",
+      "aliases": [
+        "rhel8",
+        "redhat8"
+      ],
+      "version": "V2R9",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_RHEL_8_V2R9_STIG.zip",
+      "status": "sunset",
+      "sunset_date": "2026-09-30",
+      "successor_slug": "red_hat_enterprise_linux_9",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Legacy Red Hat Enterprise Linux 8 instances (Sunset by DISA on 2026-09-30; migrate to RHEL 9 or RHEL 10 STIG).",
+      "action": "Migrate legacy RHEL 8 instances to RHEL 9 or RHEL 10 and complete the corresponding active DISA RHEL STIG CKL.",
+      "url": "https://www.stigviewer.com/stigs/red_hat_enterprise_linux_8",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "almalinux_os_9": {
+      "title": "DISA Cloud Linux AlmaLinux OS 9 STIG",
+      "slug": "almalinux_os_9",
+      "aliases": [
+        "almalinux9",
+        "almalinux_9",
+        "cloud_linux_almalinux_os_9"
+      ],
+      "version": "V1R8",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_CL_AlmaLinux_OS_9_V1R8_STIG.zip",
+      "status": "active",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened AlmaLinux OS 9 Compute Engine VM instances.",
+      "action": "Complete DISA Cloud Linux AlmaLinux OS 9 STIG CKL; apply OpenSCAP DISA STIG baseline.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "debian_linux": {
+      "title": "DISA General Purpose Operating System Security Requirements Guide (SRG)",
+      "slug": "debian_linux",
+      "aliases": [
+        "debian",
+        "general_purpose_operating_system_srg",
+        "general_purpose_operating_system_security_requirements_guide",
+        "gpos_srg"
+      ],
+      "version": "V3R4",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_GPOS_V3R4_SRG.zip",
+      "status": "active",
+      "category": "Operating Systems & Host Compute",
+      "scope": "General-purpose Linux host instances (such as Debian, Rocky Linux, or Container-Optimized OS) where no vendor-specific DISA STIG exists.",
+      "action": "Complete DISA General Purpose Operating System SRG CKL; apply OS security hardening baseline.",
+      "url": "https://www.stigviewer.com/stigs/general_purpose_operating_system_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "ms_windows_server_2022": {
+      "title": "DISA Microsoft Windows Server 2022 STIG",
+      "slug": "ms_windows_server_2022",
+      "aliases": [
+        "windows_server_2022",
+        "win2022"
+      ],
+      "version": "V2R11",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_MS_Windows_Server_2022_V2R11_STIG.zip",
+      "status": "active",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened Microsoft Windows Server 2022 Compute Engine instances and Active Directory bastions.",
+      "action": "Complete Microsoft Windows Server 2022 STIG CKL; apply DISA GPO baseline in STIG Viewer desktop app.",
+      "url": "https://www.stigviewer.com/stigs/microsoft_windows_server_2022",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "ms_windows_server_2025": {
+      "title": "DISA Microsoft Windows Server 2025 STIG",
+      "slug": "ms_windows_server_2025",
+      "aliases": [
+        "windows_server_2025",
+        "win2025"
+      ],
+      "version": "V1R4",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_MS_Windows_Server_2025_V1R4_STIG.zip",
+      "status": "active",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened Microsoft Windows Server 2025 Compute Engine instances and Active Directory bastions.",
+      "action": "Complete Microsoft Windows Server 2025 STIG CKL; apply DISA GPO baseline in STIG Viewer desktop app.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "ms_windows_server_2019": {
+      "title": "DISA Microsoft Windows Server 2019 STIG (Sunset)",
+      "slug": "ms_windows_server_2019",
+      "aliases": [
+        "windows_server_2019",
+        "win2019"
+      ],
+      "version": "V3R9",
+      "release_date": "2026-07-01",
+      "disa_library_file": "U_MS_Windows_Server_2019_V3R9_STIG.zip",
+      "status": "sunset",
+      "sunset_date": "2026-07-01",
+      "successor_slug": "ms_windows_server_2022",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Legacy Microsoft Windows Server 2019 Compute Engine instances (Sunset by DISA on 2026-07-01; migrate to Windows Server 2022 or 2025 STIG).",
+      "action": "Migrate legacy Windows Server 2019 instances to Windows Server 2022 or 2025 and complete the active DISA Microsoft Windows Server STIG CKL.",
+      "url": "https://www.stigviewer.com/stigs/microsoft_windows_server_2019",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "suse_linux_enterprise_server": {
+      "title": "DISA SUSE Linux Enterprise Server 15 STIG",
+      "slug": "suse_linux_enterprise_server",
+      "aliases": [
+        "suse",
+        "sles",
+        "suse_linux",
+        "suse_linux_enterprise_server_15"
+      ],
+      "version": "V2R9",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_SLES_15_V2R9_STIG.zip",
+      "status": "active",
+      "category": "Operating Systems & Host Compute",
+      "scope": "Hardened SUSE Linux Enterprise Server 15 instances.",
+      "action": "Complete SUSE Linux Enterprise Server 15 STIG CKL; apply OpenSCAP baseline.",
+      "url": "https://www.stigviewer.com/stigs/suse_linux_enterprise_server_15",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "cisco_ios_xe_router": {
+      "title": "DISA Cisco IOS XE Router RTR STIG",
+      "slug": "cisco_ios_xe_router",
+      "aliases": [
+        "cisco_ios_xe_router_rtr",
+        "cisco_router",
+        "ios_xe"
+      ],
+      "version": "V3R5",
+      "release_date": "2025-10-01",
+      "disa_library_file": "U_Cisco_IOS-XE_Router_Y26M04_STIG.zip",
+      "status": "active",
+      "category": "Network Appliances & Routing",
+      "scope": "Cisco IOS XE virtual edge router instances, IPsec transport encryption, and perimeter routing appliances.",
+      "action": "Complete Cisco IOS XE Router RTR STIG CKL; verify MACsec / IPsec encryption and control plane policing.",
+      "url": "https://www.stigviewer.com/stigs/cisco_ios_xe_router_rtr",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "network_infrastructure_policy_stig": {
+      "title": "DISA Network Infrastructure Policy STIG",
+      "slug": "network_infrastructure_policy_stig",
+      "aliases": [
+        "network_infrastructure_policy"
+      ],
+      "version": "V10R7",
+      "release_date": "2024-10-24",
+      "disa_library_file": "U_Network_Infrastructure_Policy_V10R7_STIG.zip",
+      "status": "active",
+      "category": "Networking & Perimeter",
+      "scope": "Network infrastructure policy architecture, routing protocol security, and boundary segmentation.",
+      "action": "Complete DISA Network Infrastructure Policy STIG CKL; verify routing plane authentication and perimeter segmentation.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "kubernetes": {
+      "title": "DISA Kubernetes STIG",
+      "slug": "kubernetes",
+      "aliases": [
+        "k8s",
+        "gke",
+        "kubernetes_stig"
+      ],
+      "version": "V2R6",
+      "release_date": "2026-04-01",
+      "disa_library_file": "U_Kubernetes_V2R6_STIG.zip",
+      "status": "active",
+      "category": "Containers & Microservices",
+      "scope": "GKE private clusters, master control plane endpoints, RBAC, and Kubernetes cluster hardening.",
+      "action": "Complete DISA Kubernetes STIG CKL; audit master authorized networks and Pod Security Standards in STIG Viewer.",
+      "url": "https://www.stigviewer.com/stigs/kubernetes",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "container_platform_srg": {
+      "title": "DISA Container Platform Security Requirements Guide (SRG)",
+      "slug": "container_platform_srg",
+      "aliases": [
+        "container_platform",
+        "serverless_srg",
+        "container_platform_security_requirements_guide"
+      ],
+      "version": "V2R5",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_Container_Platform_V2R5_SRG.zip",
+      "status": "active",
+      "category": "Containers & Microservices",
+      "scope": "Container platform runtimes, serverless container workloads, Cloud Run service perimeters, and container image registries.",
+      "action": "Complete DISA Container Platform SRG CKL; enforce VPC-SC perimeter on Cloud Run services and verify non-root container execution.",
+      "url": "https://www.stigviewer.com/stigs/container_platform_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "docker_enterprise": {
+      "title": "DISA Docker Enterprise 2.x Linux/UNIX STIG (Sunset)",
+      "slug": "docker_enterprise",
+      "aliases": [
+        "docker",
+        "container_runtime",
+        "docker_enterprise_2x_linuxunix"
+      ],
+      "version": "V2R2",
+      "release_date": "2024-07-24",
+      "disa_library_file": "U_Docker_Enterprise_2-x_Linux-Unix_V2R2_STIG.zip",
+      "status": "sunset",
+      "sunset_date": "2024-07-24",
+      "successor_slug": "container_platform_srg",
+      "category": "Containers & Microservices",
+      "scope": "Container base images, Dockerfile hardening, and non-root execution (Sunset by DISA on 2024-07-24; evaluate modern container runtimes against DISA Container Platform SRG).",
+      "action": "Complete DISA Container Platform SRG CKL; eliminate root user in Dockerfiles and verify artifact signing.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "crunchy_data_postgres_16": {
+      "title": "DISA Crunchy Data Postgres 16 STIG",
+      "slug": "crunchy_data_postgres_16",
+      "aliases": [
+        "postgresql",
+        "postgres",
+        "alloydb",
+        "psql",
+        "postgresql_16",
+        "crunchy_data_postgresql_16"
+      ],
+      "version": "V1R3",
+      "release_date": "2026-07-01",
+      "disa_library_file": "U_CD_Postgres_16_V1R3_STIG.zip",
+      "status": "active",
+      "category": "Databases & Data Management",
+      "scope": "Cloud SQL for PostgreSQL and AlloyDB instances, pgAudit logging, and TLS in transit (assessed via DISA Crunchy Data Postgres 16 STIG and Database SRG).",
+      "action": "Complete DISA Crunchy Data Postgres 16 STIG CKL; configure pgAudit database flags and verify Cloud Logging sink.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "postgresql_13": {
+      "title": "DISA Crunchy Data PostgreSQL STIG (Sunset)",
+      "slug": "postgresql_13",
+      "aliases": [
+        "crunchy_data_postgresql"
+      ],
+      "version": "V3R2",
+      "release_date": "2026-07-01",
+      "disa_library_file": "U_CD_PGSQL_V3R2_STIG.zip",
+      "status": "sunset",
+      "sunset_date": "2026-07-01",
+      "successor_slug": "crunchy_data_postgres_16",
+      "category": "Databases & Data Management",
+      "scope": "Legacy PostgreSQL instances (Sunset by DISA on 2026-07-01; assess modern PostgreSQL workloads under DISA Crunchy Data Postgres 16 STIG).",
+      "action": "Complete DISA Crunchy Data Postgres 16 STIG CKL; configure pgAudit database flags and verify Cloud Logging sink.",
+      "url": "https://www.stigviewer.com/stigs/crunchy_data_postgresql",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "oracle_mysql_8.0": {
+      "title": "DISA Oracle MySQL 8.0 STIG",
+      "slug": "oracle_mysql_8.0",
+      "aliases": [
+        "mysql",
+        "mysql_8",
+        "oracle_mysql_80"
+      ],
+      "version": "V2R3",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_Oracle_MySQL_8-0_V2R3_STIG.zip",
+      "status": "active",
+      "category": "Databases & Data Management",
+      "scope": "Cloud SQL MySQL 8.0 database instances and secure transport enforcement.",
+      "action": "Complete DISA Oracle MySQL 8.0 STIG CKL; enforce require_secure_transport and audit logging.",
+      "url": "https://www.stigviewer.com/stigs/oracle_mysql_80",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "mariadb_enterprise_10x": {
+      "title": "DISA MariaDB Enterprise 10.x STIG",
+      "slug": "mariadb_enterprise_10x",
+      "aliases": [
+        "mariadb",
+        "mariadb_10",
+        "mariadb_enterprise_10.x"
+      ],
+      "version": "V2R6",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_MariaDB_Enterprise_10-x_V2R6_STIG.zip",
+      "status": "active",
+      "category": "Databases & Data Management",
+      "scope": "MariaDB Enterprise 10.x database instances, audit plugin logging, and TLS transport enforcement.",
+      "action": "Complete DISA MariaDB Enterprise 10.x STIG CKL; enforce TLS transport and MariaDB Audit Plugin logging.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "ms_sql_server_2016_instance": {
+      "title": "DISA Microsoft SQL Server 2016 Instance STIG",
+      "slug": "ms_sql_server_2016_instance",
+      "aliases": [
+        "sql_server",
+        "mssql",
+        "sqlserver",
+        "sql_server_2016"
+      ],
+      "version": "V3R6",
+      "release_date": "2026-01-05",
+      "disa_library_file": "U_MS_SQL_Server_2016_Y26M04_STIG.zip",
+      "status": "active",
+      "category": "Databases & Data Management",
+      "scope": "Cloud SQL for SQL Server 2016/2019 database instances (assessed via DISA Microsoft SQL Server 2016 Instance & Database STIGs and Database SRG).",
+      "action": "Complete Microsoft SQL Server 2016 Instance STIG CKL; configure Windows Authentication / Cloud IAM and TLS encryption.",
+      "url": "https://www.stigviewer.com/stigs/ms_sql_server_2016_instance",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "ms_sql_server_2022_instance": {
+      "title": "DISA Microsoft SQL Server 2022 Instance STIG",
+      "slug": "ms_sql_server_2022_instance",
+      "aliases": [
+        "sql_server_2022",
+        "mssql_2022"
+      ],
+      "version": "V1R4",
+      "release_date": "2026-04-01",
+      "disa_library_file": "U_MS_SQL_Server_2022_Y26M04_STIG.zip",
+      "status": "active",
+      "category": "Databases & Data Management",
+      "scope": "Cloud SQL for SQL Server 2022 database instances.",
+      "action": "Complete Microsoft SQL Server 2022 Instance STIG CKL; configure Windows Authentication / Cloud IAM and TLS encryption.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "oracle_database_19c": {
+      "title": "DISA Oracle Database 19c STIG",
+      "slug": "oracle_database_19c",
+      "aliases": [
+        "oracle_19c",
+        "oracle_db"
+      ],
+      "version": "V1R6",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_Oracle_Database_19c_V1R6_STIG.zip",
+      "status": "active",
+      "category": "Databases & Data Management",
+      "scope": "Oracle Database 19c instances and Transparent Data Encryption (TDE).",
+      "action": "Complete DISA Oracle Database 19c STIG CKL; enforce unified auditing and secure connection strings.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "oracle_database_12c": {
+      "title": "DISA Oracle Database 12c STIG (Sunset)",
+      "slug": "oracle_database_12c",
+      "aliases": [
+        "oracle_12c"
+      ],
+      "version": "V3R4",
+      "release_date": "2025-07-08",
+      "disa_library_file": "U_Oracle_Database_12c_V3R4_STIG.zip",
+      "status": "sunset",
+      "sunset_date": "2025-07-08",
+      "successor_slug": "oracle_database_19c",
+      "category": "Databases & Data Management",
+      "scope": "Legacy Oracle Database 12c instances (Sunset by DISA on 2025-07-08; migrate to Oracle Database 19c STIG).",
+      "action": "Migrate legacy Oracle 12c instances to Oracle 19c and complete DISA Oracle Database 19c STIG CKL.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "database_srg": {
+      "title": "DISA Database Security Requirements Guide (Database SRG)",
+      "slug": "database_srg",
+      "aliases": [
+        "rdbms_srg",
+        "spanner_srg",
+        "bigquery_srg",
+        "database_security_requirements_guide"
+      ],
+      "version": "V4R6",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_Database_V4R6_SRG.zip",
+      "status": "active",
+      "category": "Databases & Data Management",
+      "scope": "Managed database and data warehouse services (Cloud Spanner, BigQuery, Memorystore, Firestore) where no product-specific DISA STIG exists.",
+      "action": "Complete DISA Database SRG CKL; enforce TLS in transit, CMEK encryption at rest, and private IP connectivity.",
+      "url": "https://www.stigviewer.com/stigs/database_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "mongodb_enterprise_advanced_7x": {
+      "title": "DISA MongoDB Enterprise Advanced 7.x STIG",
+      "slug": "mongodb_enterprise_advanced_7x",
+      "aliases": [
+        "mongodb_7",
+        "mongodb_7x",
+        "mongodb_enterprise_7.x"
+      ],
+      "version": "V1R2",
+      "release_date": "2026-07-01",
+      "disa_library_file": "U_MongoDB_Enterprise_Advanced_7-x_V1R2_STIG.zip",
+      "status": "active",
+      "category": "Databases & Data Management",
+      "scope": "MongoDB Enterprise Advanced 7.x document database instances, WiredTiger encryption, and SCRAM authentication.",
+      "action": "Complete DISA MongoDB Enterprise Advanced 7.x STIG CKL; enforce role-based access control and TLS transport.",
+      "url": "https://www.stigviewer.com/stigs/mongodb_enterprise_advanced_7x",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "mongodb_enterprise_advanced_8x": {
+      "title": "DISA MongoDB Enterprise Advanced 8.x STIG",
+      "slug": "mongodb_enterprise_advanced_8x",
+      "aliases": [
+        "mongodb_8",
+        "mongodb_8x",
+        "mongodb_enterprise_8.x"
+      ],
+      "version": "V1R1",
+      "release_date": "2026-01-26",
+      "disa_library_file": "U_MDB_Enterprise_Advanced_8-x_V1R1_STIG.zip",
+      "status": "active",
+      "category": "Databases & Data Management",
+      "scope": "MongoDB Enterprise Advanced 8.x document database instances, WiredTiger encryption, and SCRAM authentication.",
+      "action": "Complete DISA MongoDB Enterprise Advanced 8.x STIG CKL; enforce role-based access control and TLS transport.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "mongodb_enterprise_3.x": {
+      "title": "DISA MongoDB Enterprise Advanced 3.x STIG (Sunset)",
+      "slug": "mongodb_enterprise_3.x",
+      "aliases": [
+        "mongodb_3",
+        "mongodb_enterprise_3x"
+      ],
+      "version": "V2R3",
+      "release_date": "2024-07-24",
+      "disa_library_file": "U_MDB_Enterprise_Advanced_3-x_V2R3_STIG.zip",
+      "status": "sunset",
+      "sunset_date": "2024-07-24",
+      "successor_slug": "mongodb_enterprise_advanced_7x",
+      "category": "Databases & Data Management",
+      "scope": "Legacy MongoDB Enterprise Advanced 3.x instances (Sunset by DISA on 2024-07-24; migrate to MongoDB Enterprise Advanced 7.x or 8.x STIG).",
+      "action": "Migrate legacy MongoDB 3.x instances to MongoDB 7.x or 8.x and complete the active DISA MongoDB Enterprise Advanced STIG CKL.",
+      "url": "https://www.stigviewer.com/stigs/mongodb_enterprise_advanced_7x",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "storage_area_network_san_srg": {
+      "title": "DISA Storage Area Network (SAN) STIG (Sunset)",
+      "slug": "storage_area_network_san_srg",
+      "aliases": [
+        "san_srg",
+        "storage_area_network_stig"
+      ],
+      "version": "V2R5",
+      "release_date": "2025-01-30",
+      "disa_library_file": "U_Storage_Area_Network_V2R5_STIG.zip",
+      "status": "sunset",
+      "sunset_date": "2025-01-30",
+      "successor_slug": "cloud_computing_mo_os_srg",
+      "category": "Storage & Persistence",
+      "scope": "Legacy physical/virtual Storage Area Network fabrics (Sunset by DISA on 2025-01-30; cloud object storage is assessed under DISA Cloud Computing Mission Owner SRG).",
+      "action": "Evaluate cloud object storage controls against DISA Cloud Computing Mission Owner SRG; verify public access prevention and CMEK encryption.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "firewall_srg": {
+      "title": "DISA Firewall Security Requirements Guide (SRG)",
+      "slug": "firewall_srg",
+      "aliases": [
+        "perimeter_firewall_srg",
+        "firewall_security_requirements_guide"
+      ],
+      "version": "V3R4",
+      "release_date": "2026-07-01",
+      "disa_library_file": "U_Firewall_V3R4_SRG.zip",
+      "status": "active",
+      "category": "Networking & Perimeter",
+      "scope": "VPC Hub/Spoke perimeter firewall policy tiers, default-deny ingress, and Cloud IAP bastions.",
+      "action": "Complete DISA Firewall SRG CKL; verify default-deny ingress rule and zero 0.0.0.0/0 exposure.",
+      "url": "https://www.stigviewer.com/stigs/firewall_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "vpn_gateway_srg": {
+      "title": "DISA Virtual Private Network (VPN) Security Requirements Guide (SRG)",
+      "slug": "vpn_gateway_srg",
+      "aliases": [
+        "vpn_srg",
+        "vpn_gateway",
+        "virtual_private_network_vpn_security_requirements_guide"
+      ],
+      "version": "V3R5",
+      "release_date": "2026-07-01",
+      "disa_library_file": "U_VPN_V3R5_SRG.zip",
+      "status": "active",
+      "category": "Networking & Perimeter",
+      "scope": "Cloud HA VPN gateways, IPsec cryptographic profiles, and BGP dynamic routing.",
+      "action": "Complete DISA Virtual Private Network (VPN) SRG CKL; enforce IKEv2 and AES-GCM 256-bit encryption cipher suites.",
+      "url": "https://www.stigviewer.com/stigs/virtual_private_network_vpn_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "web_application_firewall_srg": {
+      "title": "DISA Application Layer Gateway (ALG) Security Requirements Guide (SRG) (WAF Functional Mapping)",
+      "slug": "web_application_firewall_srg",
+      "aliases": [
+        "waf_srg",
+        "cloud_armor_srg",
+        "waf",
+        "application_layer_gateway_srg"
+      ],
+      "version": "V2R4",
+      "release_date": "2026-07-01",
+      "disa_library_file": "U_Application_Layer_Gateway_V2R4_SRG.zip",
+      "status": "active",
+      "category": "Networking & Perimeter",
+      "scope": "Functional mapping to DISA Application Layer Gateway (ALG) SRG for Cloud Armor WAF policies, DDoS adaptive protection, and OWASP Top 10 rule sets (DISA does not publish a standalone WAF SRG).",
+      "action": "Complete DISA Application Layer Gateway (ALG) SRG CKL; verify pre-configured OWASP CRS rules and rate-limiting policies.",
+      "url": "https://www.stigviewer.com/stigs/application_layer_gateway_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "application_security_and_development_stig": {
+      "title": "DISA Application Security and Development (ASD) STIG",
+      "slug": "application_security_and_development_stig",
+      "aliases": [
+        "asd_stig",
+        "app_security_stig",
+        "application_security_and_development"
+      ],
+      "version": "V6R5",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_ASD_V6R5_STIG.zip",
+      "status": "active",
+      "category": "Application Security & DevSecOps",
+      "scope": "DevSecOps CI/CD pipelines, container vulnerability scanning, and OWASP application defenses.",
+      "action": "Complete DISA Application Security and Development (ASD) STIG CKL; incorporate automated SAST and container scanning in CI/CD pipeline.",
+      "url": "https://www.stigviewer.com/stigs/application_security_and_development",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "apache_server_2.4_unix_server": {
+      "title": "DISA Apache Server 2.4 UNIX Server STIG",
+      "slug": "apache_server_2.4_unix_server",
+      "aliases": [
+        "apache_server",
+        "apache_server_24_unix_server"
+      ],
+      "version": "V3R3",
+      "release_date": "2026-07-01",
+      "disa_library_file": "U_Apache_Server_2-4_Unix_Y26M07_STIG.zip",
+      "status": "active",
+      "category": "Application Security & DevSecOps",
+      "scope": "Apache HTTP Server 2.4 on UNIX instances (for NGINX, use DISA F5 NGINX STIG; for other web servers, use DISA Web Server SRG).",
+      "action": "Complete DISA Apache Server 2.4 UNIX Server STIG CKL; disable weak TLS ciphers, server tokens, and enforce HTTP security headers.",
+      "url": "https://www.stigviewer.com/stigs/apache_server_24_unix_server",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "f5_nginx": {
+      "title": "DISA F5 NGINX STIG",
+      "slug": "f5_nginx",
+      "aliases": [
+        "nginx",
+        "nginx_server",
+        "f5_nginx_stig"
+      ],
+      "version": "V1R2",
+      "release_date": "2026-09-30",
+      "disa_library_file": "U_F5_NGINX_V1R2_STIG.zip",
+      "status": "active",
+      "category": "Application Security & DevSecOps",
+      "scope": "NGINX HTTP/HTTPS web servers and reverse proxy instances.",
+      "action": "Complete DISA F5 NGINX STIG CKL; enforce TLS 1.2/1.3 cipher suites, disable server tokens, and configure HTTP security headers.",
+      "url": "https://public.cyber.mil/stigs/downloads/",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    },
+    "web_server_srg": {
+      "title": "DISA Web Server Security Requirements Guide (SRG)",
+      "slug": "web_server_srg",
+      "aliases": [
+        "web_server_security_requirements_guide"
+      ],
+      "version": "V4R5",
+      "release_date": "2026-07-01",
+      "disa_library_file": "U_Web_Server_V4R5_SRG.zip",
+      "status": "active",
+      "category": "Application Security & DevSecOps",
+      "scope": "Self-managed HTTP/HTTPS web server and reverse proxy workloads where no vendor-specific DISA STIG exists.",
+      "action": "Complete DISA Web Server SRG CKL; disable weak TLS ciphers, server tokens, and enforce HTTP security headers.",
+      "url": "https://www.stigviewer.com/stigs/web_server_security_requirements_guide",
+      "cyber_exchange_url": "https://public.cyber.mil/stigs/downloads/",
+      "is_foundational": false
+    }
+  },
+  "cyber_exchange_tools": "https://public.cyber.mil/stigs/srg-stig-tools/"
+}

@@ -1,0 +1,106 @@
+{
+ "boundary_firewall_matrix": [],
+ "personnel_contacts": {
+  "isso_poc": {
+   "email": "[CONFIG_REQUIRED: ISSO Email]",
+   "name": "[CONFIG_REQUIRED: ISSO Name]",
+   "phone": "[CONFIG_REQUIRED: ISSO Phone]"
+  },
+  "system_owner": {
+   "email": "[CONFIG_REQUIRED: System Owner Email]",
+   "name": "[CONFIG_REQUIRED: System Owner Name]",
+   "phone": "[CONFIG_REQUIRED: System Owner Phone]"
+  }
+ },
+ "ppsm_matrix": [
+  {
+   "boundary": "1. Ext to DoD GW (In)",
+   "connection_logical_destination_point": "Off-Premise Cloud Service (DoD Network via DISA CAP)",
+   "connection_logical_source_point": "Off-Premise Cloud Service (non-DoD Network)",
+   "data_service": "Security Analytics Warehouse",
+   "destination_device_name": "Google BigQuery API Endpoint",
+   "destination_fqdn": "bigquery.googleapis.com",
+   "destination_ip": "[NOT DETERMINED FROM SOURCE]",
+   "destination_location": "Google Cloud Platform (GCP) ([CONFIG_REQUIRED: Primary Location])",
+   "id": "1",
+   "logical_destination_point": "Off-Premise Cloud Service (DoD Network via DISA CAP)",
+   "logical_source_point": "Off-Premise Cloud Service (non-DoD Network)",
+   "port": "443",
+   "ppsm_status": "Pending Assessment",
+   "protocol": "HTTPS",
+   "purpose": "Enterprise Log Audit Analytics, Security Data Lake & SIEM Store",
+   "record_name": "Google BigQuery",
+   "source_device_name": "GCP Workload Nodes / Compute Instances",
+   "source_fqdn": "*.gbbp.internal",
+   "source_ip": "Dynamic Internal IP",
+   "source_location": "Google Cloud Platform (GCP) ([CONFIG_REQUIRED: Primary Location])",
+   "type": "Least Function",
+   "vpn_encrypted_traffic": "[NOT DETERMINED FROM SOURCE]",
+   "vpn_tunnel_type": "[NOT DETERMINED FROM SOURCE]"
+  },
+  {
+   "boundary": "1. Ext to DoD GW (In)",
+   "connection_logical_destination_point": "Off-Premise Cloud Service (DoD Network via DISA CAP)",
+   "connection_logical_source_point": "Off-Premise Cloud Service (non-DoD Network)",
+   "data_service": "Key Management & HSM",
+   "destination_device_name": "Google Cloud KMS API Endpoint",
+   "destination_fqdn": "cloudkms.googleapis.com",
+   "destination_ip": "[NOT DETERMINED FROM SOURCE]",
+   "destination_location": "Google Cloud Platform (GCP) ([CONFIG_REQUIRED: Primary Location])",
+   "id": "2",
+   "logical_destination_point": "Off-Premise Cloud Service (DoD Network via DISA CAP)",
+   "logical_source_point": "Off-Premise Cloud Service (non-DoD Network)",
+   "port": "443",
+   "ppsm_status": "Pending Assessment",
+   "protocol": "HTTPS",
+   "purpose": "Cloud HSM (FIPS 140-2 Level 3 hardware security modules manufactured by Marvell) & Software Key Management (FIPS 140-3 CMEK Level 1 Envelope Cryptography)",
+   "record_name": "Google Cloud KMS",
+   "source_device_name": "GCP Workload Nodes / Compute Instances",
+   "source_fqdn": "*.gbbp.internal",
+   "source_ip": "Dynamic Internal IP",
+   "source_location": "Google Cloud Platform (GCP) ([CONFIG_REQUIRED: Primary Location])",
+   "type": "Least Function",
+   "vpn_encrypted_traffic": "[NOT DETERMINED FROM SOURCE]",
+   "vpn_tunnel_type": "[NOT DETERMINED FROM SOURCE]"
+  },
+  {
+   "boundary": "1. Ext to DoD GW (In)",
+   "connection_logical_destination_point": "Off-Premise Cloud Service (DoD Network via DISA CAP)",
+   "connection_logical_source_point": "Off-Premise Cloud Service (non-DoD Network)",
+   "data_service": "Identity & Access Control",
+   "destination_device_name": "Google Cloud IAM API Endpoint",
+   "destination_fqdn": "iam.googleapis.com",
+   "destination_ip": "[NOT DETERMINED FROM SOURCE]",
+   "destination_location": "Google Cloud Platform (GCP) ([CONFIG_REQUIRED: Primary Location])",
+   "id": "3",
+   "logical_destination_point": "Off-Premise Cloud Service (DoD Network via DISA CAP)",
+   "logical_source_point": "Off-Premise Cloud Service (non-DoD Network)",
+   "port": "443",
+   "ppsm_status": "Pending Assessment",
+   "protocol": "HTTPS",
+   "purpose": "Role-Based Access Control (RBAC), Service Account Keys & Least Privilege",
+   "record_name": "Google Cloud IAM",
+   "source_device_name": "GCP Workload Nodes / Compute Instances",
+   "source_fqdn": "*.gbbp.internal",
+   "source_ip": "Dynamic Internal IP",
+   "source_location": "Google Cloud Platform (GCP) ([CONFIG_REQUIRED: Primary Location])",
+   "type": "Least Function",
+   "vpn_encrypted_traffic": "[NOT DETERMINED FROM SOURCE]",
+   "vpn_tunnel_type": "[NOT DETERMINED FROM SOURCE]"
+  }
+ ],
+ "rmf_team_manual_action": {
+  "callout": "> [!IMPORTANT] **RMF TEAM ACTION REQUIRED**: Confirm registration of all listed ports/protocols in the eMASS PPSM Registry and upload approval certificates."
+ },
+ "system_metadata": {
+  "compliance_baseline": "NIST SP 800-53 Rev. 5 / DoD IL5",
+  "date_exported": "<TODAY+0>",
+  "ditpr_id": "[CONFIG_REQUIRED: DITPR ID]",
+  "document_version": "1.0.0",
+  "emass_system_id": "[CONFIG_REQUIRED: eMASS System ID]",
+  "impact_level": "IL5",
+  "organization": "[CONFIG_REQUIRED: Organization Name]",
+  "system_abbreviation": "GBBP",
+  "system_name": "Google BigQuery (BigQuery) Project"
+ }
+}

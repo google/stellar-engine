@@ -1,0 +1,185 @@
+{
+ "implemented_requirements": [
+  {
+   "by-components": [
+    {
+     "description": "Account management: 1 service account defined in Terraform; 2 IAM bindings defined in Terraform. Gaps: [CONFIG_REQUIRED: account lifecycle, review and disablement procedures].",
+     "state": "partial"
+    }
+   ],
+   "control-id": "ac-2"
+  },
+  {
+   "by-components": [
+    {
+     "description": "Access enforcement: 2 IAM role bindings enforced by Cloud IAM.",
+     "state": "implemented"
+    }
+   ],
+   "control-id": "ac-3"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of information flow enforcement was found. Gaps: no VPC Service Controls perimeter found in Terraform.",
+     "state": "planned"
+    }
+   ],
+   "control-id": "ac-4"
+  },
+  {
+   "by-components": [
+    {
+     "description": "Least privilege: 2 IAM bindings reviewed for primitive roles.",
+     "state": "implemented"
+    }
+   ],
+   "control-id": "ac-6"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of event logging was found. Gaps: [CONFIG_REQUIRED: list of audited event types and review cadence].",
+     "state": "planned"
+    }
+   ],
+   "control-id": "au-2"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of audit record content was found.",
+     "state": "planned"
+    }
+   ],
+   "control-id": "au-3"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of audit record generation was found.",
+     "state": "planned"
+    }
+   ],
+   "control-id": "au-12"
+  },
+  {
+   "by-components": [
+    {
+     "description": "Baseline configuration: 6 resources codified in version-controlled Terraform.",
+     "state": "implemented"
+    }
+   ],
+   "control-id": "cm-2"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of configuration settings was found. Gaps: [CONFIG_REQUIRED: configuration settings baseline and deviation process].",
+     "state": "planned"
+    }
+   ],
+   "control-id": "cm-6"
+  },
+  {
+   "by-components": [
+    {
+     "description": "Component inventory: 6 resources inventoried from Terraform. Gaps: runtime inventory (Cloud Asset Inventory export) not evidenced in Terraform.",
+     "state": "partial"
+    }
+   ],
+   "control-id": "cm-8"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of identification and authentication was found. Gaps: MFA enforcement is configured in the identity provider and is not visible in Terraform.",
+     "state": "planned"
+    }
+   ],
+   "control-id": "ia-2"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of media storage was found.",
+     "state": "planned"
+    }
+   ],
+   "control-id": "mp-4"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of vulnerability monitoring was found. Gaps: [CONFIG_REQUIRED: vulnerability scanner, scan cadence and remediation SLAs].",
+     "state": "planned"
+    }
+   ],
+   "control-id": "ra-5"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of external system services was found. Gaps: [CONFIG_REQUIRED: external service agreements and the CSP authorization being inherited].",
+     "state": "planned"
+    }
+   ],
+   "control-id": "sa-9"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of boundary protection was found.",
+     "state": "planned"
+    }
+   ],
+   "control-id": "sc-7"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of transmission confidentiality and integrity was found. Gaps: TLS versions for all external and internal endpoints are not determined from source.",
+     "state": "planned"
+    }
+   ],
+   "control-id": "sc-8"
+  },
+  {
+   "by-components": [
+    {
+     "description": "Cryptographic key management: 1 Cloud KMS key, 0 with a rotation period. Gaps: keys without rotation_period.",
+     "state": "partial"
+    }
+   ],
+   "control-id": "sc-12"
+  },
+  {
+   "by-components": [
+    {
+     "description": "Cryptographic protection: Customer-managed encryption keys (protection level [NOT DETERMINED FROM SOURCE]). Gaps: protection level not determined for default.",
+     "state": "partial"
+    }
+   ],
+   "control-id": "sc-13"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of protection of information at rest was found.",
+     "state": "planned"
+    }
+   ],
+   "control-id": "sc-28"
+  },
+  {
+   "by-components": [
+    {
+     "description": "[NOT DETERMINED FROM SOURCE] No Terraform evidence of system monitoring was found. Gaps: no intrusion detection resource found in Terraform.",
+     "state": "planned"
+    }
+   ],
+   "control-id": "si-4"
+  }
+ ],
+ "import_profile": "https://raw.githubusercontent.com/OSCAL-Foundation/fedramp-resources/main/baselines/rev5/json/FedRAMP_rev5_HIGH-baseline_profile.json"
+}

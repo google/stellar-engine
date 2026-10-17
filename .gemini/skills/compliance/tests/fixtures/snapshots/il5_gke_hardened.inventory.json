@@ -1,0 +1,471 @@
+{
+ "application_components": {
+  "applications": [],
+  "container_images": [],
+  "database_connectors": [],
+  "exposed_ports": [],
+  "frameworks": [],
+  "runtimes": [],
+  "software_packages": []
+ },
+ "authentication_summary": "Least-Privilege Scoped Service Accounts",
+ "connectivity_summary": "Cloud NAT (Restricted Egress)",
+ "contingency_planning": {},
+ "continuous_monitoring": {},
+ "contracts": {},
+ "custom_services": {},
+ "disa_stigs": {},
+ "document_versions": {},
+ "encryption_summary": "CMEK: Cloud HSM keys, FIPS 140-2 Level 3",
+ "export_preferences": {},
+ "external_systems": {
+  "cicd_platform": "[CONFIG_REQUIRED: CI/CD Platform]",
+  "edr_solution": "[CONFIG_REQUIRED: Endpoint Detection and Response]",
+  "identity_provider": "Enterprise Identity Provider (DoD CAC / PIV)",
+  "itsm_system": "[CONFIG_REQUIRED: ITSM System]",
+  "mfa_mechanism": "[CONFIG_REQUIRED: MFA Mechanism]",
+  "perimeter_gateway": "[CONFIG_REQUIRED: Perimeter Gateway]",
+  "vulnerability_scanner": "[CONFIG_REQUIRED: Vulnerability Scanner]"
+ },
+ "iam_groups": {},
+ "ids_solution": "[CONFIG_REQUIRED: IDS/IPS Solution]",
+ "include_scanner_failures_in_poam": false,
+ "include_unparsed_blueprints_in_poam": true,
+ "infrastructure_components": {
+  "all_resources": [
+   {
+    "category": "Google Cloud Service Account",
+    "file": "main.tf",
+    "name": "gke",
+    "type": "google_service_account"
+   },
+   {
+    "category": "Google Cloud Service Account",
+    "file": "main.tf",
+    "name": "gatekeeper_sa",
+    "type": "google_service_account"
+   },
+   {
+    "category": "Google Cloud Project Iam Member",
+    "file": "main.tf",
+    "name": "gatekeeper_monitoring_writer",
+    "type": "google_project_iam_member"
+   },
+   {
+    "category": "Google Cloud Service Account Iam Member",
+    "file": "main.tf",
+    "name": "gatekeeper_wi_binding",
+    "type": "google_service_account_iam_member"
+   },
+   {
+    "category": "Google Cloud Project Service",
+    "file": "main.tf",
+    "name": "storagetransfer_api",
+    "type": "google_project_service"
+   },
+   {
+    "category": "Google Cloud Gke Hub Feature",
+    "file": "main.tf",
+    "name": "configmanagement_feature",
+    "type": "google_gke_hub_feature"
+   },
+   {
+    "category": "Google Cloud Gke Hub Feature Membership",
+    "file": "main.tf",
+    "name": "configmanagement_feature_member",
+    "type": "google_gke_hub_feature_membership"
+   },
+   {
+    "category": "Google Cloud Compute Firewall",
+    "file": "main.tf",
+    "name": "allow-iap",
+    "type": "google_compute_firewall"
+   },
+   {
+    "category": "Google Cloud Compute Firewall",
+    "file": "main.tf",
+    "name": "allow-local-connect",
+    "type": "google_compute_firewall"
+   },
+   {
+    "category": "Google Cloud Compute Router",
+    "file": "main.tf",
+    "name": "router",
+    "type": "google_compute_router"
+   },
+   {
+    "category": "Google Cloud Compute Router Nat",
+    "file": "main.tf",
+    "name": "nat",
+    "type": "google_compute_router_nat"
+   },
+   {
+    "category": "Google Cloud Kms Key Ring Iam Binding",
+    "file": "main.tf -> iam.tf",
+    "name": "kms.authoritative",
+    "type": "google_kms_key_ring_iam_binding"
+   },
+   {
+    "category": "Google Cloud Kms Key Ring",
+    "file": "main.tf -> main.tf",
+    "name": "kms",
+    "type": "google_kms_key_ring"
+   },
+   {
+    "category": "Google Cloud Kms Crypto Key",
+    "file": "main.tf -> main.tf",
+    "name": "kms",
+    "type": "google_kms_crypto_key"
+   },
+   {
+    "category": "Google Cloud Compute Network",
+    "file": "main.tf -> main.tf",
+    "name": "vpc.network",
+    "type": "google_compute_network"
+   },
+   {
+    "category": "Google Cloud Dns Policy",
+    "file": "main.tf -> main.tf",
+    "name": "vpc",
+    "type": "google_dns_policy"
+   },
+   {
+    "category": "Google Cloud Compute Subnetwork",
+    "file": "main.tf -> subnets.tf",
+    "name": "vpc.subnetwork",
+    "type": "google_compute_subnetwork"
+   },
+   {
+    "category": "Google Cloud Container Cluster",
+    "file": "main.tf -> main.tf",
+    "name": "cluster.cluster",
+    "type": "google_container_cluster"
+   },
+   {
+    "category": "Google Cloud Container Node Pool",
+    "file": "main.tf -> main.tf",
+    "name": "cluster_nodepool.nodepool",
+    "type": "google_container_node_pool"
+   },
+   {
+    "category": "Google Cloud Compute Instance",
+    "file": "main.tf -> main.tf",
+    "name": "compute-vm",
+    "type": "google_compute_instance"
+   },
+   {
+    "category": "Google Cloud Compute Resource Policy",
+    "file": "main.tf -> resource-policies.tf",
+    "name": "compute-vm.snapshot",
+    "type": "google_compute_resource_policy"
+   },
+   {
+    "category": "Google Cloud Compute Disk Resource Policy Attachment",
+    "file": "main.tf -> resource-policies.tf",
+    "name": "compute-vm.boot",
+    "type": "google_compute_disk_resource_policy_attachment"
+   }
+  ],
+  "artifact_registries": [],
+  "assured_workloads": [],
+  "binary_authorization": [],
+  "cloud_functions": [],
+  "cloud_run_services": [],
+  "compute_instances": [
+   {
+    "file": "main.tf",
+    "has_public_ip": false,
+    "image": "projects/cos-cloud/global/images/cos-105-17412-495-45",
+    "kms_key": "default",
+    "machine_type": "e2-medium",
+    "name": "bastion-vm",
+    "network_ip": null,
+    "self_link": null,
+    "shielded_vm": null,
+    "subnetwork": "projects/main_project_id/regions/region/subnetworks/subnetwork_name",
+    "zone": "us-east4-a"
+   }
+  ],
+  "conditional_resources_undetermined": [],
+  "databases": [],
+  "dataproc_clusters": [],
+  "forwarding_rules": [],
+  "gke_clusters": [
+   {
+    "file": "main.tf",
+    "location": null,
+    "master_ipv4_cidr_block": null,
+    "master_version": null,
+    "name": "cluster",
+    "private_cluster": true,
+    "private_endpoint": null,
+    "workload_identity": true
+   }
+  ],
+  "iam_bindings": [
+   {
+    "file": "main.tf",
+    "principal": "serviceAccount:gatekeeper_sa (project not declared)",
+    "role": "roles/monitoring.metricWriter",
+    "scope": "project"
+   },
+   {
+    "file": "main.tf",
+    "principal": "serviceAccount:<PROJECT_ID>.svc.id.goog[gatekeeper-system/gatekeeper-admin]",
+    "role": "roles/iam.workloadIdentityUser",
+    "scope": "service_account"
+   },
+   {
+    "file": "main.tf",
+    "principal": "serviceAccount:gke (project not declared)",
+    "role": "roles/cloudkms.cryptoKeyEncrypterDecrypter",
+    "scope": "kms_key_ring"
+   },
+   {
+    "file": "main.tf",
+    "principal": "serviceAccount:service-<PROJECT_NUMBER>@gs-project-accounts.iam.gserviceaccount.com",
+    "role": "roles/cloudkms.cryptoKeyEncrypterDecrypter",
+    "scope": "kms_key_ring"
+   },
+   {
+    "file": "main.tf",
+    "principal": "serviceAccount:service-<PROJECT_NUMBER>@compute-system.iam.gserviceaccount.com",
+    "role": "roles/cloudkms.cryptoKeyEncrypterDecrypter",
+    "scope": "kms_key_ring"
+   }
+  ],
+  "iam_roles_matrix": [
+   {
+    "file": "main.tf",
+    "principal": "serviceAccount:gatekeeper_sa (project not declared)",
+    "roles": [
+     "monitoring.metricWriter"
+    ]
+   },
+   {
+    "file": "main.tf",
+    "principal": "serviceAccount:<PROJECT_ID>.svc.id.goog[gatekeeper-system/gatekeeper-admin]",
+    "roles": [
+     "iam.workloadIdentityUser"
+    ]
+   },
+   {
+    "file": "main.tf",
+    "principal": "serviceAccount:gke (project not declared)",
+    "roles": [
+     "cloudkms.cryptoKeyEncrypterDecrypter"
+    ]
+   },
+   {
+    "file": "main.tf",
+    "principal": "serviceAccount:service-<PROJECT_NUMBER>@gs-project-accounts.iam.gserviceaccount.com",
+    "roles": [
+     "cloudkms.cryptoKeyEncrypterDecrypter"
+    ]
+   },
+   {
+    "file": "main.tf",
+    "principal": "serviceAccount:service-<PROJECT_NUMBER>@compute-system.iam.gserviceaccount.com",
+    "roles": [
+     "cloudkms.cryptoKeyEncrypterDecrypter"
+    ]
+   }
+  ],
+  "kms_keys": [
+   {
+    "file": "main.tf",
+    "key_ring": "kms-kr",
+    "name": "key-gke",
+    "protection_level": "HSM",
+    "rotation_period": "7776000s",
+    "type": "module_kms_crypto_key"
+   }
+  ],
+  "logging_sinks": [],
+  "modules_used": [
+   "cluster",
+   "cluster_nodepool",
+   "compute-vm",
+   "kms",
+   "vpc"
+  ],
+  "nat_gateways": [
+   {
+    "file": "main.tf",
+    "name": "nat"
+   }
+  ],
+  "provider_versions": {
+   "google": ">= 6.21.0, < 7.0.0"
+  },
+  "pubsub_topics": [],
+  "secrets": [],
+  "security_policies": [],
+  "service_account_keys": [],
+  "service_accounts": [
+   {
+    "account_id": "gke",
+    "display_name": "gke",
+    "file": "main.tf",
+    "resource_name": "gke"
+   },
+   {
+    "account_id": "gatekeeper_sa",
+    "display_name": "GSA for GKE Policy Controller/Gatekeeper",
+    "file": "main.tf",
+    "resource_name": "gatekeeper_sa"
+   }
+  ],
+  "service_perimeters": [],
+  "services_enabled": [
+   "cloudkms.googleapis.com",
+   "compute.googleapis.com",
+   "container.googleapis.com",
+   "iam.googleapis.com",
+   "storagetransfer.googleapis.com"
+  ],
+  "storage_buckets": [],
+  "terraform_engine_version": ">= 1.7.4",
+  "unparsed_terraform_files": []
+ },
+ "network_architecture": {
+  "application_ports": [],
+  "firewall_rules": [
+   {
+    "action": "ALLOW",
+    "allowed": [
+     {
+      "ports": [
+       "22"
+      ],
+      "protocol": "TCP"
+     }
+    ],
+    "destination_ranges": [],
+    "direction": "INGRESS",
+    "name": "network_name-allow-iap",
+    "network": "custom-vpc",
+    "ports": "22",
+    "protocol": "TCP",
+    "source_ranges": [
+     "35.235.240.0/20"
+    ]
+   },
+   {
+    "action": "ALLOW",
+    "allowed": [
+     {
+      "ports": [
+       "22"
+      ],
+      "protocol": "TCP"
+     }
+    ],
+    "destination_ranges": [],
+    "direction": "INGRESS",
+    "name": "network_name-allow-local-connect",
+    "network": "custom-vpc",
+    "ports": "22",
+    "protocol": "TCP",
+    "source_ranges": []
+   }
+  ],
+  "subnets_cidrs": [],
+  "vpcs": [
+   "vpc"
+  ]
+ },
+ "personnel_roles": {
+  "authorizing_official": {},
+  "issm": {},
+  "isso": {},
+  "system_owner": {}
+ },
+ "poam_items": [],
+ "provenance": {
+  "external_module_files": [
+   "modules/compute-vm/main.tf",
+   "modules/compute-vm/outputs.tf",
+   "modules/compute-vm/resource-policies.tf",
+   "modules/compute-vm/tags.tf",
+   "modules/compute-vm/variables.tf",
+   "modules/compute-vm/versions.tf",
+   "modules/gke-cluster-standard-se/main.tf",
+   "modules/gke-cluster-standard-se/outputs.tf",
+   "modules/gke-cluster-standard-se/variables.tf",
+   "modules/gke-cluster-standard-se/versions.tf",
+   "modules/gke-nodepool/main.tf",
+   "modules/gke-nodepool/outputs.tf",
+   "modules/gke-nodepool/variables.tf",
+   "modules/gke-nodepool/versions.tf",
+   "modules/kms/iam.tf",
+   "modules/kms/main.tf",
+   "modules/kms/outputs.tf",
+   "modules/kms/tags.tf",
+   "modules/kms/variables.tf",
+   "modules/kms/versions.tf",
+   "modules/net-vpc/main.tf",
+   "modules/net-vpc/outputs.tf",
+   "modules/net-vpc/psa.tf",
+   "modules/net-vpc/routes.tf",
+   "modules/net-vpc/subnets.tf",
+   "modules/net-vpc/variables.tf",
+   "modules/net-vpc/versions.tf"
+  ],
+  "module_root": "git work tree"
+ },
+ "security_operations": {
+  "allow_unaccredited_scc_in_il5": false,
+  "cssp_provider": "DISA",
+  "external_siem_destination": "",
+  "external_siem_type": "[CONFIG_REQUIRED: External SIEM]",
+  "scc_enabled": false,
+  "scc_tier": "premium",
+  "secops_enabled": false,
+  "secops_instance_name": "Not Deployed",
+  "telemetry_summary": "Cloud Logging export sinks streaming to DISA; external [CONFIG_REQUIRED: External SIEM] SIEM integration",
+  "threat_detection_engine": "DISA Threat Operations Center via Cloud Logging export sinks"
+ },
+ "security_scanners": {},
+ "system_information": {
+  "allow_unaccredited_scc_in_il5": false,
+  "availability_impact": "High",
+  "billing_account": "[CONFIG_REQUIRED: Billing Account ID]",
+  "cicd_platform": "[CONFIG_REQUIRED: CI/CD Platform]",
+  "cloud_provider": "Google Cloud Platform (GCP)",
+  "cloud_service_provider_abbr": "GCP",
+  "compliance_baseline": "NIST SP 800-53 Rev. 5 / DoD IL5",
+  "confidentiality_impact": "High",
+  "csp_pato_package_id": "FR1805751477",
+  "cssp_provider": "DISA",
+  "ditpr_id": "[CONFIG_REQUIRED: DITPR ID]",
+  "edr_solution": "[CONFIG_REQUIRED: Endpoint Detection and Response]",
+  "effective_date": null,
+  "emass_system_id": "[CONFIG_REQUIRED: eMASS System ID]",
+  "external_siem_type": "[CONFIG_REQUIRED: External SIEM]",
+  "identity_provider": "Enterprise Identity Provider (DoD CAC / PIV)",
+  "impact_level": "IL5",
+  "integrity_impact": "High",
+  "itsm_system": "[CONFIG_REQUIRED: ITSM System]",
+  "mfa_mechanism": "[CONFIG_REQUIRED: MFA Mechanism]",
+  "org_id": "",
+  "organization": "[CONFIG_REQUIRED: Organization Name]",
+  "organization_domain": "",
+  "perimeter_gateway": "[CONFIG_REQUIRED: Perimeter Gateway]",
+  "prepared_by": "",
+  "primary_location": "us-east4 (Ashburn, Northern Virginia, USA)",
+  "readme_source_path": "README.md",
+  "readme_system_description": "This blueprint contains all the necessary Terraform modules to build and deploy a Google Kubernetes Engine (GKE), a managed Kubernetes cluster having encryption using the Cloud Key Management Service (KMS).\n\n- GKE is a Google-managed implementation of the Kubernetes open source container orchestration platform. In GKE Standard mode, there are flexible node upgrade strategies to optimize availability and manage disruptions. - In GKE Standard mode, you pay for all resources on nodes, regardless of Pod requests. A GKE environment consists of nodes, which are Compute Engine virtual machines (VMs) with Customer-Managed Encryption Keys (CMEK) Cloud KMS that are grouped together to form a cluster. - This implementation offers a way to create and manage Google Kubernetes Engine (GKE) [Standard clusters](https://cloud.google.com/kubernetes-engine/docs/concepts/choose-cluster-mode#why-standard). - In GKE, the allocation of the nodes is done as per the Zone. For more details refer to the GKE cluster configuration choices [GKE cluster configuration choices](https://cloud.google.com/kubernetes-engine/docs/concepts/types-of-clusters) - For example, If there are 3 Zone gcp-region-name-a, gcp-region-name-b, gcp-region-name-c. The initial node allocation per zone is 1. Then the total number of nodes shall be 3 x 1 = 3 total nodes in the cluster. - GKE yaml files are hosted in the policies folder and will be applied to the deployed cluster automatically. Only yaml files in the policies folder. Do not remove the disable-priv-pods.yaml as that is responsible for creating a cron job that will disable privileged pods in the cluster every hour.",
+  "readme_title": "Google Kubernetes Engine (GKE) Standard Project",
+  "rmf_governance_system": "Enterprise GRC System (eMASS / CSAM / Xacta / FedRAMP Portal)",
+  "scc_enabled": false,
+  "scc_tier": "premium",
+  "secops_enabled": false,
+  "system_abbreviation": "GKE",
+  "system_description": "This blueprint contains all the necessary Terraform modules to build and deploy a Google Kubernetes Engine (GKE), a managed Kubernetes cluster having encryption using the Cloud Key Management Service (KMS).\n\n- GKE is a Google-managed implementation of the Kubernetes open source container orchestration platform. In GKE Standard mode, there are flexible node upgrade strategies to optimize availability and manage disruptions. - In GKE Standard mode, you pay for all resources on nodes, regardless of Pod requests. A GKE environment consists of nodes, which are Compute Engine virtual machines (VMs) with Customer-Managed Encryption Keys (CMEK) Cloud KMS that are grouped together to form a cluster. - This implementation offers a way to create and manage Google Kubernetes Engine (GKE) [Standard clusters](https://cloud.google.com/kubernetes-engine/docs/concepts/choose-cluster-mode#why-standard). - In GKE, the allocation of the nodes is done as per the Zone. For more details refer to the GKE cluster configuration choices [GKE cluster configuration choices](https://cloud.google.com/kubernetes-engine/docs/concepts/types-of-clusters) - For example, If there are 3 Zone gcp-region-name-a, gcp-region-name-b, gcp-region-name-c. The initial node allocation per zone is 1. Then the total number of nodes shall be 3 x 1 = 3 total nodes in the cluster. - GKE yaml files are hosted in the policies folder and will be applied to the deployed cluster automatically. Only yaml files in the policies folder. Do not remove the disable-priv-pods.yaml as that is responsible for creating a cron job that will disable privileged pods in the cluster every hour.",
+  "system_name": "Google Kubernetes Engine (GKE) Standard Project",
+  "telemetry_summary": "Cloud Logging export sinks streaming to DISA; external [CONFIG_REQUIRED: External SIEM] SIEM integration",
+  "threat_detection_engine": "DISA Threat Operations Center via Cloud Logging export sinks",
+  "vulnerability_scanner": "[CONFIG_REQUIRED: Vulnerability Scanner]"
+ }
+}

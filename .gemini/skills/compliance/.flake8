@@ -1,0 +1,19 @@
+[flake8]
+# Lint settings for the compliance skill.
+max-line-length = 160
+extend-ignore =
+    # Whitespace before ':' conflicts with slice spacing; W503 for line break before binary operator.
+    E203,
+    W503
+per-file-ignores =
+    # Tests and CLI entry points put src/ on sys.path before importing the engine.
+    tests/*.py:E402
+    scripts/*.py:E402
+    */tests/*.py:E402
+    */scripts/*.py:E402
+    /*tests/*.py:E402
+    /*scripts/*.py:E402
+exclude =
+    .venv,
+    __pycache__,
+    semgrep_fixtures

@@ -1,0 +1,105 @@
+{
+ "hardware_assets": [
+  {
+   "approval_status": "Pending Assessment",
+   "asset_ip_address": "[NOT DETERMINED FROM SOURCE]",
+   "asset_name": "Google Cloud Platform (GCP) Projects & Hierarchy",
+   "component_type": "Server",
+   "critical_asset": "Yes",
+   "id": "1.0",
+   "location": "[CONFIG_REQUIRED: Primary Location]",
+   "manufacturer": "Google Cloud Platform (GCP)",
+   "model_number": "Infrastructure-as-a-Service (IaaS)",
+   "nickname": "GCP Cloud Tenant (GBBP)",
+   "os_fw_version": "Google Cloud managed hypervisor (inherited from CSP)",
+   "public_facing": "No",
+   "serial_number": "GCP-CSP-GBBP-001",
+   "virtual_asset": "Yes"
+  },
+  {
+   "approval_status": "Pending Assessment",
+   "asset_ip_address": "Private Service Connect / Internal Endpoint",
+   "asset_name": "BigQuery Analytics Dataset",
+   "component_type": "Server - Database",
+   "critical_asset": "Yes",
+   "id": "2.0",
+   "location": "[CONFIG_REQUIRED: Primary Location]",
+   "manufacturer": "Google Cloud Platform",
+   "model_number": "BigQuery Analytics Dataset (Managed Tier)",
+   "nickname": "bigquery-dataset",
+   "os_fw_version": "BigQuery Managed Analytics Engine",
+   "public_facing": "No",
+   "serial_number": "GCP-DB-GBBP-002",
+   "virtual_asset": "Yes"
+  }
+ ],
+ "personnel_contacts": {
+  "isso_poc": {
+   "email": "[CONFIG_REQUIRED: ISSO Email]",
+   "name": "[CONFIG_REQUIRED: ISSO Name]",
+   "phone": "[CONFIG_REQUIRED: ISSO Phone]"
+  },
+  "system_owner": {
+   "email": "[CONFIG_REQUIRED: System Owner Email]",
+   "name": "[CONFIG_REQUIRED: System Owner Name]",
+   "phone": "[CONFIG_REQUIRED: System Owner Phone]"
+  }
+ },
+ "rmf_team_manual_action": {
+  "callout": "> [!IMPORTANT] **RMF TEAM ACTION REQUIRED**: Perform annual physical asset audits for local client workstations and confirm eMASS hardware barcode serial numbers."
+ },
+ "software_and_services_inventory": {
+  "software_assets": [
+   {
+    "approval_status": "Pending Assessment",
+    "category": "Security Analytics Warehouse",
+    "id": "1",
+    "purpose": "Enterprise Log Audit Analytics, Security Data Lake & SIEM Store",
+    "software_name": "Google BigQuery",
+    "software_type": "Application Database",
+    "vendor": "Google Cloud Platform (GCP)",
+    "version": "GCP Managed Service API"
+   },
+   {
+    "approval_status": "Pending Assessment",
+    "category": "Key Management & HSM",
+    "id": "2",
+    "purpose": "Cloud HSM (FIPS 140-2 Level 3 hardware security modules manufactured by Marvell) & Software Key Management (FIPS 140-3 CMEK Level 1 Envelope Cryptography)",
+    "software_name": "Google Cloud KMS",
+    "software_type": "KMS",
+    "vendor": "Google Cloud Platform (GCP)",
+    "version": "GCP Managed Service API"
+   },
+   {
+    "approval_status": "Pending Assessment",
+    "category": "Identity & Access Control",
+    "id": "3",
+    "purpose": "Role-Based Access Control (RBAC), Service Account Keys & Least Privilege",
+    "software_name": "Google Cloud IAM",
+    "software_type": "IAM",
+    "vendor": "Google Cloud Platform (GCP)",
+    "version": "GCP Managed Service API"
+   },
+   {
+    "approval_status": "Pending Assessment",
+    "category": "Infrastructure as Code",
+    "id": "4",
+    "purpose": "Automated declarative IaC blueprint provisioning & drift detection",
+    "software_name": "HashiCorp Terraform / GCP Provider",
+    "software_type": "Terraform",
+    "vendor": "HashiCorp / Google Cloud Platform (GCP)",
+    "version": ">= 1.7.4 (google >= 6.21.0, < 7.0.0, google-beta >= 6.21.0, < 7.0.0)"
+   }
+  ]
+ },
+ "system_metadata": {
+  "compliance_baseline": "NIST SP 800-53 Rev. 5 / DoD IL5",
+  "ditpr_emass_id": "[CONFIG_REQUIRED: DITPR ID]",
+  "document_version": "1.0.0",
+  "effective_date": "<TODAY+0>",
+  "impact_level": "IL5",
+  "organization": "[CONFIG_REQUIRED: Organization Name]",
+  "system_abbreviation": "GBBP",
+  "system_name": "Google BigQuery (BigQuery) Project"
+ }
+}

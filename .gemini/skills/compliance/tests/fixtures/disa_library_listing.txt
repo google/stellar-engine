@@ -1,0 +1,44 @@
+# Authoritative DISA SRG-STIG Library October 2026 (U_SRG-STIG_Library_October_2026.zip)
+# Last-Modified: 2026-10-07; retrieved 2026-10-15 from https://dl.dod.cyber.mil/wp-content/uploads/stigs/zip/U_SRG-STIG_Library_October_2026.zip
+# Format: <disa_library_file> | <version> | <benchmark_date_iso> | <status> | <title>
+# Active benchmarks (from XCCDF release-info inside member archives):
+U_ASD_V6R5_STIG.zip | V6R5 | 2026-09-30 | active | Application Security and Development Security Technical Implementation Guide
+U_Apache_Server_2-4_Unix_Y26M07_STIG.zip | V3R3 | 2026-07-01 | active | Apache Server 2.4 UNIX Server Security Technical Implementation Guide
+U_Application_Layer_Gateway_V2R4_SRG.zip | V2R4 | 2026-07-01 | active | Application Layer Gateway Security Requirements Guide
+U_CAN_Ubuntu_22-04_LTS_V2R10_STIG.zip | V2R10 | 2026-09-30 | active | Canonical Ubuntu 22.04 LTS Security Technical Implementation Guide
+U_CAN_Ubuntu_24-04_LTS_V1R7_STIG.zip | V1R7 | 2026-09-30 | active | Canonical Ubuntu 24.04 LTS Security Technical Implementation Guide
+U_CD_Postgres_16_V1R3_STIG.zip | V1R3 | 2026-07-01 | active | Crunchy Data Postgres 16 Security Technical Implementation Guide
+U_CL_AlmaLinux_OS_9_V1R8_STIG.zip | V1R8 | 2026-09-30 | active | Cloud Linux AlmaLinux OS 9 Security Technical Implementation Guide
+U_Cisco_IOS-XE_Router_Y26M04_STIG.zip | V3R5 | 2025-10-01 | active | Cisco IOS XE Router RTR Security Technical Implementation Guide
+U_Cloud_Computing_Y26M06_SRG.zip | V1R2 | 2025-01-30 | active | Cloud Computing Mission Owner Network Security Requirements Guide
+U_Cloud_Computing_Y26M06_SRG.zip | V1R3 | 2025-08-13 | active | Cloud Computing Mission Owner Operating System Security Requirements Guide
+U_Container_Platform_V2R5_SRG.zip | V2R5 | 2026-09-30 | active | Container Platform Security Requirements Guide
+U_Database_V4R6_SRG.zip | V4R6 | 2026-09-30 | active | Database Security Requirements Guide
+U_F5_NGINX_V1R2_STIG.zip | V1R2 | 2026-09-30 | active | F5 NGINX Security Technical Implementation Guide
+U_Firewall_V3R4_SRG.zip | V3R4 | 2026-07-01 | active | Firewall Security Requirements Guide
+U_GPOS_V3R4_SRG.zip | V3R4 | 2026-09-30 | active | General Purpose Operating System Security Requirements Guide
+U_Kubernetes_V2R6_STIG.zip | V2R6 | 2026-04-01 | active | Kubernetes Security Technical Implementation Guide
+U_MDB_Enterprise_Advanced_8-x_V1R1_STIG.zip | V1R1 | 2026-01-26 | active | MongoDB Enterprise Advanced 8.x Security Technical Implementation Guide
+U_MS_SQL_Server_2016_Y26M04_STIG.zip | V3R6 | 2026-01-05 | active | MS SQL Server 2016 Instance Security Technical Implementation Guide
+U_MS_SQL_Server_2022_Y26M04_STIG.zip | V1R4 | 2026-04-01 | active | Microsoft SQL Server 2022 Instance Security Technical Implementation Guide
+U_MS_Windows_Server_2022_V2R11_STIG.zip | V2R11 | 2026-09-30 | active | Microsoft Windows Server 2022 Security Technical Implementation Guide
+U_MS_Windows_Server_2025_V1R4_STIG.zip | V1R4 | 2026-09-30 | active | Microsoft Windows Server 2025 Security Technical Implementation Guide
+U_MariaDB_Enterprise_10-x_V2R6_STIG.zip | V2R6 | 2026-09-30 | active | MariaDB Enterprise 10.x Security Technical Implementation Guide
+U_MongoDB_Enterprise_Advanced_7-x_V1R2_STIG.zip | V1R2 | 2026-07-01 | active | MongoDB Enterprise Advanced 7.x Security Technical Implementation Guide
+U_Network_Infrastructure_Policy_V10R7_STIG.zip | V10R7 | 2024-10-24 | active | Network Infrastructure Policy Security Technical Implementation Guide
+U_Oracle_Database_19c_V1R6_STIG.zip | V1R6 | 2026-09-30 | active | Oracle Database 19c Security Technical Implementation Guide
+U_Oracle_MySQL_8-0_V2R3_STIG.zip | V2R3 | 2026-09-30 | active | Oracle MySQL 8.0 Security Technical Implementation Guide
+U_RHEL_10_V1R3_STIG.zip | V1R3 | 2026-09-30 | active | Red Hat Enterprise Linux 10 Security Technical Implementation Guide
+U_RHEL_9_V2R10_STIG.zip | V2R10 | 2026-09-30 | active | Red Hat Enterprise Linux 9 Security Technical Implementation Guide
+U_SLES_15_V2R9_STIG.zip | V2R9 | 2026-09-30 | active | SUSE Linux Enterprise Server 15 Security Technical Implementation Guide
+U_VPN_V3R5_SRG.zip | V3R5 | 2026-07-01 | active | Virtual Private Network (VPN) Security Requirements Guide
+U_Web_Server_V4R5_SRG.zip | V4R5 | 2026-07-01 | active | Web Server Security Requirements Guide
+# Sunset benchmarks (from _SRG-STIG_Library_Revision_History.pdf, 30 September 2026):
+U_CAN_Ubuntu_20-04_LTS_V2R4_STIG.zip | V2R4 | 2025-10-01 | sunset:2025-10-01 | Canonical Ubuntu 20.04 LTS Security Technical Implementation Guide (Sunset)
+U_CD_PGSQL_V3R2_STIG.zip | V3R2 | 2026-07-01 | sunset:2026-07-01 | Crunchy Data PostgreSQL Security Technical Implementation Guide (Sunset)
+U_Docker_Enterprise_2-x_Linux-Unix_V2R2_STIG.zip | V2R2 | 2024-07-24 | sunset:2024-07-24 | Docker Enterprise 2.x Linux/UNIX Security Technical Implementation Guide (Sunset)
+U_MDB_Enterprise_Advanced_3-x_V2R3_STIG.zip | V2R3 | 2024-07-24 | sunset:2024-07-24 | MongoDB Enterprise Advanced 3.x Security Technical Implementation Guide (Sunset)
+U_MS_Windows_Server_2019_V3R9_STIG.zip | V3R9 | 2026-07-01 | sunset:2026-07-01 | Microsoft Windows Server 2019 Security Technical Implementation Guide (Sunset)
+U_Oracle_Database_12c_V3R4_STIG.zip | V3R4 | 2025-07-08 | sunset:2025-07-08 | Oracle Database 12c Security Technical Implementation Guide (Sunset)
+U_RHEL_8_V2R9_STIG.zip | V2R9 | 2026-09-30 | sunset:2026-09-30 | Red Hat Enterprise Linux 8 Security Technical Implementation Guide (Sunset)
+U_Storage_Area_Network_V2R5_STIG.zip | V2R5 | 2025-01-30 | sunset:2025-01-30 | Storage Area Network (SAN) Security Technical Implementation Guide (Sunset)

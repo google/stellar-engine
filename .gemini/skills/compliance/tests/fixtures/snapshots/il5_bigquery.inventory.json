@@ -1,0 +1,210 @@
+{
+ "application_components": {
+  "applications": [],
+  "container_images": [],
+  "database_connectors": [],
+  "exposed_ports": [],
+  "frameworks": [],
+  "runtimes": [],
+  "software_packages": []
+ },
+ "authentication_summary": "Not determined from IaC",
+ "connectivity_summary": "Not determined from IaC",
+ "contingency_planning": {},
+ "continuous_monitoring": {},
+ "contracts": {},
+ "custom_services": {},
+ "disa_stigs": {},
+ "document_versions": {},
+ "encryption_summary": "Customer-managed encryption keys referenced (protection level [NOT DETERMINED FROM SOURCE])",
+ "export_preferences": {},
+ "external_systems": {
+  "cicd_platform": "[CONFIG_REQUIRED: CI/CD Platform]",
+  "edr_solution": "[CONFIG_REQUIRED: Endpoint Detection and Response]",
+  "identity_provider": "Enterprise Identity Provider (DoD CAC / PIV)",
+  "itsm_system": "[CONFIG_REQUIRED: ITSM System]",
+  "mfa_mechanism": "[CONFIG_REQUIRED: MFA Mechanism]",
+  "perimeter_gateway": "[CONFIG_REQUIRED: Perimeter Gateway]",
+  "vulnerability_scanner": "[CONFIG_REQUIRED: Vulnerability Scanner]"
+ },
+ "iam_groups": {},
+ "ids_solution": "[CONFIG_REQUIRED: IDS/IPS Solution]",
+ "include_scanner_failures_in_poam": false,
+ "include_unparsed_blueprints_in_poam": true,
+ "infrastructure_components": {
+  "all_resources": [
+   {
+    "category": "Google Cloud Project Service",
+    "file": "main.tf",
+    "name": "bigquery_api",
+    "type": "google_project_service"
+   },
+   {
+    "category": "Google Cloud Kms Crypto Key Iam Member",
+    "file": "main.tf",
+    "name": "bq_sa_kms_access",
+    "type": "google_kms_crypto_key_iam_member"
+   },
+   {
+    "category": "Google Cloud Bigquery Dataset",
+    "file": "main.tf -> main.tf",
+    "name": "bigquery-dataset",
+    "type": "google_bigquery_dataset"
+   }
+  ],
+  "artifact_registries": [],
+  "assured_workloads": [],
+  "binary_authorization": [],
+  "cloud_functions": [],
+  "cloud_run_services": [],
+  "compute_instances": [],
+  "conditional_resources_undetermined": [
+   {
+    "category": "Google Cloud Bigquery Table",
+    "condition": "tables",
+    "file": "main.tf -> main.tf",
+    "name": "bigquery-dataset",
+    "type": "google_bigquery_table"
+   }
+  ],
+  "databases": [
+   {
+    "cmek_key": "default",
+    "file": "main.tf",
+    "location": null,
+    "name": "bigquery-dataset",
+    "type": "google_bigquery_dataset"
+   }
+  ],
+  "dataproc_clusters": [],
+  "forwarding_rules": [],
+  "gke_clusters": [],
+  "iam_bindings": [
+   {
+    "file": "main.tf",
+    "principal": "serviceAccount:data.google_bigquery_default_service_account.bq_sa",
+    "role": "roles/cloudkms.cryptoKeyEncrypterDecrypter",
+    "scope": "kms_crypto_key"
+   }
+  ],
+  "iam_roles_matrix": [
+   {
+    "file": "main.tf",
+    "principal": "serviceAccount:data.google_bigquery_default_service_account.bq_sa",
+    "roles": [
+     "cloudkms.cryptoKeyEncrypterDecrypter"
+    ]
+   }
+  ],
+  "kms_keys": [
+   {
+    "file": "main.tf",
+    "key_ring": "kms-keyring",
+    "name": "default",
+    "protection_level": "Not determined from IaC (existing key data source)",
+    "rotation_period": null,
+    "type": "data.google_kms_crypto_key"
+   }
+  ],
+  "logging_sinks": [],
+  "modules_used": [
+   "bigquery-dataset"
+  ],
+  "nat_gateways": [],
+  "provider_versions": {
+   "google": ">= 6.21.0, < 7.0.0",
+   "google-beta": ">= 6.21.0, < 7.0.0"
+  },
+  "pubsub_topics": [],
+  "secrets": [],
+  "security_policies": [],
+  "service_account_keys": [],
+  "service_accounts": [],
+  "service_perimeters": [],
+  "services_enabled": [
+   "bigquery.googleapis.com",
+   "cloudkms.googleapis.com",
+   "iam.googleapis.com"
+  ],
+  "storage_buckets": [],
+  "terraform_engine_version": ">= 1.7.4",
+  "unparsed_terraform_files": []
+ },
+ "network_architecture": {
+  "application_ports": [],
+  "firewall_rules": [],
+  "subnets_cidrs": [],
+  "vpcs": []
+ },
+ "personnel_roles": {
+  "authorizing_official": {},
+  "issm": {},
+  "isso": {},
+  "system_owner": {}
+ },
+ "poam_items": [],
+ "provenance": {
+  "external_module_files": [
+   "modules/bigquery-dataset/main.tf",
+   "modules/bigquery-dataset/outputs.tf",
+   "modules/bigquery-dataset/tags.tf",
+   "modules/bigquery-dataset/variables.tf",
+   "modules/bigquery-dataset/versions.tf"
+  ],
+  "module_root": "git work tree"
+ },
+ "security_operations": {
+  "allow_unaccredited_scc_in_il5": false,
+  "cssp_provider": "DISA",
+  "external_siem_destination": "",
+  "external_siem_type": "[CONFIG_REQUIRED: External SIEM]",
+  "scc_enabled": false,
+  "scc_tier": "premium",
+  "secops_enabled": false,
+  "secops_instance_name": "Not Deployed",
+  "telemetry_summary": "Cloud Logging export sinks streaming to DISA; external [CONFIG_REQUIRED: External SIEM] SIEM integration",
+  "threat_detection_engine": "DISA Threat Operations Center via Cloud Logging export sinks"
+ },
+ "security_scanners": {},
+ "system_information": {
+  "allow_unaccredited_scc_in_il5": false,
+  "availability_impact": "High",
+  "billing_account": "[CONFIG_REQUIRED: Billing Account ID]",
+  "cicd_platform": "[CONFIG_REQUIRED: CI/CD Platform]",
+  "cloud_provider": "Google Cloud Platform (GCP)",
+  "cloud_service_provider_abbr": "GCP",
+  "compliance_baseline": "NIST SP 800-53 Rev. 5 / DoD IL5",
+  "confidentiality_impact": "High",
+  "csp_pato_package_id": "FR1805751477",
+  "cssp_provider": "DISA",
+  "ditpr_id": "[CONFIG_REQUIRED: DITPR ID]",
+  "edr_solution": "[CONFIG_REQUIRED: Endpoint Detection and Response]",
+  "effective_date": null,
+  "emass_system_id": "[CONFIG_REQUIRED: eMASS System ID]",
+  "external_siem_type": "[CONFIG_REQUIRED: External SIEM]",
+  "identity_provider": "Enterprise Identity Provider (DoD CAC / PIV)",
+  "impact_level": "IL5",
+  "integrity_impact": "High",
+  "itsm_system": "[CONFIG_REQUIRED: ITSM System]",
+  "mfa_mechanism": "[CONFIG_REQUIRED: MFA Mechanism]",
+  "org_id": "",
+  "organization": "[CONFIG_REQUIRED: Organization Name]",
+  "organization_domain": "",
+  "perimeter_gateway": "[CONFIG_REQUIRED: Perimeter Gateway]",
+  "prepared_by": "",
+  "primary_location": "[CONFIG_REQUIRED: Primary Location]",
+  "readme_source_path": "README.md",
+  "readme_system_description": "Google BigQuery is a fully-managed, serverless data system in which querying data is made possible. Database does not need to be constantly monitored, and users can levarage data and analyze the data. 1. The Rotation Period is set to 90 days indicated by 7776000s seconds, 2. The Destory Schedulded Duration is is set to 30 days indicated by 2592000 seconds. 3. The IAM Permissions and Roles is assigned\n\nThis blueprint contains all the necessary Terraform modules to build and deploy a BigQuery project on Google Cloud.",
+  "readme_title": "Google BigQuery (BigQuery) Project",
+  "rmf_governance_system": "Enterprise GRC System (eMASS / CSAM / Xacta / FedRAMP Portal)",
+  "scc_enabled": false,
+  "scc_tier": "premium",
+  "secops_enabled": false,
+  "system_abbreviation": "GBBP",
+  "system_description": "Google BigQuery is a fully-managed, serverless data system in which querying data is made possible. Database does not need to be constantly monitored, and users can levarage data and analyze the data. 1. The Rotation Period is set to 90 days indicated by 7776000s seconds, 2. The Destory Schedulded Duration is is set to 30 days indicated by 2592000 seconds. 3. The IAM Permissions and Roles is assigned\n\nThis blueprint contains all the necessary Terraform modules to build and deploy a BigQuery project on Google Cloud.",
+  "system_name": "Google BigQuery (BigQuery) Project",
+  "telemetry_summary": "Cloud Logging export sinks streaming to DISA; external [CONFIG_REQUIRED: External SIEM] SIEM integration",
+  "threat_detection_engine": "DISA Threat Operations Center via Cloud Logging export sinks",
+  "vulnerability_scanner": "[CONFIG_REQUIRED: Vulnerability Scanner]"
+ }
+}

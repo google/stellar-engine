@@ -1,0 +1,4183 @@
+{
+  "regime_id": "fedramp_low",
+  "display_name": "FedRAMP Low",
+  "framework": "FedRAMP Rev. 5",
+  "impact_level": "Low",
+  "fips_199_impacts": {
+    "confidentiality": "Low",
+    "integrity": "Low",
+    "availability": "Low"
+  },
+  "provenance": {
+    "profile_file": "FedRAMP_rev5_LOW-baseline_profile.json",
+    "profile_sha256": "2466a03f41d7ce73aeafbb5632124edf2a5e473e70231e194ba8d3cb54ce0c7f",
+    "profile_url": "https://raw.githubusercontent.com/OSCAL-Foundation/fedramp-resources/383977291aad960b0811faf6ebf5a893b0811f7f/baselines/rev5/json/FedRAMP_rev5_LOW-baseline_profile.json",
+    "resolved_catalog_file": "FedRAMP_rev5_LOW-baseline-resolved-profile_catalog.json",
+    "resolved_catalog_sha256": "2f7d5a9594d1398fb7e48db7221983dcf97d30161a685d39914d2108bc0f18cf",
+    "resolved_catalog_url": "https://raw.githubusercontent.com/OSCAL-Foundation/fedramp-resources/383977291aad960b0811faf6ebf5a893b0811f7f/baselines/rev5/json/FedRAMP_rev5_LOW-baseline-resolved-profile_catalog.json",
+    "upstream_repo": "https://github.com/OSCAL-Foundation/fedramp-resources",
+    "upstream_commit": "383977291aad960b0811faf6ebf5a893b0811f7f",
+    "version": "fedramp-3.0.0rc1-oscal-1.1.2",
+    "oscal_version": "1.1.3",
+    "last_modified": "2025-03-03T00:00:00Z",
+    "retrieved_at": "2026-10-15",
+    "license": "CC0-1.0 / U.S. Government Public Domain (17 U.S.C. 105)"
+  },
+  "control_count": 156,
+  "base_control_count": 135,
+  "enhancement_count": 21,
+  "parameter_count": 168,
+  "controls_with_parameters_count": 80,
+  "control_ids": [
+    "AC-1",
+    "AC-2",
+    "AC-3",
+    "AC-7",
+    "AC-8",
+    "AC-14",
+    "AC-17",
+    "AC-18",
+    "AC-19",
+    "AC-20",
+    "AC-22",
+    "AT-1",
+    "AT-2",
+    "AT-2(2)",
+    "AT-3",
+    "AT-4",
+    "AU-1",
+    "AU-2",
+    "AU-3",
+    "AU-4",
+    "AU-5",
+    "AU-6",
+    "AU-8",
+    "AU-9",
+    "AU-11",
+    "AU-12",
+    "CA-1",
+    "CA-2",
+    "CA-2(1)",
+    "CA-3",
+    "CA-5",
+    "CA-6",
+    "CA-7",
+    "CA-7(4)",
+    "CA-8",
+    "CA-9",
+    "CM-1",
+    "CM-2",
+    "CM-4",
+    "CM-5",
+    "CM-6",
+    "CM-7",
+    "CM-8",
+    "CM-10",
+    "CM-11",
+    "CP-1",
+    "CP-2",
+    "CP-3",
+    "CP-4",
+    "CP-9",
+    "CP-10",
+    "IA-1",
+    "IA-2",
+    "IA-2(1)",
+    "IA-2(2)",
+    "IA-2(8)",
+    "IA-2(12)",
+    "IA-4",
+    "IA-5",
+    "IA-5(1)",
+    "IA-6",
+    "IA-7",
+    "IA-8",
+    "IA-8(1)",
+    "IA-8(2)",
+    "IA-8(4)",
+    "IA-11",
+    "IR-1",
+    "IR-2",
+    "IR-4",
+    "IR-5",
+    "IR-6",
+    "IR-7",
+    "IR-8",
+    "MA-1",
+    "MA-2",
+    "MA-4",
+    "MA-5",
+    "MP-1",
+    "MP-2",
+    "MP-6",
+    "MP-7",
+    "PE-1",
+    "PE-2",
+    "PE-3",
+    "PE-6",
+    "PE-8",
+    "PE-12",
+    "PE-13",
+    "PE-14",
+    "PE-15",
+    "PE-16",
+    "PL-1",
+    "PL-2",
+    "PL-4",
+    "PL-4(1)",
+    "PL-8",
+    "PL-10",
+    "PL-11",
+    "PS-1",
+    "PS-2",
+    "PS-3",
+    "PS-4",
+    "PS-5",
+    "PS-6",
+    "PS-7",
+    "PS-8",
+    "PS-9",
+    "RA-1",
+    "RA-2",
+    "RA-3",
+    "RA-3(1)",
+    "RA-5",
+    "RA-5(2)",
+    "RA-5(11)",
+    "RA-7",
+    "SA-1",
+    "SA-2",
+    "SA-3",
+    "SA-4",
+    "SA-4(10)",
+    "SA-5",
+    "SA-8",
+    "SA-9",
+    "SA-22",
+    "SC-1",
+    "SC-5",
+    "SC-7",
+    "SC-8",
+    "SC-8(1)",
+    "SC-12",
+    "SC-13",
+    "SC-15",
+    "SC-20",
+    "SC-21",
+    "SC-22",
+    "SC-28",
+    "SC-28(1)",
+    "SC-39",
+    "SI-1",
+    "SI-2",
+    "SI-3",
+    "SI-4",
+    "SI-5",
+    "SI-12",
+    "SR-1",
+    "SR-2",
+    "SR-2(1)",
+    "SR-3",
+    "SR-5",
+    "SR-8",
+    "SR-10",
+    "SR-11",
+    "SR-11(1)",
+    "SR-11(2)",
+    "SR-12"
+  ],
+  "parameters": {
+    "ac-01_odp.05": {
+      "param_id": "ac-01_odp.05",
+      "control_id": "AC-1",
+      "label": "frequency",
+      "sp800_53a_label": "AC-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ac-01_odp.07": {
+      "param_id": "ac-01_odp.07",
+      "control_id": "AC-1",
+      "label": "frequency",
+      "sp800_53a_label": "AC-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ac-01_odp.08": {
+      "param_id": "ac-01_odp.08",
+      "control_id": "AC-1",
+      "label": "events",
+      "sp800_53a_label": "AC-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ac-02_odp.06": {
+      "param_id": "ac-02_odp.06",
+      "control_id": "AC-2",
+      "label": "time period",
+      "sp800_53a_label": "AC-02_ODP[06]",
+      "value": "twenty-four (24) hours",
+      "raw_values": [
+        "twenty-four (24) hours"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ac-02_odp.07": {
+      "param_id": "ac-02_odp.07",
+      "control_id": "AC-2",
+      "label": "time period",
+      "sp800_53a_label": "AC-02_ODP[07]",
+      "value": "eight (8) hours",
+      "raw_values": [
+        "eight (8) hours"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ac-02_odp.08": {
+      "param_id": "ac-02_odp.08",
+      "control_id": "AC-2",
+      "label": "time period",
+      "sp800_53a_label": "AC-02_ODP[08]",
+      "value": "eight (8) hours",
+      "raw_values": [
+        "eight (8) hours"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ac-02_odp.10": {
+      "param_id": "ac-02_odp.10",
+      "control_id": "AC-2",
+      "label": "frequency",
+      "sp800_53a_label": "AC-02_ODP[10]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ac-08_odp.01": {
+      "param_id": "ac-08_odp.01",
+      "control_id": "AC-8",
+      "label": "system use notification",
+      "sp800_53a_label": "AC-08_ODP[01]",
+      "value": "see additional Requirements and Guidance",
+      "raw_values": [
+        "see additional Requirements and Guidance"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ac-08_odp.02": {
+      "param_id": "ac-08_odp.02",
+      "control_id": "AC-8",
+      "label": "conditions",
+      "sp800_53a_label": "AC-08_ODP[02]",
+      "value": "see additional Requirements and Guidance",
+      "raw_values": [
+        "see additional Requirements and Guidance"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ac-22_odp": {
+      "param_id": "ac-22_odp",
+      "control_id": "AC-22",
+      "label": "frequency",
+      "sp800_53a_label": "AC-22_ODP",
+      "value": "at least quarterly",
+      "raw_values": [
+        "at least quarterly"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "at-01_odp.05": {
+      "param_id": "at-01_odp.05",
+      "control_id": "AT-1",
+      "label": "frequency",
+      "sp800_53a_label": "AT-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "at-01_odp.07": {
+      "param_id": "at-01_odp.07",
+      "control_id": "AT-1",
+      "label": "frequency",
+      "sp800_53a_label": "AT-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "at-01_odp.08": {
+      "param_id": "at-01_odp.08",
+      "control_id": "AT-1",
+      "label": "events",
+      "sp800_53a_label": "AT-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "at-02_odp.01": {
+      "param_id": "at-02_odp.01",
+      "control_id": "AT-2",
+      "label": "frequency",
+      "sp800_53a_label": "AT-02_ODP[01]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "at-02_odp.02": {
+      "param_id": "at-02_odp.02",
+      "control_id": "AT-2",
+      "label": "frequency",
+      "sp800_53a_label": "AT-02_ODP[02]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "at-02_odp.06": {
+      "param_id": "at-02_odp.06",
+      "control_id": "AT-2",
+      "label": "frequency",
+      "sp800_53a_label": "AT-02_ODP[06]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "at-03_odp.03": {
+      "param_id": "at-03_odp.03",
+      "control_id": "AT-3",
+      "label": "frequency",
+      "sp800_53a_label": "AT-03_ODP[03]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "at-03_odp.04": {
+      "param_id": "at-03_odp.04",
+      "control_id": "AT-3",
+      "label": "frequency",
+      "sp800_53a_label": "AT-03_ODP[04]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "at-04_odp": {
+      "param_id": "at-04_odp",
+      "control_id": "AT-4",
+      "label": "time period",
+      "sp800_53a_label": "AT-04_ODP",
+      "value": "at least one (1) year or 1 year after completion of a specific training program",
+      "raw_values": [
+        "at least one (1) year or 1 year after completion of a specific training program"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "au-01_odp.05": {
+      "param_id": "au-01_odp.05",
+      "control_id": "AU-1",
+      "label": "frequency",
+      "sp800_53a_label": "AU-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "au-01_odp.07": {
+      "param_id": "au-01_odp.07",
+      "control_id": "AU-1",
+      "label": "frequency",
+      "sp800_53a_label": "AU-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "au-01_odp.08": {
+      "param_id": "au-01_odp.08",
+      "control_id": "AU-1",
+      "label": "events",
+      "sp800_53a_label": "AU-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "au-02_odp.01": {
+      "param_id": "au-02_odp.01",
+      "control_id": "AU-2",
+      "label": "event types",
+      "sp800_53a_label": "AU-02_ODP[01]",
+      "value": "successful and unsuccessful account logon events, account management events, object access, policy change, privilege functions, process tracking, and system events. For Web applications: all administrator activity, authentication checks, authorization checks, data deletions, data access, data changes, and permission changes",
+      "raw_values": [
+        "successful and unsuccessful account logon events, account management events, object access, policy change, privilege functions, process tracking, and system events. For Web applications: all administrator activity, authentication checks, authorization checks, data deletions, data access, data changes, and permission changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "au-02_odp.02": {
+      "param_id": "au-02_odp.02",
+      "control_id": "AU-2",
+      "label": "event types (subset of AU-02_ODP[01])",
+      "sp800_53a_label": "AU-02_ODP[02]",
+      "value": "organization-defined subset of the auditable events defined in AU-2a to be audited continually for each identified event.",
+      "raw_values": [
+        "organization-defined subset of the auditable events defined in AU-2a to be audited continually for each identified event."
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "au-02_odp.03": {
+      "param_id": "au-02_odp.03",
+      "control_id": "AU-2",
+      "label": "frequency or situation",
+      "sp800_53a_label": "AU-02_ODP[03]",
+      "value": "organization-defined subset of the auditable events defined in AU-2a to be audited continually for each identified event.",
+      "raw_values": [
+        "organization-defined subset of the auditable events defined in AU-2a to be audited continually for each identified event."
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "au-02_odp.04": {
+      "param_id": "au-02_odp.04",
+      "control_id": "AU-2",
+      "label": "frequency",
+      "sp800_53a_label": "AU-02_ODP[04]",
+      "value": "annually and whenever there is a change in the threat environment",
+      "raw_values": [
+        "annually and whenever there is a change in the threat environment"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "au-05_odp.03": {
+      "param_id": "au-05_odp.03",
+      "control_id": "AU-5",
+      "label": "additional actions",
+      "sp800_53a_label": "AU-05_ODP[03]",
+      "value": "overwrite oldest record",
+      "raw_values": [
+        "overwrite oldest record"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "au-06_odp.01": {
+      "param_id": "au-06_odp.01",
+      "control_id": "AU-6",
+      "label": "frequency",
+      "sp800_53a_label": "AU-06_ODP[01]",
+      "value": "at least weekly",
+      "raw_values": [
+        "at least weekly"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "au-08_odp": {
+      "param_id": "au-08_odp",
+      "control_id": "AU-8",
+      "label": "granularity of time measurement",
+      "sp800_53a_label": "AU-08_ODP",
+      "value": "one second granularity of time measurement",
+      "raw_values": [
+        "one second granularity of time measurement"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "au-11_odp": {
+      "param_id": "au-11_odp",
+      "control_id": "AU-11",
+      "label": "time period",
+      "sp800_53a_label": "AU-11_ODP",
+      "value": "a time period in compliance with M-21-31",
+      "raw_values": [
+        "a time period in compliance with M-21-31"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "au-12_odp.01": {
+      "param_id": "au-12_odp.01",
+      "control_id": "AU-12",
+      "label": "system components",
+      "sp800_53a_label": "AU-12_ODP[01]",
+      "value": "all information system and network components where audit capability is deployed/available",
+      "raw_values": [
+        "all information system and network components where audit capability is deployed/available"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ca-01_odp.05": {
+      "param_id": "ca-01_odp.05",
+      "control_id": "CA-1",
+      "label": "frequency",
+      "sp800_53a_label": "CA-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ca-01_odp.07": {
+      "param_id": "ca-01_odp.07",
+      "control_id": "CA-1",
+      "label": "frequency",
+      "sp800_53a_label": "CA-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ca-01_odp.08": {
+      "param_id": "ca-01_odp.08",
+      "control_id": "CA-1",
+      "label": "events",
+      "sp800_53a_label": "CA-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ca-02_odp.01": {
+      "param_id": "ca-02_odp.01",
+      "control_id": "CA-2",
+      "label": "assessment frequency",
+      "sp800_53a_label": "CA-02_ODP[01]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ca-02_odp.02": {
+      "param_id": "ca-02_odp.02",
+      "control_id": "CA-2",
+      "label": "individuals or roles",
+      "sp800_53a_label": "CA-02_ODP[02]",
+      "value": "individuals or roles to include FedRAMP PMO",
+      "raw_values": [
+        "individuals or roles to include FedRAMP PMO"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ca-03_odp.03": {
+      "param_id": "ca-03_odp.03",
+      "control_id": "CA-3",
+      "label": "frequency",
+      "sp800_53a_label": "CA-03_ODP[03]",
+      "value": "at least annually and on input from AO",
+      "raw_values": [
+        "at least annually and on input from AO"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ca-05_odp": {
+      "param_id": "ca-05_odp",
+      "control_id": "CA-5",
+      "label": "frequency",
+      "sp800_53a_label": "CA-05_ODP",
+      "value": "at least monthly",
+      "raw_values": [
+        "at least monthly"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ca-06_odp": {
+      "param_id": "ca-06_odp",
+      "control_id": "CA-6",
+      "label": "frequency",
+      "sp800_53a_label": "CA-06_ODP",
+      "value": "in accordance with OMB A-130 requirements or when a significant change occurs",
+      "raw_values": [
+        "in accordance with OMB A-130 requirements or when a significant change occurs"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ca-07_odp.04": {
+      "param_id": "ca-07_odp.04",
+      "control_id": "CA-7",
+      "label": "personnel or roles",
+      "sp800_53a_label": "CA-07_ODP[04]",
+      "value": "to include AO",
+      "raw_values": [
+        "to include AO"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ca-07_odp.06": {
+      "param_id": "ca-07_odp.06",
+      "control_id": "CA-7",
+      "label": "personnel or roles",
+      "sp800_53a_label": "CA-07_ODP[06]",
+      "value": "to include AO",
+      "raw_values": [
+        "to include AO"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ca-08_odp.01": {
+      "param_id": "ca-08_odp.01",
+      "control_id": "CA-8",
+      "label": "frequency",
+      "sp800_53a_label": "CA-08_ODP[01]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cm-01_odp.05": {
+      "param_id": "cm-01_odp.05",
+      "control_id": "CM-1",
+      "label": "frequency",
+      "sp800_53a_label": "CM-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cm-01_odp.07": {
+      "param_id": "cm-01_odp.07",
+      "control_id": "CM-1",
+      "label": "frequency",
+      "sp800_53a_label": "CM-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cm-01_odp.08": {
+      "param_id": "cm-01_odp.08",
+      "control_id": "CM-1",
+      "label": "events",
+      "sp800_53a_label": "CM-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cm-02_odp.01": {
+      "param_id": "cm-02_odp.01",
+      "control_id": "CM-2",
+      "label": "frequency",
+      "sp800_53a_label": "CM-02_ODP[01]",
+      "value": "at least annually and when a significant change occurs",
+      "raw_values": [
+        "at least annually and when a significant change occurs"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cm-02_odp.02": {
+      "param_id": "cm-02_odp.02",
+      "control_id": "CM-2",
+      "label": "circumstances",
+      "sp800_53a_label": "CM-02_ODP[02]",
+      "value": "to include when directed by the AO",
+      "raw_values": [
+        "to include when directed by the AO"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cm-08_odp.02": {
+      "param_id": "cm-08_odp.02",
+      "control_id": "CM-8",
+      "label": "frequency",
+      "sp800_53a_label": "CM-08_ODP[02]",
+      "value": "at least monthly",
+      "raw_values": [
+        "at least monthly"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cm-11_odp.03": {
+      "param_id": "cm-11_odp.03",
+      "control_id": "CM-11",
+      "label": "frequency",
+      "sp800_53a_label": "CM-11_ODP[03]",
+      "value": "Continuously (via CM-7 (5))",
+      "raw_values": [
+        "Continuously (via CM-7 (5))"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-01_odp.05": {
+      "param_id": "cp-01_odp.05",
+      "control_id": "CP-1",
+      "label": "frequency",
+      "sp800_53a_label": "CP-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-01_odp.07": {
+      "param_id": "cp-01_odp.07",
+      "control_id": "CP-1",
+      "label": "frequency",
+      "sp800_53a_label": "CP-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-01_odp.08": {
+      "param_id": "cp-01_odp.08",
+      "control_id": "CP-1",
+      "label": "events",
+      "sp800_53a_label": "CP-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-02_odp.05": {
+      "param_id": "cp-02_odp.05",
+      "control_id": "CP-2",
+      "label": "frequency",
+      "sp800_53a_label": "CP-02_ODP[05]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-03_odp.01": {
+      "param_id": "cp-03_odp.01",
+      "control_id": "CP-3",
+      "label": "time period",
+      "sp800_53a_label": "CP-03_ODP[01]",
+      "value": "*See Additional Requirements",
+      "raw_values": [
+        "*See Additional Requirements"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-03_odp.02": {
+      "param_id": "cp-03_odp.02",
+      "control_id": "CP-3",
+      "label": "frequency",
+      "sp800_53a_label": "CP-03_ODP[02]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-03_odp.03": {
+      "param_id": "cp-03_odp.03",
+      "control_id": "CP-3",
+      "label": "frequency",
+      "sp800_53a_label": "CP-03_ODP[03]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-04_odp.01": {
+      "param_id": "cp-04_odp.01",
+      "control_id": "CP-4",
+      "label": "frequency",
+      "sp800_53a_label": "CP-04_ODP[01]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-04_odp.02": {
+      "param_id": "cp-04_odp.02",
+      "control_id": "CP-4",
+      "label": "tests",
+      "sp800_53a_label": "CP-04_ODP[02]",
+      "value": "classroom exercise/table top written tests",
+      "raw_values": [
+        "classroom exercise/table top written tests"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-04_odp.03": {
+      "param_id": "cp-04_odp.03",
+      "control_id": "CP-4",
+      "label": "tests",
+      "sp800_53a_label": "CP-04_ODP[03]",
+      "value": "classroom exercise/table top written tests",
+      "raw_values": [
+        "classroom exercise/table top written tests"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-09_odp.02": {
+      "param_id": "cp-09_odp.02",
+      "control_id": "CP-9",
+      "label": "frequency",
+      "sp800_53a_label": "CP-09_ODP[02]",
+      "value": "daily incremental; weekly full",
+      "raw_values": [
+        "daily incremental; weekly full"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-09_odp.03": {
+      "param_id": "cp-09_odp.03",
+      "control_id": "CP-9",
+      "label": "frequency",
+      "sp800_53a_label": "CP-09_ODP[03]",
+      "value": "daily incremental; weekly full",
+      "raw_values": [
+        "daily incremental; weekly full"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "cp-09_odp.04": {
+      "param_id": "cp-09_odp.04",
+      "control_id": "CP-9",
+      "label": "frequency",
+      "sp800_53a_label": "CP-09_ODP[04]",
+      "value": "daily incremental; weekly full",
+      "raw_values": [
+        "daily incremental; weekly full"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ia-01_odp.05": {
+      "param_id": "ia-01_odp.05",
+      "control_id": "IA-1",
+      "label": "frequency",
+      "sp800_53a_label": "IA-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ia-01_odp.07": {
+      "param_id": "ia-01_odp.07",
+      "control_id": "IA-1",
+      "label": "frequency",
+      "sp800_53a_label": "IA-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ia-01_odp.08": {
+      "param_id": "ia-01_odp.08",
+      "control_id": "IA-1",
+      "label": "events",
+      "sp800_53a_label": "IA-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ia-04_odp.01": {
+      "param_id": "ia-04_odp.01",
+      "control_id": "IA-4",
+      "label": "personnel or roles",
+      "sp800_53a_label": "IA-04_ODP[01]",
+      "value": "at a minimum, the ISSO (or similar role within the organization)",
+      "raw_values": [
+        "at a minimum, the ISSO (or similar role within the organization)"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ia-04_odp.02": {
+      "param_id": "ia-04_odp.02",
+      "control_id": "IA-4",
+      "label": "time period",
+      "sp800_53a_label": "IA-04_ODP[02]",
+      "value": "at least two (2) years",
+      "raw_values": [
+        "at least two (2) years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ir-01_odp.05": {
+      "param_id": "ir-01_odp.05",
+      "control_id": "IR-1",
+      "label": "frequency",
+      "sp800_53a_label": "IR-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ir-01_odp.07": {
+      "param_id": "ir-01_odp.07",
+      "control_id": "IR-1",
+      "label": "frequency",
+      "sp800_53a_label": "IR-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ir-01_odp.08": {
+      "param_id": "ir-01_odp.08",
+      "control_id": "IR-1",
+      "label": "events",
+      "sp800_53a_label": "IR-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ir-02_odp.01": {
+      "param_id": "ir-02_odp.01",
+      "control_id": "IR-2",
+      "label": "time period",
+      "sp800_53a_label": "IR-02_ODP[01]",
+      "value": "ten (10) days for privileged users, thirty (30) days for Incident Response roles",
+      "raw_values": [
+        "ten (10) days for privileged users, thirty (30) days for Incident Response roles"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ir-02_odp.02": {
+      "param_id": "ir-02_odp.02",
+      "control_id": "IR-2",
+      "label": "frequency",
+      "sp800_53a_label": "IR-02_ODP[02]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ir-02_odp.03": {
+      "param_id": "ir-02_odp.03",
+      "control_id": "IR-2",
+      "label": "frequency",
+      "sp800_53a_label": "IR-02_ODP[03]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ir-06_odp.01": {
+      "param_id": "ir-06_odp.01",
+      "control_id": "IR-6",
+      "label": "time period",
+      "sp800_53a_label": "IR-06_ODP[01]",
+      "value": "US-CERT incident reporting timelines as specified in NIST Special Publication 800-61 (as amended)",
+      "raw_values": [
+        "US-CERT incident reporting timelines as specified in NIST Special Publication 800-61 (as amended)"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ir-08_odp.02": {
+      "param_id": "ir-08_odp.02",
+      "control_id": "IR-8",
+      "label": "frequency",
+      "sp800_53a_label": "IR-08_ODP[02]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ir-08_odp.04": {
+      "param_id": "ir-08_odp.04",
+      "control_id": "IR-8",
+      "label": "incident response personnel",
+      "sp800_53a_label": "IR-08_ODP[04]",
+      "value": "see additional FedRAMP Requirements and Guidance",
+      "raw_values": [
+        "see additional FedRAMP Requirements and Guidance"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ir-08_odp.05": {
+      "param_id": "ir-08_odp.05",
+      "control_id": "IR-8",
+      "label": "organizational elements",
+      "sp800_53a_label": "IR-08_ODP[05]",
+      "value": "see additional FedRAMP Requirements and Guidance",
+      "raw_values": [
+        "see additional FedRAMP Requirements and Guidance"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ir-08_odp.06": {
+      "param_id": "ir-08_odp.06",
+      "control_id": "IR-8",
+      "label": "incident response personnel",
+      "sp800_53a_label": "IR-08_ODP[06]",
+      "value": "see additional FedRAMP Requirements and Guidance",
+      "raw_values": [
+        "see additional FedRAMP Requirements and Guidance"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ir-08_odp.07": {
+      "param_id": "ir-08_odp.07",
+      "control_id": "IR-8",
+      "label": "organizational elements",
+      "sp800_53a_label": "IR-08_ODP[07]",
+      "value": "see additional FedRAMP Requirements and Guidance",
+      "raw_values": [
+        "see additional FedRAMP Requirements and Guidance"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ma-01_odp.05": {
+      "param_id": "ma-01_odp.05",
+      "control_id": "MA-1",
+      "label": "frequency",
+      "sp800_53a_label": "MA-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ma-01_odp.07": {
+      "param_id": "ma-01_odp.07",
+      "control_id": "MA-1",
+      "label": "frequency",
+      "sp800_53a_label": "MA-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ma-01_odp.08": {
+      "param_id": "ma-01_odp.08",
+      "control_id": "MA-1",
+      "label": "events",
+      "sp800_53a_label": "MA-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "mp-01_odp.05": {
+      "param_id": "mp-01_odp.05",
+      "control_id": "MP-1",
+      "label": "frequency",
+      "sp800_53a_label": "MP-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "mp-01_odp.07": {
+      "param_id": "mp-01_odp.07",
+      "control_id": "MP-1",
+      "label": "frequency",
+      "sp800_53a_label": "MP-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "mp-01_odp.08": {
+      "param_id": "mp-01_odp.08",
+      "control_id": "MP-1",
+      "label": "events",
+      "sp800_53a_label": "MP-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "mp-06_odp.01": {
+      "param_id": "mp-06_odp.01",
+      "control_id": "MP-6",
+      "label": "system media",
+      "sp800_53a_label": "MP-06_ODP[01]",
+      "value": "techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware",
+      "raw_values": [
+        "techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "mp-06_odp.02": {
+      "param_id": "mp-06_odp.02",
+      "control_id": "MP-6",
+      "label": "system media",
+      "sp800_53a_label": "MP-06_ODP[02]",
+      "value": "techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware",
+      "raw_values": [
+        "techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "mp-06_odp.03": {
+      "param_id": "mp-06_odp.03",
+      "control_id": "MP-6",
+      "label": "system media",
+      "sp800_53a_label": "MP-06_ODP[03]",
+      "value": "techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware",
+      "raw_values": [
+        "techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-01_odp.05": {
+      "param_id": "pe-01_odp.05",
+      "control_id": "PE-1",
+      "label": "frequency",
+      "sp800_53a_label": "PE-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-01_odp.07": {
+      "param_id": "pe-01_odp.07",
+      "control_id": "PE-1",
+      "label": "frequency",
+      "sp800_53a_label": "PE-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-01_odp.08": {
+      "param_id": "pe-01_odp.08",
+      "control_id": "PE-1",
+      "label": "events",
+      "sp800_53a_label": "PE-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-02_odp": {
+      "param_id": "pe-02_odp",
+      "control_id": "PE-2",
+      "label": "frequency",
+      "sp800_53a_label": "PE-02_ODP",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-03_odp.02": {
+      "param_id": "pe-03_odp.02",
+      "control_id": "PE-3",
+      "label": null,
+      "sp800_53a_label": "PE-03_ODP[02]",
+      "value": "CSP defined physical access control systems/devices AND guards",
+      "raw_values": [
+        "CSP defined physical access control systems/devices AND guards"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-03_odp.06": {
+      "param_id": "pe-03_odp.06",
+      "control_id": "PE-3",
+      "label": "circumstances",
+      "sp800_53a_label": "PE-03_ODP[06]",
+      "value": "in all circumstances within restricted access area where the information system resides",
+      "raw_values": [
+        "in all circumstances within restricted access area where the information system resides"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-03_odp.07": {
+      "param_id": "pe-03_odp.07",
+      "control_id": "PE-3",
+      "label": "physical access devices",
+      "sp800_53a_label": "PE-03_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-03_odp.09": {
+      "param_id": "pe-03_odp.09",
+      "control_id": "PE-3",
+      "label": "frequency",
+      "sp800_53a_label": "PE-03_ODP[09]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-03_odp.10": {
+      "param_id": "pe-03_odp.10",
+      "control_id": "PE-3",
+      "label": "frequency",
+      "sp800_53a_label": "PE-03_ODP[10]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-06_odp.01": {
+      "param_id": "pe-06_odp.01",
+      "control_id": "PE-6",
+      "label": "frequency",
+      "sp800_53a_label": "PE-06_ODP[01]",
+      "value": "at least monthly",
+      "raw_values": [
+        "at least monthly"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-08_odp.01": {
+      "param_id": "pe-08_odp.01",
+      "control_id": "PE-8",
+      "label": "time period",
+      "sp800_53a_label": "PE-08_ODP[01]",
+      "value": "for a minimum of one (1) year",
+      "raw_values": [
+        "for a minimum of one (1) year"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-08_odp.02": {
+      "param_id": "pe-08_odp.02",
+      "control_id": "PE-8",
+      "label": "frequency",
+      "sp800_53a_label": "PE-08_ODP[02]",
+      "value": "at least monthly",
+      "raw_values": [
+        "at least monthly"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-14_odp.01": {
+      "param_id": "pe-14_odp.01",
+      "control_id": "PE-14",
+      "label": null,
+      "sp800_53a_label": "PE-14_ODP[01]",
+      "value": "consistent with American Society of Heating, Refrigerating and Air-conditioning Engineers (ASHRAE) document entitled Thermal Guidelines for Data Processing Environments",
+      "raw_values": [
+        "consistent with American Society of Heating, Refrigerating and Air-conditioning Engineers (ASHRAE) document entitled Thermal Guidelines for Data Processing Environments"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-14_odp.04": {
+      "param_id": "pe-14_odp.04",
+      "control_id": "PE-14",
+      "label": "frequency",
+      "sp800_53a_label": "PE-14_ODP[04]",
+      "value": "continuously",
+      "raw_values": [
+        "continuously"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-16_odp.01": {
+      "param_id": "pe-16_odp.01",
+      "control_id": "PE-16",
+      "label": "types of system components",
+      "sp800_53a_label": "PE-16_ODP[01]",
+      "value": "all information system components",
+      "raw_values": [
+        "all information system components"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pe-16_odp.02": {
+      "param_id": "pe-16_odp.02",
+      "control_id": "PE-16",
+      "label": "types of system components",
+      "sp800_53a_label": "PE-16_ODP[02]",
+      "value": "all information system components",
+      "raw_values": [
+        "all information system components"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pl-01_odp.05": {
+      "param_id": "pl-01_odp.05",
+      "control_id": "PL-1",
+      "label": "frequency",
+      "sp800_53a_label": "PL-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pl-01_odp.07": {
+      "param_id": "pl-01_odp.07",
+      "control_id": "PL-1",
+      "label": "frequency",
+      "sp800_53a_label": "PL-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pl-01_odp.08": {
+      "param_id": "pl-01_odp.08",
+      "control_id": "PL-1",
+      "label": "events",
+      "sp800_53a_label": "PL-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pl-02_odp.03": {
+      "param_id": "pl-02_odp.03",
+      "control_id": "PL-2",
+      "label": "frequency",
+      "sp800_53a_label": "PL-02_ODP[03]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pl-04_odp.01": {
+      "param_id": "pl-04_odp.01",
+      "control_id": "PL-4",
+      "label": "frequency",
+      "sp800_53a_label": "PL-04_ODP[01]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pl-04_odp.02": {
+      "param_id": "pl-04_odp.02",
+      "control_id": "PL-4",
+      "label": null,
+      "sp800_53a_label": "PL-04_ODP[02]",
+      "value": "at least annually and when the rules are revised or changed",
+      "raw_values": [
+        "at least annually and when the rules are revised or changed"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "pl-08_odp": {
+      "param_id": "pl-08_odp",
+      "control_id": "PL-8",
+      "label": "frequency",
+      "sp800_53a_label": "PL-08_ODP",
+      "value": "at least annually and when a significant change occurs",
+      "raw_values": [
+        "at least annually and when a significant change occurs"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-01_odp.05": {
+      "param_id": "ps-01_odp.05",
+      "control_id": "PS-1",
+      "label": "frequency",
+      "sp800_53a_label": "PS-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-01_odp.07": {
+      "param_id": "ps-01_odp.07",
+      "control_id": "PS-1",
+      "label": "frequency",
+      "sp800_53a_label": "PS-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-01_odp.08": {
+      "param_id": "ps-01_odp.08",
+      "control_id": "PS-1",
+      "label": "events",
+      "sp800_53a_label": "PS-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-02_odp": {
+      "param_id": "ps-02_odp",
+      "control_id": "PS-2",
+      "label": "frequency",
+      "sp800_53a_label": "PS-02_ODP",
+      "value": "at least every three years",
+      "raw_values": [
+        "at least every three years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-03_odp.01": {
+      "param_id": "ps-03_odp.01",
+      "control_id": "PS-3",
+      "label": "conditions requiring rescreening",
+      "sp800_53a_label": "PS-03_ODP[01]",
+      "value": "for national security clearances; a reinvestigation is required during the fifth (5th) year for top secret security clearance, the tenth (10th) year for secret security clearance, and fifteenth (15th) year for confidential security clearance. For moderate risk law enforcement and high impact public trust level, a reinvestigation is required during the fifth (5th) year. There is no reinvestigation for other moderate risk positions or any low risk positions",
+      "raw_values": [
+        "for national security clearances; a reinvestigation is required during the fifth (5th) year for top secret security clearance, the tenth (10th) year for secret security clearance, and fifteenth (15th) year for confidential security clearance. For moderate risk law enforcement and high impact public trust level, a reinvestigation is required during the fifth (5th) year. There is no reinvestigation for other moderate risk positions or any low risk positions"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-03_odp.02": {
+      "param_id": "ps-03_odp.02",
+      "control_id": "PS-3",
+      "label": "frequency",
+      "sp800_53a_label": "PS-03_ODP[02]",
+      "value": "for national security clearances; a reinvestigation is required during the fifth (5th) year for top secret security clearance, the tenth (10th) year for secret security clearance, and fifteenth (15th) year for confidential security clearance. For moderate risk law enforcement and high impact public trust level, a reinvestigation is required during the fifth (5th) year. There is no reinvestigation for other moderate risk positions or any low risk positions",
+      "raw_values": [
+        "for national security clearances; a reinvestigation is required during the fifth (5th) year for top secret security clearance, the tenth (10th) year for secret security clearance, and fifteenth (15th) year for confidential security clearance. For moderate risk law enforcement and high impact public trust level, a reinvestigation is required during the fifth (5th) year. There is no reinvestigation for other moderate risk positions or any low risk positions"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-04_odp.01": {
+      "param_id": "ps-04_odp.01",
+      "control_id": "PS-4",
+      "label": "time period",
+      "sp800_53a_label": "PS-04_ODP[01]",
+      "value": "four (4) hours",
+      "raw_values": [
+        "four (4) hours"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-05_odp.02": {
+      "param_id": "ps-05_odp.02",
+      "control_id": "PS-5",
+      "label": "time period following the formal transfer action",
+      "sp800_53a_label": "PS-05_ODP[02]",
+      "value": "twenty-four (24) hours",
+      "raw_values": [
+        "twenty-four (24) hours"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-05_odp.04": {
+      "param_id": "ps-05_odp.04",
+      "control_id": "PS-5",
+      "label": "time period",
+      "sp800_53a_label": "PS-05_ODP[04]",
+      "value": "twenty-four (24) hours",
+      "raw_values": [
+        "twenty-four (24) hours"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-06_odp.01": {
+      "param_id": "ps-06_odp.01",
+      "control_id": "PS-6",
+      "label": "frequency",
+      "sp800_53a_label": "PS-06_ODP[01]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-06_odp.02": {
+      "param_id": "ps-06_odp.02",
+      "control_id": "PS-6",
+      "label": "frequency",
+      "sp800_53a_label": "PS-06_ODP[02]",
+      "value": "at least annually and any time there is a change to the user's level of access",
+      "raw_values": [
+        "at least annually and any time there is a change to the user's level of access"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-07_odp.01": {
+      "param_id": "ps-07_odp.01",
+      "control_id": "PS-7",
+      "label": "personnel or roles",
+      "sp800_53a_label": "PS-07_ODP[01]",
+      "value": "including access control personnel responsible for the system and/or facilities, as appropriate",
+      "raw_values": [
+        "including access control personnel responsible for the system and/or facilities, as appropriate"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-07_odp.02": {
+      "param_id": "ps-07_odp.02",
+      "control_id": "PS-7",
+      "label": "time period",
+      "sp800_53a_label": "PS-07_ODP[02]",
+      "value": "within twenty-four (24) hours",
+      "raw_values": [
+        "within twenty-four (24) hours"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ps-08_odp.01": {
+      "param_id": "ps-08_odp.01",
+      "control_id": "PS-8",
+      "label": "personnel or roles",
+      "sp800_53a_label": "PS-08_ODP[01]",
+      "value": "at a minimum, the ISSO and/or similar role within the organization",
+      "raw_values": [
+        "at a minimum, the ISSO and/or similar role within the organization"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ra-01_odp.05": {
+      "param_id": "ra-01_odp.05",
+      "control_id": "RA-1",
+      "label": "frequency",
+      "sp800_53a_label": "RA-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ra-01_odp.07": {
+      "param_id": "ra-01_odp.07",
+      "control_id": "RA-1",
+      "label": "frequency",
+      "sp800_53a_label": "RA-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ra-01_odp.08": {
+      "param_id": "ra-01_odp.08",
+      "control_id": "RA-1",
+      "label": "events",
+      "sp800_53a_label": "RA-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ra-03_odp.01": {
+      "param_id": "ra-03_odp.01",
+      "control_id": "RA-3",
+      "label": null,
+      "sp800_53a_label": "RA-03_ODP[01]",
+      "value": "security assessment report",
+      "raw_values": [
+        "security assessment report"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ra-03_odp.03": {
+      "param_id": "ra-03_odp.03",
+      "control_id": "RA-3",
+      "label": "frequency",
+      "sp800_53a_label": "RA-03_ODP[03]",
+      "value": "at least every three (3) years and when a significant change occurs",
+      "raw_values": [
+        "at least every three (3) years and when a significant change occurs"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ra-03_odp.05": {
+      "param_id": "ra-03_odp.05",
+      "control_id": "RA-3",
+      "label": "frequency",
+      "sp800_53a_label": "RA-03_ODP[05]",
+      "value": "at least every three (3) years",
+      "raw_values": [
+        "at least every three (3) years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ra-05_odp.01": {
+      "param_id": "ra-05_odp.01",
+      "control_id": "RA-5",
+      "label": "frequency and/or randomly in accordance with organization-defined process",
+      "sp800_53a_label": "RA-05_ODP[01]",
+      "value": "monthly operating system/infrastructure; monthly web applications (including APIs) and databases",
+      "raw_values": [
+        "monthly operating system/infrastructure; monthly web applications (including APIs) and databases"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ra-05_odp.02": {
+      "param_id": "ra-05_odp.02",
+      "control_id": "RA-5",
+      "label": "frequency and/or randomly in accordance with organization-defined process",
+      "sp800_53a_label": "RA-05_ODP[02]",
+      "value": "monthly operating system/infrastructure; monthly web applications (including APIs) and databases",
+      "raw_values": [
+        "monthly operating system/infrastructure; monthly web applications (including APIs) and databases"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ra-05_odp.03": {
+      "param_id": "ra-05_odp.03",
+      "control_id": "RA-5",
+      "label": "response times",
+      "sp800_53a_label": "RA-05_ODP[03]",
+      "value": "high-risk vulnerabilities mitigated within thirty (30) days from date of discovery; moderate-risk vulnerabilities mitigated within ninety (90) days from date of discovery; low risk vulnerabilities mitigated within one hundred and eighty (180) days from date of discovery",
+      "raw_values": [
+        "high-risk vulnerabilities mitigated within thirty (30) days from date of discovery; moderate-risk vulnerabilities mitigated within ninety (90) days from date of discovery; low risk vulnerabilities mitigated within one hundred and eighty (180) days from date of discovery"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "ra-05.02_odp.01": {
+      "param_id": "ra-05.02_odp.01",
+      "control_id": "RA-5(2)",
+      "label": null,
+      "sp800_53a_label": "RA-05(02)_ODP[01]",
+      "value": "prior to a new scan",
+      "raw_values": [
+        "prior to a new scan"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sa-01_odp.05": {
+      "param_id": "sa-01_odp.05",
+      "control_id": "SA-1",
+      "label": "frequency",
+      "sp800_53a_label": "SA-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sa-01_odp.07": {
+      "param_id": "sa-01_odp.07",
+      "control_id": "SA-1",
+      "label": "frequency",
+      "sp800_53a_label": "SA-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sa-01_odp.08": {
+      "param_id": "sa-01_odp.08",
+      "control_id": "SA-1",
+      "label": "events",
+      "sp800_53a_label": "SA-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sa-05_odp.02": {
+      "param_id": "sa-05_odp.02",
+      "control_id": "SA-5",
+      "label": "personnel or roles",
+      "sp800_53a_label": "SA-05_ODP[02]",
+      "value": "at a minimum, the ISSO (or similar role within the organization)",
+      "raw_values": [
+        "at a minimum, the ISSO (or similar role within the organization)"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sa-09_odp.01": {
+      "param_id": "sa-09_odp.01",
+      "control_id": "SA-9",
+      "label": "controls",
+      "sp800_53a_label": "SA-09_ODP[01]",
+      "value": "Appropriate FedRAMP Security Controls Baseline (s) if Federal information is processed or stored within the external system",
+      "raw_values": [
+        "Appropriate FedRAMP Security Controls Baseline (s) if Federal information is processed or stored within the external system"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sa-09_odp.02": {
+      "param_id": "sa-09_odp.02",
+      "control_id": "SA-9",
+      "label": "processes, methods, and techniques",
+      "sp800_53a_label": "SA-09_ODP[02]",
+      "value": "Federal/FedRAMP Continuous Monitoring requirements must be met for external systems where Federal information is processed or stored",
+      "raw_values": [
+        "Federal/FedRAMP Continuous Monitoring requirements must be met for external systems where Federal information is processed or stored"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sc-01_odp.05": {
+      "param_id": "sc-01_odp.05",
+      "control_id": "SC-1",
+      "label": "frequency",
+      "sp800_53a_label": "SC-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sc-01_odp.07": {
+      "param_id": "sc-01_odp.07",
+      "control_id": "SC-1",
+      "label": "frequency",
+      "sp800_53a_label": "SC-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sc-01_odp.08": {
+      "param_id": "sc-01_odp.08",
+      "control_id": "SC-1",
+      "label": "events",
+      "sp800_53a_label": "SC-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sc-05_odp.02": {
+      "param_id": "sc-05_odp.02",
+      "control_id": "SC-5",
+      "label": null,
+      "sp800_53a_label": "SC-05_ODP[02]",
+      "value": "Protect against",
+      "raw_values": [
+        "Protect against"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sc-05_odp.01": {
+      "param_id": "sc-05_odp.01",
+      "control_id": "SC-5",
+      "label": "types of denial-of-service events",
+      "sp800_53a_label": "SC-05_ODP[01]",
+      "value": "at a minimum: ICMP (ping) flood, SYN flood, slowloris, buffer overflow attack, and volume attack",
+      "raw_values": [
+        "at a minimum: ICMP (ping) flood, SYN flood, slowloris, buffer overflow attack, and volume attack"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sc-12_odp": {
+      "param_id": "sc-12_odp",
+      "control_id": "SC-12",
+      "label": "requirements",
+      "sp800_53a_label": "SC-12_ODP",
+      "value": "In accordance with Federal requirements",
+      "raw_values": [
+        "In accordance with Federal requirements"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sc-13_odp.02": {
+      "param_id": "sc-13_odp.02",
+      "control_id": "SC-13",
+      "label": "types of cryptography",
+      "sp800_53a_label": "SC-13_ODP[02]",
+      "value": "FIPS-validated or NSA-approved cryptography",
+      "raw_values": [
+        "FIPS-validated or NSA-approved cryptography"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sc-15_odp": {
+      "param_id": "sc-15_odp",
+      "control_id": "SC-15",
+      "label": "exceptions where remote activation is to be allowed",
+      "sp800_53a_label": "SC-15_ODP",
+      "value": "no exceptions for computing devices",
+      "raw_values": [
+        "no exceptions for computing devices"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sc-28.01_odp.02": {
+      "param_id": "sc-28.01_odp.02",
+      "control_id": "SC-28(1)",
+      "label": "system components or media",
+      "sp800_53a_label": "SC-28(01)_ODP[02]",
+      "value": "all information system components storing Federal data or system data that must be protected at the High or Moderate impact levels",
+      "raw_values": [
+        "all information system components storing Federal data or system data that must be protected at the High or Moderate impact levels"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "si-01_odp.05": {
+      "param_id": "si-01_odp.05",
+      "control_id": "SI-1",
+      "label": "frequency",
+      "sp800_53a_label": "SI-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "si-01_odp.07": {
+      "param_id": "si-01_odp.07",
+      "control_id": "SI-1",
+      "label": "frequency",
+      "sp800_53a_label": "SI-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "si-01_odp.08": {
+      "param_id": "si-01_odp.08",
+      "control_id": "SI-1",
+      "label": "events",
+      "sp800_53a_label": "SI-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "si-02_odp": {
+      "param_id": "si-02_odp",
+      "control_id": "SI-2",
+      "label": "time period",
+      "sp800_53a_label": "SI-02_ODP",
+      "value": "within thirty (30) days of release of updates",
+      "raw_values": [
+        "within thirty (30) days of release of updates"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "si-03_odp.01": {
+      "param_id": "si-03_odp.01",
+      "control_id": "SI-3",
+      "label": null,
+      "sp800_53a_label": "SI-03_ODP[01]",
+      "value": "signature based and non-signature based",
+      "raw_values": [
+        "signature based and non-signature based"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "si-03_odp.02": {
+      "param_id": "si-03_odp.02",
+      "control_id": "SI-3",
+      "label": "frequency",
+      "sp800_53a_label": "SI-03_ODP[02]",
+      "value": "at least weekly",
+      "raw_values": [
+        "at least weekly"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "si-03_odp.03": {
+      "param_id": "si-03_odp.03",
+      "control_id": "SI-3",
+      "label": null,
+      "sp800_53a_label": "SI-03_ODP[03]",
+      "value": "to include endpoints and network entry and exit points",
+      "raw_values": [
+        "to include endpoints and network entry and exit points"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "si-03_odp.04": {
+      "param_id": "si-03_odp.04",
+      "control_id": "SI-3",
+      "label": null,
+      "sp800_53a_label": "SI-03_ODP[04]",
+      "value": "to include blocking and quarantining malicious code",
+      "raw_values": [
+        "to include blocking and quarantining malicious code"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "si-03_odp.06": {
+      "param_id": "si-03_odp.06",
+      "control_id": "SI-3",
+      "label": "personnel or roles",
+      "sp800_53a_label": "SI-03_ODP[06]",
+      "value": "administrator or defined security personnel near-realtime",
+      "raw_values": [
+        "administrator or defined security personnel near-realtime"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "si-05_odp.01": {
+      "param_id": "si-05_odp.01",
+      "control_id": "SI-5",
+      "label": "external organizations",
+      "sp800_53a_label": "SI-05_ODP[01]",
+      "value": "to include US-CERT and Cybersecurity and Infrastructure Security Agency (CISA) Directives",
+      "raw_values": [
+        "to include US-CERT and Cybersecurity and Infrastructure Security Agency (CISA) Directives"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "si-05_odp.02": {
+      "param_id": "si-05_odp.02",
+      "control_id": "SI-5",
+      "label": null,
+      "sp800_53a_label": "SI-05_ODP[02]",
+      "value": "to include system security personnel and administrators with configuration/patch-management responsibilities",
+      "raw_values": [
+        "to include system security personnel and administrators with configuration/patch-management responsibilities"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sr-01_odp.01": {
+      "param_id": "sr-01_odp.01",
+      "control_id": "SR-1",
+      "label": "personnel or roles",
+      "sp800_53a_label": "SR-01_ODP[01]",
+      "value": "to include chief privacy and ISSO and/or similar role or designees",
+      "raw_values": [
+        "to include chief privacy and ISSO and/or similar role or designees"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sr-01_odp.05": {
+      "param_id": "sr-01_odp.05",
+      "control_id": "SR-1",
+      "label": "frequency",
+      "sp800_53a_label": "SR-01_ODP[05]",
+      "value": "at least every 3 years",
+      "raw_values": [
+        "at least every 3 years"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sr-01_odp.07": {
+      "param_id": "sr-01_odp.07",
+      "control_id": "SR-1",
+      "label": "frequency",
+      "sp800_53a_label": "SR-01_ODP[07]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sr-01_odp.08": {
+      "param_id": "sr-01_odp.08",
+      "control_id": "SR-1",
+      "label": "events",
+      "sp800_53a_label": "SR-01_ODP[08]",
+      "value": "significant changes",
+      "raw_values": [
+        "significant changes"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sr-02_odp.02": {
+      "param_id": "sr-02_odp.02",
+      "control_id": "SR-2",
+      "label": "frequency",
+      "sp800_53a_label": "SR-02_ODP[02]",
+      "value": "at least annually",
+      "raw_values": [
+        "at least annually"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sr-08_odp.01": {
+      "param_id": "sr-08_odp.01",
+      "control_id": "SR-8",
+      "label": null,
+      "sp800_53a_label": "SR-08_ODP[01]",
+      "value": "notification of supply chain compromises and results of assessment or audits",
+      "raw_values": [
+        "notification of supply chain compromises and results of assessment or audits"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    },
+    "sr-11.02_odp": {
+      "param_id": "sr-11.02_odp",
+      "control_id": "SR-11(2)",
+      "label": "system components",
+      "sp800_53a_label": "SR-11(02)_ODP",
+      "value": "all",
+      "raw_values": [
+        "all"
+      ],
+      "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+    }
+  },
+  "parameters_by_control": {
+    "AC-1": [
+      {
+        "param_id": "ac-01_odp.05",
+        "control_id": "AC-1",
+        "label": "frequency",
+        "sp800_53a_label": "AC-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ac-01_odp.07",
+        "control_id": "AC-1",
+        "label": "frequency",
+        "sp800_53a_label": "AC-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ac-01_odp.08",
+        "control_id": "AC-1",
+        "label": "events",
+        "sp800_53a_label": "AC-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AC-2": [
+      {
+        "param_id": "ac-02_odp.06",
+        "control_id": "AC-2",
+        "label": "time period",
+        "sp800_53a_label": "AC-02_ODP[06]",
+        "value": "twenty-four (24) hours",
+        "raw_values": [
+          "twenty-four (24) hours"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ac-02_odp.07",
+        "control_id": "AC-2",
+        "label": "time period",
+        "sp800_53a_label": "AC-02_ODP[07]",
+        "value": "eight (8) hours",
+        "raw_values": [
+          "eight (8) hours"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ac-02_odp.08",
+        "control_id": "AC-2",
+        "label": "time period",
+        "sp800_53a_label": "AC-02_ODP[08]",
+        "value": "eight (8) hours",
+        "raw_values": [
+          "eight (8) hours"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ac-02_odp.10",
+        "control_id": "AC-2",
+        "label": "frequency",
+        "sp800_53a_label": "AC-02_ODP[10]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AC-8": [
+      {
+        "param_id": "ac-08_odp.01",
+        "control_id": "AC-8",
+        "label": "system use notification",
+        "sp800_53a_label": "AC-08_ODP[01]",
+        "value": "see additional Requirements and Guidance",
+        "raw_values": [
+          "see additional Requirements and Guidance"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ac-08_odp.02",
+        "control_id": "AC-8",
+        "label": "conditions",
+        "sp800_53a_label": "AC-08_ODP[02]",
+        "value": "see additional Requirements and Guidance",
+        "raw_values": [
+          "see additional Requirements and Guidance"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AC-22": [
+      {
+        "param_id": "ac-22_odp",
+        "control_id": "AC-22",
+        "label": "frequency",
+        "sp800_53a_label": "AC-22_ODP",
+        "value": "at least quarterly",
+        "raw_values": [
+          "at least quarterly"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AT-1": [
+      {
+        "param_id": "at-01_odp.05",
+        "control_id": "AT-1",
+        "label": "frequency",
+        "sp800_53a_label": "AT-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "at-01_odp.07",
+        "control_id": "AT-1",
+        "label": "frequency",
+        "sp800_53a_label": "AT-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "at-01_odp.08",
+        "control_id": "AT-1",
+        "label": "events",
+        "sp800_53a_label": "AT-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AT-2": [
+      {
+        "param_id": "at-02_odp.01",
+        "control_id": "AT-2",
+        "label": "frequency",
+        "sp800_53a_label": "AT-02_ODP[01]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "at-02_odp.02",
+        "control_id": "AT-2",
+        "label": "frequency",
+        "sp800_53a_label": "AT-02_ODP[02]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "at-02_odp.06",
+        "control_id": "AT-2",
+        "label": "frequency",
+        "sp800_53a_label": "AT-02_ODP[06]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AT-3": [
+      {
+        "param_id": "at-03_odp.03",
+        "control_id": "AT-3",
+        "label": "frequency",
+        "sp800_53a_label": "AT-03_ODP[03]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "at-03_odp.04",
+        "control_id": "AT-3",
+        "label": "frequency",
+        "sp800_53a_label": "AT-03_ODP[04]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AT-4": [
+      {
+        "param_id": "at-04_odp",
+        "control_id": "AT-4",
+        "label": "time period",
+        "sp800_53a_label": "AT-04_ODP",
+        "value": "at least one (1) year or 1 year after completion of a specific training program",
+        "raw_values": [
+          "at least one (1) year or 1 year after completion of a specific training program"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AU-1": [
+      {
+        "param_id": "au-01_odp.05",
+        "control_id": "AU-1",
+        "label": "frequency",
+        "sp800_53a_label": "AU-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "au-01_odp.07",
+        "control_id": "AU-1",
+        "label": "frequency",
+        "sp800_53a_label": "AU-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "au-01_odp.08",
+        "control_id": "AU-1",
+        "label": "events",
+        "sp800_53a_label": "AU-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AU-2": [
+      {
+        "param_id": "au-02_odp.01",
+        "control_id": "AU-2",
+        "label": "event types",
+        "sp800_53a_label": "AU-02_ODP[01]",
+        "value": "successful and unsuccessful account logon events, account management events, object access, policy change, privilege functions, process tracking, and system events. For Web applications: all administrator activity, authentication checks, authorization checks, data deletions, data access, data changes, and permission changes",
+        "raw_values": [
+          "successful and unsuccessful account logon events, account management events, object access, policy change, privilege functions, process tracking, and system events. For Web applications: all administrator activity, authentication checks, authorization checks, data deletions, data access, data changes, and permission changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "au-02_odp.02",
+        "control_id": "AU-2",
+        "label": "event types (subset of AU-02_ODP[01])",
+        "sp800_53a_label": "AU-02_ODP[02]",
+        "value": "organization-defined subset of the auditable events defined in AU-2a to be audited continually for each identified event.",
+        "raw_values": [
+          "organization-defined subset of the auditable events defined in AU-2a to be audited continually for each identified event."
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "au-02_odp.03",
+        "control_id": "AU-2",
+        "label": "frequency or situation",
+        "sp800_53a_label": "AU-02_ODP[03]",
+        "value": "organization-defined subset of the auditable events defined in AU-2a to be audited continually for each identified event.",
+        "raw_values": [
+          "organization-defined subset of the auditable events defined in AU-2a to be audited continually for each identified event."
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "au-02_odp.04",
+        "control_id": "AU-2",
+        "label": "frequency",
+        "sp800_53a_label": "AU-02_ODP[04]",
+        "value": "annually and whenever there is a change in the threat environment",
+        "raw_values": [
+          "annually and whenever there is a change in the threat environment"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AU-5": [
+      {
+        "param_id": "au-05_odp.03",
+        "control_id": "AU-5",
+        "label": "additional actions",
+        "sp800_53a_label": "AU-05_ODP[03]",
+        "value": "overwrite oldest record",
+        "raw_values": [
+          "overwrite oldest record"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AU-6": [
+      {
+        "param_id": "au-06_odp.01",
+        "control_id": "AU-6",
+        "label": "frequency",
+        "sp800_53a_label": "AU-06_ODP[01]",
+        "value": "at least weekly",
+        "raw_values": [
+          "at least weekly"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AU-8": [
+      {
+        "param_id": "au-08_odp",
+        "control_id": "AU-8",
+        "label": "granularity of time measurement",
+        "sp800_53a_label": "AU-08_ODP",
+        "value": "one second granularity of time measurement",
+        "raw_values": [
+          "one second granularity of time measurement"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AU-11": [
+      {
+        "param_id": "au-11_odp",
+        "control_id": "AU-11",
+        "label": "time period",
+        "sp800_53a_label": "AU-11_ODP",
+        "value": "a time period in compliance with M-21-31",
+        "raw_values": [
+          "a time period in compliance with M-21-31"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "AU-12": [
+      {
+        "param_id": "au-12_odp.01",
+        "control_id": "AU-12",
+        "label": "system components",
+        "sp800_53a_label": "AU-12_ODP[01]",
+        "value": "all information system and network components where audit capability is deployed/available",
+        "raw_values": [
+          "all information system and network components where audit capability is deployed/available"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CA-1": [
+      {
+        "param_id": "ca-01_odp.05",
+        "control_id": "CA-1",
+        "label": "frequency",
+        "sp800_53a_label": "CA-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ca-01_odp.07",
+        "control_id": "CA-1",
+        "label": "frequency",
+        "sp800_53a_label": "CA-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ca-01_odp.08",
+        "control_id": "CA-1",
+        "label": "events",
+        "sp800_53a_label": "CA-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CA-2": [
+      {
+        "param_id": "ca-02_odp.01",
+        "control_id": "CA-2",
+        "label": "assessment frequency",
+        "sp800_53a_label": "CA-02_ODP[01]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ca-02_odp.02",
+        "control_id": "CA-2",
+        "label": "individuals or roles",
+        "sp800_53a_label": "CA-02_ODP[02]",
+        "value": "individuals or roles to include FedRAMP PMO",
+        "raw_values": [
+          "individuals or roles to include FedRAMP PMO"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CA-3": [
+      {
+        "param_id": "ca-03_odp.03",
+        "control_id": "CA-3",
+        "label": "frequency",
+        "sp800_53a_label": "CA-03_ODP[03]",
+        "value": "at least annually and on input from AO",
+        "raw_values": [
+          "at least annually and on input from AO"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CA-5": [
+      {
+        "param_id": "ca-05_odp",
+        "control_id": "CA-5",
+        "label": "frequency",
+        "sp800_53a_label": "CA-05_ODP",
+        "value": "at least monthly",
+        "raw_values": [
+          "at least monthly"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CA-6": [
+      {
+        "param_id": "ca-06_odp",
+        "control_id": "CA-6",
+        "label": "frequency",
+        "sp800_53a_label": "CA-06_ODP",
+        "value": "in accordance with OMB A-130 requirements or when a significant change occurs",
+        "raw_values": [
+          "in accordance with OMB A-130 requirements or when a significant change occurs"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CA-7": [
+      {
+        "param_id": "ca-07_odp.04",
+        "control_id": "CA-7",
+        "label": "personnel or roles",
+        "sp800_53a_label": "CA-07_ODP[04]",
+        "value": "to include AO",
+        "raw_values": [
+          "to include AO"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ca-07_odp.06",
+        "control_id": "CA-7",
+        "label": "personnel or roles",
+        "sp800_53a_label": "CA-07_ODP[06]",
+        "value": "to include AO",
+        "raw_values": [
+          "to include AO"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CA-8": [
+      {
+        "param_id": "ca-08_odp.01",
+        "control_id": "CA-8",
+        "label": "frequency",
+        "sp800_53a_label": "CA-08_ODP[01]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CM-1": [
+      {
+        "param_id": "cm-01_odp.05",
+        "control_id": "CM-1",
+        "label": "frequency",
+        "sp800_53a_label": "CM-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "cm-01_odp.07",
+        "control_id": "CM-1",
+        "label": "frequency",
+        "sp800_53a_label": "CM-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "cm-01_odp.08",
+        "control_id": "CM-1",
+        "label": "events",
+        "sp800_53a_label": "CM-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CM-2": [
+      {
+        "param_id": "cm-02_odp.01",
+        "control_id": "CM-2",
+        "label": "frequency",
+        "sp800_53a_label": "CM-02_ODP[01]",
+        "value": "at least annually and when a significant change occurs",
+        "raw_values": [
+          "at least annually and when a significant change occurs"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "cm-02_odp.02",
+        "control_id": "CM-2",
+        "label": "circumstances",
+        "sp800_53a_label": "CM-02_ODP[02]",
+        "value": "to include when directed by the AO",
+        "raw_values": [
+          "to include when directed by the AO"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CM-8": [
+      {
+        "param_id": "cm-08_odp.02",
+        "control_id": "CM-8",
+        "label": "frequency",
+        "sp800_53a_label": "CM-08_ODP[02]",
+        "value": "at least monthly",
+        "raw_values": [
+          "at least monthly"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CM-11": [
+      {
+        "param_id": "cm-11_odp.03",
+        "control_id": "CM-11",
+        "label": "frequency",
+        "sp800_53a_label": "CM-11_ODP[03]",
+        "value": "Continuously (via CM-7 (5))",
+        "raw_values": [
+          "Continuously (via CM-7 (5))"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CP-1": [
+      {
+        "param_id": "cp-01_odp.05",
+        "control_id": "CP-1",
+        "label": "frequency",
+        "sp800_53a_label": "CP-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "cp-01_odp.07",
+        "control_id": "CP-1",
+        "label": "frequency",
+        "sp800_53a_label": "CP-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "cp-01_odp.08",
+        "control_id": "CP-1",
+        "label": "events",
+        "sp800_53a_label": "CP-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CP-2": [
+      {
+        "param_id": "cp-02_odp.05",
+        "control_id": "CP-2",
+        "label": "frequency",
+        "sp800_53a_label": "CP-02_ODP[05]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CP-3": [
+      {
+        "param_id": "cp-03_odp.01",
+        "control_id": "CP-3",
+        "label": "time period",
+        "sp800_53a_label": "CP-03_ODP[01]",
+        "value": "*See Additional Requirements",
+        "raw_values": [
+          "*See Additional Requirements"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "cp-03_odp.02",
+        "control_id": "CP-3",
+        "label": "frequency",
+        "sp800_53a_label": "CP-03_ODP[02]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "cp-03_odp.03",
+        "control_id": "CP-3",
+        "label": "frequency",
+        "sp800_53a_label": "CP-03_ODP[03]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CP-4": [
+      {
+        "param_id": "cp-04_odp.01",
+        "control_id": "CP-4",
+        "label": "frequency",
+        "sp800_53a_label": "CP-04_ODP[01]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "cp-04_odp.02",
+        "control_id": "CP-4",
+        "label": "tests",
+        "sp800_53a_label": "CP-04_ODP[02]",
+        "value": "classroom exercise/table top written tests",
+        "raw_values": [
+          "classroom exercise/table top written tests"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "cp-04_odp.03",
+        "control_id": "CP-4",
+        "label": "tests",
+        "sp800_53a_label": "CP-04_ODP[03]",
+        "value": "classroom exercise/table top written tests",
+        "raw_values": [
+          "classroom exercise/table top written tests"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "CP-9": [
+      {
+        "param_id": "cp-09_odp.02",
+        "control_id": "CP-9",
+        "label": "frequency",
+        "sp800_53a_label": "CP-09_ODP[02]",
+        "value": "daily incremental; weekly full",
+        "raw_values": [
+          "daily incremental; weekly full"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "cp-09_odp.03",
+        "control_id": "CP-9",
+        "label": "frequency",
+        "sp800_53a_label": "CP-09_ODP[03]",
+        "value": "daily incremental; weekly full",
+        "raw_values": [
+          "daily incremental; weekly full"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "cp-09_odp.04",
+        "control_id": "CP-9",
+        "label": "frequency",
+        "sp800_53a_label": "CP-09_ODP[04]",
+        "value": "daily incremental; weekly full",
+        "raw_values": [
+          "daily incremental; weekly full"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "IA-1": [
+      {
+        "param_id": "ia-01_odp.05",
+        "control_id": "IA-1",
+        "label": "frequency",
+        "sp800_53a_label": "IA-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ia-01_odp.07",
+        "control_id": "IA-1",
+        "label": "frequency",
+        "sp800_53a_label": "IA-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ia-01_odp.08",
+        "control_id": "IA-1",
+        "label": "events",
+        "sp800_53a_label": "IA-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "IA-4": [
+      {
+        "param_id": "ia-04_odp.01",
+        "control_id": "IA-4",
+        "label": "personnel or roles",
+        "sp800_53a_label": "IA-04_ODP[01]",
+        "value": "at a minimum, the ISSO (or similar role within the organization)",
+        "raw_values": [
+          "at a minimum, the ISSO (or similar role within the organization)"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ia-04_odp.02",
+        "control_id": "IA-4",
+        "label": "time period",
+        "sp800_53a_label": "IA-04_ODP[02]",
+        "value": "at least two (2) years",
+        "raw_values": [
+          "at least two (2) years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "IR-1": [
+      {
+        "param_id": "ir-01_odp.05",
+        "control_id": "IR-1",
+        "label": "frequency",
+        "sp800_53a_label": "IR-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ir-01_odp.07",
+        "control_id": "IR-1",
+        "label": "frequency",
+        "sp800_53a_label": "IR-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ir-01_odp.08",
+        "control_id": "IR-1",
+        "label": "events",
+        "sp800_53a_label": "IR-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "IR-2": [
+      {
+        "param_id": "ir-02_odp.01",
+        "control_id": "IR-2",
+        "label": "time period",
+        "sp800_53a_label": "IR-02_ODP[01]",
+        "value": "ten (10) days for privileged users, thirty (30) days for Incident Response roles",
+        "raw_values": [
+          "ten (10) days for privileged users, thirty (30) days for Incident Response roles"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ir-02_odp.02",
+        "control_id": "IR-2",
+        "label": "frequency",
+        "sp800_53a_label": "IR-02_ODP[02]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ir-02_odp.03",
+        "control_id": "IR-2",
+        "label": "frequency",
+        "sp800_53a_label": "IR-02_ODP[03]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "IR-6": [
+      {
+        "param_id": "ir-06_odp.01",
+        "control_id": "IR-6",
+        "label": "time period",
+        "sp800_53a_label": "IR-06_ODP[01]",
+        "value": "US-CERT incident reporting timelines as specified in NIST Special Publication 800-61 (as amended)",
+        "raw_values": [
+          "US-CERT incident reporting timelines as specified in NIST Special Publication 800-61 (as amended)"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "IR-8": [
+      {
+        "param_id": "ir-08_odp.02",
+        "control_id": "IR-8",
+        "label": "frequency",
+        "sp800_53a_label": "IR-08_ODP[02]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ir-08_odp.04",
+        "control_id": "IR-8",
+        "label": "incident response personnel",
+        "sp800_53a_label": "IR-08_ODP[04]",
+        "value": "see additional FedRAMP Requirements and Guidance",
+        "raw_values": [
+          "see additional FedRAMP Requirements and Guidance"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ir-08_odp.05",
+        "control_id": "IR-8",
+        "label": "organizational elements",
+        "sp800_53a_label": "IR-08_ODP[05]",
+        "value": "see additional FedRAMP Requirements and Guidance",
+        "raw_values": [
+          "see additional FedRAMP Requirements and Guidance"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ir-08_odp.06",
+        "control_id": "IR-8",
+        "label": "incident response personnel",
+        "sp800_53a_label": "IR-08_ODP[06]",
+        "value": "see additional FedRAMP Requirements and Guidance",
+        "raw_values": [
+          "see additional FedRAMP Requirements and Guidance"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ir-08_odp.07",
+        "control_id": "IR-8",
+        "label": "organizational elements",
+        "sp800_53a_label": "IR-08_ODP[07]",
+        "value": "see additional FedRAMP Requirements and Guidance",
+        "raw_values": [
+          "see additional FedRAMP Requirements and Guidance"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "MA-1": [
+      {
+        "param_id": "ma-01_odp.05",
+        "control_id": "MA-1",
+        "label": "frequency",
+        "sp800_53a_label": "MA-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ma-01_odp.07",
+        "control_id": "MA-1",
+        "label": "frequency",
+        "sp800_53a_label": "MA-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ma-01_odp.08",
+        "control_id": "MA-1",
+        "label": "events",
+        "sp800_53a_label": "MA-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "MP-1": [
+      {
+        "param_id": "mp-01_odp.05",
+        "control_id": "MP-1",
+        "label": "frequency",
+        "sp800_53a_label": "MP-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "mp-01_odp.07",
+        "control_id": "MP-1",
+        "label": "frequency",
+        "sp800_53a_label": "MP-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "mp-01_odp.08",
+        "control_id": "MP-1",
+        "label": "events",
+        "sp800_53a_label": "MP-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "MP-6": [
+      {
+        "param_id": "mp-06_odp.01",
+        "control_id": "MP-6",
+        "label": "system media",
+        "sp800_53a_label": "MP-06_ODP[01]",
+        "value": "techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware",
+        "raw_values": [
+          "techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "mp-06_odp.02",
+        "control_id": "MP-6",
+        "label": "system media",
+        "sp800_53a_label": "MP-06_ODP[02]",
+        "value": "techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware",
+        "raw_values": [
+          "techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "mp-06_odp.03",
+        "control_id": "MP-6",
+        "label": "system media",
+        "sp800_53a_label": "MP-06_ODP[03]",
+        "value": "techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware",
+        "raw_values": [
+          "techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PE-1": [
+      {
+        "param_id": "pe-01_odp.05",
+        "control_id": "PE-1",
+        "label": "frequency",
+        "sp800_53a_label": "PE-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "pe-01_odp.07",
+        "control_id": "PE-1",
+        "label": "frequency",
+        "sp800_53a_label": "PE-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "pe-01_odp.08",
+        "control_id": "PE-1",
+        "label": "events",
+        "sp800_53a_label": "PE-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PE-2": [
+      {
+        "param_id": "pe-02_odp",
+        "control_id": "PE-2",
+        "label": "frequency",
+        "sp800_53a_label": "PE-02_ODP",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PE-3": [
+      {
+        "param_id": "pe-03_odp.02",
+        "control_id": "PE-3",
+        "label": null,
+        "sp800_53a_label": "PE-03_ODP[02]",
+        "value": "CSP defined physical access control systems/devices AND guards",
+        "raw_values": [
+          "CSP defined physical access control systems/devices AND guards"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "pe-03_odp.06",
+        "control_id": "PE-3",
+        "label": "circumstances",
+        "sp800_53a_label": "PE-03_ODP[06]",
+        "value": "in all circumstances within restricted access area where the information system resides",
+        "raw_values": [
+          "in all circumstances within restricted access area where the information system resides"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "pe-03_odp.07",
+        "control_id": "PE-3",
+        "label": "physical access devices",
+        "sp800_53a_label": "PE-03_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "pe-03_odp.09",
+        "control_id": "PE-3",
+        "label": "frequency",
+        "sp800_53a_label": "PE-03_ODP[09]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "pe-03_odp.10",
+        "control_id": "PE-3",
+        "label": "frequency",
+        "sp800_53a_label": "PE-03_ODP[10]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PE-6": [
+      {
+        "param_id": "pe-06_odp.01",
+        "control_id": "PE-6",
+        "label": "frequency",
+        "sp800_53a_label": "PE-06_ODP[01]",
+        "value": "at least monthly",
+        "raw_values": [
+          "at least monthly"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PE-8": [
+      {
+        "param_id": "pe-08_odp.01",
+        "control_id": "PE-8",
+        "label": "time period",
+        "sp800_53a_label": "PE-08_ODP[01]",
+        "value": "for a minimum of one (1) year",
+        "raw_values": [
+          "for a minimum of one (1) year"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "pe-08_odp.02",
+        "control_id": "PE-8",
+        "label": "frequency",
+        "sp800_53a_label": "PE-08_ODP[02]",
+        "value": "at least monthly",
+        "raw_values": [
+          "at least monthly"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PE-14": [
+      {
+        "param_id": "pe-14_odp.01",
+        "control_id": "PE-14",
+        "label": null,
+        "sp800_53a_label": "PE-14_ODP[01]",
+        "value": "consistent with American Society of Heating, Refrigerating and Air-conditioning Engineers (ASHRAE) document entitled Thermal Guidelines for Data Processing Environments",
+        "raw_values": [
+          "consistent with American Society of Heating, Refrigerating and Air-conditioning Engineers (ASHRAE) document entitled Thermal Guidelines for Data Processing Environments"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "pe-14_odp.04",
+        "control_id": "PE-14",
+        "label": "frequency",
+        "sp800_53a_label": "PE-14_ODP[04]",
+        "value": "continuously",
+        "raw_values": [
+          "continuously"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PE-16": [
+      {
+        "param_id": "pe-16_odp.01",
+        "control_id": "PE-16",
+        "label": "types of system components",
+        "sp800_53a_label": "PE-16_ODP[01]",
+        "value": "all information system components",
+        "raw_values": [
+          "all information system components"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "pe-16_odp.02",
+        "control_id": "PE-16",
+        "label": "types of system components",
+        "sp800_53a_label": "PE-16_ODP[02]",
+        "value": "all information system components",
+        "raw_values": [
+          "all information system components"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PL-1": [
+      {
+        "param_id": "pl-01_odp.05",
+        "control_id": "PL-1",
+        "label": "frequency",
+        "sp800_53a_label": "PL-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "pl-01_odp.07",
+        "control_id": "PL-1",
+        "label": "frequency",
+        "sp800_53a_label": "PL-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "pl-01_odp.08",
+        "control_id": "PL-1",
+        "label": "events",
+        "sp800_53a_label": "PL-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PL-2": [
+      {
+        "param_id": "pl-02_odp.03",
+        "control_id": "PL-2",
+        "label": "frequency",
+        "sp800_53a_label": "PL-02_ODP[03]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PL-4": [
+      {
+        "param_id": "pl-04_odp.01",
+        "control_id": "PL-4",
+        "label": "frequency",
+        "sp800_53a_label": "PL-04_ODP[01]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "pl-04_odp.02",
+        "control_id": "PL-4",
+        "label": null,
+        "sp800_53a_label": "PL-04_ODP[02]",
+        "value": "at least annually and when the rules are revised or changed",
+        "raw_values": [
+          "at least annually and when the rules are revised or changed"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PL-8": [
+      {
+        "param_id": "pl-08_odp",
+        "control_id": "PL-8",
+        "label": "frequency",
+        "sp800_53a_label": "PL-08_ODP",
+        "value": "at least annually and when a significant change occurs",
+        "raw_values": [
+          "at least annually and when a significant change occurs"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PS-1": [
+      {
+        "param_id": "ps-01_odp.05",
+        "control_id": "PS-1",
+        "label": "frequency",
+        "sp800_53a_label": "PS-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ps-01_odp.07",
+        "control_id": "PS-1",
+        "label": "frequency",
+        "sp800_53a_label": "PS-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ps-01_odp.08",
+        "control_id": "PS-1",
+        "label": "events",
+        "sp800_53a_label": "PS-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PS-2": [
+      {
+        "param_id": "ps-02_odp",
+        "control_id": "PS-2",
+        "label": "frequency",
+        "sp800_53a_label": "PS-02_ODP",
+        "value": "at least every three years",
+        "raw_values": [
+          "at least every three years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PS-3": [
+      {
+        "param_id": "ps-03_odp.01",
+        "control_id": "PS-3",
+        "label": "conditions requiring rescreening",
+        "sp800_53a_label": "PS-03_ODP[01]",
+        "value": "for national security clearances; a reinvestigation is required during the fifth (5th) year for top secret security clearance, the tenth (10th) year for secret security clearance, and fifteenth (15th) year for confidential security clearance. For moderate risk law enforcement and high impact public trust level, a reinvestigation is required during the fifth (5th) year. There is no reinvestigation for other moderate risk positions or any low risk positions",
+        "raw_values": [
+          "for national security clearances; a reinvestigation is required during the fifth (5th) year for top secret security clearance, the tenth (10th) year for secret security clearance, and fifteenth (15th) year for confidential security clearance. For moderate risk law enforcement and high impact public trust level, a reinvestigation is required during the fifth (5th) year. There is no reinvestigation for other moderate risk positions or any low risk positions"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ps-03_odp.02",
+        "control_id": "PS-3",
+        "label": "frequency",
+        "sp800_53a_label": "PS-03_ODP[02]",
+        "value": "for national security clearances; a reinvestigation is required during the fifth (5th) year for top secret security clearance, the tenth (10th) year for secret security clearance, and fifteenth (15th) year for confidential security clearance. For moderate risk law enforcement and high impact public trust level, a reinvestigation is required during the fifth (5th) year. There is no reinvestigation for other moderate risk positions or any low risk positions",
+        "raw_values": [
+          "for national security clearances; a reinvestigation is required during the fifth (5th) year for top secret security clearance, the tenth (10th) year for secret security clearance, and fifteenth (15th) year for confidential security clearance. For moderate risk law enforcement and high impact public trust level, a reinvestigation is required during the fifth (5th) year. There is no reinvestigation for other moderate risk positions or any low risk positions"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PS-4": [
+      {
+        "param_id": "ps-04_odp.01",
+        "control_id": "PS-4",
+        "label": "time period",
+        "sp800_53a_label": "PS-04_ODP[01]",
+        "value": "four (4) hours",
+        "raw_values": [
+          "four (4) hours"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PS-5": [
+      {
+        "param_id": "ps-05_odp.02",
+        "control_id": "PS-5",
+        "label": "time period following the formal transfer action",
+        "sp800_53a_label": "PS-05_ODP[02]",
+        "value": "twenty-four (24) hours",
+        "raw_values": [
+          "twenty-four (24) hours"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ps-05_odp.04",
+        "control_id": "PS-5",
+        "label": "time period",
+        "sp800_53a_label": "PS-05_ODP[04]",
+        "value": "twenty-four (24) hours",
+        "raw_values": [
+          "twenty-four (24) hours"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PS-6": [
+      {
+        "param_id": "ps-06_odp.01",
+        "control_id": "PS-6",
+        "label": "frequency",
+        "sp800_53a_label": "PS-06_ODP[01]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ps-06_odp.02",
+        "control_id": "PS-6",
+        "label": "frequency",
+        "sp800_53a_label": "PS-06_ODP[02]",
+        "value": "at least annually and any time there is a change to the user's level of access",
+        "raw_values": [
+          "at least annually and any time there is a change to the user's level of access"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PS-7": [
+      {
+        "param_id": "ps-07_odp.01",
+        "control_id": "PS-7",
+        "label": "personnel or roles",
+        "sp800_53a_label": "PS-07_ODP[01]",
+        "value": "including access control personnel responsible for the system and/or facilities, as appropriate",
+        "raw_values": [
+          "including access control personnel responsible for the system and/or facilities, as appropriate"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ps-07_odp.02",
+        "control_id": "PS-7",
+        "label": "time period",
+        "sp800_53a_label": "PS-07_ODP[02]",
+        "value": "within twenty-four (24) hours",
+        "raw_values": [
+          "within twenty-four (24) hours"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "PS-8": [
+      {
+        "param_id": "ps-08_odp.01",
+        "control_id": "PS-8",
+        "label": "personnel or roles",
+        "sp800_53a_label": "PS-08_ODP[01]",
+        "value": "at a minimum, the ISSO and/or similar role within the organization",
+        "raw_values": [
+          "at a minimum, the ISSO and/or similar role within the organization"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "RA-1": [
+      {
+        "param_id": "ra-01_odp.05",
+        "control_id": "RA-1",
+        "label": "frequency",
+        "sp800_53a_label": "RA-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ra-01_odp.07",
+        "control_id": "RA-1",
+        "label": "frequency",
+        "sp800_53a_label": "RA-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ra-01_odp.08",
+        "control_id": "RA-1",
+        "label": "events",
+        "sp800_53a_label": "RA-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "RA-3": [
+      {
+        "param_id": "ra-03_odp.01",
+        "control_id": "RA-3",
+        "label": null,
+        "sp800_53a_label": "RA-03_ODP[01]",
+        "value": "security assessment report",
+        "raw_values": [
+          "security assessment report"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ra-03_odp.03",
+        "control_id": "RA-3",
+        "label": "frequency",
+        "sp800_53a_label": "RA-03_ODP[03]",
+        "value": "at least every three (3) years and when a significant change occurs",
+        "raw_values": [
+          "at least every three (3) years and when a significant change occurs"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ra-03_odp.05",
+        "control_id": "RA-3",
+        "label": "frequency",
+        "sp800_53a_label": "RA-03_ODP[05]",
+        "value": "at least every three (3) years",
+        "raw_values": [
+          "at least every three (3) years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "RA-5": [
+      {
+        "param_id": "ra-05_odp.01",
+        "control_id": "RA-5",
+        "label": "frequency and/or randomly in accordance with organization-defined process",
+        "sp800_53a_label": "RA-05_ODP[01]",
+        "value": "monthly operating system/infrastructure; monthly web applications (including APIs) and databases",
+        "raw_values": [
+          "monthly operating system/infrastructure; monthly web applications (including APIs) and databases"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ra-05_odp.02",
+        "control_id": "RA-5",
+        "label": "frequency and/or randomly in accordance with organization-defined process",
+        "sp800_53a_label": "RA-05_ODP[02]",
+        "value": "monthly operating system/infrastructure; monthly web applications (including APIs) and databases",
+        "raw_values": [
+          "monthly operating system/infrastructure; monthly web applications (including APIs) and databases"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "ra-05_odp.03",
+        "control_id": "RA-5",
+        "label": "response times",
+        "sp800_53a_label": "RA-05_ODP[03]",
+        "value": "high-risk vulnerabilities mitigated within thirty (30) days from date of discovery; moderate-risk vulnerabilities mitigated within ninety (90) days from date of discovery; low risk vulnerabilities mitigated within one hundred and eighty (180) days from date of discovery",
+        "raw_values": [
+          "high-risk vulnerabilities mitigated within thirty (30) days from date of discovery; moderate-risk vulnerabilities mitigated within ninety (90) days from date of discovery; low risk vulnerabilities mitigated within one hundred and eighty (180) days from date of discovery"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "RA-5(2)": [
+      {
+        "param_id": "ra-05.02_odp.01",
+        "control_id": "RA-5(2)",
+        "label": null,
+        "sp800_53a_label": "RA-05(02)_ODP[01]",
+        "value": "prior to a new scan",
+        "raw_values": [
+          "prior to a new scan"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SA-1": [
+      {
+        "param_id": "sa-01_odp.05",
+        "control_id": "SA-1",
+        "label": "frequency",
+        "sp800_53a_label": "SA-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "sa-01_odp.07",
+        "control_id": "SA-1",
+        "label": "frequency",
+        "sp800_53a_label": "SA-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "sa-01_odp.08",
+        "control_id": "SA-1",
+        "label": "events",
+        "sp800_53a_label": "SA-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SA-5": [
+      {
+        "param_id": "sa-05_odp.02",
+        "control_id": "SA-5",
+        "label": "personnel or roles",
+        "sp800_53a_label": "SA-05_ODP[02]",
+        "value": "at a minimum, the ISSO (or similar role within the organization)",
+        "raw_values": [
+          "at a minimum, the ISSO (or similar role within the organization)"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SA-9": [
+      {
+        "param_id": "sa-09_odp.01",
+        "control_id": "SA-9",
+        "label": "controls",
+        "sp800_53a_label": "SA-09_ODP[01]",
+        "value": "Appropriate FedRAMP Security Controls Baseline (s) if Federal information is processed or stored within the external system",
+        "raw_values": [
+          "Appropriate FedRAMP Security Controls Baseline (s) if Federal information is processed or stored within the external system"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "sa-09_odp.02",
+        "control_id": "SA-9",
+        "label": "processes, methods, and techniques",
+        "sp800_53a_label": "SA-09_ODP[02]",
+        "value": "Federal/FedRAMP Continuous Monitoring requirements must be met for external systems where Federal information is processed or stored",
+        "raw_values": [
+          "Federal/FedRAMP Continuous Monitoring requirements must be met for external systems where Federal information is processed or stored"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SC-1": [
+      {
+        "param_id": "sc-01_odp.05",
+        "control_id": "SC-1",
+        "label": "frequency",
+        "sp800_53a_label": "SC-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "sc-01_odp.07",
+        "control_id": "SC-1",
+        "label": "frequency",
+        "sp800_53a_label": "SC-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "sc-01_odp.08",
+        "control_id": "SC-1",
+        "label": "events",
+        "sp800_53a_label": "SC-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SC-5": [
+      {
+        "param_id": "sc-05_odp.02",
+        "control_id": "SC-5",
+        "label": null,
+        "sp800_53a_label": "SC-05_ODP[02]",
+        "value": "Protect against",
+        "raw_values": [
+          "Protect against"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "sc-05_odp.01",
+        "control_id": "SC-5",
+        "label": "types of denial-of-service events",
+        "sp800_53a_label": "SC-05_ODP[01]",
+        "value": "at a minimum: ICMP (ping) flood, SYN flood, slowloris, buffer overflow attack, and volume attack",
+        "raw_values": [
+          "at a minimum: ICMP (ping) flood, SYN flood, slowloris, buffer overflow attack, and volume attack"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SC-12": [
+      {
+        "param_id": "sc-12_odp",
+        "control_id": "SC-12",
+        "label": "requirements",
+        "sp800_53a_label": "SC-12_ODP",
+        "value": "In accordance with Federal requirements",
+        "raw_values": [
+          "In accordance with Federal requirements"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SC-13": [
+      {
+        "param_id": "sc-13_odp.02",
+        "control_id": "SC-13",
+        "label": "types of cryptography",
+        "sp800_53a_label": "SC-13_ODP[02]",
+        "value": "FIPS-validated or NSA-approved cryptography",
+        "raw_values": [
+          "FIPS-validated or NSA-approved cryptography"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SC-15": [
+      {
+        "param_id": "sc-15_odp",
+        "control_id": "SC-15",
+        "label": "exceptions where remote activation is to be allowed",
+        "sp800_53a_label": "SC-15_ODP",
+        "value": "no exceptions for computing devices",
+        "raw_values": [
+          "no exceptions for computing devices"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SC-28(1)": [
+      {
+        "param_id": "sc-28.01_odp.02",
+        "control_id": "SC-28(1)",
+        "label": "system components or media",
+        "sp800_53a_label": "SC-28(01)_ODP[02]",
+        "value": "all information system components storing Federal data or system data that must be protected at the High or Moderate impact levels",
+        "raw_values": [
+          "all information system components storing Federal data or system data that must be protected at the High or Moderate impact levels"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SI-1": [
+      {
+        "param_id": "si-01_odp.05",
+        "control_id": "SI-1",
+        "label": "frequency",
+        "sp800_53a_label": "SI-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "si-01_odp.07",
+        "control_id": "SI-1",
+        "label": "frequency",
+        "sp800_53a_label": "SI-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "si-01_odp.08",
+        "control_id": "SI-1",
+        "label": "events",
+        "sp800_53a_label": "SI-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SI-2": [
+      {
+        "param_id": "si-02_odp",
+        "control_id": "SI-2",
+        "label": "time period",
+        "sp800_53a_label": "SI-02_ODP",
+        "value": "within thirty (30) days of release of updates",
+        "raw_values": [
+          "within thirty (30) days of release of updates"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SI-3": [
+      {
+        "param_id": "si-03_odp.01",
+        "control_id": "SI-3",
+        "label": null,
+        "sp800_53a_label": "SI-03_ODP[01]",
+        "value": "signature based and non-signature based",
+        "raw_values": [
+          "signature based and non-signature based"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "si-03_odp.02",
+        "control_id": "SI-3",
+        "label": "frequency",
+        "sp800_53a_label": "SI-03_ODP[02]",
+        "value": "at least weekly",
+        "raw_values": [
+          "at least weekly"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "si-03_odp.03",
+        "control_id": "SI-3",
+        "label": null,
+        "sp800_53a_label": "SI-03_ODP[03]",
+        "value": "to include endpoints and network entry and exit points",
+        "raw_values": [
+          "to include endpoints and network entry and exit points"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "si-03_odp.04",
+        "control_id": "SI-3",
+        "label": null,
+        "sp800_53a_label": "SI-03_ODP[04]",
+        "value": "to include blocking and quarantining malicious code",
+        "raw_values": [
+          "to include blocking and quarantining malicious code"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "si-03_odp.06",
+        "control_id": "SI-3",
+        "label": "personnel or roles",
+        "sp800_53a_label": "SI-03_ODP[06]",
+        "value": "administrator or defined security personnel near-realtime",
+        "raw_values": [
+          "administrator or defined security personnel near-realtime"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SI-5": [
+      {
+        "param_id": "si-05_odp.01",
+        "control_id": "SI-5",
+        "label": "external organizations",
+        "sp800_53a_label": "SI-05_ODP[01]",
+        "value": "to include US-CERT and Cybersecurity and Infrastructure Security Agency (CISA) Directives",
+        "raw_values": [
+          "to include US-CERT and Cybersecurity and Infrastructure Security Agency (CISA) Directives"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "si-05_odp.02",
+        "control_id": "SI-5",
+        "label": null,
+        "sp800_53a_label": "SI-05_ODP[02]",
+        "value": "to include system security personnel and administrators with configuration/patch-management responsibilities",
+        "raw_values": [
+          "to include system security personnel and administrators with configuration/patch-management responsibilities"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SR-1": [
+      {
+        "param_id": "sr-01_odp.01",
+        "control_id": "SR-1",
+        "label": "personnel or roles",
+        "sp800_53a_label": "SR-01_ODP[01]",
+        "value": "to include chief privacy and ISSO and/or similar role or designees",
+        "raw_values": [
+          "to include chief privacy and ISSO and/or similar role or designees"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "sr-01_odp.05",
+        "control_id": "SR-1",
+        "label": "frequency",
+        "sp800_53a_label": "SR-01_ODP[05]",
+        "value": "at least every 3 years",
+        "raw_values": [
+          "at least every 3 years"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "sr-01_odp.07",
+        "control_id": "SR-1",
+        "label": "frequency",
+        "sp800_53a_label": "SR-01_ODP[07]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      },
+      {
+        "param_id": "sr-01_odp.08",
+        "control_id": "SR-1",
+        "label": "events",
+        "sp800_53a_label": "SR-01_ODP[08]",
+        "value": "significant changes",
+        "raw_values": [
+          "significant changes"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SR-2": [
+      {
+        "param_id": "sr-02_odp.02",
+        "control_id": "SR-2",
+        "label": "frequency",
+        "sp800_53a_label": "SR-02_ODP[02]",
+        "value": "at least annually",
+        "raw_values": [
+          "at least annually"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SR-8": [
+      {
+        "param_id": "sr-08_odp.01",
+        "control_id": "SR-8",
+        "label": null,
+        "sp800_53a_label": "SR-08_ODP[01]",
+        "value": "notification of supply chain compromises and results of assessment or audits",
+        "raw_values": [
+          "notification of supply chain compromises and results of assessment or audits"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ],
+    "SR-11(2)": [
+      {
+        "param_id": "sr-11.02_odp",
+        "control_id": "SR-11(2)",
+        "label": "system components",
+        "sp800_53a_label": "SR-11(02)_ODP",
+        "value": "all",
+        "raw_values": [
+          "all"
+        ],
+        "source": "FedRAMP Rev 5 Low Baseline Profile (FedRAMP_rev5_LOW-baseline_profile.json)"
+      }
+    ]
+  },
+  "guidance_by_control": {
+    "AC-7": "In alignment with NIST SP 800-63B.",
+    "AC-8": "The service provider shall determine elements of the cloud environment that require the System Use Notification control. The elements of the cloud environment that require System Use Notification are approved and accepted by the AO. The service provider shall determine how System Use Notification is going to be verified and provide appropriate periodicity of the check. The System Use Notification verification and periodicity are approved and accepted by the AO. If not performed as part of a Configuration Baseline check, then there must be documented agreement on how to provide results of verification and the necessary periodicity of the verification by the service provider. The documented agreement on how to provide verification of the results are approved and accepted by the AO. If performed as part of a Configuration Baseline check, then the % of items requiring setting that are checked and that pass (or fail) check can be provided.",
+    "AC-20": "The interrelated controls of AC-20, CA-3, and SA-9 should be differentiated as follows: AC-20 describes system access to and from external systems. CA-3 describes documentation of an agreement between the respective system owners when data is exchanged between the CSO and an external system. SA-9 describes the responsibilities of external system owners. These responsibilities would typically be captured in the agreement required by CA-3.",
+    "AU-2": "Coordination between service provider and consumer shall be documented and accepted by the AO. Annually or whenever changes in the threat environment are communicated to the service provider by the AO.",
+    "AU-6": "Coordination between service provider and consumer shall be documented and accepted by the AO. In multi-tenant environments, capability and means for providing review, analysis, and reporting to consumer for data pertaining to consumer shall be documented.",
+    "AU-11": "The service provider retains audit records on-line for at least ninety days and further preserves audit records off-line for a period that is in accordance with NARA requirements. The service provider must support Agency requirements to comply with M-21-31 (https://www.whitehouse.gov/wp-content/uploads/2021/08/M-21-31-Improving-the-Federal-Governments-Investigative-and-Remediation-Capabilities-Related-to-Cybersecurity-Incidents.pdf) The service provider is encouraged to align with M-21-31 where possible",
+    "CA-2": "Reference FedRAMP Annual Assessment Guidance.",
+    "CA-5": "POA&Ms must be provided at least monthly. Reference FedRAMP-POAM-Template",
+    "CA-6": "Significant change is defined in NIST Special Publication 800-37 Revision 2, Appendix F and according to FedRAMP Significant Change Policies and Procedures. The service provider describes the types of changes to the information system or the environment of operations that would impact the risk posture. The types of changes are approved and accepted by the AO.",
+    "CA-7": "Operating System, Database, Web Application, Container, and Service Configuration Scans: at least monthly. All scans performed by Independent Assessor: at least annually. CSOs with more than one agency ATO must implement a collaborative Continuous Monitoring (ConMon) approach described in the FedRAMP Guide for Multi-Agency Continuous Monitoring. This requirement applies to CSOs authorized via the Agency path as each agency customer is responsible for performing ConMon oversight. FedRAMP does not provide a template for the Continuous Monitoring Plan. CSPs should reference the FedRAMP Continuous Monitoring Strategy Guide when developing the Continuous Monitoring Plan.",
+    "CA-8": "Scope can be limited to public facing applications in alignment with M-22-09. Reference the FedRAMP Penetration Test Guidance.",
+    "CM-2": "Significant change is defined in NIST Special Publication 800-37 Revision 2, Appendix F.",
+    "CM-6": "The service provider shall use the DoD STIGs or Center for Internet Security guidelines to establish configuration settings; The service provider shall ensure that checklists for configuration settings are Security Content Automation Protocol (SCAP) validated or SCAP compatible (if validated checklists are not available). Compliance checks are used to evaluate configuration settings and provide general insight into the overall effectiveness of configuration management activities. CSPs and 3PAOs typically combine compliance check findings into a single CM-6 finding, which is acceptable. However, for initial assessments, annual assessments, and significant change requests, FedRAMP requires a clear understanding, on a per-control basis, where risks exist. Therefore, 3PAOs must also analyze compliance check findings as part of the controls assessment. Where a direct mapping exists, the 3PAO must document additional findings per control in the corresponding SAR Risk Exposure Table (RET), which are then documented in the CSP's Plan of Action and Milestones (POA&M). This will likely result in the details of individual control findings overlapping with those in the combined CM-6 finding, which is acceptable. During monthly continuous monitoring, new findings from CSP compliance checks may be combined into a single CM-6 POA&M item. CSPs are not required to map the findings to specific controls because controls are only assessed during initial assessments, annual assessments, and significant change requests.",
+    "CM-7": "The service provider shall use Security guidelines (See CM-6) to establish list of prohibited or restricted functions, ports, protocols, and/or services or establishes its own list of prohibited or restricted functions, ports, protocols, and/or services if STIGs or CIS is not available.",
+    "CM-8": "must be provided at least monthly or when there is a change.",
+    "CP-2": "CSPs must use the FedRAMP Information System Contingency Plan (ISCP) Template (available on the fedramp.gov: https://www.fedramp.gov/assets/resources/templates/SSP-A06-FedRAMP-ISCP-Template.docx).",
+    "CP-3": "Privileged admins and engineers must take the basic contingency training within 10 days. Consideration must be given for those privileged admins and engineers with critical contingency-related roles, to gain enough system context and situational awareness to understand the full impact of contingency training as it applies to their respective level. Newly hired critical contingency personnel must take this more in-depth training within 60 days of hire date when the training will have more impact.",
+    "CP-4": "The service provider develops test plans in accordance with NIST Special Publication 800-34 (as amended); plans are approved by the AO prior to initiating testing. The service provider must include the Contingency Plan test results with the security package within the Contingency Plan-designated appendix (Appendix G, Contingency Plan Test Report).",
+    "CP-9": "The service provider shall determine what elements of the cloud environment require the Information System Backup control. The service provider shall determine how Information System Backup is going to be verified and appropriate periodicity of the check. The service provider maintains at least three backup copies of user-level information (at least one of which is available online) or provides an equivalent alternative. The service provider maintains at least three backup copies of system-level information (at least one of which is available online) or provides an equivalent alternative. The service provider maintains at least three backup copies of information system documentation including security information (at least one of which is available online) or provides an equivalent alternative.",
+    "IA-2": "For all control enhancements that specify multifactor authentication, the implementation must adhere to the Digital Identity Guidelines specified in NIST Special Publication 800-63B. Multi-factor authentication must be phishing-resistant. All uses of encrypted virtual private networks must meet all applicable Federal requirements and architecture, dataflow, and security and privacy controls must be documented, assessed, and authorized to operate. \"Phishing-resistant\" authentication refers to authentication processes designed to detect and prevent disclosure of authentication secrets and outputs to a website or application masquerading as a legitimate system.",
+    "IA-2(1)": "According to SP 800-63-3, SP 800-63A (IAL), SP 800-63B (AAL), and SP 800-63C (FAL). Multi-factor authentication must be phishing-resistant. Multi-factor authentication to subsequent components in the same user domain is not required.",
+    "IA-2(2)": "According to SP 800-63-3, SP 800-63A (IAL), SP 800-63B (AAL), and SP 800-63C (FAL). Multi-factor authentication must be phishing-resistant. Multi-factor authentication to subsequent components in the same user domain is not required.",
+    "IA-2(12)": "Include Common Access Card (CAC), i.e., the DoD technical implementation of PIV/FIPS 201/HSPD-12.",
+    "IA-5": "Authenticators must be compliant with NIST SP 800-63-3 Digital Identity Guidelines IAL, AAL, FAL level 1. Link https://pages.nist.gov/800-63-3 SP 800-63C Section 6.2.3 Encrypted Assertion requires that authentication assertions be encrypted when passed through third parties, such as a browser. For example, a SAML assertion can be encrypted using XML-Encryption, or an OpenID Connect ID Token can be encrypted using JSON Web Encryption (JWE).",
+    "IA-5(1)": "Password policies must be compliant with NIST SP 800-63B for all memorized, lookup, out-of-band, or One-Time-Passwords (OTP). Password policies shall not enforce special character or minimum password rotation requirements for memorized secrets of users. For cases where technology doesn't allow multi-factor authentication, these rules should be enforced: must have a minimum length of 14 characters and must support all printable ASCII characters. For emergency use accounts, these rules should be enforced: must have a minimum length of 14 characters, must support all printable ASCII characters, and passwords must be changed if used. Note that (c) and (d) require the use of cryptography which must be compliant with Federal requirements and utilize FIPS validated or NSA approved cryptography (see SC-13).",
+    "IA-11": "The fixed time period cannot exceed the limits set in SP 800-63. At this writing they are: - AAL1 (low baseline) - 30 days of extended session - No limit on inactivity",
+    "IR-4": "The FISMA definition of \"incident\" shall be used: \"An occurrence that actually or imminently jeopardizes, without lawful authority, the confidentiality, integrity, or availability of information or an information system; or constitutes a violation or imminent threat of violation of law, security policies, security procedures, or acceptable use policies.\" The service provider ensures that individuals conducting incident handling meet personnel security requirements commensurate with the criticality/sensitivity of the information being processed, stored, and transmitted by the information system.",
+    "IR-6": "Reports security incident information according to FedRAMP Incident Communications Procedure.",
+    "IR-8": "The service provider defines a list of incident response personnel (identified by name and/or by role) and organizational elements. The incident response list includes designated FedRAMP personnel. The service provider defines a list of incident response personnel (identified by name and/or by role) and organizational elements. The incident response list includes designated FedRAMP personnel.",
+    "PE-14": "The service provider measures temperature at server inlets and humidity levels by dew point.",
+    "PL-8": "Significant change is defined in NIST Special Publication 800-37 Revision 2, Appendix F.",
+    "PL-10": "Select the appropriate FedRAMP Baseline",
+    "RA-3": "Significant change is defined in NIST Special Publication 800-37 Revision 2, Appendix F. Include all Authorizing Officials.",
+    "RA-5": "See the FedRAMP Documents page\\> Vulnerability Scanning Requirements https://www.FedRAMP.gov/documents/ an accredited independent assessor scans operating systems/infrastructure, web applications, and databases once annually. If a vulnerability is listed among the CISA Known Exploited Vulnerability (KEV) Catalog (https://www.cisa.gov/known-exploited-vulnerabilities-catalog) the KEV remediation date supersedes the FedRAMP parameter requirement. to include all Authorizing Officials. Informational findings from a scanner are detailed as a returned result that holds no vulnerability risk or severity and for FedRAMP does not require an entry onto the POA&M or entry onto the RET during any assessment phase. Warning findings, on the other hand, are given a risk rating (low, moderate, high or critical) by the scanning solution and should be treated like any other finding with a risk or severity rating for tracking purposes onto either the POA&M or RET depending on when the findings originated (during assessments or during monthly continuous monitoring). If a warning is received during scanning, but further validation turns up no actual issue then this item should be categorized as a false positive. If this situation presents itself during an assessment phase (initial assessment, annual assessment or any SCR), follow guidance on how to report false positives in the Security Assessment Report (SAR). If this situation happens during monthly continuous monitoring, a deviation request will need to be submitted per the FedRAMP Vulnerability Deviation Request Form. Warnings are commonly associated with scanning solutions that also perform compliance scans, and if the scanner reports a \"warning\" as part of the compliance scanning of a CSO, follow guidance surrounding the tracking of compliance findings during either the assessment phases (initial assessment, annual assessment or any SCR) or monthly continuous monitoring as it applies. Guidance on compliance scan findings can be found by searching on \"Tracking of Compliance Scans\" in FAQs.",
+    "SA-4": "The service provider must comply with Federal Acquisition Regulation (FAR) Subpart 7.103, and Section 889 of the John S. McCain National Defense Authorization Act (NDAA) for Fiscal Year 2019 (Pub. L. 115-232), and FAR Subpart 4.21, which implements Section 889 (as well as any added updates related to FISMA to address security concerns in the system acquisitions process). The use of Common Criteria (ISO/IEC 15408) evaluated products is strongly preferred. See https://www.niap-ccevs.org/Product/index.cfm or https://www.commoncriteriaportal.org/products/.",
+    "SC-7": "SC-7 (b) should be met by subnet isolation. A subnetwork (subnet) is a physically or logically segmented section of a larger network defined at TCP/IP Layer 3, to both minimize traffic and, important for a FedRAMP Authorization, add a crucial layer of network isolation. Subnets are distinct from VLANs (Layer 2), security groups, and VPCs and are specifically required to satisfy SC-7 part b and other controls. See the FedRAMP Subnets White Paper (https://www.fedramp.gov/assets/resources/documents/FedRAMP_subnets_white_paper.pdf) for additional information.",
+    "SC-8": "For each instance of data in transit, confidentiality AND integrity should be through cryptography as specified in SC-8 (1), physical means as specified in SC-8 (5), or in combination. For clarity, this control applies to all data in transit. Examples include the following data flows: - Crossing the system boundary - Between compute instances - including containers - From a compute instance to storage - Replication between availability zones - Transmission of backups to storage - From a load balancer to a compute instance - Flows from management tools required for their work - e.g. log collection, scanning, etc. The following applies only when choosing SC-8 (5) in lieu of SC-8 (1). FedRAMP-Defined Assignment / Selection Parameters SC-8 (5)-1 [a hardened or alarmed carrier Protective Distribution System (PDS) when outside of Controlled Access Area (CAA)] SC-8 (5)-2 [prevent unauthorized disclosure of information AND detect changes to information] SC-8 (5) applies when physical protection has been selected as the method to protect confidentiality and integrity. For physical protection, data in transit must be in either a Controlled Access Area (CAA), or a Hardened or alarmed PDS. Hardened or alarmed PDS: Shall be as defined in SECTION X - CATEGORY 2 PDS INSTALLATION GUIDANCE of CNSSI No.7003, titled PROTECTED DISTRIBUTION SYSTEMS (PDS). Per the CNSSI No. 7003 Section VIII, PDS must originate and terminate in a Controlled Access Area (CAA). Controlled Access Area (CAA): Data will be considered physically protected, and in a CAA if it meets Section 2.3 of the DHS's Recommended Practice: Improving Industrial Control System Cybersecurity with Defense-in-Depth Strategies. CSPs can meet Section 2.3 of the DHS' recommended practice by satisfactory implementation of the following controls PE-2 (1), PE-2 (2), PE-2 (3), PE-3 (2), PE-3 (3), PE-6 (2), and PE-6 (3). Note: When selecting SC-8 (5), the above SC-8(5), and the above referenced PE controls must be added to the SSP. CNSSI No.7003 can be accessed here: https://www.dcsa.mil/Portals/91/documents/ctp/nao/CNSSI_7003_PDS_September_2015.pdf DHS Recommended Practice: Improving Industrial Control System Cybersecurity with Defense-in-Depth Strategies can be accessed here: https://us-cert.cisa.gov/sites/default/files/FactSheets/NCCIC%20ICS_FactSheet_Defense_in_Depth_Strategies_S508C.pdf",
+    "SC-8(1)": "Please ensure SSP Section 10.3 Cryptographic Modules Implemented for Data At Rest (DAR) and Data In Transit (DIT) is fully populated for reference in this control. See M-22-09, including \"Agencies encrypt all DNS requests and HTTP traffic within their environment\" SC-8 (1) applies when encryption has been selected as the method to protect confidentiality and integrity. Otherwise refer to SC-8 (5). SC-8 (1) is strongly encouraged. Note that this enhancement requires the use of cryptography which must be compliant with Federal requirements and utilize FIPS validated or NSA approved cryptography (see SC-13.) When leveraging encryption from the underlying IaaS/PaaS: While some IaaS/PaaS services provide encryption by default, many require encryption to be configured, and enabled by the customer. The CSP has the responsibility to verify encryption is properly configured.",
+    "SC-12": "See references in NIST 800-53 documentation. Must meet applicable Federal Cryptographic Requirements. See References Section of control. Wildcard certificates may be used internally within the system, but are not permitted for external customer access to the system.",
+    "SC-13": "This control applies to all use of cryptography. In addition to encryption, this includes functions such as hashing, random number generation, and key generation. Examples include the following: - Encryption of data - Decryption of data - Generation of one time passwords (OTPs) for MFA - Protocols such as TLS, SSH, and HTTPS The requirement for FIPS 140 validation, as well as timelines for acceptance of FIPS 140-2, and 140-3 can be found at the NIST Cryptographic Module Validation Program (CMVP). https://csrc.nist.gov/projects/cryptographic-module-validation-program For NSA-approved cryptography, the National Information Assurance Partnership (NIAP) oversees a national program to evaluate Commercial IT Products for Use in National Security Systems. The NIAP Product Compliant List can be found at the following location: https://www.niap-ccevs.org/Product/index.cfm When leveraging encryption from underlying IaaS/PaaS: While some IaaS/PaaS provide encryption by default, many require encryption to be configured, and enabled by the customer. The CSP has the responsibility to verify encryption is properly configured. Moving to non-FIPS CM or product is acceptable when: - FIPS validated version has a known vulnerability - Feature with vulnerability is in use - Non-FIPS version fixes the vulnerability - Non-FIPS version is submitted to NIST for FIPS validation - POA&M is added to track approval, and deployment when ready At a minimum, this control applies to cryptography in use for the following controls: AU-9(3), CP-9(8), IA-2(6), IA-5(1), MP-5, SC-8(1), and SC-28(1).",
+    "SC-15": "The information system provides disablement (instead of physical disconnect) of collaborative computing devices in a manner that supports ease of use.",
+    "SC-20": "Control Description should include how DNSSEC is implemented on authoritative DNS servers to supply valid responses to external DNSSEC requests. SC-20 applies to use of external authoritative DNS to access a CSO from outside the boundary. External authoritative DNS servers may be located outside an authorized environment. Positioning these servers inside an authorized boundary is encouraged. CSPs are recommended to self-check DNSSEC configuration through one of many available analyzers such as Sandia National Labs (https://dnsviz.net)",
+    "SC-21": "Control description should include how DNSSEC is implemented on recursive DNS servers to make DNSSEC requests when resolving DNS requests from internal components to domains external to the CSO boundary. - If the reply is signed, and fails DNSSEC, do not use the reply - If the reply is unsigned: - CSP chooses the policy to apply Internal recursive DNS servers must be located inside an authorized environment. It is typically within the boundary, or leveraged from an underlying IaaS/PaaS. Accepting an unsigned reply is acceptable SC-21 applies to use of internal recursive DNS to access a domain outside the boundary by a component inside the boundary. - DNSSEC resolution to access a component inside the boundary is excluded.",
+    "SC-28": "The organization supports the capability to use cryptographic mechanisms to protect information at rest. When leveraging encryption from underlying IaaS/PaaS: While some IaaS/PaaS services provide encryption by default, many require encryption to be configured, and enabled by the customer. The CSP has the responsibility to verify encryption is properly configured. Note that this enhancement requires the use of cryptography in accordance with SC-13.",
+    "SC-28(1)": "Organizations should select a mode of protection that is targeted towards the relevant threat scenarios. Examples: A. Organizations may apply full disk encryption (FDE) to a mobile device where the primary threat is loss of the device while storage is locked. B. For a database application housing data for a single customer, encryption at the file system level would often provide more protection than FDE against the more likely threat of an intruder on the operating system accessing the storage. C. For a database application housing data for multiple customers, encryption with unique keys for each customer at the database record level may be more appropriate.",
+    "SI-4": "See US-CERT Incident Response Reporting Guidelines.",
+    "SI-5": "SI-5 Additional FedRAMP Requirements and Guidance: Service Providers must address the CISA Emergency and Binding Operational Directives applicable to their cloud service offering per FedRAMP guidance. This includes listing the applicable directives and stating compliance status.",
+    "SR-3": "CSO must document and maintain the supply chain custody, including replacement devices, to ensure the integrity of the devices before being introduced to the boundary.",
+    "SR-8": "CSOs must ensure and document how they receive notifications from their supply chain vendor of newly discovered vulnerabilities including zero-day vulnerabilities.",
+    "SR-11": "CSOs must ensure that their supply chain vendors provide authenticity of software and patches and the vendor must have a plan to protect the development pipeline."
+  },
+  "formatted_parameter_rows": {
+    "AC-1": "`ac-01_odp.05` (frequency): at least every 3 years; `ac-01_odp.07` (frequency): at least annually; `ac-01_odp.08` (events): significant changes",
+    "AC-2": "`ac-02_odp.06` (time period): twenty-four (24) hours; `ac-02_odp.07` (time period): eight (8) hours; `ac-02_odp.08` (time period): eight (8) hours; `ac-02_odp.10` (frequency): at least annually",
+    "AC-8": "`ac-08_odp.01` (system use notification): see additional Requirements and Guidance; `ac-08_odp.02` (conditions): see additional Requirements and Guidance",
+    "AC-22": "`ac-22_odp` (frequency): at least quarterly",
+    "AT-1": "`at-01_odp.05` (frequency): at least every 3 years; `at-01_odp.07` (frequency): at least annually; `at-01_odp.08` (events): significant changes",
+    "AT-2": "`at-02_odp.01` (frequency): at least annually; `at-02_odp.02` (frequency): at least annually; `at-02_odp.06` (frequency): at least annually",
+    "AT-3": "`at-03_odp.03` (frequency): at least annually; `at-03_odp.04` (frequency): at least annually",
+    "AT-4": "`at-04_odp` (time period): at least one (1) year or 1 year after completion of a specific training program",
+    "AU-1": "`au-01_odp.05` (frequency): at least every 3 years; `au-01_odp.07` (frequency): at least annually; `au-01_odp.08` (events): significant changes",
+    "AU-2": "`au-02_odp.01` (event types): successful and unsuccessful account logon events, account management events, object access, policy change, privilege functions, process tracking, and system events. For Web applications: all administrator activity, authentication checks, authorization checks, data deletions, data access, data changes, and permission changes; `au-02_odp.02` (event types (subset of AU-02_ODP[01])): organization-defined subset of the auditable events defined in AU-2a to be audited continually for each identified event.; `au-02_odp.03` (frequency or situation): organization-defined subset of the auditable events defined in AU-2a to be audited continually for each identified event.; `au-02_odp.04` (frequency): annually and whenever there is a change in the threat environment",
+    "AU-5": "`au-05_odp.03` (additional actions): overwrite oldest record",
+    "AU-6": "`au-06_odp.01` (frequency): at least weekly",
+    "AU-8": "`au-08_odp` (granularity of time measurement): one second granularity of time measurement",
+    "AU-11": "`au-11_odp` (time period): a time period in compliance with M-21-31",
+    "AU-12": "`au-12_odp.01` (system components): all information system and network components where audit capability is deployed/available",
+    "CA-1": "`ca-01_odp.05` (frequency): at least every 3 years; `ca-01_odp.07` (frequency): at least annually; `ca-01_odp.08` (events): significant changes",
+    "CA-2": "`ca-02_odp.01` (assessment frequency): at least annually; `ca-02_odp.02` (individuals or roles): individuals or roles to include FedRAMP PMO",
+    "CA-3": "`ca-03_odp.03` (frequency): at least annually and on input from AO",
+    "CA-5": "`ca-05_odp` (frequency): at least monthly",
+    "CA-6": "`ca-06_odp` (frequency): in accordance with OMB A-130 requirements or when a significant change occurs",
+    "CA-7": "`ca-07_odp.04` (personnel or roles): to include AO; `ca-07_odp.06` (personnel or roles): to include AO",
+    "CA-8": "`ca-08_odp.01` (frequency): at least annually",
+    "CM-1": "`cm-01_odp.05` (frequency): at least every 3 years; `cm-01_odp.07` (frequency): at least annually; `cm-01_odp.08` (events): significant changes",
+    "CM-2": "`cm-02_odp.01` (frequency): at least annually and when a significant change occurs; `cm-02_odp.02` (circumstances): to include when directed by the AO",
+    "CM-8": "`cm-08_odp.02` (frequency): at least monthly",
+    "CM-11": "`cm-11_odp.03` (frequency): Continuously (via CM-7 (5))",
+    "CP-1": "`cp-01_odp.05` (frequency): at least every 3 years; `cp-01_odp.07` (frequency): at least annually; `cp-01_odp.08` (events): significant changes",
+    "CP-2": "`cp-02_odp.05` (frequency): at least annually",
+    "CP-3": "`cp-03_odp.01` (time period): *See Additional Requirements; `cp-03_odp.02` (frequency): at least annually; `cp-03_odp.03` (frequency): at least annually",
+    "CP-4": "`cp-04_odp.01` (frequency): at least every 3 years; `cp-04_odp.02` (tests): classroom exercise/table top written tests; `cp-04_odp.03` (tests): classroom exercise/table top written tests",
+    "CP-9": "`cp-09_odp.02` (frequency): daily incremental; weekly full; `cp-09_odp.03` (frequency): daily incremental; weekly full; `cp-09_odp.04` (frequency): daily incremental; weekly full",
+    "IA-1": "`ia-01_odp.05` (frequency): at least every 3 years; `ia-01_odp.07` (frequency): at least annually; `ia-01_odp.08` (events): significant changes",
+    "IA-4": "`ia-04_odp.01` (personnel or roles): at a minimum, the ISSO (or similar role within the organization); `ia-04_odp.02` (time period): at least two (2) years",
+    "IR-1": "`ir-01_odp.05` (frequency): at least every 3 years; `ir-01_odp.07` (frequency): at least annually; `ir-01_odp.08` (events): significant changes",
+    "IR-2": "`ir-02_odp.01` (time period): ten (10) days for privileged users, thirty (30) days for Incident Response roles; `ir-02_odp.02` (frequency): at least annually; `ir-02_odp.03` (frequency): at least annually",
+    "IR-6": "`ir-06_odp.01` (time period): US-CERT incident reporting timelines as specified in NIST Special Publication 800-61 (as amended)",
+    "IR-8": "`ir-08_odp.02` (frequency): at least annually; `ir-08_odp.04` (incident response personnel): see additional FedRAMP Requirements and Guidance; `ir-08_odp.05` (organizational elements): see additional FedRAMP Requirements and Guidance; `ir-08_odp.06` (incident response personnel): see additional FedRAMP Requirements and Guidance; `ir-08_odp.07` (organizational elements): see additional FedRAMP Requirements and Guidance",
+    "MA-1": "`ma-01_odp.05` (frequency): at least every 3 years; `ma-01_odp.07` (frequency): at least annually; `ma-01_odp.08` (events): significant changes",
+    "MP-1": "`mp-01_odp.05` (frequency): at least every 3 years; `mp-01_odp.07` (frequency): at least annually; `mp-01_odp.08` (events): significant changes",
+    "MP-6": "`mp-06_odp.01` (system media): techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware; `mp-06_odp.02` (system media): techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware; `mp-06_odp.03` (system media): techniques and procedures IAW NIST SP 800-88 Section 4: Reuse and Disposal of Storage Media and Hardware",
+    "PE-1": "`pe-01_odp.05` (frequency): at least every 3 years; `pe-01_odp.07` (frequency): at least annually; `pe-01_odp.08` (events): significant changes",
+    "PE-2": "`pe-02_odp` (frequency): at least annually",
+    "PE-3": "`pe-03_odp.02`: CSP defined physical access control systems/devices AND guards; `pe-03_odp.06` (circumstances): in all circumstances within restricted access area where the information system resides; `pe-03_odp.07` (physical access devices): at least annually; `pe-03_odp.09` (frequency): at least annually; `pe-03_odp.10` (frequency): at least annually",
+    "PE-6": "`pe-06_odp.01` (frequency): at least monthly",
+    "PE-8": "`pe-08_odp.01` (time period): for a minimum of one (1) year; `pe-08_odp.02` (frequency): at least monthly",
+    "PE-14": "`pe-14_odp.01`: consistent with American Society of Heating, Refrigerating and Air-conditioning Engineers (ASHRAE) document entitled Thermal Guidelines for Data Processing Environments; `pe-14_odp.04` (frequency): continuously",
+    "PE-16": "`pe-16_odp.01` (types of system components): all information system components; `pe-16_odp.02` (types of system components): all information system components",
+    "PL-1": "`pl-01_odp.05` (frequency): at least every 3 years; `pl-01_odp.07` (frequency): at least annually; `pl-01_odp.08` (events): significant changes",
+    "PL-2": "`pl-02_odp.03` (frequency): at least annually",
+    "PL-4": "`pl-04_odp.01` (frequency): at least every 3 years; `pl-04_odp.02`: at least annually and when the rules are revised or changed",
+    "PL-8": "`pl-08_odp` (frequency): at least annually and when a significant change occurs",
+    "PS-1": "`ps-01_odp.05` (frequency): at least every 3 years; `ps-01_odp.07` (frequency): at least annually; `ps-01_odp.08` (events): significant changes",
+    "PS-2": "`ps-02_odp` (frequency): at least every three years",
+    "PS-3": "`ps-03_odp.01` (conditions requiring rescreening): for national security clearances; a reinvestigation is required during the fifth (5th) year for top secret security clearance, the tenth (10th) year for secret security clearance, and fifteenth (15th) year for confidential security clearance. For moderate risk law enforcement and high impact public trust level, a reinvestigation is required during the fifth (5th) year. There is no reinvestigation for other moderate risk positions or any low risk positions; `ps-03_odp.02` (frequency): for national security clearances; a reinvestigation is required during the fifth (5th) year for top secret security clearance, the tenth (10th) year for secret security clearance, and fifteenth (15th) year for confidential security clearance. For moderate risk law enforcement and high impact public trust level, a reinvestigation is required during the fifth (5th) year. There is no reinvestigation for other moderate risk positions or any low risk positions",
+    "PS-4": "`ps-04_odp.01` (time period): four (4) hours",
+    "PS-5": "`ps-05_odp.02` (time period following the formal transfer action): twenty-four (24) hours; `ps-05_odp.04` (time period): twenty-four (24) hours",
+    "PS-6": "`ps-06_odp.01` (frequency): at least annually; `ps-06_odp.02` (frequency): at least annually and any time there is a change to the user's level of access",
+    "PS-7": "`ps-07_odp.01` (personnel or roles): including access control personnel responsible for the system and/or facilities, as appropriate; `ps-07_odp.02` (time period): within twenty-four (24) hours",
+    "PS-8": "`ps-08_odp.01` (personnel or roles): at a minimum, the ISSO and/or similar role within the organization",
+    "RA-1": "`ra-01_odp.05` (frequency): at least every 3 years; `ra-01_odp.07` (frequency): at least annually; `ra-01_odp.08` (events): significant changes",
+    "RA-3": "`ra-03_odp.01`: security assessment report; `ra-03_odp.03` (frequency): at least every three (3) years and when a significant change occurs; `ra-03_odp.05` (frequency): at least every three (3) years",
+    "RA-5": "`ra-05_odp.01` (frequency and/or randomly in accordance with organization-defined process): monthly operating system/infrastructure; monthly web applications (including APIs) and databases; `ra-05_odp.02` (frequency and/or randomly in accordance with organization-defined process): monthly operating system/infrastructure; monthly web applications (including APIs) and databases; `ra-05_odp.03` (response times): high-risk vulnerabilities mitigated within thirty (30) days from date of discovery; moderate-risk vulnerabilities mitigated within ninety (90) days from date of discovery; low risk vulnerabilities mitigated within one hundred and eighty (180) days from date of discovery",
+    "RA-5(2)": "`ra-05.02_odp.01`: prior to a new scan",
+    "SA-1": "`sa-01_odp.05` (frequency): at least every 3 years; `sa-01_odp.07` (frequency): at least annually; `sa-01_odp.08` (events): significant changes",
+    "SA-5": "`sa-05_odp.02` (personnel or roles): at a minimum, the ISSO (or similar role within the organization)",
+    "SA-9": "`sa-09_odp.01` (controls): Appropriate FedRAMP Security Controls Baseline (s) if Federal information is processed or stored within the external system; `sa-09_odp.02` (processes, methods, and techniques): Federal/FedRAMP Continuous Monitoring requirements must be met for external systems where Federal information is processed or stored",
+    "SC-1": "`sc-01_odp.05` (frequency): at least every 3 years; `sc-01_odp.07` (frequency): at least annually; `sc-01_odp.08` (events): significant changes",
+    "SC-5": "`sc-05_odp.02`: Protect against; `sc-05_odp.01` (types of denial-of-service events): at a minimum: ICMP (ping) flood, SYN flood, slowloris, buffer overflow attack, and volume attack",
+    "SC-12": "`sc-12_odp` (requirements): In accordance with Federal requirements",
+    "SC-13": "`sc-13_odp.02` (types of cryptography): FIPS-validated or NSA-approved cryptography",
+    "SC-15": "`sc-15_odp` (exceptions where remote activation is to be allowed): no exceptions for computing devices",
+    "SC-28(1)": "`sc-28.01_odp.02` (system components or media): all information system components storing Federal data or system data that must be protected at the High or Moderate impact levels",
+    "SI-1": "`si-01_odp.05` (frequency): at least every 3 years; `si-01_odp.07` (frequency): at least annually; `si-01_odp.08` (events): significant changes",
+    "SI-2": "`si-02_odp` (time period): within thirty (30) days of release of updates",
+    "SI-3": "`si-03_odp.01`: signature based and non-signature based; `si-03_odp.02` (frequency): at least weekly; `si-03_odp.03`: to include endpoints and network entry and exit points; `si-03_odp.04`: to include blocking and quarantining malicious code; `si-03_odp.06` (personnel or roles): administrator or defined security personnel near-realtime",
+    "SI-5": "`si-05_odp.01` (external organizations): to include US-CERT and Cybersecurity and Infrastructure Security Agency (CISA) Directives; `si-05_odp.02`: to include system security personnel and administrators with configuration/patch-management responsibilities",
+    "SR-1": "`sr-01_odp.01` (personnel or roles): to include chief privacy and ISSO and/or similar role or designees; `sr-01_odp.05` (frequency): at least every 3 years; `sr-01_odp.07` (frequency): at least annually; `sr-01_odp.08` (events): significant changes",
+    "SR-2": "`sr-02_odp.02` (frequency): at least annually",
+    "SR-8": "`sr-08_odp.01`: notification of supply chain compromises and results of assessment or audits",
+    "SR-11(2)": "`sr-11.02_odp` (system components): all"
+  }
+}

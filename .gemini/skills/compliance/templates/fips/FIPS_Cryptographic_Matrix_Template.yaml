@@ -1,0 +1,52 @@
+# skip boilerplate check
+# This template is hydrated into customer ATO deliverables; a Google
+# copyright header must not be stamped onto a customer's authorization
+# artifact. See templates/PROVENANCE.md.
+
+# ==============================================================================
+# FIPS 140-2 / FIPS 140-3 Cryptographic Validation Matrix
+# Required for Public Sector and Regulated Cloud Authorizations (FedRAMP, GovRAMP (formerly StateRAMP), CJIS, and DoD)
+# ==============================================================================
+
+system_metadata:
+  system_name: "{{ SYSTEM_NAME }}"
+  system_abbreviation: "{{ SYSTEM_ABBREVIATION }}"
+  impact_level: "{{ IMPACT_LEVEL }}"
+  compliance_baseline: "{{ COMPLIANCE_BASELINE }}"
+  organization: "{{ ORGANIZATION }}"
+  effective_date: "{{ DATE }}"
+  document_version: "{{ VERSION }}"
+
+cryptographic_modules:
+  - module_id: "FIPS-01"
+    function_area: "Customer-Managed Encryption Key (CMEK) Management (Cloud KMS Software / Cloud HSM)"
+    module_name: "Google BoringCrypto Module (Cloud KMS Software) / Cloud HSM (Marvell [formerly Cavium] HSMs)"
+    vendor: "Google LLC / Marvell (formerly Cavium)"
+    fips_certificate_number: "NIST CMVP Cert #4735 (Google BoringCrypto, FIPS 140-3 Level 1, retrieved 2026-10-15) for Cloud KMS software keys; Cloud HSM: FIPS 140-2 Level 3 validated HSMs manufactured by Marvell (formerly Cavium) [CONFIG_REQUIRED: CMVP certificate number from the Google Cloud FedRAMP/DoD package cryptographic module inventory or the Cloud HSM key attestation certificate chain]"
+    validation_level: "Cloud HSM (where protection_level=HSM): FIPS 140-2 Level 3 validated hardware security modules manufactured by Marvell (formerly Cavium); Cloud KMS software keys: FIPS 140-3 Level 1"
+    cryptographic_algorithms: "AES-256-GCM, RSA-2048/3072/4096, ECDSA P-256/P-384, HMAC-SHA-256/SHA-384, SP 800-90A CTR-DRBG"
+    implementation_scope: "Customer-Managed Encryption Keys (CMEK) securing GCS Buckets, Cloud SQL, Persistent Disks, and Secret Manager (Google default storage-layer encryption uses FIPS 140-validated BoringCrypto per CSP authorization package)."
+    validation_status: "Active on CMVP (#4735 for BoringCrypto software primitives, retrieved 2026-10-15); per CSP documentation for Cloud HSM (verify CMVP certificate status before submission)"
+
+  - module_id: "FIPS-02"
+    function_area: "Data-in-Transit Encryption (TLS 1.2 / TLS 1.3)"
+    module_name: "Google BoringCrypto Cryptographic Module"
+    vendor: "Google LLC"
+    fips_certificate_number: "NIST CMVP Cert #5104 (retrieved 2026-10-15)"
+    validation_level: "FIPS 140-3 Level 1"
+    cryptographic_algorithms: "TLS 1.2 / TLS 1.3 KDFs, AES-128/256-GCM, ECDHE-RSA / ECDHE-ECDSA, SHA-256 / SHA-384"
+    implementation_scope: "Encrypted Transport Layer Security (TLS 1.2 minimum, TLS 1.3 where supported per NIST SP 800-52 Rev. 2) across Google Front Ends (GFE) and customer endpoints (enforced via constraints/gcp.restrictTLSVersion where configured), plus ALTS/PSP network-layer encryption within the VPC."
+    validation_status: "Active on CMVP (#5104, retrieved 2026-10-15)"
+
+  - module_id: "FIPS-03"
+    function_area: "Perimeter Boundary & VPN Encryption (IPsec / TLS)"
+    module_name: "Google Cloud VPN / [CONFIG_REQUIRED: Customer NGFW Cryptographic Module]"
+    vendor: "Google LLC / [CONFIG_REQUIRED: Enterprise Appliance Security Vendor]"
+    fips_certificate_number: "[CONFIG_REQUIRED: CSP module certificate per Google Cloud FedRAMP/DoD authorization package and customer NGFW/appliance CMVP certificate]"
+    validation_level: "[CONFIG_REQUIRED: Cloud VPN & Customer Appliance FIPS Validation Level]"
+    cryptographic_algorithms: "IPsec IKEv2, AES-256-GCM, AES-256-CBC, HMAC-SHA-256/384, DH Group 14 (MODP-2048), ECDH Groups 19/20 (P-256/P-384)"
+    implementation_scope: "Boundary tunnel encryption (customer must restrict Cloud VPN IKEv2 proposals to FIPS-approved cipher suites: AES-GCM, SHA-2, and DH Group 14 or ECDH Groups 19/20)."
+    validation_status: "[CONFIG_REQUIRED: Verify NIST CMVP Certificate Status and applicable DISA STIG/SRG compliance for any customer-managed NGFW appliance]"
+
+rmf_team_manual_action:
+  callout: "> [!IMPORTANT] **RMF TEAM ACTION REQUIRED**: Maintain updated NIST CMVP Certificate numbers and verify module expiration dates prior to 3PAO / SCA assessment."

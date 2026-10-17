@@ -1,0 +1,53 @@
+{
+  "description": "Allowlisted NIST CMVP certificate numbers permitted in templates, with verified CSRC metadata and function scope (retrieved 2026-10-15).",
+  "certificates": {
+    "4735": {
+      "certificate_number": "4735",
+      "module_name": "BoringCrypto",
+      "vendor": "Google, LLC.",
+      "standard": "FIPS 140-3",
+      "overall_level": 1,
+      "status": "Active",
+      "sunset_date": "2029-07-22",
+      "retrieval_date": "2026-10-15",
+      "source_url": "https://csrc.nist.gov/projects/cryptographic-module-validation-program/certificate/4735",
+      "permitted_functions": [
+        "kms_software",
+        "drbg",
+        "cryptographic_module_auth",
+        "tls_1_2"
+      ],
+      "prohibited_line_patterns": [
+        "TLS\\s*1\\.3",
+        "Cloud\\s+VPN",
+        "IKEv2",
+        "storage\\s+level",
+        "Default\\s+Envelope\\s+Encryption",
+        "Storage\\s+Encryption"
+      ]
+    },
+    "5104": {
+      "certificate_number": "5104",
+      "module_name": "BoringCrypto",
+      "vendor": "Google, LLC",
+      "standard": "FIPS 140-3",
+      "overall_level": 1,
+      "status": "Active",
+      "sunset_date": "2030-12-08",
+      "retrieval_date": "2026-10-15",
+      "source_url": "https://csrc.nist.gov/projects/cryptographic-module-validation-program/certificate/5104",
+      "permitted_functions": [
+        "kms_software",
+        "tls_1_2",
+        "tls_1_3",
+        "drbg",
+        "cryptographic_module_auth"
+      ],
+      "prohibited_line_patterns": [
+        "Cloud\\s+VPN",
+        "IKEv2",
+        "Cloud\\s+HSM"
+      ]
+    }
+  }
+}

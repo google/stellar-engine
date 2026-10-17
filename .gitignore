@@ -82,3 +82,18 @@ experimental/last_operation.env
 experimental/logs/
 experimental/state/
 *.bak
+
+# Compliance skill local virtualenv
+.gemini/skills/compliance/.venv/
+
+# Compliance skill generated output and per-system operator config. The engine
+# writes these into the target blueprint directory; they are per-system
+# deliverables or sensitive operator inputs, not repository source.
+**/compliance_config.yaml
+**/system_inventory.json
+**/system_inventory.json.bak
+**/ato_artifacts/
+**/ato_artifacts_backup_*/
+**/tfplan.json
+**/terraform_plan.json
+blueprints/**/plan.json
