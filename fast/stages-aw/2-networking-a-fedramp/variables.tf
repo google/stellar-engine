@@ -65,9 +65,17 @@ variable "envs_folders" {
 }
 
 variable "essential_contacts" {
-  description = "Email used for essential contacts, unset if null."
-  type        = string
-  default     = null
+  description = "Email or map of emails to notification category lists used for essential contacts, unset if null or empty."
+  type        = any
+  default     = {}
+  validation {
+    condition = (
+      var.essential_contacts == null ||
+      can(tostring(var.essential_contacts)) ||
+      can({ for k, v in tomap(var.essential_contacts) : k => tolist(v) })
+    )
+    error_message = "essential_contacts must be null, a single email string, or a map of email strings to notification category lists."
+  }
 }
 
 variable "factories_config" {
@@ -253,6 +261,13 @@ variable "regime_mapping" {
   default     = null
 }
 
+variable "spoke_project_iam" {
+  description = "Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role."
+  type        = map(map(list(string)))
+  default     = {}
+  nullable    = false
+}
+
 variable "subnets" {
   description = "VPC subnet configurations keyed by network name."
   type = map(list(object({
@@ -348,5 +363,3 @@ variable "firewall_rules" {
   default  = {}
   nullable = false
 }
-
-

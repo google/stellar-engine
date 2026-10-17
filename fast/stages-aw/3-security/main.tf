@@ -15,6 +15,14 @@
  */
 
 locals {
+  essential_contacts = (
+    var.essential_contacts == null
+    ? {}
+    : try(
+      { for k, v in tomap(var.essential_contacts) : k => tolist(v) },
+      tostring(var.essential_contacts) == "" ? {} : { (tostring(var.essential_contacts)) = ["ALL"] }
+    )
+  )
   # additive IAM binding for delegated KMS admins
   kms_restricted_admin_template = {
     role = "roles/cloudkms.admin"
@@ -76,9 +84,5 @@ module "folder" {
   name          = "Security"
   folder_create = var.folder_ids.security == null
   id            = var.folder_ids.security
-  contacts = (
-    var.essential_contacts == null
-    ? {}
-    : { (var.essential_contacts) = ["ALL"] }
-  )
+  contacts      = local.essential_contacts
 }
