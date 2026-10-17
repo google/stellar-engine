@@ -24,6 +24,5 @@ custom.kmsRotation:
     - cloudkms.googleapis.com/CryptoKey
   method_types:
     - CREATE
-    - UPDATE
   condition: "((resource.rotationPeriod != duration('0s')) && (resource.rotationPeriod <= duration('7776000s')))"
   description: The rotation period for Cloud KMS keys must be set to 90 days or less.
