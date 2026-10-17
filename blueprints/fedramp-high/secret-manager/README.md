@@ -1,18 +1,23 @@
 # Secret Manager Blueprint
 This blueprint demonstrates how to create Google Secret Manager secrets, configure them with Customer-Managed Encryption Keys (CMEK) using Cloud KMS, and manage their IAM permissions, all within a multi-project GCP environment. It guides users on securely adding secret versions outside of Terraform state using a bash script.
-
 <!-- BEGIN TFDOC -->
-- [Secret Manager Blueprint](#secret-manager-blueprint)
-- [Introduction](#introduction)
-- [Disclaimer](#disclaimer)
-- [Prerequisites](#prerequisites)
-- [Deployment Steps](#deployment-steps)
-- [Verification](#verification)
-- [Important Notes](#important-notes)
-- [Variables](#variables)
-- [Outputs](#outputs)
-<!-- END TFDOC -->
+## Variables
 
+| name | description | type | required | default |
+|---|---|:---:|:---:|:---:|
+| [core_project_id](variables.tf#L15) | The Google Cloud Project ID where shared core services like KMS keys are located. Used for referencing existing KMS keys. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L32) | The Google Cloud Project ID where the secrets will be created. | <code>string</code> | ✓ |  |
+| [gcp_region](variables.tf#L20) | The Google Cloud region to be used as the default for regional resources and the provider. Note: Secret Manager secrets are regional resources. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [iam](variables.tf#L26) | IAM bindings in {SECRET => {ROLE => [MEMBERS]}} format. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [secrets](variables.tf#L37) | Map of secret configurations. Each key is the `secret_id` (name) of the secret. Each value is an object with optional `expire_time`, `version_destroy_ttl`, `locations` (list of regions for user-managed replication), and `keys` (a map where keys are replication locations (or 'global') and values are full KMS CryptoKey self-links for encryption). | <code title="map&#40;object&#40;&#123;&#10;  location            &#61; string &#35; A location is required for every secret&#10;  key                 &#61; string &#35; A key is required for the location &#40;the key and secret must be in the same region&#41;&#10;  expire_time         &#61; optional&#40;string&#41;&#10;  version_destroy_ttl &#61; optional&#40;string&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+
+## Outputs
+
+| name | description | sensitive |
+|---|---|:---:|
+| [ids](outputs.tf#L15) | Secret IDs. |  |
+| [secrets](outputs.tf#L20) | Secret resources. |  |
+<!-- END TFDOC -->
 ## Introduction
 Secret Manager is a secure and convenient storage system for API keys, passwords, certificates, and other sensitive data. It enables robust secret management with Cloud IAM roles, versioning, audit logging, and automated rotation capabilities.
 

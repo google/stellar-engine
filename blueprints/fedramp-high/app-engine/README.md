@@ -6,6 +6,8 @@
 - [Disclaimer](#disclaimer)
 - [Deployment Steps](#deployment-steps)
 - [Verification of a succesful deployment](#verification-of-a-succesful-deployment)
+- [Deployer Permissions](#deployer-permissions)
+  - [Impersonated Deployment Configuration](#impersonated-deployment-configuration)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
@@ -68,24 +70,23 @@ provider "google-beta" {
   billing_project             = "<workload-project-id>"
 }
 ```
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [main_project_id](variables.tf#L1) | Main project ID. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L6) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [main_project_id](variables.tf#L15) | Main project ID. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L20) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [app_id](outputs.tf#L1) | Identifier of the app. |  |
-| [code_bucket](outputs.tf#L6) | GCS bucket where the app code is stored. |  |
-| [default_bucket](outputs.tf#L11) | GCS bucket where the app content is stored. |  |
-| [default_hostname](outputs.tf#L16) | Default hostname for the app. |  |
-| [gcr_domain](outputs.tf#L21) | GCR domain used for storing managed Docker images. |  |
-| [id](outputs.tf#L26) | An identifier for the resource. |  |
-| [name](outputs.tf#L31) | Unique name of the app. |  |
+| [app_id](outputs.tf#L15) | Identifier of the app. |  |
+| [code_bucket](outputs.tf#L20) | GCS bucket where the app code is stored. |  |
+| [default_bucket](outputs.tf#L25) | GCS bucket where the app content is stored. |  |
+| [default_hostname](outputs.tf#L30) | Default hostname for the app. |  |
+| [gcr_domain](outputs.tf#L35) | GCR domain used for storing managed Docker images. |  |
+| [id](outputs.tf#L40) | An identifier for the resource. |  |
+| [name](outputs.tf#L45) | Unique name of the app. |  |
 <!-- END TFDOC -->

@@ -32,22 +32,22 @@ Look at the Private Service Connect tab under Network Services. You should see t
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [main_project_id](variables.tf#L19) | The GCP Project ID where the PSC will be created. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L24) | The network ID where the PSC will be created. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L35) | The GCP region. | <code>string</code> | ✓ |  |
-| [address](variables.tf#L1) | The IP address of the private service connection. | <code>string</code> |  | <code>&#34;10.5.5.5&#34;</code> |
-| [dns_code](variables.tf#L7) | Code to identify DNS resources in the form of `{dns_code}-{dns_type}`. | <code>string</code> |  | <code>&#34;dz&#34;</code> |
-| [ip_name](variables.tf#L13) | Name of the private IP allocation. | <code>string</code> |  | <code>&#34;psconnect-ip&#34;</code> |
-| [psc_name](variables.tf#L29) | Name of the forwarding rule used to create the PSC. | <code>string</code> |  | <code>&#34;pscforwardingrule&#34;</code> |
-| [service](variables.tf#L40) | Target resource to receive the matched traffic. Only `all-apis` and `vpc-sc` are valid. | <code>string</code> |  | <code>&#34;all-apis&#34;</code> |
+| [main_project_id](variables.tf#L33) | The GCP Project ID where the PSC will be created. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L38) | The network ID where the PSC will be created. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L49) | The GCP region. | <code>string</code> | ✓ |  |
+| [address](variables.tf#L15) | The IP address of the private service connection. | <code>string</code> |  | <code>&#34;10.5.5.5&#34;</code> |
+| [dns_code](variables.tf#L21) | Code to identify DNS resources in the form of `{dns_code}-{dns_type}`. | <code>string</code> |  | <code>&#34;dz&#34;</code> |
+| [ip_name](variables.tf#L27) | Name of the private IP allocation. | <code>string</code> |  | <code>&#34;psconnect-ip&#34;</code> |
+| [psc_name](variables.tf#L43) | Name of the forwarding rule used to create the PSC. | <code>string</code> |  | <code>&#34;pscforwardingrule&#34;</code> |
+| [service](variables.tf#L54) | Target resource to receive the matched traffic. Only `all-apis` and `vpc-sc` are valid. | <code>string</code> |  | <code>&#34;vpc-sc&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [dns_zone_gcr_name](outputs.tf#L1) | Name for Managed DNS zone for GCR. |  |
-| [dns_zone_googleapis_name](outputs.tf#L6) | Name for Managed DNS zone for GoogleAPIs. |  |
-| [dns_zone_pkg_dev_name](outputs.tf#L11) | Name for Managed DNS zone for PKG_DEV. |  |
-| [global_address_id](outputs.tf#L16) | An identifier for the global address created for the private service connect with format `projects/{{project}}/global/addresses/{{name}}`. |  |
-| [private_ip_allocation](outputs.tf#L21) | The IP that was allocated for this service connection. |  |
+| [dns_zone_gcr_name](outputs.tf#L15) | Name for Managed DNS zone for GCR. |  |
+| [dns_zone_googleapis_name](outputs.tf#L20) | Name for Managed DNS zone for GoogleAPIs. |  |
+| [dns_zone_pkg_dev_name](outputs.tf#L25) | Name for Managed DNS zone for PKG_DEV. |  |
+| [global_address_id](outputs.tf#L30) | An identifier for the global address created for the private service connect with format `projects/{{project}}/global/addresses/{{name}}`. |  |
+| [private_ip_allocation](outputs.tf#L35) | The IP that was allocated for this service connection. |  |
 <!-- END TFDOC -->

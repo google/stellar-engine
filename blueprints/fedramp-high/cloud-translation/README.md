@@ -49,25 +49,25 @@ To use the created workflow for batch translations, continue to the following st
 3. Go to workflows, and click on your newly created "translate-workflow".
 4. Click "Execute", then click "Execute" again.
 5. After the workflow executes, look at the output bucket to view your translated documents.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [main_project_id](variables.tf#L13) | The Google Project ID. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L24) | The Google Cloud region. | <code>string</code> | ✓ |  |
-| [deletion_protection](variables.tf#L1) | Deletion proteciton. | <code>bool</code> |  | <code>true</code> |
-| [file](variables.tf#L7) | File path of the yaml instructions for the workflow. | <code>string</code> |  | <code>&#34;code&#47;example.yaml&#34;</code> |
-| [output_folder](variables.tf#L18) | Name of the folder that will be created in the output bucket to store the translated text. | <code>string</code> |  | <code>&#34;output&#34;</code> |
-| [src_lang](variables.tf#L29) | The source language of the text. | <code>string</code> |  | <code>&#34;es&#34;</code> |
-| [target_lang](variables.tf#L35) | The target language to translate into. | <code>string</code> |  | <code>&#34;en&#34;</code> |
+| [main_project_id](variables.tf#L33) | The Google Project ID. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L44) | The Google Cloud region. | <code>string</code> | ✓ |  |
+| [deletion_protection](variables.tf#L15) | Deletion proteciton. | <code>bool</code> |  | <code>true</code> |
+| [file](variables.tf#L21) | File path of the yaml instructions for the workflow. | <code>string</code> |  | <code>&#34;code&#47;example.yaml&#34;</code> |
+| [kms_key_self_link](variables.tf#L27) | The full self-link of the existing KMS key to use for Workflow encryption (CMEK). | <code>string</code> |  | <code>null</code> |
+| [output_folder](variables.tf#L38) | Name of the folder that will be created in the output bucket to store the translated text. | <code>string</code> |  | <code>&#34;output&#34;</code> |
+| [src_lang](variables.tf#L49) | The source language of the text. | <code>string</code> |  | <code>&#34;es&#34;</code> |
+| [target_lang](variables.tf#L55) | The target language to translate into. | <code>string</code> |  | <code>&#34;en&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [input_bucket](outputs.tf#L1) | Bucket that takes documents as input. |  |
-| [output_bucket](outputs.tf#L6) | Bucket that stores translated output. |  |
-| [workflow](outputs.tf#L11) | Workflow that runs the batch processing. |  |
+| [input_bucket](outputs.tf#L15) | Bucket that takes documents as input. |  |
+| [output_bucket](outputs.tf#L20) | Bucket that stores translated output. |  |
+| [workflow](outputs.tf#L25) | Workflow that runs the batch processing. |  |
 <!-- END TFDOC -->

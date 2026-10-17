@@ -124,20 +124,20 @@ To add more Docker registries, simply add new objects below `docker:`
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [core_project_id](variables.tf#L1) | Core project ID. | <code>string</code> | ✓ |  |
-| [developer_registries](variables.tf#L6) | A map of developer registries and readers/writers for those developer registries. | <code title="map&#40;object&#40;&#123;&#10;  readers &#61; optional&#40;list&#40;string&#41;&#41;&#10;  writers &#61; optional&#40;list&#40;string&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [kms_key_name](variables.tf#L14) | The full self-link (projects/../locations/../keyRings/../cryptoKeys/..) of the existing KMS key to use for disk encryption. | <code>string</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L19) | Keyring attributes. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L24) | GCP Project to deploy Google Artifact Registries into. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L29) | Project that the Consumer Compute Engine VPC is located. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L34) | GCP Region to deploy Consumer VM into. | <code>string</code> | ✓ |  |
-| [subnetwork_name](variables.tf#L39) | VPC Subnet to deploy Consumer VM into. | <code>string</code> | ✓ |  |
-| [vpc_network_name](variables.tf#L44) | Name of the VPC where the subnet is deployed. | <code>string</code> |  | <code>&#34;&#34;</code> |
+| [core_project_id](variables.tf#L15) | Core project ID. | <code>string</code> | ✓ |  |
+| [developer_registries](variables.tf#L20) | A map of developer registries and readers/writers for those developer registries. | <code title="map&#40;object&#40;&#123;&#10;  readers &#61; optional&#40;list&#40;string&#41;&#41;&#10;  writers &#61; optional&#40;list&#40;string&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [kms_key_name](variables.tf#L28) | The full self-link (projects/../locations/../keyRings/../cryptoKeys/..) of the existing KMS key to use for disk encryption. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L33) | Keyring attributes. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L38) | GCP Project to deploy Google Artifact Registries into. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L43) | Project that the Consumer Compute Engine VPC is located. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L48) | GCP Region to deploy Consumer VM into. | <code>string</code> | ✓ |  |
+| [subnetwork_name](variables.tf#L53) | VPC Subnet to deploy Consumer VM into. | <code>string</code> | ✓ |  |
+| [vpc_network_name](variables.tf#L58) | Name of the VPC where the subnet is deployed. | <code>string</code> |  | <code>&#34;&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [docker_registries](outputs.tf#L1) | Docker registries created from the docker-registries.yaml file, with Docker Hub appended. |  |
-| [yum_repositories](outputs.tf#L6) | Yum repositories created from the yum-repos.yaml file. |  |
+| [docker_registries](outputs.tf#L15) | Docker registries created from the docker-registries.yaml file, with Docker Hub appended. |  |
+| [yum_repositories](outputs.tf#L20) | Yum repositories created from the yum-repos.yaml file. |  |
 <!-- END TFDOC -->

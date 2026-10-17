@@ -24,6 +24,11 @@ variable "file" {
   default     = "code/example.yaml"
 }
 
+variable "kms_key_name" {
+  description = "KMS customer managed encryption key (CMEK) name."
+  type        = string
+}
+
 variable "main_project_id" {
   description = "The Google Project ID."
   type        = string
@@ -43,9 +48,4 @@ variable "type" {
   description = "Type of Document AI model."
   type        = string
   default     = "OCR_PROCESSOR"
-}
-
-variable "kms_key_name" {
-  description = "KMS customer managed encryption key (CMEK) name."
-  type        = string
 }

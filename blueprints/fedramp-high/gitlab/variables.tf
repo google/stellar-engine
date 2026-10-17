@@ -12,6 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "compute_image" {
+  description = "The image used to provision the compute instance."
+  type        = string
+  default     = "projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20241219"
+}
+
+variable "gitlab_install_script_sha256" {
+  description = "Expected SHA-256 hash for the GitLab package repository install script."
+  type        = string
+  default     = "47c124527729776870cf09cd6bd46a9b94f55d40c7545ca26640c75de86b560d"
+  validation {
+    condition     = can(regex("^[a-fA-F0-9]{64}$", var.gitlab_install_script_sha256))
+    error_message = "gitlab_install_script_sha256 must be a valid 64-character hexadecimal SHA-256 digest."
+  }
+}
+
 variable "gitlab_uri" {
   description = "The URL hostname that the gitlab instance will be attached to."
   type        = string
@@ -105,20 +121,4 @@ variable "zone" {
   description = "Zone to deploy to."
   type        = string
   default     = "us-east4-a"
-}
-
-variable "compute_image" {
-  description = "The image used to provision the compute instance."
-  type        = string
-  default     = "projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20241219"
-}
-
-variable "gitlab_install_script_sha256" {
-  description = "Expected SHA-256 hash for the GitLab package repository install script."
-  type        = string
-  default     = "47c124527729776870cf09cd6bd46a9b94f55d40c7545ca26640c75de86b560d"
-  validation {
-    condition     = can(regex("^[a-fA-F0-9]{64}$", var.gitlab_install_script_sha256))
-    error_message = "gitlab_install_script_sha256 must be a valid 64-character hexadecimal SHA-256 digest."
-  }
 }

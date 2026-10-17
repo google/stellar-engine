@@ -79,27 +79,27 @@ table_info = {
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [bigtable_service_account_id](variables.tf#L7) | The Service Account for Bigtable. | <code>string</code> | ✓ |  |
-| [cluster_id](variables.tf#L12) | The Bigtable cluster ID. | <code>string</code> | ✓ |  |
-| [core_project_id](variables.tf#L17) | Core project ID. | <code>string</code> | ✓ |  |
-| [instance_name](variables.tf#L22) | Provide the name of the Bigtable. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L27) | The Cloud KMS key for encryption. | <code>string</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L32) | KMS Keyring. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L37) | Main project ID. | <code>string</code> | ✓ |  |
-| [auto_delete](variables.tf#L1) | Persistent Disk auto delete options. | <code>bool</code> |  | <code>true</code> |
-| [num_nodes](variables.tf#L42) | Number of nodes in the Bigtable cluster. | <code>number</code> |  | <code>1</code> |
-| [region](variables.tf#L48) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [storage_type](variables.tf#L54) | Either SSD or HDD. | <code>string</code> |  | <code>&#34;SSD&#34;</code> |
-| [table](variables.tf#L60) | Table to create in the bigtable instance. Default is null. | <code title="map&#40;object&#40;&#123;&#10;  split_keys      &#61; optional&#40;list&#40;string&#41;&#41;&#10;  column_families &#61; map&#40;object&#40;&#123;&#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code title="&#123;&#10;  &#34;Test&#34; &#61; &#123;&#10;    column_families &#61; &#123;&#125;&#10;  &#125;&#10;&#125;">&#123;&#8230;&#125;</code> |
-| [zone](variables.tf#L73) | Google Cloud Zone. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
+| [bigtable_service_account_id](variables.tf#L15) | The Service Account for Bigtable. | <code>string</code> | ✓ |  |
+| [cluster_id](variables.tf#L20) | The Bigtable cluster ID. | <code>string</code> | ✓ |  |
+| [core_project_id](variables.tf#L25) | Core project ID. | <code>string</code> | ✓ |  |
+| [instance_name](variables.tf#L36) | Provide the name of the Bigtable. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L41) | The Cloud KMS key for encryption. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L46) | KMS Keyring. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L51) | Main project ID. | <code>string</code> | ✓ |  |
+| [deletion_protection](variables.tf#L30) | Prevent Terraform from destroying the Bigtable instance. | <code>bool</code> |  | <code>true</code> |
+| [num_nodes](variables.tf#L56) | Number of nodes in the Bigtable cluster. | <code>number</code> |  | <code>1</code> |
+| [region](variables.tf#L62) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [storage_type](variables.tf#L68) | Either SSD or HDD. | <code>string</code> |  | <code>&#34;SSD&#34;</code> |
+| [table](variables.tf#L74) | Table to create in the bigtable instance. Default is null. | <code title="map&#40;object&#40;&#123;&#10;  split_keys      &#61; optional&#40;list&#40;string&#41;&#41;&#10;  column_families &#61; map&#40;object&#40;&#123;&#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>null</code> |
+| [zone](variables.tf#L83) | Google Cloud Zone. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [bigtable_service_identity_email](outputs.tf#L1) | The email of the Bigtable Service Identity. |  |
-| [bigtable_service_identity_uid](outputs.tf#L6) | The ID of the Bigtable Service Identity. |  |
-| [cluster_info](outputs.tf#L11) | Information about the created Bigtable cluster. |  |
-| [instance_name](outputs.tf#L21) | Bigtable instance name. |  |
-| [table_info](outputs.tf#L26) | Information about the tables created (if any). |  |
+| [bigtable_service_identity_email](outputs.tf#L15) | The email of the Bigtable Service Identity. |  |
+| [bigtable_service_identity_uid](outputs.tf#L20) | The ID of the Bigtable Service Identity. |  |
+| [cluster_info](outputs.tf#L25) | Information about the created Bigtable cluster. |  |
+| [instance_name](outputs.tf#L35) | Bigtable instance name. |  |
+| [table_info](outputs.tf#L40) | Information about the tables created (if any). |  |
 <!-- END TFDOC -->

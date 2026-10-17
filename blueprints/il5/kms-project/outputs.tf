@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-output "managed_keyring_id" {
-  description = "The fully qualified ID of the existing KMS KeyRing being managed by this blueprint."
-  value       = data.google_kms_key_ring.existing_keyring.id
-}
-
-output "managed_keyring_name" {
-  description = "The name of the existing KMS KeyRing being managed by this blueprint."
-  value       = data.google_kms_key_ring.existing_keyring.name
+output "managed_key_ids" {
+  description = "A map of names to fully qualified IDs for the existing CryptoKeys being managed by this blueprint."
+  value = {
+    for key_name, key_data in data.google_kms_crypto_key.existing_keys :
+    key_name => key_data.id
+  }
 }
 
 output "managed_key_self_links" {
@@ -32,11 +30,12 @@ output "managed_key_self_links" {
   }
 }
 
-output "managed_key_ids" {
-  description = "A map of names to fully qualified IDs for the existing CryptoKeys being managed by this blueprint."
-  value = {
-    for key_name, key_data in data.google_kms_crypto_key.existing_keys :
-    key_name => key_data.id
-  }
+output "managed_keyring_id" {
+  description = "The fully qualified ID of the existing KMS KeyRing being managed by this blueprint."
+  value       = data.google_kms_key_ring.existing_keyring.id
 }
 
+output "managed_keyring_name" {
+  description = "The name of the existing KMS KeyRing being managed by this blueprint."
+  value       = data.google_kms_key_ring.existing_keyring.name
+}

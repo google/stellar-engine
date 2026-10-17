@@ -53,7 +53,8 @@ def get_bindings(resources, prefix=None, folders=None):
       if resource_type == 'organization':
         resource_id = _org_id(attrs['org_id'])
       else:
-        resource_id = attrs.get(resource_type) or attrs.get('name') or attrs.get('id', '')
+        resource_id = attrs.get(resource_type) or attrs.get(
+            'name') or attrs.get('id', '')
         if prefix and resource_id.startswith(prefix):
           resource_id = resource_id[len(prefix) + 1:]
       role = attrs['role']

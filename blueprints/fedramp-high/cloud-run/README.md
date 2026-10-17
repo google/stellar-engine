@@ -50,33 +50,32 @@ You should see this README and some terraform files.
 ## Verification of a successful deployment
 Use GCP console to verify if the resources have been created.
 https://console.cloud.google.com/run
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [container_image](variables.tf#L21) | Container image to be hosted on cloud run. | <code>string</code> | ✓ |  |
-| [core_project_id](variables.tf#L26) | Core project ID. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L61) | Path to the kms key to use. | <code>string</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L66) | KMS Keyring. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L71) | Main Project ID. | <code>string</code> | ✓ |  |
-| [name](variables.tf#L82) | Name of the cloud run instance to be created. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L93) | Google Cloud Region. | <code>string</code> | ✓ |  |
-| [binary_authorization_mode](variables.tf#L1) | Binary Authorization mode for the Cloud Run service. | <code>string</code> |  | <code>&#34;default&#34;</code> |
-| [binary_authorization_policy](variables.tf#L11) | The full resource name of the Binary Authorization policy (e.g., 'projects/YOUR_PROJECT_ID/policies/YOUR_POLICY_ID'). | <code>string</code> |  | <code>null</code> |
-| [cpu](variables.tf#L31) | Sets the CPU limit. 1000m = 1 vCPU. | <code>string</code> |  | <code>&#34;1000m&#34;</code> |
-| [cpu_idle](variables.tf#L37) | Allows the container to scale to zero. | <code>bool</code> |  | <code>true</code> |
-| [env_vars](variables.tf#L43) | Environment variables for the Cloud Run service or job. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [ingress](variables.tf#L49) | Ingress settings. | <code>string</code> |  | <code>&#34;INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER&#34;</code> |
-| [is_job](variables.tf#L55) | Set to true to create a job instead of a service. | <code>bool</code> |  | <code>false</code> |
-| [memory](variables.tf#L76) | Sets the memory limit. 512Mi = 512MiB. | <code>string</code> |  | <code>&#34;512Mi&#34;</code> |
-| [port](variables.tf#L87) | Mapping of port number and port name to open. | <code>number</code> |  | <code>8080</code> |
+| [container_image](variables.tf#L35) | Container image to be hosted on cloud run. | <code>string</code> | ✓ |  |
+| [core_project_id](variables.tf#L40) | Core project ID. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L76) | Path to the kms key to use. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L81) | KMS Keyring. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L86) | Main Project ID. | <code>string</code> | ✓ |  |
+| [name](variables.tf#L97) | Name of the cloud run instance to be created. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L108) | Google Cloud Region. | <code>string</code> | ✓ |  |
+| [binary_authorization_mode](variables.tf#L15) | Binary Authorization mode for the Cloud Run service. | <code>string</code> |  | <code>&#34;default&#34;</code> |
+| [binary_authorization_policy](variables.tf#L25) | The full resource name of the Binary Authorization policy (e.g., 'projects/YOUR_PROJECT_ID/policies/YOUR_POLICY_ID'). | <code>string</code> |  | <code>null</code> |
+| [cpu](variables.tf#L45) | Sets the CPU limit. 1000m = 1 vCPU. | <code>string</code> |  | <code>&#34;1000m&#34;</code> |
+| [cpu_idle](variables.tf#L51) | Allows the container to scale to zero. | <code>bool</code> |  | <code>true</code> |
+| [env_vars](variables.tf#L57) | Environment variables for the Cloud Run service or job. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [ingress](variables.tf#L64) | Ingress settings. | <code>string</code> |  | <code>&#34;INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER&#34;</code> |
+| [is_job](variables.tf#L70) | Set to true to create a job instead of a service. | <code>bool</code> |  | <code>false</code> |
+| [memory](variables.tf#L91) | Sets the memory limit. 512Mi = 512MiB. | <code>string</code> |  | <code>&#34;512Mi&#34;</code> |
+| [port](variables.tf#L102) | Mapping of port number and port name to open. | <code>number</code> |  | <code>8080</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [cloud_run](outputs.tf#L1) | Cloud Run Service that was created. |  |
-| [service-account](outputs.tf#L6) | Service account that was created to run the Cloud Run Service. |  |
+| [cloud_run](outputs.tf#L15) | Cloud Run Service that was created. |  |
+| [service-account](outputs.tf#L20) | Service account that was created to run the Cloud Run Service. |  |
 <!-- END TFDOC -->

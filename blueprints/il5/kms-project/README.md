@@ -1,18 +1,27 @@
 # Cloud KMS Project Blueprint
 This blueprint demonstrates how to manage existing Google Cloud Key Management Service (Cloud KMS) KeyRings and CryptoKeys, applying IAM policies and potentially other configurations (like rotation policies) to them within a multi-project GCP environment. It assumes KMS infrastructure is created by a foundational layer.
-
 <!-- BEGIN TFDOC -->
-- [Cloud KMS Project Blueprint](#cloud-kms-project-blueprint)
-- [Introduction](#introduction)
-- [Disclaimer](#disclaimer)
-- [Prerequisites](#prerequisites)
-- [Deployment Steps](#deployment-steps)
-- [Verification](#verification)
-- [Important Notes](#important-notes)
-- [Variables](#variables)
-- [Outputs](#outputs)
-<!-- END TFDOC -->
+## Variables
 
+| name | description | type | required | default |
+|---|---|:---:|:---:|:---:|
+| [core_project_id](variables.tf#L15) | The Google Cloud Project ID where the existing KMS KeyRing and CryptoKeys are actually provisioned (this could be the same as `main_project_id`). | <code>string</code> | ✓ |  |
+| [existing_kms_keyring_name](variables.tf#L26) | The name of the existing Cloud KMS KeyRing to manage or apply policies to. | <code>string</code> | ✓ |  |
+| [gcp_region](variables.tf#L40) | The Google Cloud region where the existing KMS KeyRing is located. This will also be used as the default region for the provider. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L51) | The Google Cloud Project ID where KMS-related IAM policies will be managed (i.e., the project where the existing KMS keys reside). | <code>string</code> | ✓ |  |
+| [email](variables.tf#L20) | Email address of a user to grant permissions on KMS keys (if used in `existing_kms_keys.iam_members`). | <code>string</code> |  | <code>&#34;null &#35; Made optional, as it might not always be used&#34;</code> |
+| [existing_kms_keys](variables.tf#L31) | A map where keys are the names of existing CryptoKeys within the specified KeyRing, and values are objects defining additional properties (e.g., IAM members to add). | <code title="map&#40;object&#40;&#123;&#10;  iam_members       &#61; optional&#40;map&#40;list&#40;string&#41;&#41;, &#123;&#125;&#41; &#35; Example: &#123; &#34;roles&#47;cloudkms.cryptoKeyEncrypterDecrypter&#34; &#61; &#91;&#34;serviceAccount:...&#34;, &#34;user:...&#34;&#93; &#125;&#10;  rotation_period_s &#61; optional&#40;number&#41;                &#35; Example for managing rotation on existing keys &#40;in seconds&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [group_email](variables.tf#L45) | An email address that represents a Google group to grant permissions on KMS keys (if used in `existing_kms_keys.iam_members`). | <code>string</code> |  | <code>&#34;null &#35; Made optional, as it might not always be used&#34;</code> |
+
+## Outputs
+
+| name | description | sensitive |
+|---|---|:---:|
+| [managed_key_ids](outputs.tf#L17) | A map of names to fully qualified IDs for the existing CryptoKeys being managed by this blueprint. |  |
+| [managed_key_self_links](outputs.tf#L25) | A map of names to self-links for the existing CryptoKeys being managed by this blueprint. |  |
+| [managed_keyring_id](outputs.tf#L33) | The fully qualified ID of the existing KMS KeyRing being managed by this blueprint. |  |
+| [managed_keyring_name](outputs.tf#L38) | The name of the existing KMS KeyRing being managed by this blueprint. |  |
+<!-- END TFDOC -->
 ## Introduction
 Google Cloud Key Management Service (Cloud KMS) lets you create and manage encryption keys for use in compatible Google Cloud services and in your own applications. This blueprint facilitates central management by applying additional policies or configurations to KMS KeyRings and CryptoKeys that are already provisioned by your organization's foundational infrastructure.
 

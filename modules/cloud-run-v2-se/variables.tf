@@ -15,7 +15,7 @@
  */
 
 variable "binary_authorization_mode" {
-  description = "Mode for Binary Authorization. Can be 'default', 'policy', or 'disabled'"
+  description = "Mode for Binary Authorization. Can be 'default', 'policy', or 'disabled'."
   type        = string
   default     = "disabled" # Or "default"
   validation {

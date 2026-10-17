@@ -28,7 +28,12 @@ import os
 import re
 import sys
 
-_EXCLUDE_DIRS = ('.git', '.terraform')
+# Directories that never contain first-party source. Virtualenvs are excluded
+# because tools/lint.sh runs this check against $PWD, and in-tree virtualenvs
+# (such as .venv or venv) would otherwise cause every third-party file in
+# site-packages to be reported as a violation.
+_EXCLUDE_DIRS = ('.git', '.terraform', '.venv', 'venv', '__pycache__',
+                 'node_modules')
 _EXCLUDE_RE = re.compile(r'# skip boilerplate check')
 _MATCH_FILES = ('Dockerfile', '.py', '.sh', '.tf', '.yaml', '.yml')
 _MATCH_STRING = (r'^\s*[#\*]\sCopyright [0-9]{4} Google LLC$\s+[#\*]\s+'

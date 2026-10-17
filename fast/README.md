@@ -10,15 +10,14 @@ Fabric FAST comes from engineers in Google Cloud's Professional Services Organiz
 
 Fabric FAST was initially conceived to help enterprises quickly set up a GCP organization following battle-tested and widely-used patterns. Despite its origin in enterprise environments, FAST includes many customization points making it an ideal blueprint for organizations of all sizes, ranging from startups to the largest companies.
 
-<!-- BEGIN TOC --> 
-- [Stellar Engine FAST Security](#stellar-engine-fast-security)
-  - [Guiding principles](#guiding-principles)
-    - [Contracts and stages](#contracts-and-stages)
-    - [Security-first design](#security-first-design)
-    - [Extensive use of factories](#extensive-use-of-factories)
-    - [CI/CD](#cicd)
-  - [Implementation](#implementation)
-<!-- END TOC --> 
+<!-- BEGIN TOC -->
+- [Guiding principles](#guiding-principles)
+  - [Contracts and stages](#contracts-and-stages)
+  - [Security-first design](#security-first-design)
+  - [Extensive use of factories](#extensive-use-of-factories)
+  - [CI/CD](#cicd)
+- [Implementation](#implementation)
+<!-- END TOC -->
 
 ---
 

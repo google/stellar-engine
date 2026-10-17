@@ -358,5 +358,4 @@ module "cf-http" {
 - cloudbuild-custom-pool.tf
 - functions-default-sa-iam-grants.tf
 - pubsub.tf
-- secret-credentials.tf
 <!-- END TFDOC -->

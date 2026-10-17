@@ -41,7 +41,6 @@ In both modes, an optional service account can be created and assigned to either
   - [Sole Tenancy](#sole-tenancy)
 - [Variables](#variables)
 - [Outputs](#outputs)
-- [Fixtures](#fixtures)
 <!-- END TOC -->
 
 ### Instance using defaults
@@ -966,9 +965,4 @@ module "sole-tenancy" {
 | [service_account_iam_email](outputs.tf#L78) | Service account email. |  |
 | [template](outputs.tf#L87) | Template resource. |  |
 | [template_name](outputs.tf#L92) | Template name. |  |
-
-## Fixtures
-
-- iam-service-account.tf
-- net-vpc-ipv6.tf
 <!-- END TFDOC -->

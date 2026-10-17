@@ -2,7 +2,6 @@
 This blueprint creates a Google Cloud Pub/Sub topic and associated service accounts, configured for Customer-Managed Encryption Keys (CMEK) from an existing KMS key, and supports various subscription types.
 
 <!-- BEGIN TOC -->
-- [Google Cloud Pub/Sub Project Blueprint](#google-cloud-pubsub-project-blueprint)
 - [Introduction](#introduction)
 - [Disclaimer](#disclaimer)
 - [Prerequisites](#prerequisites)
@@ -102,31 +101,29 @@ To verify a successful deployment:
 -   This blueprint strictly **creates a Pub/Sub topic and its associated resources**; it does not consume an existing topic.
 -   Pub/Sub topics are **regional or global** resources depending on configuration. `var.gcp_region` will determine the topic's location (persistence region).
 -   The `kms_key_name` and `kms_keyring_name` inputs refer to **existing** Cloud KMS resources. This blueprint consumes these existing keys for CMEK on the topic.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [allowed_persistence_regions](variables.tf#L1) | A list of Google Cloud regions where messages are allowed to be stored. If empty, the topic will use the default global storage policy. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#34;us-east4&#34;&#93;</code> |
-| [core_project_id](variables.tf#L8) | The Google Cloud Project ID where the existing KMS KeyRing and CryptoKeys are provisioned. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L13) | The full resource path of the existing Cloud KMS CryptoKey to use for Customer-Managed Encryption Keys (CMEK) on the Pub/Sub topic. | <code>string</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L18) | The name of the existing Cloud KMS Key Ring to use for Pub/Sub topic encryption. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L22) | The Google Cloud Project ID where the Pub/Sub topic and associated service accounts will be created. | <code>string</code> | ✓ |  |
-| [publisher_account_id](variables.tf#L27) | The ID for the custom service account created for the Pub/Sub publisher (e.g., &#39;my-publisher-sa&#39;). | <code>string</code> |  | <code>&#34;pubsub-publisher-sa&#34;</code> |
-| [publisher_name](variables.tf#L33) | The display name for the custom Pub/Sub publisher service account. | <code>string</code> |  | <code>&#34;Pub&#47;Sub Publisher Service Account&#34;</code> |
-| [pubsub_topic](variables.tf#L39) | The name of the Pub/Sub topic to be created by this blueprint. | <code>string</code> | ✓ |  |
-| [gcp_region](variables.tf#L43) | The Google Cloud region to be used for Pub/Sub topic deployment and as the default for the provider. | <code>string</code> | ✓ |  |
-| [subscriber_account_id](variables.tf#L48) | The ID for the custom service account created for the Pub/Sub subscriber (e.g., &#39;my-subscriber-sa&#39;). | <code>string</code> |  | <code>&#34;pubsub-subscriber-sa&#34;</code> |
-| [subscriber_name](variables.tf#L54) | The display name for the custom Pub/Sub subscriber service account. | <code>string</code> |  | <code>&#34;Pub&#47;Sub Subscriber Service Account&#34;</code> |
+| [core_project_id](variables.tf#L23) | The Google Cloud Project ID where the existing KMS KeyRing and CryptoKeys are provisioned. | <code>string</code> | ✓ |  |
+| [gcp_region](variables.tf#L28) | The Google Cloud region to be used for Pub/Sub topic deployment and as the default for the provider. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L33) | The full resource path of the existing Cloud KMS CryptoKey to use for Customer-Managed Encryption Keys (CMEK) on the Pub/Sub topic. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L38) | The name of the existing Cloud KMS Key Ring to use for Pub/Sub topic encryption. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L43) | The Google Cloud Project ID where the Pub/Sub topic and associated service accounts will be created. | <code>string</code> | ✓ |  |
+| [pubsub_topic](variables.tf#L60) | The name of the Pub/Sub topic to be created by this blueprint. | <code>string</code> | ✓ |  |
+| [allowed_persistence_regions](variables.tf#L17) | A list of Google Cloud regions where messages are allowed to be stored. If empty, the topic will use the default global storage policy. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#34;us-east4&#34;&#93;</code> |
+| [publisher_account_id](variables.tf#L48) | The ID for the custom service account created for the Pub/Sub publisher (e.g., 'my-publisher-sa'). | <code>string</code> |  | <code>&#34;pubsub-publisher-sa&#34;</code> |
+| [publisher_name](variables.tf#L54) | The display name for the custom Pub/Sub publisher service account. | <code>string</code> |  | <code>&#34;Pub&#47;Sub Publisher Service Account&#34;</code> |
+| [subscriber_account_id](variables.tf#L65) | The ID for the custom service account created for the Pub/Sub subscriber (e.g., 'my-subscriber-sa'). | <code>string</code> |  | <code>&#34;pubsub-subscriber-sa&#34;</code> |
+| [subscriber_name](variables.tf#L71) | The display name for the custom Pub/Sub subscriber service account. | <code>string</code> |  | <code>&#34;Pub&#47;Sub Subscriber Service Account&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [pubsub_topic_name](outputs.tf#L14) | The name of the created Pub/Sub topic. |  |
-| [pubsub_topic_self_link](outputs.tf#L19) | The full resource path (self-link) of the created Pub/Sub topic. |  |
-| [publisher_service_account_email](outputs.tf#L24) | The email of the publisher service account. |  |
-| [subscriber_service_account_email](outputs.tf#L29) | The email of the subscriber service account. |  |
+| [publisher_service_account_email](outputs.tf#L17) | The email of the publisher service account. |  |
+| [pubsub_topic_name](outputs.tf#L22) | The name of the created Pub/Sub topic. |  |
+| [pubsub_topic_self_link](outputs.tf#L27) | The full resource path (self-link) of the created Pub/Sub topic. |  |
+| [subscriber_service_account_email](outputs.tf#L32) | The email of the subscriber service account. |  |
 <!-- END TFDOC -->
-
