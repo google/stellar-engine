@@ -62,15 +62,6 @@ resource "google_compute_instance_group_manager" "default" {
     }
   }
 
-  dynamic "instance_lifecycle_policy" {
-    for_each = var.instance_lifecycle_policy == null ? [] : [var.instance_lifecycle_policy]
-    iterator = p
-    content {
-      force_update_on_repair    = p.value.force_update_on_repair
-      default_action_on_failure = p.value.default_action_on_failure
-    }
-  }
-
   dynamic "named_port" {
     for_each = var.named_ports == null ? {} : var.named_ports
     iterator = config
@@ -173,15 +164,6 @@ resource "google_compute_region_instance_group_manager" "default" {
     content {
       health_check      = local.health_check
       initial_delay_sec = var.auto_healing_policies.initial_delay_sec
-    }
-  }
-
-  dynamic "instance_lifecycle_policy" {
-    for_each = var.instance_lifecycle_policy == null ? [] : [var.instance_lifecycle_policy]
-    iterator = p
-    content {
-      force_update_on_repair    = p.value.force_update_on_repair
-      default_action_on_failure = p.value.default_action_on_failure
     }
   }
 

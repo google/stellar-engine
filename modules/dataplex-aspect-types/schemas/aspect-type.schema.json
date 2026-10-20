@@ -1,22 +1,26 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Resource Manager Tags",
+  "title": "Dataplex Aspect Type",
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "allowed_values_regex": {
-      "type": "string"
-    },
-    "name": {
-      "type": "string"
-    },
     "description": {
       "type": "string"
     },
-    "id": {
+    "display_name": {
       "type": "string"
     },
-    "network": {
+    "labels": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9_-]{0,62}$": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{0,63}$"
+        }
+      }
+    },
+    "metadata_template": {
       "type": "string"
     },
     "iam": {
@@ -27,64 +31,18 @@
     },
     "iam_bindings_additive": {
       "$ref": "#/$defs/iam_bindings_additive"
-    },
-    "values": {
-      "type": "object",
-      "additionalProperties": false,
-      "patternProperties": {
-        "^[a-z-][^\\\\'\"/]+$": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "name": {
-              "type": "string"
-            },
-            "description": {
-              "type": "string"
-            },
-            "id": {
-              "type": "string"
-            },
-            "iam": {
-              "$ref": "#/$defs/iam"
-            },
-            "iam_bindings": {
-              "$ref": "#/$defs/iam_bindings"
-            },
-            "iam_bindings_additive": {
-              "$ref": "#/$defs/iam_bindings_additive"
-            }
-          }
-        }
-      }
     }
   },
-  "allOf": [
-    {
-      "if": {
-        "required": [
-          "allowed_values_regex"
-        ]
-      },
-      "then": {
-        "not": {
-          "required": [
-            "values"
-          ]
-        }
-      }
-    }
-  ],
   "$defs": {
     "iam": {
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {
-        "^roles/": {
+        "^(?:roles/|\\$custom_roles:|organizations/[0-9]+/roles/|([a-z0-9.]+:)?projects/[a-z0-9-]+/roles/)": {
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|\\$iam_principals:[a-z0-9_-]+)"
+            "pattern": "^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:||\\$iam_principals:[a-z0-9_-]+)"
           }
         }
       }
@@ -106,7 +64,7 @@
             },
             "role": {
               "type": "string",
-              "pattern": "^roles/"
+              "pattern": "^(?:roles/|\\$custom_roles:|organizations/[0-9]+/roles/|([a-z0-9.]+:)?projects/[a-z0-9-]+/roles/)"
             },
             "condition": {
               "type": "object",
@@ -145,7 +103,7 @@
             },
             "role": {
               "type": "string",
-              "pattern": "^[a-zA-Z0-9_/]+$"
+              "pattern": "^(?:roles/|\\$custom_roles:|organizations/[0-9]+/roles/|([a-z0-9.]+:)?projects/[a-z0-9-]+/roles/)"
             },
             "condition": {
               "type": "object",

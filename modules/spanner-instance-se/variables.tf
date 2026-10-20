@@ -62,7 +62,7 @@ variable "databases" {
 }
 
 variable "edition" {
-  description = "The Spanner instance edition. Valid values are 'EDITION_UNSPECIFIED', 'STANDARD', 'ENTERPRISE', or 'ENTERPRISE_PLUS'."
+  description = "The Spanner instance edition used when `instance.edition` is not set. Valid values are 'EDITION_UNSPECIFIED', 'STANDARD', 'ENTERPRISE', or 'ENTERPRISE_PLUS'."
   type        = string
   default     = "ENTERPRISE" # ENTERPRISE is required for autoscaling
   validation {

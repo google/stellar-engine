@@ -61,7 +61,8 @@ Stellar Engine keeps these changes on top of the upstream modules. Each sync pre
 | `project` | Terraform ignores `auto_create_network` and a `gcloud` step deletes the default network. |
 | `project` | The Cloud KMS service agent gets no automatic IAM grant, and the module does not look up the BigQuery default service account. |
 | `iam-service-account` | A precondition fails when the service account ID exceeds 30 characters. |
-| `folder` | The module picks the `CONSUMER_FOLDER` resource from the Assured Workloads workload and caps the display name at 30 characters. |
+| `folder` | The module picks the `CONSUMER_FOLDER` resource from the Assured Workloads workload and caps the display name at 30 characters, and the `folder_number` local returns null instead of failing when the folder ID is unknown. |
+| `gke-nodepool` | The `node_config.confidential_nodes` attribute turns on Confidential GKE Nodes for the node pool. |
 | `organization-se` | The copy of `organization` drops tags, prefixes custom constraint and policy names, joins additive IAM keys with `//`, and accepts flat `condition_vars`. |
 | `spanner-instance`, `spanner-instance-se` | Databases default to deletion protection, and the copy defaults to the `ENTERPRISE` edition. |
 | `cloudsql-instance` | The `psc_config` block is always present, and backups survive instance deletion by default. |
@@ -71,6 +72,7 @@ Stellar Engine keeps these changes on top of the upstream modules. Each sync pre
 | `datafusion`, `datafusion-se` | The instance logs with all metadata, and the copy carries a Stellar Engine implementation. |
 | `gke-cluster-standard`, `gke-cluster-autopilot` | The control plane public endpoint stays disabled unless a caller enables it. |
 | `gke-cluster-standard-se` | Every cluster registers with a fleet, by default in its own project. |
+| `gke-cluster-standard`, `gke-cluster-standard-se` | Shielded GKE Nodes default to on. |
 | `pubsub` | The module keeps the `name` output. |
 | `net-vpc-peering` | Variable descriptions are more detailed. |
 

@@ -49,9 +49,6 @@ resource "google_container_cluster" "cluster" {
     ? "ADVANCED_DATAPATH"
     : null
   )
-  fleet {
-    project = var.project_id
-  }
 
   dynamic "default_snat_status" {
     for_each = var.vpc_config.disable_default_snat == null ? [] : [""]
@@ -312,10 +309,12 @@ resource "google_container_cluster" "cluster" {
       enabled_apis = var.enable_features.beta_apis
     }
   }
+  # Stellar Engine registers every cluster with a fleet, by default the one of
+  # the cluster project.
   dynamic "fleet" {
-    for_each = var.fleet_project != null ? [""] : []
+    for_each = [""]
     content {
-      project = var.fleet_project
+      project = coalesce(var.fleet_project, var.project_id)
     }
   }
   dynamic "gateway_api_config" {

@@ -1,5 +1,5 @@
-/** TO MOD
- * Copyright 2024 Google LLC
+/**
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,57 +15,91 @@
  */
 
 locals {
-  prefix       = var.prefix == null ? "" : "${var.prefix}-"
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    }
+  }
+  ctx_p = "$"
+  encryption_key_name = (
+    var.encryption_key_name == null
+    ? null
+    : lookup(local.ctx.kms_keys, var.encryption_key_name, var.encryption_key_name)
+  )
+  has_replicas = length(var.replicas) > 0
   is_mysql     = can(regex("^MYSQL", var.database_version))
   is_postgres  = can(regex("^POSTGRES", var.database_version))
-  has_replicas = length(var.replicas) > 0
   is_regional  = var.availability_type == "REGIONAL" ? true : false
-  psc_enabled = (
-    var.network_config.connectivity.psc_allowed_consumer_projects != null
+  psa_private_network = (
+    try(var.network_config.connectivity.psa_config.private_network, null) == null
+    ? null
+    : lookup(
+      local.ctx.networks,
+      var.network_config.connectivity.psa_config.private_network,
+      var.network_config.connectivity.psa_config.private_network
+    )
   )
-  psc_allowed_consumer_projects = coalesce(
-    var.network_config.connectivity.psc_allowed_consumer_projects,
-    []
+  prefix     = var.prefix == null ? "" : "${var.prefix}-"
+  project_id = lookup(local.ctx.project_ids, var.project_id, var.project_id)
+  region     = lookup(local.ctx.locations, var.region, var.region)
+
+  ### PSC locals
+  psc_enabled = try(var.network_config.connectivity.psc_config, null) != null
+  psc_allowed_consumer_projects = (
+    try(var.network_config.connectivity.psc_config.allowed_consumer_projects, null) == null
+    ? null
+    : [
+      for p in try(var.network_config.connectivity.psc_config.allowed_consumer_projects, []) :
+      lookup(local.ctx.project_ids, p, p)
+    ]
   )
-  # enable backup if the user asks for it or if the user is deploying
-  # MySQL in HA configuration (regional or with specified replicas)
-  enable_backup = (
-    var.backup_configuration.enabled ||
-    (local.is_mysql && local.has_replicas) ||
-    (local.is_mysql && local.is_regional)
-  )
+  psc_auto_connections = [
+    for c in coalesce(
+      try(var.network_config.connectivity.psc_config.psc_auto_connections, []),
+      []
+      ) : {
+      consumer_network = lookup(local.ctx.networks, c.consumer_network, c.consumer_network)
+      consumer_service_project_id = (
+        c.consumer_service_project_id == null
+        ? null
+        : lookup(local.ctx.project_ids, c.consumer_service_project_id, c.consumer_service_project_id)
+      )
+    }
+  ]
+
   users = {
-    for k, v in coalesce(var.users, {}) : k =>
+    for k, v in var.users : k =>
     local.is_mysql
     ? {
-      name     = coalesce(v.type, "BUILT_IN") == "BUILT_IN" ? split("@", k)[0] : k
-      host     = coalesce(v.type, "BUILT_IN") == "BUILT_IN" ? try(split("@", k)[1], null) : null
-      password = coalesce(v.type, "BUILT_IN") == "BUILT_IN" ? try(random_password.passwords[k].result, v.password) : null
-      type     = coalesce(v.type, "BUILT_IN")
+      name           = v.type == "BUILT_IN" ? split("@", k)[0] : k
+      host           = v.type == "BUILT_IN" ? try(split("@", k)[1], null) : null
+      password       = v.type == "BUILT_IN" ? try(random_password.passwords[k].result, v.password) : null
+      type           = v.type
+      database_roles = v.database_roles
     }
     : {
-      name     = local.is_postgres ? try(trimsuffix(k, ".gserviceaccount.com"), k) : k
-      host     = null
-      password = coalesce(v.type, "BUILT_IN") == "BUILT_IN" ? try(random_password.passwords[k].result, v.password) : null
-      type     = coalesce(v.type, "BUILT_IN")
+      name           = local.is_postgres ? try(trimsuffix(k, ".gserviceaccount.com"), k) : k
+      host           = null
+      password       = v.type == "BUILT_IN" ? try(random_password.passwords[k].result, v.password) : null
+      type           = v.type
+      database_roles = v.database_roles
     }
   }
 }
 
 resource "google_sql_database_instance" "primary" {
   provider            = google-beta
-  project             = var.project_id
+  project             = local.project_id
   name                = "${local.prefix}${var.name}"
-  region              = var.region
+  region              = local.region
   database_version    = var.database_version
-  encryption_key_name = var.encryption_key_name
+  encryption_key_name = local.encryption_key_name
   root_password       = var.root_password.random_password ? random_password.root_password[0].result : var.root_password.password
 
   settings {
     tier                        = var.tier
     edition                     = var.edition
     deletion_protection_enabled = var.gcp_deletion_protection
-    retain_backups_on_delete    = var.backup_configuration.retain_backups_on_delete
     disk_autoresize             = var.disk_size == null
     disk_autoresize_limit       = var.disk_autoresize_limit
     disk_size                   = var.disk_size
@@ -75,13 +109,14 @@ resource "google_sql_database_instance" "primary" {
     activation_policy           = var.activation_policy
     collation                   = var.collation
     connector_enforcement       = var.connector_enforcement
+    data_api_access             = var.data_api_access
+    enable_dataplex_integration = var.enable_dataplex_integration
     time_zone                   = var.time_zone
+    retain_backups_on_delete    = try(var.backup_configuration.retain_backups_on_delete, true)
 
     ip_configuration {
-      ipv4_enabled = var.network_config.connectivity.public_ipv4
-      private_network = try(
-        var.network_config.connectivity.psa_config.private_network, null
-      )
+      ipv4_enabled    = var.network_config.connectivity.public_ipv4
+      private_network = local.psa_private_network
       allocated_ip_range = try(
         var.network_config.connectivity.psa_config.allocated_ip_ranges.primary, null
       )
@@ -101,34 +136,84 @@ resource "google_sql_database_instance" "primary" {
           value = network.value
         }
       }
+      # SQL Admin returns a disabled psc_config even when PSC is unused, so
+      # always emit the block to avoid a permanent diff.
       psc_config {
-        psc_enabled               = local.psc_enabled
-        allowed_consumer_projects = local.psc_allowed_consumer_projects
+        psc_enabled = local.psc_enabled
+        allowed_consumer_projects = (
+          local.psc_enabled ? local.psc_allowed_consumer_projects : []
+        )
+        network_attachment_uri             = try(var.network_config.connectivity.psc_config.network_attachment_uri, null)
+        psc_auto_connection_policy_enabled = try(var.network_config.connectivity.psc_config.psc_auto_connection_policy_enabled, null)
+        psc_auto_dns_enabled               = try(var.network_config.connectivity.psc_config.psc_auto_dns_enabled, null)
+        psc_write_endpoint_dns_enabled     = try(var.network_config.connectivity.psc_config.psc_write_endpoint_dns_enabled, null)
+
+        dynamic "psc_auto_connections" {
+          for_each = local.psc_auto_connections
+          content {
+            consumer_network            = psc_auto_connections.value.consumer_network
+            consumer_service_project_id = psc_auto_connections.value.consumer_service_project_id
+          }
+        }
       }
     }
 
+    # backup_configuration is Optional+Computed in the provider schema, meaning an absent block
+    # is treated as "don't manage" rather than "set to disabled". Setting var.backup_configuration
+    # to null preserves existing GCP settings; passing an object (even with enabled=false) causes
+    # Terraform to actively manage and apply the desired state.
+    # See: https://github.com/hashicorp/terraform-provider-google/blob/main/google/services/sql/resource_sql_database_instance.go#L424
+    # See: https://developer.hashicorp.com/terraform/language/attr-as-blocks
     dynamic "backup_configuration" {
-      for_each = local.enable_backup ? { 1 = 1 } : {}
+      for_each = var.backup_configuration != null ? [1] : []
       content {
-        enabled = true
-        // enable binary log if the user asks for it or we have replicas (default in regional),
-        // but only for MySQL
+        enabled = var.backup_configuration.enabled
+        // auto-enable binary log for MySQL when replicas or regional HA are in use;
+        // must be null (not true) when backups are disabled
         binary_log_enabled = (
-          local.is_mysql
+          local.is_mysql && var.backup_configuration.enabled
           ? var.backup_configuration.binary_log_enabled || local.has_replicas || local.is_regional
           : null
         )
         start_time = var.backup_configuration.start_time
         location   = var.backup_configuration.location
+        // must be explicitly false (not null) when backups are disabled
         point_in_time_recovery_enabled = (
-          var.backup_configuration.point_in_time_recovery_enabled
+          var.backup_configuration.enabled
+          ? var.backup_configuration.point_in_time_recovery_enabled
+          : false
         )
-        transaction_log_retention_days = (
-          var.backup_configuration.log_retention_days
-        )
-        backup_retention_settings {
-          retained_backups = var.backup_configuration.retention_count
-          retention_unit   = "COUNT"
+        transaction_log_retention_days = var.backup_configuration.log_retention_days
+        dynamic "backup_retention_settings" {
+          for_each = var.backup_configuration.enabled ? { 1 = 1 } : {}
+          content {
+            retained_backups = var.backup_configuration.retention_count
+            retention_unit   = "COUNT"
+          }
+        }
+      }
+    }
+
+    dynamic "final_backup_config" {
+      for_each = try(var.backup_configuration.final_backup != null ? [var.backup_configuration.final_backup] : [], [])
+      content {
+        enabled        = final_backup_config.value.enabled
+        retention_days = final_backup_config.value.retention_days
+      }
+    }
+
+    dynamic "connection_pool_config" {
+      # Only available for PostgreSQL on Enterprise Plus edition.
+      for_each = (var.managed_connection_pooling_config.enabled && local.is_postgres && var.edition == "ENTERPRISE_PLUS") ? [1] : []
+      content {
+        connection_pooling_enabled = true
+        dynamic "flags" {
+          for_each = var.managed_connection_pooling_config.flags
+          iterator = flag
+          content {
+            name  = flag.key
+            value = flag.value
+          }
         }
       }
     }
@@ -161,11 +246,12 @@ resource "google_sql_database_instance" "primary" {
     dynamic "insights_config" {
       for_each = var.insights_config != null ? [1] : []
       content {
-        query_insights_enabled  = true
-        query_string_length     = var.insights_config.query_string_length
-        record_application_tags = var.insights_config.record_application_tags
-        record_client_address   = var.insights_config.record_client_address
-        query_plans_per_minute  = var.insights_config.query_plans_per_minute
+        query_insights_enabled          = true
+        query_string_length             = var.insights_config.query_string_length
+        record_application_tags         = var.insights_config.record_application_tags
+        record_client_address           = var.insights_config.record_client_address
+        query_plans_per_minute          = var.insights_config.query_plans_per_minute
+        enhanced_query_insights_enabled = var.insights_config.enhanced_query_insights_enabled
       }
     }
 
@@ -204,39 +290,40 @@ resource "google_sql_database_instance" "primary" {
 }
 
 resource "google_sql_database_instance" "replicas" {
-  provider             = google-beta
-  for_each             = local.has_replicas ? var.replicas : {}
-  project              = var.project_id
-  name                 = "${local.prefix}${each.key}"
-  region               = each.value.region
-  database_version     = var.database_version
-  encryption_key_name  = each.value.encryption_key_name
+  provider         = google-beta
+  for_each         = local.has_replicas ? var.replicas : {}
+  project          = local.project_id
+  name             = "${local.prefix}${each.key}"
+  region           = lookup(local.ctx.locations, each.value.region, each.value.region)
+  database_version = var.database_version
+  encryption_key_name = (
+    each.value.encryption_key_name == null
+    ? null
+    : lookup(local.ctx.kms_keys, each.value.encryption_key_name, each.value.encryption_key_name)
+  )
   master_instance_name = google_sql_database_instance.primary.name
 
   settings {
     tier                        = coalesce(each.value.tier, var.tier)
     edition                     = var.edition
     deletion_protection_enabled = var.gcp_deletion_protection
-    retain_backups_on_delete    = var.backup_configuration.retain_backups_on_delete
     disk_autoresize             = var.disk_size == null
     disk_autoresize_limit       = var.disk_autoresize_limit
     disk_size                   = var.disk_size
     disk_type                   = var.disk_type
-    # availability_type = var.availability_type
-    user_labels           = var.labels
-    activation_policy     = var.activation_policy
-    collation             = var.collation
-    connector_enforcement = var.connector_enforcement
-    time_zone             = var.time_zone
+    availability_type           = each.value.availability_type
+    user_labels                 = var.labels
+    activation_policy           = var.activation_policy
+    collation                   = var.collation
+    connector_enforcement       = var.connector_enforcement
+    time_zone                   = var.time_zone
 
 
     ip_configuration {
       ipv4_enabled = (
         var.network_config.connectivity.public_ipv4
       )
-      private_network = (
-        try(var.network_config.connectivity.psa_config.private_network, null)
-      )
+      private_network = local.psa_private_network
       allocated_ip_range = try(
         var.network_config.connectivity.psa_config.allocated_ip_ranges.replica, null
       )
@@ -256,9 +343,25 @@ resource "google_sql_database_instance" "replicas" {
           value = network.value
         }
       }
+      # SQL Admin returns a disabled psc_config even when PSC is unused, so
+      # always emit the block to avoid a permanent diff.
       psc_config {
-        psc_enabled               = local.psc_enabled
-        allowed_consumer_projects = local.psc_allowed_consumer_projects
+        psc_enabled = local.psc_enabled
+        allowed_consumer_projects = (
+          local.psc_enabled ? local.psc_allowed_consumer_projects : []
+        )
+        network_attachment_uri             = try(var.network_config.connectivity.psc_config.network_attachment_uri, null)
+        psc_auto_connection_policy_enabled = try(var.network_config.connectivity.psc_config.psc_auto_connection_policy_enabled, null)
+        psc_auto_dns_enabled               = try(var.network_config.connectivity.psc_config.psc_auto_dns_enabled, null)
+        psc_write_endpoint_dns_enabled     = try(var.network_config.connectivity.psc_config.psc_write_endpoint_dns_enabled, null)
+
+        dynamic "psc_auto_connections" {
+          for_each = local.psc_auto_connections
+          content {
+            consumer_network            = psc_auto_connections.value.consumer_network
+            consumer_service_project_id = psc_auto_connections.value.consumer_service_project_id
+          }
+        }
       }
     }
 
@@ -276,16 +379,16 @@ resource "google_sql_database_instance" "replicas" {
 
 resource "google_sql_database" "databases" {
   for_each = var.databases != null ? toset(var.databases) : toset([])
-  project  = var.project_id
+  project  = local.project_id
   instance = google_sql_database_instance.primary.name
   name     = each.key
 }
 
 resource "random_password" "passwords" {
   for_each = toset([
-    for k, v in coalesce(var.users, {}) :
+    for k, v in var.users :
     k
-    if v.password == null
+    if v.password == null && v.type == "BUILT_IN"
   ])
   length      = try(var.password_validation_policy.min_length, 16)
   special     = true
@@ -306,13 +409,14 @@ resource "random_password" "root_password" {
 }
 
 resource "google_sql_user" "users" {
-  for_each = local.users
-  project  = var.project_id
-  instance = google_sql_database_instance.primary.name
-  name     = each.value.name
-  host     = each.value.host
-  password = each.value.password
-  type     = each.value.type
+  for_each       = local.users
+  project        = local.project_id
+  instance       = google_sql_database_instance.primary.name
+  name           = each.value.name
+  host           = each.value.host
+  password       = each.value.password
+  type           = each.value.type
+  database_roles = each.value.database_roles
 }
 
 moved {
@@ -327,7 +431,7 @@ resource "google_sql_ssl_cert" "client_certificates" {
     : toset([])
   )
   provider    = google-beta
-  project     = var.project_id
+  project     = local.project_id
   instance    = google_sql_database_instance.primary.name
   common_name = each.key
 }

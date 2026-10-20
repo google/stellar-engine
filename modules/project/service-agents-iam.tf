@@ -48,7 +48,6 @@ resource "google_folder_iam_member" "service_agents_folder_bindings" {
     google_project_service.project_services,
     google_project_service_identity.default,
     google_project_default_service_accounts.default_service_accounts,
-    data.google_bigquery_default_service_account.bq_sa,
     data.google_storage_project_service_account.gcs_sa,
     data.google_logging_project_settings.logging_sa
   ]
@@ -75,7 +74,6 @@ resource "google_project_iam_member" "service_agents_project_bindings" {
     google_project_service.project_services,
     google_project_service_identity.default,
     google_project_default_service_accounts.default_service_accounts,
-    data.google_bigquery_default_service_account.bq_sa,
     data.google_storage_project_service_account.gcs_sa,
     data.google_logging_project_settings.logging_sa
   ]

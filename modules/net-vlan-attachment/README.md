@@ -48,6 +48,107 @@ module "example-va" {
 # tftest modules=1 resources=5
 ```
 
+### Dedicated Interconnect - Single VLAN Attachment with BGP Route Policies
+
+> [!NOTE]
+> Cloud Router serializes configuration changes. Updating or deleting several route policies on the same router in a single apply may fail with `Error 400: [...] is not ready, resourceNotReady`. Re-running the apply converges, and `-parallelism=1` avoids the error entirely.
+
+```hcl
+resource "google_compute_router" "interconnect-router" {
+  name    = "interconnect-router"
+  network = "mynet"
+  project = "myproject"
+  region  = "europe-west8"
+  bgp {
+    advertise_mode    = "CUSTOM"
+    asn               = 64514
+    advertised_groups = ["ALL_SUBNETS"]
+    advertised_ip_ranges {
+      range = "10.255.255.0/24"
+    }
+    advertised_ip_ranges {
+      range = "192.168.255.0/24"
+    }
+  }
+}
+
+module "example-va" {
+  source      = "./fabric/modules/net-vlan-attachment"
+  network     = "mynet"
+  project_id  = "myproject"
+  region      = "europe-west8"
+  name        = "vlan-attachment"
+  description = "Example vlan attachment"
+  peer_asn    = "65000"
+  bgp_peer = {
+    import_policies = ["import-rfc1918", "import-drop-all"]
+    export_policies = ["export-policy"]
+  }
+  router_config = {
+    create = false
+    name   = google_compute_router.interconnect-router.name
+    route_policies = {
+      "import-rfc1918" = {
+        type = "IMPORT"
+        terms = [
+          {
+            priority = 1
+            match = {
+              expression  = "destination == '10.0.0.0/8' || destination == '172.16.0.0/12' || destination == '192.168.0.0/16'"
+              title       = "import-rfc1918-subnets"
+              description = "Accept the 3 RFC1918 subnets."
+            }
+            actions = [{
+              expression = "accept()"
+            }]
+          }
+        ]
+      }
+      "import-drop-all" = {
+        type = "IMPORT"
+        terms = [
+          {
+            priority = 2
+            match = {
+              expression  = "destination.inAnyRange(prefix('0.0.0.0/0').orLonger())"
+              title       = "default-drop"
+              description = "Drop all the routes not accepted above"
+            }
+            actions = [{
+              expression = "drop()"
+            }]
+          }
+        ]
+      }
+      "export-policy" = {
+        type = "EXPORT"
+        terms = [
+          {
+            priority = 0
+            match = {
+              expression = "destination == '10.255.255.0/24'"
+            }
+            actions = [
+              { expression = "med.set(1000)" },
+              { expression = "accept()" }
+            ]
+          }
+        ]
+      }
+    }
+  }
+  dedicated_interconnect_config = {
+    bandwidth    = "BPS_10G"
+    bgp_range    = "169.254.0.0/29"
+    interconnect = "https://www.googleapis.com/compute/v1/projects/my-project/global/interconnects/interconnect-a"
+    vlan_tag     = 12345
+  }
+}
+# tftest modules=1 resources=8 inventory=bgp-route-policies.yaml
+```
+
+Policies are created on the router with their map key as name, and peers reference them by that same key. Editing a term is an in-place update, so names stay stable. Names the module does not manage (for example policies already defined on a pre-existing router) are passed through to the peer unchanged.
+
 ### Dedicated Interconnect - Single VLAN Attachment (No SLA) - BFD and MD5 Auth
 
 ```hcl
@@ -80,6 +181,14 @@ module "example-va" {
   router_config = {
     create = false
     name   = google_compute_router.interconnect-router.name
+  }
+  bgp_peer = {
+    custom_learned_ip_ranges = {
+      route_priority = 100
+      ip_ranges = {
+        "10.0.0.0/24" = "test advertisement"
+      }
+    }
     bfd = {
       min_receive_interval        = 1000
       min_transmit_interval       = 1000
@@ -92,17 +201,18 @@ module "example-va" {
     }
   }
   dedicated_interconnect_config = {
-    bandwidth    = "BPS_10G"
-    bgp_range    = "169.254.0.0/29"
-    interconnect = "https://www.googleapis.com/compute/v1/projects/my-project/global/interconnects/interconnect-a"
-    vlan_tag     = 12345
+    bandwidth                            = "BPS_10G"
+    bgp_range                            = "169.254.0.0/29"
+    candidate_cloud_router_ip_address    = "169.254.0.1/29"
+    candidate_customer_router_ip_address = "169.254.0.2/29"
+    interconnect                         = "https://www.googleapis.com/compute/v1/projects/my-project/global/interconnects/interconnect-a"
+    vlan_tag                             = 12345
   }
 }
-
-# tftest modules=1 resources=5
+# tftest modules=1 resources=5 inventory=bgp-peer.yaml
 ```
 
-If you don't specify the MD5 key, the module will generate a random 12 charachters key for you.
+If you don't specify the MD5 key, the module will generate a random 12 characters key for you.
 
 ```hcl
 resource "google_compute_router" "interconnect-router" {
@@ -544,8 +654,6 @@ module "example-va-b-ew12" {
 
 ### IPSec for Dedicated Interconnect
 
-Refer to the HA VPN over Interconnect Blueprint for an all-encompassing example.
-
 ```hcl
 resource "google_compute_router" "encrypted-interconnect-underlay-router-ew8" {
   name                          = "encrypted-interconnect-underlay-router-ew8"
@@ -615,6 +723,7 @@ module "example-va-a" {
   description = "example-va-a vlan attachment"
   peer_asn    = "65001"
   router_config = {
+    asn    = 16550
     create = true
   }
   partner_interconnect_config = {
@@ -632,6 +741,7 @@ module "example-va-b" {
   description = "example-va-b vlan attachment"
   peer_asn    = "65001"
   router_config = {
+    asn    = 16550
     create = true
   }
   partner_interconnect_config = {
@@ -646,19 +756,21 @@ module "example-va-b" {
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [description](variables.tf#L36) | VLAN attachment description. | <code>string</code> | ✓ |  |
-| [name](variables.tf#L53) | The common resources name, used after resource type prefix and suffix. | <code>string</code> | ✓ |  |
-| [network](variables.tf#L58) | The VPC name to which resources are associated to. | <code>string</code> | ✓ |  |
-| [peer_asn](variables.tf#L75) | The on-premises underlay router ASN. | <code>string</code> | ✓ |  |
-| [project_id](variables.tf#L80) | The project id where resources are created. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L85) | The region where resources are created. | <code>string</code> | ✓ |  |
-| [router_config](variables.tf#L90) | Cloud Router configuration for the VPN. If you want to reuse an existing router, set create to false and use name to specify the desired router. | <code title="object&#40;&#123;&#10;  create &#61; optional&#40;bool, true&#41;&#10;  asn    &#61; optional&#40;number, 65001&#41;&#10;  bfd &#61; optional&#40;object&#40;&#123;&#10;    min_receive_interval        &#61; optional&#40;number&#41;&#10;    min_transmit_interval       &#61; optional&#40;number&#41;&#10;    multiplier                  &#61; optional&#40;number&#41;&#10;    session_initialization_mode &#61; optional&#40;string, &#34;ACTIVE&#34;&#41;&#10;  &#125;&#41;&#41;&#10;  custom_advertise &#61; optional&#40;object&#40;&#123;&#10;    all_subnets &#61; bool&#10;    ip_ranges   &#61; map&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;  md5_authentication_key &#61; optional&#40;object&#40;&#123;&#10;    name &#61; string&#10;    key  &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;  keepalive &#61; optional&#40;number&#41;&#10;  name      &#61; optional&#40;string, &#34;router&#34;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [description](variables.tf#L81) | VLAN attachment description. | <code>string</code> | ✓ |  |
+| [name](variables.tf#L98) | The common resources name, used after resource type prefix and suffix. | <code>string</code> | ✓ |  |
+| [network](variables.tf#L103) | The VPC name to which resources are associated to. | <code>string</code> | ✓ |  |
+| [peer_asn](variables.tf#L120) | The on-premises underlay router ASN. | <code>string</code> | ✓ |  |
+| [project_id](variables.tf#L125) | The project id where resources are created. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L130) | The region where resources are created. | <code>string</code> | ✓ |  |
+| [router_config](variables.tf#L135) | Cloud Router configuration for the VPN. If you want to reuse an existing router, set create to false and use name to specify the desired router. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [admin_enabled](variables.tf#L17) | Whether the VLAN attachment is enabled. | <code>bool</code> |  | <code>true</code> |
-| [dedicated_interconnect_config](variables.tf#L23) | Dedicated interconnect configuration. | <code title="object&#40;&#123;&#10;  bandwidth    &#61; optional&#40;string, &#34;BPS_10G&#34;&#41;&#10;  bgp_range    &#61; optional&#40;string&#41;&#10;  bgp_priority &#61; optional&#40;number&#41;&#10;  interconnect &#61; string&#10;  vlan_tag     &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [ipsec_gateway_ip_ranges](variables.tf#L41) | IPSec Gateway IP Ranges. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [mtu](variables.tf#L47) | The MTU associated to the VLAN attachment (1440 / 1500). | <code>number</code> |  | <code>1500</code> |
-| [partner_interconnect_config](variables.tf#L63) | Partner interconnect configuration. | <code title="object&#40;&#123;&#10;  edge_availability_domain &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [vpn_gateways_ip_range](variables.tf#L115) | The IP range (cidr notation) to be used for the GCP VPN gateways. If null IPSec over Interconnect is not enabled. | <code>string</code> |  | <code>null</code> |
+| [bgp_peer](variables.tf#L23) | BGP peer configuration for the VLAN attachment. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [context](variables.tf#L50) | Context-specific interpolations. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [dedicated_interconnect_config](variables.tf#L62) | Dedicated interconnect configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [ipsec_gateway_ip_ranges](variables.tf#L86) | IPSec Gateway IP Ranges. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [mtu](variables.tf#L92) | The MTU associated to the VLAN attachment (1440 / 1500). | <code>number</code> |  | <code>1500</code> |
+| [partner_interconnect_config](variables.tf#L108) | Partner interconnect configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [vpn_gateways_ip_range](variables.tf#L198) | The IP range (cidr notation) to be used for the GCP VPN gateways. If null IPSec over Interconnect is not enabled. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs
 
@@ -669,7 +781,8 @@ module "example-va-b" {
 | [md5_configuration](outputs.tf#L27) | MD5 configuration. |  |
 | [name](outputs.tf#L38) | The name of the VLAN attachment created. |  |
 | [pairing_key](outputs.tf#L43) | Opaque identifier of an PARTNER attachment used to initiate provisioning with a selected partner. |  |
-| [router](outputs.tf#L48) | Router resource (only if auto-created). |  |
-| [router_interface](outputs.tf#L53) | Router interface created for the VLAN attachment. |  |
-| [router_name](outputs.tf#L58) | Router name. |  |
+| [route_policies](outputs.tf#L48) | BGP route policy ids, keyed by route policy key. |  |
+| [router](outputs.tf#L55) | Router resource (only if auto-created). |  |
+| [router_interface](outputs.tf#L60) | Router interface created for the VLAN attachment. |  |
+| [router_name](outputs.tf#L65) | Router name. |  |
 <!-- END TFDOC -->

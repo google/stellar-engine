@@ -1,4 +1,4 @@
-# Resource Manager Tags
+# Dataplex Aspect Type
 
 <!-- markdownlint-disable MD036 -->
 
@@ -6,32 +6,24 @@
 
 *additional properties: false*
 
-- **allowed_values_regex**: *string*
-- **name**: *string*
 - **description**: *string*
-- **id**: *string*
-- **network**: *string*
+- **display_name**: *string*
+- **labels**: *object*
+  <br>*additional properties: false*
+  - **`^[a-z][a-z0-9_-]{0,62}$`**: *string*
+    <br>*pattern: ^[a-z0-9_-]{0,63}$*
+- **metadata_template**: *string*
 - **iam**: *reference([iam](#refs-iam))*
 - **iam_bindings**: *reference([iam_bindings](#refs-iam_bindings))*
 - **iam_bindings_additive**: *reference([iam_bindings_additive](#refs-iam_bindings_additive))*
-- **values**: *object*
-  <br>*additional properties: false*
-  - **`^[a-z-][^\\'"/]+$`**: *object*
-    <br>*additional properties: false*
-    - **name**: *string*
-    - **description**: *string*
-    - **id**: *string*
-    - **iam**: *reference([iam](#refs-iam))*
-    - **iam_bindings**: *reference([iam_bindings](#refs-iam_bindings))*
-    - **iam_bindings_additive**: *reference([iam_bindings_additive](#refs-iam_bindings_additive))*
 
 ## Definitions
 
 - **iam**<a name="refs-iam"></a>: *object*
   <br>*additional properties: false*
-  - **`^roles/`**: *array*
+  - **`^(?:roles/|\$custom_roles:|organizations/[0-9]+/roles/|([a-z0-9.]+:)?projects/[a-z0-9-]+/roles/)`**: *array*
     - items: *string*
-      <br>*pattern: ^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|\$iam_principals:[a-z0-9_-]+)*
+      <br>*pattern: ^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:||\$iam_principals:[a-z0-9_-]+)*
 - **iam_bindings**<a name="refs-iam_bindings"></a>: *object*
   <br>*additional properties: false*
   - **`^[a-z0-9_-]+$`**: *object*
@@ -40,7 +32,7 @@
       - items: *string*
         <br>*pattern: ^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|\$iam_principals:[a-z0-9_-]+)*
     - **role**: *string*
-      <br>*pattern: ^roles/*
+      <br>*pattern: ^(?:roles/|\$custom_roles:|organizations/[0-9]+/roles/|([a-z0-9.]+:)?projects/[a-z0-9-]+/roles/)*
     - **condition**: *object*
       <br>*additional properties: false*
       - ⁺**expression**: *string*
@@ -53,7 +45,7 @@
     - **member**: *string*
       <br>*pattern: ^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|\$iam_principals:[a-z0-9_-]+)*
     - **role**: *string*
-      <br>*pattern: ^[a-zA-Z0-9_/]+$*
+      <br>*pattern: ^(?:roles/|\$custom_roles:|organizations/[0-9]+/roles/|([a-z0-9.]+:)?projects/[a-z0-9-]+/roles/)*
     - **condition**: *object*
       <br>*additional properties: false*
       - ⁺**expression**: *string*

@@ -93,7 +93,7 @@ variable "description" {
 }
 
 variable "distribution_policy" {
-  description = "DIstribution policy for regional MIG."
+  description = "Distribution policy for regional MIG."
   type = object({
     target_shape = optional(string)
     zones        = optional(list(string))
@@ -174,13 +174,39 @@ variable "health_check_config" {
   }
 }
 
+variable "instance_flexibility_policy_selections" {
+  description = "Instance flexibility policy selections. Only applicable to regional instances."
+  type = map(object({
+    rank          = number
+    machine_types = list(string)
+  }))
+  default  = {}
+  nullable = false
+  validation {
+    condition     = length(var.instance_flexibility_policy_selections) == 0 || length(split("-", var.location)) == 2
+    error_message = "Instance flexibility is only supported for regional MIGs."
+  }
+}
+
 variable "instance_lifecycle_policy" {
-  description = "Instance lifecycle policy for repairs and failures."
+  description = "The instance lifecycle policy for the MIG."
   type = object({
-    force_update_on_repair    = optional(string) # YES, NO
-    default_action_on_failure = optional(string) # DO_NOTHING, REPAIR
+    default_action_on_failure = optional(string)
+    on_failed_health_check    = optional(string)
+    on_repair = optional(object({
+      allow_changing_zone = optional(string)
+      force_update        = optional(string)
+    }))
   })
-  default = null
+  default  = null
+  nullable = true
+  validation {
+    condition = (
+      try(var.instance_lifecycle_policy.on_repair.allow_changing_zone, null) == null
+      || length(split("-", var.location)) == 2
+    )
+    error_message = "Allow changing zone on repair is only supported for regional MIGs."
+  }
 }
 
 variable "instance_template" {

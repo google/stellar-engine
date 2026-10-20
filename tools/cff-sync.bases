@@ -6,6 +6,3 @@
 biglake-catalog biglake-catalog v59.2.0
 cloud-config-container cloud-config-container v59.2.0
 project-factory project-factory v59.2.0
-datafusion-se datafusion v59.2.0
-gke-cluster-standard-se gke-cluster-standard v59.2.0
-spanner-instance-se spanner-instance v59.2.0
