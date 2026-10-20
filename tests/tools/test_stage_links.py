@@ -63,9 +63,8 @@ class TestStageLinksImpersonation(unittest.TestCase):
     for stage_name, (sa_pattern, ro_pattern) in expected_patterns.items():
       with self.subTest(stage=stage_name):
         output = self._run_stage_links(stage_name)
-        self.assertIn(
-            f'expects *-{sa_pattern}@*.iam.gserviceaccount.com', output
-        )
+        self.assertIn(f'expects *-{sa_pattern}@*.iam.gserviceaccount.com',
+                      output)
         self.assertIn(
             f'or the read-only *-{ro_pattern}@*.iam.gserviceaccount.com',
             output,
@@ -90,12 +89,10 @@ class TestStageLinksImpersonation(unittest.TestCase):
             'GOOGLE_IMPERSONATE_SERVICE_ACCOUNT',
             'CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT',
         ):
-          with self.subTest(
-              stage=stage_name, account_id=account_id, env_var=env_var
-          ):
+          with self.subTest(stage=stage_name, account_id=account_id,
+                            env_var=env_var):
             output = self._run_stage_links(
-                stage_name, env_overrides={env_var: self._sa(account_id)}
-            )
+                stage_name, env_overrides={env_var: self._sa(account_id)})
             self.assertNotIn('WARNING: Active shell impersonation', output)
 
   def test_warns_on_stale_cross_stage_impersonation_env_var(self):
@@ -106,6 +103,10 @@ class TestStageLinksImpersonation(unittest.TestCase):
             'test-prod-bootstrap-0', 'test-prod-resman-0', 'test-security-0',
             'test-prod-networking-0'
         ],
+        '2-networking-b-il5-ngfw': [
+            'test-prod-bootstrap-0', 'test-prod-resman-0', 'test-security-0',
+            'test-prod-networking-0'
+        ],
         '3-security': [
             'test-prod-resman-net-0', 'test-prod-resman-sec-0',
             'test-prod-security-0x'
@@ -113,19 +114,20 @@ class TestStageLinksImpersonation(unittest.TestCase):
     }
     for stage_name, account_ids in stale_service_accounts.items():
       for account_id in account_ids:
-        with self.subTest(stage=stage_name, account_id=account_id):
-          output = self._run_stage_links(
-              stage_name,
-              env_overrides={
-                  'GOOGLE_IMPERSONATE_SERVICE_ACCOUNT': self._sa(account_id)
-              },
-          )
-          self.assertIn('WARNING: Active shell impersonation', output)
-          self.assertIn(
-              'unset GOOGLE_IMPERSONATE_SERVICE_ACCOUNT'
-              ' CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT',
-              output,
-          )
+        for env_var in (
+            'GOOGLE_IMPERSONATE_SERVICE_ACCOUNT',
+            'CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT',
+        ):
+          with self.subTest(stage=stage_name, account_id=account_id,
+                            env_var=env_var):
+            output = self._run_stage_links(
+                stage_name, env_overrides={env_var: self._sa(account_id)})
+            self.assertIn('WARNING: Active shell impersonation', output)
+            self.assertIn(
+                'unset GOOGLE_IMPERSONATE_SERVICE_ACCOUNT'
+                ' CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT',
+                output,
+            )
 
   def test_no_warning_when_networking_impersonation_matches_stage(self):
     service_account = self._sa('test-prod-resman-net-0')

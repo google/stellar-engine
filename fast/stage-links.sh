@@ -157,15 +157,20 @@ if [[ -n "$STAGE_SA_PATTERN" ]]; then
   fi
   ACTIVE_IMPERSONATE_SA="${GOOGLE_IMPERSONATE_SERVICE_ACCOUNT:-${CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT:-}}"
   # anchor each pattern to the "@" so that a longer account ID such as
-  # "<prefix>-bootstrap-0-old" does not match the "bootstrap-0" pattern
+  # "<prefix>-prod-bootstrap-0-old" does not match the "bootstrap-0" pattern
   ACTIVE_SA_MATCHES=false
-  for SA_PATTERN in "$STAGE_SA_PATTERN" $STAGE_SA_RO_PATTERN; do
-    if [[ "$ACTIVE_IMPERSONATE_SA" == *"-${SA_PATTERN}@"* ]]; then
+  for SA_PATTERN in "$STAGE_SA_PATTERN" "$STAGE_SA_RO_PATTERN"; do
+    if [[ -n "$SA_PATTERN" && "$ACTIVE_IMPERSONATE_SA" == *"-${SA_PATTERN}@"* ]]; then
       ACTIVE_SA_MATCHES=true
+      break
     fi
   done
+  EXPECTED_SA_PATTERNS="$STAGE_SA_PATTERN"
+  if [[ -n "$STAGE_SA_RO_PATTERN" ]]; then
+    EXPECTED_SA_PATTERNS="$STAGE_SA_PATTERN or $STAGE_SA_RO_PATTERN"
+  fi
   if [[ -n "$ACTIVE_IMPERSONATE_SA" && "$ACTIVE_SA_MATCHES" == false ]]; then
-    echo "# WARNING: Active shell impersonation ($ACTIVE_IMPERSONATE_SA) does not match stage '$STAGE_NAME' ($STAGE_SA_PATTERN)."
+    echo "# WARNING: Active shell impersonation ($ACTIVE_IMPERSONATE_SA) does not match stage '$STAGE_NAME' ($EXPECTED_SA_PATTERNS)."
     echo "# Clear stale cross-stage impersonation variables to prevent 403 Forbidden errors:"
     echo "unset GOOGLE_IMPERSONATE_SERVICE_ACCOUNT CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT"
   fi
