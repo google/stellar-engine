@@ -22,8 +22,7 @@ nginx['redirect_http_to_https'] = true
 gitlab_rails['redis_enable_client'] = false
 gitlab_rails['redis_host'] = '${redis.host}'
 gitlab_rails['redis_port'] = ${redis.port}
-# TODO: use auth
-# gitlab_rails['redis_password'] = nil
+gitlab_rails['redis_password'] = '${redis.auth_string}'
 redis['enable'] = false
 
 # https://docs.gitlab.com/omnibus/settings/database.html#using-a-non-packaged-postgresql-database-management-server

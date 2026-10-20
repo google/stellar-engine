@@ -314,7 +314,7 @@ gitlab-rake “gitlab:password:reset”
 
 | name | description | modules | resources |
 |---|---|---|---|
-| [gitlab.tf](./gitlab.tf) | None | <code>compute-vm</code> · <code>iam-service-account</code> · <code>net-lb-int</code> |  |
+| [gitlab.tf](./gitlab.tf) | None | <code>compute-vm</code> · <code>iam-service-account</code> · <code>net-lb-int</code> | <code>google_secret_manager_secret</code> · <code>google_secret_manager_secret_iam_member</code> · <code>google_secret_manager_secret_version</code> |
 | [main.tf](./main.tf) | Module-level locals and resources. | <code>project</code> |  |
 | [outputs.tf](./outputs.tf) | Module outputs. |  |  |
 | [services.tf](./services.tf) | None | <code>cloudsql-instance</code> · <code>gcs</code> | <code>google_redis_instance</code> |
@@ -325,28 +325,28 @@ gitlab-rake “gitlab:password:reset”
 
 | name | description | type | required | default | producer |
 |---|---|:---:|:---:|:---:|:---:|
-| [network_config](variables.tf#L92) | Shared VPC network configurations to use for Gitlab Runner VM. | <code title="object&#40;&#123;&#10;  host_project      &#61; optional&#40;string&#41;&#10;  network_self_link &#61; string&#10;  subnet_self_link  &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |  |
-| [prefix](variables.tf#L101) | Prefix used for resource names. | <code>string</code> | ✓ |  |  |
-| [project_id](variables.tf#L120) | Project id, references existing project if `project_create` is null. | <code>string</code> | ✓ |  |  |
-| [region](variables.tf#L139) | GCP Region. | <code>string</code> | ✓ |  |  |
+| [network_config](variables.tf#L96) | Shared VPC network configurations to use for Gitlab Runner VM. | <code title="object&#40;&#123;&#10;  host_project      &#61; optional&#40;string&#41;&#10;  network_self_link &#61; string&#10;  subnet_self_link  &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |  |
+| [prefix](variables.tf#L105) | Prefix used for resource names. | <code>string</code> | ✓ |  |  |
+| [project_id](variables.tf#L124) | Project id, references existing project if `project_create` is null. | <code>string</code> | ✓ |  |  |
+| [region](variables.tf#L143) | GCP Region. | <code>string</code> | ✓ |  |  |
 | [admin_principals](variables.tf#L17) | Users, groups and/or service accounts that are assigned roles, in IAM format (`group:foo@example.com`). | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |  |
 | [cloudsql_config](variables.tf#L23) | Cloud SQL Postgres config. | <code title="object&#40;&#123;&#10;  name             &#61; optional&#40;string, &#34;gitlab-0&#34;&#41;&#10;  database_version &#61; optional&#40;string, &#34;POSTGRES_13&#34;&#41;&#10;  tier             &#61; optional&#40;string, &#34;db-custom-2-8192&#34;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
 | [gcs_config](variables.tf#L34) | GCS for Object Storage config. | <code title="object&#40;&#123;&#10;  enable_versioning &#61; optional&#40;bool, false&#41;&#10;  location          &#61; optional&#40;string, &#34;EU&#34;&#41;&#10;  storage_class     &#61; optional&#40;string, &#34;STANDARD&#34;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
 | [gitlab_config](variables.tf#L45) | Gitlab configuration. | <code title="object&#40;&#123;&#10;  hostname &#61; optional&#40;string, &#34;gitlab.gcp.example.com&#34;&#41;&#10;  mail &#61; optional&#40;object&#40;&#123;&#10;    enabled &#61; optional&#40;bool, false&#41;&#10;    sendgrid &#61; optional&#40;object&#40;&#123;&#10;      api_key        &#61; optional&#40;string&#41;&#10;      email_from     &#61; optional&#40;string, null&#41;&#10;      email_reply_to &#61; optional&#40;string, null&#41;&#10;    &#125;&#41;, null&#41;&#10;  &#125;&#41;, &#123;&#125;&#41;&#10;  saml &#61; optional&#40;object&#40;&#123;&#10;    forced                 &#61; optional&#40;bool, false&#41;&#10;    idp_cert_fingerprint   &#61; string&#10;    sso_target_url         &#61; string&#10;    name_identifier_format &#61; optional&#40;string, &#34;urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress&#34;&#41;&#10;  &#125;&#41;, null&#41;&#10;  ha_required &#61; optional&#40;bool, false&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
-| [gitlab_instance_config](variables.tf#L70) | Gitlab Compute Engine instance config. | <code title="object&#40;&#123;&#10;  instance_type &#61; optional&#40;string, &#34;n1-highcpu-8&#34;&#41;&#10;  name          &#61; optional&#40;string, &#34;gitlab-0&#34;&#41;&#10;  network_tags  &#61; optional&#40;list&#40;string&#41;, &#91;&#93;&#41;&#10;  replica_zone  &#61; optional&#40;string&#41;&#10;  zone          &#61; optional&#40;string&#41;&#10;  boot_disk &#61; optional&#40;object&#40;&#123;&#10;    size &#61; optional&#40;number, 20&#41;&#10;    type &#61; optional&#40;string, &#34;pd-standard&#34;&#41;&#10;  &#125;&#41;, &#123;&#125;&#41;&#10;  data_disk &#61; optional&#40;object&#40;&#123;&#10;    size         &#61; optional&#40;number, 100&#41;&#10;    type         &#61; optional&#40;string, &#34;pd-ssd&#34;&#41;&#10;    replica_zone &#61; optional&#40;string&#41;&#10;  &#125;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
-| [project_create](variables.tf#L111) | Provide values if project creation is needed, uses existing project if null. Parent is in 'folders/nnn' or 'organizations/nnn' format. | <code title="object&#40;&#123;&#10;  billing_account_id &#61; string&#10;  parent             &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |  |
-| [redis_config](variables.tf#L125) | Redis Config. | <code title="object&#40;&#123;&#10;  memory_size_gb      &#61; optional&#40;number, 1&#41;&#10;  name                &#61; optional&#40;string, &#34;gitlab-0&#34;&#41;&#10;  persistence_mode    &#61; optional&#40;string, &#34;RDB&#34;&#41;&#10;  rdb_snapshot_period &#61; optional&#40;string, &#34;TWELVE_HOURS&#34;&#41;&#10;  tier                &#61; optional&#40;string, &#34;BASIC&#34;&#41;&#10;  version             &#61; optional&#40;string, &#34;REDIS_6_X&#34;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
+| [gitlab_instance_config](variables.tf#L74) | Gitlab Compute Engine instance config. | <code title="object&#40;&#123;&#10;  instance_type &#61; optional&#40;string, &#34;n1-highcpu-8&#34;&#41;&#10;  name          &#61; optional&#40;string, &#34;gitlab-0&#34;&#41;&#10;  network_tags  &#61; optional&#40;list&#40;string&#41;, &#91;&#93;&#41;&#10;  replica_zone  &#61; optional&#40;string&#41;&#10;  zone          &#61; optional&#40;string&#41;&#10;  boot_disk &#61; optional&#40;object&#40;&#123;&#10;    size &#61; optional&#40;number, 20&#41;&#10;    type &#61; optional&#40;string, &#34;pd-standard&#34;&#41;&#10;  &#125;&#41;, &#123;&#125;&#41;&#10;  data_disk &#61; optional&#40;object&#40;&#123;&#10;    size         &#61; optional&#40;number, 100&#41;&#10;    type         &#61; optional&#40;string, &#34;pd-ssd&#34;&#41;&#10;    replica_zone &#61; optional&#40;string&#41;&#10;  &#125;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
+| [project_create](variables.tf#L115) | Provide values if project creation is needed, uses existing project if null. Parent is in 'folders/nnn' or 'organizations/nnn' format. | <code title="object&#40;&#123;&#10;  billing_account_id &#61; string&#10;  parent             &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |  |
+| [redis_config](variables.tf#L129) | Redis Config. | <code title="object&#40;&#123;&#10;  memory_size_gb      &#61; optional&#40;number, 1&#41;&#10;  name                &#61; optional&#40;string, &#34;gitlab-0&#34;&#41;&#10;  persistence_mode    &#61; optional&#40;string, &#34;RDB&#34;&#41;&#10;  rdb_snapshot_period &#61; optional&#40;string, &#34;TWELVE_HOURS&#34;&#41;&#10;  tier                &#61; optional&#40;string, &#34;BASIC&#34;&#41;&#10;  version             &#61; optional&#40;string, &#34;REDIS_6_X&#34;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
 
 ## Outputs
 
 | name | description | sensitive | consumers |
 |---|---|:---:|---|
 | [gitlab_ilb_ip](outputs.tf#L26) | Gitlab Internal Load Balancer IP Address. |  |  |
-| [instance](outputs.tf#L31) | Gitlab compute engine instance. |  |  |
-| [postgresql_users](outputs.tf#L36) | Gitlab postgres user password. | ✓ |  |
-| [project](outputs.tf#L42) | GCP project. |  |  |
-| [ssh_to_gitlab](outputs.tf#L47) | gcloud command to ssh gitlab instance. |  |  |
-| [ssl_certs](outputs.tf#L52) | Gitlab SSL Certificates. | ✓ |  |
+| [instance](outputs.tf#L31) | Gitlab compute engine instance. | ✓ |  |
+| [postgresql_users](outputs.tf#L37) | Gitlab postgres user password. | ✓ |  |
+| [project](outputs.tf#L43) | GCP project. |  |  |
+| [ssh_to_gitlab](outputs.tf#L48) | gcloud command to ssh gitlab instance. |  |  |
+| [ssl_certs](outputs.tf#L53) | Gitlab SSL Certificates. | ✓ |  |
 <!-- END TFDOC -->
 ## Test
 

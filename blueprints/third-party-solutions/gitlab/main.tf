@@ -25,6 +25,7 @@ module "project" {
     "compute.googleapis.com",
     "memcache.googleapis.com",
     "redis.googleapis.com",
+    "secretmanager.googleapis.com",
     "sqladmin.googleapis.com",
     "sql-component.googleapis.com",
     "stackdriver.googleapis.com",
