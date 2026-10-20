@@ -16,82 +16,86 @@ import json
 import pathlib
 import re
 import unittest
+
 import yaml
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 
-_CURATED_LABELS = frozenset({
-    'Bug',
-    'Documentation',
-    'Duplicate',
-    'Enhancement',
-    'Framework - FedRAMP High',
-    'Framework - FedRAMP Moderate',
-    'Framework - IL4',
-    'Framework - IL5',
-    'Gemini - Enterprise',
-    'Gemini - Government',
-    'Good First Issue',
-    'Help Wanted',
-    'Level of Effort - High',
-    'Level of Effort - Low',
-    'Level of Effort - Medium',
-    'Priority - High',
-    'Priority - Low',
-    'Priority - Medium',
-    'Project Management',
-    'Question',
-    'Release - Pending',
-    'Release - Tagged',
-    'Scope - Blueprint',
-    'Scope - Fast',
-    'Scope - Module',
-    'Security',
-    "Won't Fix",
-})
+_CURATED_LABELS = frozenset(
+    {
+        "Bug",
+        "Documentation",
+        "Duplicate",
+        "Enhancement",
+        "Framework - FedRAMP High",
+        "Framework - FedRAMP Moderate",
+        "Framework - IL4",
+        "Framework - IL5",
+        "Gemini - Enterprise",
+        "Gemini - Government",
+        "Good First Issue",
+        "Help Wanted",
+        "Level of Effort - High",
+        "Level of Effort - Low",
+        "Level of Effort - Medium",
+        "Priority - High",
+        "Priority - Low",
+        "Priority - Medium",
+        "Project Management",
+        "Question",
+        "Release - Pending",
+        "Release - Tagged",
+        "Scope - Blueprint",
+        "Scope - Fast",
+        "Scope - Module",
+        "Security",
+        "Won't Fix",
+    }
+)
 
 
 class TestLabelTaxonomy(unittest.TestCase):
-
-  def test_labeler_uses_only_curated_labels(self):
-    labeler_path = _REPO_ROOT / '.github/labeler.yml'
-    config = yaml.safe_load(labeler_path.read_text(encoding='utf-8'))
-    self.assertIsInstance(config, dict)
-    self.assertTrue(set(config.keys()).issubset(_CURATED_LABELS))
-    self.assertNotEqual(
-        config.get('Gemini - Enterprise'),
-        config.get('Gemini - Government'),
-    )
-    g4g_globs = [
-        rule['changed-files'][0]['any-glob-to-any-file']
-        for rule in config.get('Gemini - Government', [])
-        if 'changed-files' in rule
-    ]
-    self.assertNotIn('blueprints/gemini-enterprise/**', g4g_globs[0])
-
-  def test_issue_templates_use_only_curated_labels(self):
-    template_dir = _REPO_ROOT / '.github/ISSUE_TEMPLATE'
-    frontmatter_re = re.compile(r'^---\n(.*?)\n---', re.DOTALL)
-    for template_path in sorted(template_dir.glob('*.md')):
-      with self.subTest(template=template_path.name):
-        match = frontmatter_re.match(template_path.read_text(encoding='utf-8'))
-        self.assertIsNotNone(match)
-        frontmatter = yaml.safe_load(match.group(1))
-        raw_labels = frontmatter.get('labels', [])
-        labels = (
-            [s.strip() for s in raw_labels.split(',') if s.strip()]
-            if isinstance(raw_labels, str)
-            else list(raw_labels)
+    def test_labeler_uses_only_curated_labels(self):
+        labeler_path = _REPO_ROOT / ".github/labeler.yml"
+        config = yaml.safe_load(labeler_path.read_text(encoding="utf-8"))
+        self.assertIsInstance(config, dict)
+        self.assertTrue(set(config.keys()).issubset(_CURATED_LABELS))
+        self.assertNotEqual(
+            config.get("Gemini - Enterprise"),
+            config.get("Gemini - Government"),
         )
-        self.assertTrue(labels)
-        self.assertTrue(set(labels).issubset(_CURATED_LABELS))
+        g4g_globs = [
+            rule["changed-files"][0]["any-glob-to-any-file"]
+            for rule in config.get("Gemini - Government", [])
+            if "changed-files" in rule
+        ]
+        self.assertNotIn("blueprints/gemini-enterprise/**", g4g_globs[0])
 
-  def test_release_please_config_uses_curated_release_labels(self):
-    config_path = _REPO_ROOT / '.github/release-please-config.json'
-    config = json.loads(config_path.read_text(encoding='utf-8'))
-    self.assertEqual(config.get('label'), 'Release - Pending')
-    self.assertEqual(config.get('release-label'), 'Release - Tagged')
+    def test_issue_templates_use_only_curated_labels(self):
+        template_dir = _REPO_ROOT / ".github/ISSUE_TEMPLATE"
+        frontmatter_re = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
+        for template_path in sorted(template_dir.glob("*.md")):
+            with self.subTest(template=template_path.name):
+                match = frontmatter_re.match(
+                    template_path.read_text(encoding="utf-8")
+                )
+                self.assertIsNotNone(match)
+                frontmatter = yaml.safe_load(match.group(1))
+                raw_labels = frontmatter.get("labels", [])
+                labels = (
+                    [s.strip() for s in raw_labels.split(",") if s.strip()]
+                    if isinstance(raw_labels, str)
+                    else list(raw_labels)
+                )
+                self.assertTrue(labels)
+                self.assertTrue(set(labels).issubset(_CURATED_LABELS))
+
+    def test_release_please_config_uses_curated_release_labels(self):
+        config_path = _REPO_ROOT / ".github/release-please-config.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        self.assertEqual(config.get("label"), "Release - Pending")
+        self.assertEqual(config.get("release-label"), "Release - Tagged")
 
 
-if __name__ == '__main__':
-  unittest.main()
+if __name__ == "__main__":
+    unittest.main()
