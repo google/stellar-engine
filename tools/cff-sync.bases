@@ -1,0 +1,8 @@
+# Base releases for modules that tools/sync-from-cff.sh cannot read from a
+# module_name in versions.tf, because upstream ships them without one or the
+# local copy never recorded it. The script updates the release after a sync.
+#
+# <directory under modules/> <upstream module> <base release>
+biglake-catalog biglake-catalog v38.0.0
+cloud-config-container cloud-config-container v38.0.0
+project-factory project-factory v38.0.0
