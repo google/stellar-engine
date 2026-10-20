@@ -79,6 +79,11 @@ Evaluate diffs and static analysis findings from a skeptical maintainer perspect
 * Use sentence case and concise 2-to-4-word numbered headings in guides and READMEs, and keep documentation version-agnostic by referencing `versions.tf` and upstream provider docs rather than hardcoding tool or runtime versions.
 * Never use em-dashes, ampersands in prose or headings, unnecessary parentheses, first-person pronouns such as `I`, `we`, `my`, or `our` in documentation, validation openers such as `spot on`, `you're right`, or `great point`, AI cliches such as `delve`, `testament`, `tapestry`, or `underscore`, bolded lead-in labels or colon prefixes in bullet lists, backticks inside Markdown headings, or horizontal rules such as `---` as section dividers.
 
+### 4.3 Changelog and releases
+
+* Follow every top-level `* ` commit bullet in `CHANGELOG.md`, release pull requests, GitHub Releases, and annotated Git tags with an indented `  * ...` sub-bullet sentence in plain English that explains what changed and how it affects deployments, rather than leaving bare one-line commit titles.
+* Group release entries under `### Breaking Changes`, `### Features`, and `### Bug Fixes` (`RELEASES.md`).
+
 ## 5 Scripting and testing
 
 * Verify that Python files pass `pyflakes` and CodeQL `py/unused-local-variable` checks with no unused imports, unused local variables, or undefined names, format Python code with `yapf` using `.style.yapf`, and stay within the 79-character line limit.

@@ -67,3 +67,8 @@ Follow these steps when you generate or modify code in this repository.
    foundational resource such as a base VPC or privileged service account.
 5. Read the `README.md` file of any module under `modules/` before calling it
    to verify its inputs, outputs, and version constraints.
+
+## 6 Changelog and release notes
+
+* Follow every top-level `* ` entry in `CHANGELOG.md`, release pull requests, GitHub Releases, and annotated Git tags with an indented `  * ...` sub-bullet sentence in plain English that summarizes what changed and how it affects deployments, rather than leaving bare one-line commit titles.
+* When preparing a release pull request on `release-please--branches--main`, add the `  * ...` sub-bullets to `CHANGELOG.md` and the release pull request body (`RELEASES.md`).
