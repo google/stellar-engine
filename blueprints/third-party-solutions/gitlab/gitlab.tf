@@ -23,8 +23,9 @@ locals {
     }
     mail = var.gitlab_config.mail
     redis = {
-      host = google_redis_instance.cache.host
-      port = google_redis_instance.cache.port
+      host        = google_redis_instance.cache.host
+      port        = google_redis_instance.cache.port
+      auth_string = google_redis_instance.cache.auth_string
     }
     prefix   = var.prefix
     saml     = var.gitlab_config.saml
@@ -36,13 +37,62 @@ locals {
   gitlab_ssl_ca_key              = local.self_signed_ssl_certs_required ? tls_private_key.gitlab_ca_private_key[0].private_key_pem : ""
   self_signed_ssl_certs_required = fileexists("${path.module}/certs/${var.gitlab_config.hostname}.crt") && fileexists("${path.module}/certs/${var.gitlab_config.hostname}.key") && fileexists("${path.module}/certs/${var.gitlab_config.hostname}.ca.crt") ? false : true
   gitlab_user_data = templatefile("${path.module}/assets/cloud-config.yaml", {
-    gitlab_config      = var.gitlab_config
-    gitlab_rb          = indent(6, local.gitlab_rb)
-    gitlab_sshd_config = indent(6, file("${path.module}/assets/sshd_config"))
-    gitlab_cert_name   = var.gitlab_config.hostname
-    gitlab_ssl_key     = indent(6, base64encode(local.gitlab_ssl_key))
-    gitlab_ssl_crt     = indent(6, base64encode(local.gitlab_ssl_crt))
+    project_id          = module.project.project_id
+    gitlab_config       = var.gitlab_config
+    gitlab_rb_secret_id = google_secret_manager_secret.gitlab_rb.secret_id
+    gitlab_ssl_key_id   = google_secret_manager_secret.gitlab_ssl_key.secret_id
+    gitlab_sshd_config  = indent(6, file("${path.module}/assets/sshd_config"))
+    gitlab_cert_name    = var.gitlab_config.hostname
+    gitlab_ssl_crt      = indent(6, base64encode(local.gitlab_ssl_crt))
   })
+}
+
+resource "google_secret_manager_secret" "gitlab_rb" {
+  project   = module.project.project_id
+  secret_id = "${var.prefix}-gitlab-rb"
+  replication {
+    user_managed {
+      replicas {
+        location = var.region
+      }
+    }
+  }
+}
+
+resource "google_secret_manager_secret_version" "gitlab_rb" {
+  secret      = google_secret_manager_secret.gitlab_rb.id
+  secret_data = local.gitlab_rb
+}
+
+resource "google_secret_manager_secret_iam_member" "gitlab_rb_accessor" {
+  project   = module.project.project_id
+  secret_id = google_secret_manager_secret.gitlab_rb.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = module.gitlab-sa.iam_email
+}
+
+resource "google_secret_manager_secret" "gitlab_ssl_key" {
+  project   = module.project.project_id
+  secret_id = "${var.prefix}-gitlab-ssl-key"
+  replication {
+    user_managed {
+      replicas {
+        location = var.region
+      }
+    }
+  }
+}
+
+resource "google_secret_manager_secret_version" "gitlab_ssl_key" {
+  secret      = google_secret_manager_secret.gitlab_ssl_key.id
+  secret_data = local.gitlab_ssl_key
+}
+
+resource "google_secret_manager_secret_iam_member" "gitlab_ssl_key_accessor" {
+  project   = module.project.project_id
+  secret_id = google_secret_manager_secret.gitlab_ssl_key.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = module.gitlab-sa.iam_email
 }
 
 module "gitlab-sa" {
