@@ -263,6 +263,7 @@ A few things to note on the default perimeter
 - writer identities for sinks defined in the bootstrap stage are passed through via output files, and automatically included in an ingress policy
 - the perimeter is brought up in enforced mode by default
 - Google Cloud Project discovery is turned on by default and includes all Google Cloud Projects in the Google Cloud Organization
+- the stage resolves access level names in `perimeter_default` and in policies defined through the `vpc_sc` variable, while ingress and egress policy YAML files reference access levels as `$access_levels:<name>`
 
 The following example configures the default perimeter, with a single broad geo-based access level. Refer to the [vpc-sc module](../../../modules/vpc-sc/) for details on how to configure ingress/egress policies, and how to leverage the YAML factories. The perimeter is set to enforced mode and leverages auto discovery of Google Cloud Projects.
 
