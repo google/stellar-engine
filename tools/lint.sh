@@ -18,7 +18,7 @@
 # DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 echo -- Boilerplate check --
-python3 tools/check_boilerplate.py "$PWD"
+uv run --locked python tools/check_boilerplate.py "$PWD"
 
 echo -- Terraform format --
 terraform fmt -recursive -check -diff "$PWD"
@@ -27,20 +27,20 @@ echo -- Terraform lint --
 bash tools/tflint.sh -f compact
 
 echo -- READMEs --
-python3 tools/check_documentation.py --no-show-summary modules fast blueprints
+uv run --locked python tools/check_documentation.py --no-show-summary modules fast blueprints
 
 echo -- Links --
-python3 tools/check_links.py --no-show-summary "$PWD"
+uv run --locked python tools/check_links.py --no-show-summary "$PWD"
 
 echo -- FAST Names --
-python3 tools/check_names.py --prefix-length=10 --failed-only fast/stages
+uv run --locked python tools/check_names.py --prefix-length=10 --failed-only fast/stages
 
 echo -- Python formatting --
-ruff format --check "$PWD"
-ruff check "$PWD"
+uv run --locked ruff format --check "$PWD"
+uv run --locked ruff check "$PWD"
 
 echo -- Blueprint metadata --
-python3 tools/validate_metadata.py -v blueprints --verbose --failed-only
+uv run --locked python tools/validate_metadata.py -v blueprints --verbose --failed-only
 
 echo -- Version checks --
 find . -type f -name 'versions.tf' -exec diff -ub default-versions.tf {} \;
