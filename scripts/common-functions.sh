@@ -327,6 +327,24 @@ setup_error_handling() {
     trap 'error_handler $LINENO $?' ERR
 }
 
+# ERR trap handler used by deploy.sh
+error_handler() {
+    local line_no=$1
+    local exit_code=$?
+    log_error "Script failed at line $line_no with exit code $exit_code"
+
+    # Save deployment state for potential recovery
+    if [[ -n "${PREFIX:-}" ]]; then
+        local state_dir="${SCRIPT_DIR}/state"
+        mkdir -p "$state_dir"
+        echo "LAST_FAILED_OPERATION=deploy" >> "${state_dir}/last_operation_${PREFIX}.env" 2>/dev/null || true
+        echo "LAST_FAILED_LINE=$line_no" >> "${state_dir}/last_operation_${PREFIX}.env" 2>/dev/null || true
+    fi
+
+    cleanup
+    exit "$exit_code"
+}
+
 # Default cleanup function (can be overridden)
 cleanup() {
     log_info "Cleaning up temporary files..."
@@ -450,6 +468,39 @@ promptUser() {
     fi
 
     return 0
+}
+
+# Helper function to handle promptUser return codes properly
+handle_prompt() {
+    local prompt="$1"
+    shift
+    local commands=("$@")
+
+    if promptUser "$prompt" "${commands[@]}"; then
+        return 0  # Success - user chose "yes"
+    else
+        local exit_code=$?
+        if [[ $exit_code -eq 255 ]]; then
+            return 0  # Skip is treated as success for optional commands
+        else
+            return $exit_code  # Propagate other errors
+        fi
+    fi
+}
+
+# Handle prompts where skip should be treated as "no" (for if statements)
+handle_prompt_if() {
+    local prompt="$1"
+    shift
+    local commands=("$@")
+
+    if promptUser "$prompt" "${commands[@]}"; then
+        return 0  # Success - user chose "yes"
+    else
+        local exit_code=$?
+        # Both "no" and "skip" return failure for if statements
+        return 1
+    fi
 }
 
 # Confirm destructive operation with explicit "DELETE" typing
