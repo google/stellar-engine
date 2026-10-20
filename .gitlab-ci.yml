@@ -139,26 +139,26 @@ dummy_job:
 # check-docs-stages-aw:
 #   stage: test
 #   image:
-#     name: python:3.9.19
+#     name: python:3.14
 #     entrypoint:
 #       - "/usr/bin/env"
 #       - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 #   script:
-#     - cd tools
-#     - pip install click marko
-#     - python check_documentation.py fast/stages-aw
+#     - pip install uv
+#     - uv sync --locked
+#     - uv run --locked python tools/check_documentation.py fast/stages-aw
 # 
 # check-docs-blueprints:
 #   stage: test
 #   image:
-#     name: python:3.9
+#     name: python:3.14
 #     entrypoint:
 #       - "/usr/bin/env"
 #       - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 #   script:
-#     - cd tools
-#     - pip install click marko
-#     - python check_documentation.py blueprints
+#     - pip install uv
+#     - uv sync --locked
+#     - uv run --locked python tools/check_documentation.py blueprints
 # 
 # checkov-stages-aw:
 #   stage: test
