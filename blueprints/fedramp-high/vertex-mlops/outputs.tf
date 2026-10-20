@@ -16,10 +16,9 @@
 
 output "notebook" {
   description = "Vertex AI notebook ids."
-  value = merge(
-    { for k, v in resource.google_notebooks_runtime.runtime : k => v.id },
-    { for k, v in resource.google_workbench_instance.playground : k => v.id }
-  )
+  value = {
+    for k, v in resource.google_workbench_instance.playground : k => v.id
+  }
 }
 
 output "project_id" {

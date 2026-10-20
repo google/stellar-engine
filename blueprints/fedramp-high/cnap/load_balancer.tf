@@ -21,9 +21,10 @@ locals {
       id            = ""
       health_checks = []
       port_name     = ""
+      # Without a custom OAuth client, IAP uses a Google-managed client.
       iap_config = {
-        oauth2_client_id     = google_iap_client.project_client.client_id
-        oauth2_client_secret = google_iap_client.project_client.secret
+        oauth2_client_id     = try(var.iap_oauth2_client.id, null)
+        oauth2_client_secret = try(var.iap_oauth2_client.secret, null)
       }
       security_policy = google_compute_region_security_policy.default.self_link
     }
@@ -31,13 +32,14 @@ locals {
   vm_backends = { for key, _ in try(local.vms, {}) : key =>
     {
       backends = [{
-        backend = module.cos-mig[key].group_manager.instance_group
+        group = module.cos-mig[key].group_manager.instance_group
       }]
       health_checks = [google_compute_region_health_check.http_region_health_check[key].self_link, ]
       protocol      = "HTTP"
+      # Without a custom OAuth client, IAP uses a Google-managed client.
       iap_config = {
-        oauth2_client_id     = google_iap_client.project_client.client_id
-        oauth2_client_secret = google_iap_client.project_client.secret
+        oauth2_client_id     = try(var.iap_oauth2_client.id, null)
+        oauth2_client_secret = try(var.iap_oauth2_client.secret, null)
       }
       security_policy = google_compute_region_security_policy.default.self_link
     }
@@ -129,7 +131,7 @@ module "cnap-0-redirect" {
   source     = "../../../modules/net-lb-app-ext-regional/"
   project_id = var.network_project_id
   name       = "${var.prefix}-cloud-native-access-point-redirect"
-  vpc        = data.google_compute_network.network.self_link
+  vpc_config = { network = data.google_compute_network.network.self_link }
   region     = var.region
   address = (
     google_compute_address.cnap_ext_ip.id
@@ -149,7 +151,7 @@ module "cnap-0" {
   source     = "../../../modules/net-lb-app-ext-regional/"
   project_id = var.main_project_id
   name       = local.lb_name
-  vpc        = data.google_compute_network.network.self_link
+  vpc_config = { network = data.google_compute_network.network.self_link }
   region     = var.region
   address = (
     google_compute_address.cnap_ext_ip.id

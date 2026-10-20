@@ -61,15 +61,22 @@ moved {
 }
 
 module "cloud-run" {
-  source                      = "../../../modules/cloud-run-v2-se/"
-  project_id                  = var.main_project_id
-  name                        = var.name
-  region                      = var.region
-  encryption_key              = data.google_kms_crypto_key.default.id
-  create_job                  = var.is_job
-  ingress                     = var.ingress
-  binary_authorization_mode   = var.binary_authorization_mode
-  binary_authorization_policy = var.binary_authorization_policy
+  source         = "../../../modules/cloud-run-v2-se/"
+  project_id     = var.main_project_id
+  name           = var.name
+  region         = var.region
+  encryption_key = data.google_kms_crypto_key.default.id
+  type           = var.is_job ? "JOB" : "SERVICE"
+  service_config = { ingress = var.ingress }
+  binary_authorization = (
+    var.binary_authorization_mode == "disabled" ? null : {
+      use_default = var.binary_authorization_mode == "default" ? true : null
+      policy = (
+        var.binary_authorization_mode == "policy"
+        ? var.binary_authorization_policy : null
+      )
+    }
+  )
 
   containers = {
     (var.name) = {
@@ -89,6 +96,9 @@ module "cloud-run" {
       }
     }
   }
-  service_account     = google_service_account.cloud_run_service_account.email
+  service_account_config = {
+    create = false
+    email  = google_service_account.cloud_run_service_account.email
+  }
   deletion_protection = true
 }
