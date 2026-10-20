@@ -664,8 +664,8 @@ Each FAST deployment stage uses a dedicated least-privilege automation service a
 | :--- | :--- | :--- |
 | `0-bootstrap` | `${FAST_PREFIX}-prod-bootstrap-0@${FAST_PREFIX}-prod-iac-core-0.iam.gserviceaccount.com` | Organization IAM, Assured Workloads, Stage 0 projects |
 | `1-resman` | `${FAST_PREFIX}-prod-resman-0@${FAST_PREFIX}-prod-iac-core-0.iam.gserviceaccount.com` | Stage folders, automation service accounts, CI/CD repositories |
-| `2-networking` | `${FAST_PREFIX}-prod-networking-0@${FAST_PREFIX}-prod-iac-core-0.iam.gserviceaccount.com` | Shared VPCs, firewall policies, interconnect/VPN, DNS |
-| `3-security` | `${FAST_PREFIX}-prod-security-0@${FAST_PREFIX}-prod-iac-core-0.iam.gserviceaccount.com` | KMS keys, VPC Service Controls, security projects |
+| `2-networking` | `${FAST_PREFIX}-prod-resman-net-0@${FAST_PREFIX}-prod-iac-core-0.iam.gserviceaccount.com` | Shared VPCs, firewall policies, interconnect/VPN, DNS |
+| `3-security` | `${FAST_PREFIX}-security-0@${FAST_PREFIX}-prod-iac-core-0.iam.gserviceaccount.com` | KMS keys, VPC Service Controls, security projects |
 
 If you encounter `403 Forbidden` or `Permission 'iam.serviceAccounts.getAccessToken' denied` errors when transitioning between stages:
 
