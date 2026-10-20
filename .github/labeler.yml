@@ -1,16 +1,31 @@
 # Type and Framework are independent: a blueprints/fedramp-high/ change gets both.
 
-"Scope - Modules":
+"Scope - Module":
   - changed-files:
       - any-glob-to-any-file: 'modules/**'
 
 "Scope - Fast":
   - changed-files:
-      - any-glob-to-any-file: 'fast/**'
+      - any-glob-to-any-file:
+          - 'fast/**'
+          - 'scripts/**'
+          - 'cli/**'
 
 "Scope - Blueprint":
   - changed-files:
       - any-glob-to-any-file: 'blueprints/**'
+
+"Documentation":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'
+          - '*.md'
+
+"Project Management":
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+          - '.gemini/**'
 
 "Framework - FedRAMP Moderate":
   - changed-files:
@@ -30,8 +45,24 @@
 
 "Gemini - Enterprise":
   - changed-files:
-      - any-glob-to-any-file: 'blueprints/gemini-enterprise/**'
+      - any-glob-to-any-file:
+          - '**/*gemini-enterprise*/**'
+          - '**/*gemini-enterprise*'
+          - '**/*gemini_enterprise*/**'
+          - '**/*gemini_enterprise*'
+  - head-branch:
+      - '^.*gemini[-_]?enterprise.*$'
 
 "Gemini - Government":
   - changed-files:
-      - any-glob-to-any-file: 'blueprints/gemini-enterprise/**'
+      - any-glob-to-any-file:
+          - '**/*gem4gov*/**'
+          - '**/*gem4gov*'
+          - '**/*g4g*/**'
+          - '**/*g4g*'
+          - '**/*gemini-for-government*/**'
+          - '**/*gemini-for-government*'
+          - '**/*gemini_for_government*/**'
+          - '**/*gemini_for_government*'
+  - head-branch:
+      - '^.*(gem4gov|g4g|gemini[-_]?for[-_]?government).*$'

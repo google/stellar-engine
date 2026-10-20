@@ -1,5 +1,7 @@
 {
   "pull-request-header": "<!-- release-please -->",
+  "label": "Release - Pending",
+  "release-label": "Release - Tagged",
   "packages": {
     ".": {
       "release-type": "simple",
