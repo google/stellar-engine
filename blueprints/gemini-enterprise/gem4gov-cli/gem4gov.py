@@ -18,7 +18,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from google.api_core.client_options import ClientOptions
 import subprocess
-import random
+import secrets
 import string
 import json
 import yaml
@@ -1162,7 +1162,9 @@ def create_application_logic(credentials, project_id, data_store_list, workforce
     
     if not engine_id:
         click.echo(nl=True)
-        engine_id = 'g4g-gem-ent-app-' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+        alphabet = string.ascii_lowercase + string.digits
+        suffix = ''.join(secrets.choice(alphabet) for _ in range(4))
+        engine_id = 'g4g-gem-ent-app-' + suffix
     
     # Re-using the prompt from onboard for consistency
     if not compliance_regime:

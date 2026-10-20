@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN useradd --create-home --shell /usr/sbin/nologin appuser && chown -R appuser:appuser /app
+RUN useradd --create-home --shell /usr/sbin/nologin appuser && chmod -R a+rX /app
 USER appuser
 
 # Expose port 8080 for Cloud Run
