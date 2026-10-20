@@ -639,7 +639,6 @@ environment.) A subset of the file structure containing IaC is listed below.
   - **cloud-function-v1**
   - **cloud-function-v2**
   - **cloud-identity-group**
-  - **cloud-run**
   - **cloud-run-v2**
   - **cloud-run-v2-se**
   - **cloud-scheduler**
