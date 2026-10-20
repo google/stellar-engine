@@ -543,28 +543,27 @@ module "cloud_run" {
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [name](variables.tf#L181) | Name used for Cloud Run service. | <code>string</code> | ✓ |  |
-| [project_id](variables.tf#L196) | Project id used for all resources. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L201) | Region used for all resources. | <code>string</code> | ✓ |  |
-| [binary_authorization_mode](variables.tf#L17) | Mode for Binary Authorization. Can be 'default', 'policy', or 'disabled'. | <code>string</code> |  | <code>&#34;disabled&#34; &#35; Or &#34;default&#34;</code> |
-| [binary_authorization_policy](variables.tf#L27) | The resource name of the Binary Authorization policy to use (e.g., projects/PROJECT_ID/policies/POLICY_ID). Required if binary_authorization_mode is 'policy'. | <code>string</code> |  | <code>null</code> |
-| [containers](variables.tf#L33) | Containers in name => attributes format. | <code title="map&#40;object&#40;&#123;&#10;  image   &#61; string&#10;  command &#61; optional&#40;list&#40;string&#41;&#41;&#10;  args    &#61; optional&#40;list&#40;string&#41;&#41;&#10;  env     &#61; optional&#40;map&#40;string&#41;&#41;&#10;  env_from_key &#61; optional&#40;map&#40;object&#40;&#123;&#10;    secret  &#61; string&#10;    version &#61; string&#10;  &#125;&#41;&#41;&#41;&#10;  liveness_probe &#61; optional&#40;object&#40;&#123;&#10;    grpc &#61; optional&#40;object&#40;&#123;&#10;      port    &#61; optional&#40;number&#41;&#10;      service &#61; optional&#40;string&#41;&#10;    &#125;&#41;&#41;&#10;    http_get &#61; optional&#40;object&#40;&#123;&#10;      http_headers &#61; optional&#40;map&#40;string&#41;&#41;&#10;      path         &#61; optional&#40;string&#41;&#10;    &#125;&#41;&#41;&#10;    failure_threshold     &#61; optional&#40;number&#41;&#10;    initial_delay_seconds &#61; optional&#40;number&#41;&#10;    period_seconds        &#61; optional&#40;number&#41;&#10;    timeout_seconds       &#61; optional&#40;number&#41;&#10;  &#125;&#41;&#41;&#10;  ports &#61; optional&#40;map&#40;object&#40;&#123;&#10;    container_port &#61; optional&#40;number&#41;&#10;    name           &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#41;&#10;  resources &#61; optional&#40;object&#40;&#123;&#10;    limits &#61; optional&#40;object&#40;&#123;&#10;      cpu    &#61; string&#10;      memory &#61; string&#10;    &#125;&#41;&#41;&#10;    cpu_idle          &#61; optional&#40;bool&#41;&#10;    startup_cpu_boost &#61; optional&#40;bool&#41;&#10;  &#125;&#41;&#41;&#10;  startup_probe &#61; optional&#40;object&#40;&#123;&#10;    grpc &#61; optional&#40;object&#40;&#123;&#10;      port    &#61; optional&#40;number&#41;&#10;      service &#61; optional&#40;string&#41;&#10;    &#125;&#41;&#41;&#10;    http_get &#61; optional&#40;object&#40;&#123;&#10;      http_headers &#61; optional&#40;map&#40;string&#41;&#41;&#10;      path         &#61; optional&#40;string&#41;&#10;    &#125;&#41;&#41;&#10;    tcp_socket &#61; optional&#40;object&#40;&#123;&#10;      port &#61; optional&#40;number&#41;&#10;    &#125;&#41;&#41;&#10;    failure_threshold     &#61; optional&#40;number&#41;&#10;    initial_delay_seconds &#61; optional&#40;number&#41;&#10;    period_seconds        &#61; optional&#40;number&#41;&#10;    timeout_seconds       &#61; optional&#40;number&#41;&#10;  &#125;&#41;&#41;&#10;  volume_mounts &#61; optional&#40;map&#40;string&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [create_job](variables.tf#L93) | Create Cloud Run Job instead of Service. | <code>bool</code> |  | <code>false</code> |
-| [custom_audiences](variables.tf#L99) | Custom audiences for service. | <code>list&#40;string&#41;</code> |  | <code>null</code> |
-| [deletion_protection](variables.tf#L105) | Deletion protection setting for this Cloud Run service. | <code>string</code> |  | <code>null</code> |
-| [encryption_key](variables.tf#L111) | The full resource name of the Cloud KMS CryptoKey. | <code>string</code> |  | <code>null</code> |
-| [eventarc_triggers](variables.tf#L117) | Event arc triggers for different sources. | <code title="object&#40;&#123;&#10;  audit_log &#61; optional&#40;map&#40;object&#40;&#123;&#10;    method  &#61; string&#10;    service &#61; string&#10;  &#125;&#41;&#41;&#41;&#10;  pubsub                 &#61; optional&#40;map&#40;string&#41;&#41;&#10;  service_account_email  &#61; optional&#40;string&#41;&#10;  service_account_create &#61; optional&#40;bool, false&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [iam](variables.tf#L135) | IAM bindings for Cloud Run service in {ROLE => [MEMBERS]} format. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [ingress](variables.tf#L141) | Ingress settings. | <code>string</code> |  | <code>null</code> |
-| [labels](variables.tf#L158) | Resource labels. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [launch_stage](variables.tf#L164) | The launch stage as defined by Google Cloud Platform Launch Stages. | <code>string</code> |  | <code>null</code> |
-| [prefix](variables.tf#L186) | Optional prefix used for resource names. | <code>string</code> |  | <code>null</code> |
-| [revision](variables.tf#L206) | Revision template configurations. | <code title="object&#40;&#123;&#10;  name                       &#61; optional&#40;string&#41;&#10;  gen2_execution_environment &#61; optional&#40;bool&#41;&#10;  max_concurrency            &#61; optional&#40;number&#41;&#10;  max_instance_count         &#61; optional&#40;number&#41;&#10;  min_instance_count         &#61; optional&#40;number&#41;&#10;  job &#61; optional&#40;object&#40;&#123;&#10;    max_retries &#61; optional&#40;number&#41;&#10;    task_count  &#61; optional&#40;number&#41;&#10;  &#125;&#41;, &#123;&#125;&#41;&#10;  vpc_access &#61; optional&#40;object&#40;&#123;&#10;    connector &#61; optional&#40;string&#41;&#10;    egress    &#61; optional&#40;string&#41;&#10;    network   &#61; optional&#40;string&#41;&#10;    subnet    &#61; optional&#40;string&#41;&#10;    tags      &#61; optional&#40;list&#40;string&#41;&#41;&#10;  &#125;&#41;, &#123;&#125;&#41;&#10;  timeout &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [service_account](variables.tf#L244) | Service account email. Unused if service account is auto-created. | <code>string</code> |  | <code>null</code> |
-| [service_account_create](variables.tf#L250) | Auto-create service account. | <code>bool</code> |  | <code>false</code> |
-| [tag_bindings](variables.tf#L256) | Tag bindings for this service, in key => tag value id format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [volumes](variables.tf#L263) | Named volumes in containers in name => attributes format. | <code title="map&#40;object&#40;&#123;&#10;  secret &#61; optional&#40;object&#40;&#123;&#10;    name         &#61; string&#10;    default_mode &#61; optional&#40;string&#41;&#10;    path         &#61; optional&#40;string&#41;&#10;    version      &#61; optional&#40;string&#41;&#10;    mode         &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;  cloud_sql_instances &#61; optional&#40;list&#40;string&#41;&#41;&#10;  empty_dir_size      &#61; optional&#40;string&#41;&#10;  gcs &#61; optional&#40;object&#40;&#123;&#10;    bucket       &#61; string&#10;    is_read_only &#61; optional&#40;bool&#41;&#10;  &#125;&#41;&#41;&#10;  nfs &#61; optional&#40;object&#40;&#123;&#10;    server       &#61; string&#10;    path         &#61; optional&#40;string&#41;&#10;    is_read_only &#61; optional&#40;bool&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [vpc_connector_create](variables-vpcconnector.tf#L17) | Populate this to create a Serverless VPC Access connector. | <code title="object&#40;&#123;&#10;  ip_cidr_range &#61; optional&#40;string&#41;&#10;  machine_type  &#61; optional&#40;string&#41;&#10;  name          &#61; optional&#40;string&#41;&#10;  network       &#61; optional&#40;string&#41;&#10;  instances &#61; optional&#40;object&#40;&#123;&#10;    max &#61; optional&#40;number&#41;&#10;    min &#61; optional&#40;number&#41;&#10;    &#125;&#41;, &#123;&#125;&#10;  &#41;&#10;  throughput &#61; optional&#40;object&#40;&#123;&#10;    max &#61; optional&#40;number&#41;&#10;    min &#61; optional&#40;number&#41;&#10;    &#125;&#41;, &#123;&#125;&#10;  &#41;&#10;  subnet &#61; optional&#40;object&#40;&#123;&#10;    name       &#61; optional&#40;string&#41;&#10;    project_id &#61; optional&#40;string&#41;&#10;  &#125;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [name](variables.tf#L192) | Name used for Cloud Run service. | <code>string</code> | ✓ |  |
+| [project_id](variables.tf#L197) | Project id used for all resources. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L202) | Region used for all resources. | <code>string</code> | ✓ |  |
+| [binary_authorization](variables.tf#L17) | Binary Authorization configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [containers](variables.tf#L27) | Containers in name => attributes format. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [context](variables.tf#L107) | Context-specific interpolations. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [deletion_protection](variables.tf#L129) | Deletion protection setting for this Cloud Run service. | <code>string</code> |  | <code>null</code> |
+| [encryption_key](variables.tf#L135) | The full resource name of the Cloud KMS CryptoKey. | <code>string</code> |  | <code>null</code> |
+| [iam](variables.tf#L141) | IAM bindings for Cloud Run service in {ROLE => [MEMBERS]} format. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [job_config](variables.tf#L147) | Cloud Run Job specific configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [labels](variables.tf#L162) | Resource labels. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [launch_stage](variables.tf#L168) | The launch stage as defined by Google Cloud Platform Launch Stages. | <code>string</code> |  | <code>null</code> |
+| [managed_revision](variables.tf#L185) | Whether the Terraform module should control the deployment of revisions. | <code>bool</code> |  | <code>true</code> |
+| [revision](variables.tf#L207) | Revision template configurations. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [service_account_config](variables-serviceaccount.tf#L17) | Service account configurations. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [service_config](variables.tf#L274) | Cloud Run service specific configuration options. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [tag_bindings](variables.tf#L407) | Tag bindings for this service, in key => tag value id format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [type](variables.tf#L414) | Type of Cloud Run resource to deploy: JOB, SERVICE or WORKERPOOL. | <code>string</code> |  | <code>&#34;SERVICE&#34;</code> |
+| [volumes](variables.tf#L424) | Named volumes in containers in name => attributes format. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [vpc_connector_create](variables-vpcconnector.tf#L17) | VPC connector network configuration. Must be provided if new VPC connector is being created. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [workerpool_config](variables.tf#L458) | Cloud Run Worker Pool specific configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 
@@ -572,8 +571,10 @@ module "cloud_run" {
 |---|---|:---:|
 | [id](outputs.tf#L17) | Fully qualified job or service id. |  |
 | [invoke_command](outputs.tf#L22) | Command to invoke Cloud Run Service / submit job. |  |
-| [job](outputs.tf#L36) | Cloud Run Job. |  |
-| [service](outputs.tf#L41) | Cloud Run Service. |  |
+| [job](outputs.tf#L27) | Cloud Run Job. |  |
+| [resource](outputs.tf#L32) | Cloud Run resource (job, service or worker_pool). |  |
+| [resource_name](outputs.tf#L37) | Cloud Run resource (job, service or workerpool)  service name. |  |
+| [service](outputs.tf#L42) | Cloud Run Service. |  |
 | [service_account](outputs.tf#L46) | Service account resource. |  |
 | [service_account_email](outputs.tf#L51) | Service account email. |  |
 | [service_account_iam_email](outputs.tf#L56) | Service account email. |  |
@@ -583,9 +584,10 @@ module "cloud_run" {
 
 ## Fixtures
 
-- iam-service-account.tf
-- pubsub.tf
-- secret-credentials.tf
-- shared-vpc.tf
-- vpc-connector.tf
+- [cloudsql-instance.tf](../../tests/fixtures/cloudsql-instance.tf)
+- [iam-service-account.tf](../../tests/fixtures/iam-service-account.tf)
+- [pubsub.tf](../../tests/fixtures/pubsub.tf)
+- [secret-credentials.tf](../../tests/fixtures/secret-credentials.tf)
+- [shared-vpc.tf](../../tests/fixtures/shared-vpc.tf)
+- [vpc-connector.tf](../../tests/fixtures/vpc-connector.tf)
 <!-- END TFDOC -->

@@ -267,14 +267,15 @@ module "pubsub" {
 | name | description | sensitive |
 |---|---|:---:|
 | [id](outputs.tf#L17) | Fully qualified topic id. |  |
-| [schema](outputs.tf#L28) | Schema resource. |  |
-| [schema_id](outputs.tf#L33) | Schema resource id. |  |
-| [subscription_id](outputs.tf#L38) | Subscription ids. |  |
-| [subscriptions](outputs.tf#L50) | Subscription resources. |  |
-| [topic](outputs.tf#L60) | Topic resource. |  |
+| [name](outputs.tf#L28) | Topic name. |  |
+| [schema](outputs.tf#L33) | Schema resource. |  |
+| [schema_id](outputs.tf#L38) | Schema resource id. |  |
+| [subscription_id](outputs.tf#L43) | Subscription ids. |  |
+| [subscriptions](outputs.tf#L55) | Subscription resources. |  |
+| [topic](outputs.tf#L65) | Topic resource. |  |
 
 ## Fixtures
 
-- bigquery-dataset.tf
-- gcs.tf
+- [bigquery-dataset.tf](../../tests/fixtures/bigquery-dataset.tf)
+- [gcs.tf](../../tests/fixtures/gcs.tf)
 <!-- END TFDOC -->

@@ -595,11 +595,12 @@ module "cluster-1" {
 | [cluster](outputs.tf#L32) | Cluster resource. | ✓ |
 | [dns_endpoint](outputs.tf#L38) | Control plane DNS endpoint. |  |
 | [endpoint](outputs.tf#L46) | Cluster endpoint. |  |
-| [id](outputs.tf#L51) | FUlly qualified cluster id. |  |
-| [location](outputs.tf#L56) | Cluster location. |  |
-| [master_version](outputs.tf#L61) | Master version. |  |
-| [name](outputs.tf#L66) | Cluster name. |  |
-| [notifications](outputs.tf#L71) | GKE PubSub notifications topic. |  |
-| [self_link](outputs.tf#L76) | Cluster self link. | ✓ |
-| [workload_identity_pool](outputs.tf#L82) | Workload identity pool. |  |
+| [fleet](outputs.tf#L51) | Fleet the cluster is registered with. |  |
+| [id](outputs.tf#L56) | FUlly qualified cluster id. |  |
+| [location](outputs.tf#L61) | Cluster location. |  |
+| [master_version](outputs.tf#L66) | Master version. |  |
+| [name](outputs.tf#L71) | Cluster name. |  |
+| [notifications](outputs.tf#L76) | GKE PubSub notifications topic. |  |
+| [self_link](outputs.tf#L81) | Cluster self link. | ✓ |
+| [workload_identity_pool](outputs.tf#L87) | Workload identity pool. |  |
 <!-- END TFDOC -->

@@ -495,7 +495,7 @@ module "db" {
 | [tier](variables.tf#L345) | The machine type to use for the instances. | <code>string</code> | ✓ |  |
 | [activation_policy](variables.tf#L17) | This variable specifies when the instance should be active. Can be either ALWAYS, NEVER or ON_DEMAND. Default is ALWAYS. | <code>string</code> |  | <code>&#34;ALWAYS&#34;</code> |
 | [availability_type](variables.tf#L28) | Availability type for the primary replica. Either `ZONAL` or `REGIONAL`. | <code>string</code> |  | <code>&#34;ZONAL&#34;</code> |
-| [backup_configuration](variables.tf#L34) | Backup settings for primary instance. Set to null to leave existing GCP backup settings unmanaged. When set, all fields are managed by Terraform including disabling backups when enabled=false. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [backup_configuration](variables.tf#L34) | Backup settings for primary instance. Set to null to leave existing GCP backup settings unmanaged; backups are still retained on instance deletion. When set, all fields are managed by Terraform including disabling backups when enabled=false. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [collation](variables.tf#L54) | The name of server instance collation. | <code>string</code> |  | <code>null</code> |
 | [connector_enforcement](variables.tf#L60) | Specifies if connections must use Cloud SQL connectors. | <code>string</code> |  | <code>null</code> |
 | [context](variables.tf#L66) | Context-specific interpolations. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
