@@ -1,8 +1,9 @@
 # Sample terraform.tfvars file for Stage 2 (Networking - IL5 NGFW)
 # Replace values with your desired network topologies.
 # Replace every <region> with the regions.primary value from the Stage 0
-# terraform.tfvars file. The stage validates that the landing-default subnet
-# and the first tenant subnet of each environment use that region.
+# terraform.tfvars file. The stage validates that the landing, dmz and mgmt
+# default subnets and the first tenant subnet of each environment use that
+# region.
 
 # VPC Subnetwork Configurations
 subnets = {

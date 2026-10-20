@@ -145,7 +145,8 @@ class TestStage2Networking(unittest.TestCase):
     )
 
     vars_tf = (_IL5_NET_DIR / 'variables.tf').read_text(encoding='utf-8')
-    self.assertIn('s.region if s.name == "landing-default"', vars_tf)
+    self.assertIn('for net in ["landing", "dmz", "mgmt"]', vars_tf)
+    self.assertIn('s.region if s.name == "${net}-default"', vars_tf)
 
     for stage_dir in (_FEDRAMP_NET_DIR, _IL5_NET_DIR):
       with self.subTest(stage=stage_dir.name):
