@@ -98,6 +98,14 @@ We welcome contributions to Stellar Engine! Since this is an open-source project
 
 Please ensure your code adheres to our formatting and security standards. 
 
+Run the repository checks before you open a pull request. The `pyproject.toml` and `uv.lock` files at the repository root pin the Python version and packages for the `tools/` scripts and the `tests/` suite, so [uv](https://docs.astral.sh/uv/getting-started/installation/) is the only Python tool you install:
+
+- `uv run pytest` runs the Python unit tests.
+- `bash tools/run_tests.sh` runs the Python unit tests, the shell script tests, and a compile check of every Python file.
+- `bash tools/lint.sh` runs the license header, documentation, link, naming, formatting, and metadata checks.
+
+The `tools/lint.sh` script also needs the Terraform and TFLint binaries on your `PATH`.
+
 ## Issue Reporting
 
 If you encounter any bugs, have feature requests, or run into deployment issues, please [create an issue](https://github.com/google/stellar-engine/issues) on our GitHub repository. Keep the issue description clear and provide steps to reproduce if applicable.
