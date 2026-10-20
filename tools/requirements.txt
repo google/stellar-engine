@@ -1,9 +1,0 @@
-click
-deepdiff
-ghapi
-iso8601
-marko
-requests
-yamale
-ruff==0.17.1
-jsonschema
