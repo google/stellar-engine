@@ -126,6 +126,120 @@ assert_false "check_os_environment fails when OS=Windows_NT outside WSL2" 'OS="W
 OS_ERR_OUTPUT=$(check_os_environment "MINGW64_NT-10.0" "msys" 2>&1 || true)
 assert_true "check_os_environment error recommends WSL2" '[[ "$OS_ERR_OUTPUT" == *"WSL2"* ]]'
 
+# Run a snippet in a fresh bash process that sources common-functions.sh
+# without set -e, the same way deploy.sh runs. Stdin comes from $2 and the exit
+# status lands in ISOLATED_STATUS.
+COMMON_FUNCTIONS="${REPO_ROOT}/scripts/common-functions.sh"
+run_isolated() {
+  local snippet="$1"
+  local input="${2:-}"
+  set +e
+  bash -c "source \"\$1\"; ${snippet}" _ "$COMMON_FUNCTIONS" \
+    < <(printf '%s' "$input") >/dev/null 2>&1
+  ISOLATED_STATUS=$?
+  set -e
+}
+
+# 12. Test error_handler exits with the failing command's status
+EH_DIR="${TMP_TEST_DIR}/error_handler"
+mkdir -p "$EH_DIR"
+run_isolated "SCRIPT_DIR='${EH_DIR}'; PREFIX=testpx; cleanup() { :; }
+trap 'error_handler \$LINENO \$?' ERR
+fail_with() { return \"\$1\"; }
+fail_with 42
+exit 0"
+assert_equals "error_handler exits with the failing status when the trap passes it" "42" "$ISOLATED_STATUS"
+assert_true "error_handler records the failed line in the state file" 'grep -q "^LAST_FAILED_LINE=" "${EH_DIR}/state/last_operation_testpx.env"'
+assert_true "error_handler records deploy as the failed operation by default" 'grep -q "^LAST_FAILED_OPERATION=deploy$" "${EH_DIR}/state/last_operation_testpx.env"'
+
+run_isolated "SCRIPT_DIR='${EH_DIR}'; cleanup() { :; }
+trap 'error_handler \$LINENO' ERR
+fail_with() { return \"\$1\"; }
+fail_with 7
+exit 0"
+assert_equals "error_handler captures the failing status when the trap omits it" "7" "$ISOLATED_STATUS"
+
+run_isolated "cleanup() { touch '${EH_DIR}/cleanup_ran'; }
+trap 'error_handler \$LINENO \$?' ERR
+false
+exit 0"
+assert_true "error_handler runs the cleanup function" '[[ -f "${EH_DIR}/cleanup_ran" ]]'
+
+run_isolated "my_cleanup() { touch '${EH_DIR}/custom_cleanup_ran'; }
+setup_error_handling my_cleanup
+fail_with() { return \"\$1\"; }
+fail_with 5
+exit 0"
+assert_equals "setup_error_handling installs the shared handler" "5" "$ISOLATED_STATUS"
+assert_true "setup_error_handling runs the named cleanup function" '[[ -f "${EH_DIR}/custom_cleanup_ran" ]]'
+
+# 13. Test handle_prompt with a "no" answer
+HP_MARKER="${TMP_TEST_DIR}/handle_prompt_ran"
+run_isolated "trap 'exit 99' ERR
+handle_prompt 'Proceed?' 'touch ${HP_MARKER}' || true
+exit 0" "n"$'\n'
+assert_equals "handle_prompt with n returns without tripping the ERR trap" "0" "$ISOLATED_STATUS"
+assert_false "handle_prompt with n does not run its commands" '[[ -f "$HP_MARKER" ]]'
+
+run_isolated "handle_prompt 'Proceed?'" "n"$'\n'
+assert_equals "handle_prompt with n returns 1" "1" "$ISOLATED_STATUS"
+
+run_isolated "handle_prompt 'Proceed?' 'touch ${HP_MARKER}'" "s"$'\n'
+assert_equals "handle_prompt with s returns 0" "0" "$ISOLATED_STATUS"
+assert_false "handle_prompt with s does not run its commands" '[[ -f "$HP_MARKER" ]]'
+
+run_isolated "handle_prompt 'Proceed?' 'touch ${HP_MARKER}'" "y"$'\n'
+assert_equals "handle_prompt with y returns 0" "0" "$ISOLATED_STATUS"
+assert_true "handle_prompt with y runs its commands" '[[ -f "$HP_MARKER" ]]'
+rm -f "$HP_MARKER"
+
+# 14. Test that only "yes" takes the then branch of handle_prompt_if
+YES_BRANCH="if handle_prompt_if 'Proceed?'; then exit 10; else exit 20; fi"
+run_isolated "$YES_BRANCH" "y"$'\n'
+assert_equals "handle_prompt_if with y takes the yes branch" "10" "$ISOLATED_STATUS"
+run_isolated "$YES_BRANCH" "n"$'\n'
+assert_equals "handle_prompt_if with n takes the no branch" "20" "$ISOLATED_STATUS"
+run_isolated "$YES_BRANCH" "s"$'\n'
+assert_equals "handle_prompt_if with s takes the no branch" "20" "$ISOLATED_STATUS"
+
+# 15. Test that NON_INTERACTIVE uses PROMPT_DEFAULT_RESPONSE without reading stdin
+run_isolated "NON_INTERACTIVE=true; $YES_BRANCH" "y"$'\n'
+assert_equals "NON_INTERACTIVE defaults to no for handle_prompt_if" "20" "$ISOLATED_STATUS"
+run_isolated "NON_INTERACTIVE=true; handle_prompt 'Proceed?' 'touch ${HP_MARKER}'"
+assert_equals "NON_INTERACTIVE defaults to no for handle_prompt" "1" "$ISOLATED_STATUS"
+assert_false "NON_INTERACTIVE with the no default does not run commands" '[[ -f "$HP_MARKER" ]]'
+run_isolated "NON_INTERACTIVE=true; PROMPT_DEFAULT_RESPONSE=y; $YES_BRANCH"
+assert_equals "NON_INTERACTIVE with PROMPT_DEFAULT_RESPONSE=y takes the yes branch" "10" "$ISOLATED_STATUS"
+run_isolated "NON_INTERACTIVE=true; PROMPT_DEFAULT_RESPONSE=y; handle_prompt 'Proceed?' 'touch ${HP_MARKER}'"
+assert_equals "NON_INTERACTIVE with PROMPT_DEFAULT_RESPONSE=y returns 0" "0" "$ISOLATED_STATUS"
+assert_true "NON_INTERACTIVE with PROMPT_DEFAULT_RESPONSE=y runs commands" '[[ -f "$HP_MARKER" ]]'
+
+# 16. Test prompt_with_default
+PWD_VALUE=""
+PWD_VALUE=$(printf '\n' | { MY_VALUE=old; prompt_with_default MY_VALUE "Value" 2>/dev/null; echo "$MY_VALUE"; })
+assert_equals "prompt_with_default keeps the current value on Enter" "old" "$PWD_VALUE"
+PWD_VALUE=$(printf 'new\n' | { MY_VALUE=old; prompt_with_default MY_VALUE "Value" 2>/dev/null; echo "$MY_VALUE"; })
+assert_equals "prompt_with_default replaces the current value with typed input" "new" "$PWD_VALUE"
+PWD_VALUE=$(printf 'new' | { MY_VALUE=""; prompt_with_default MY_VALUE "Value" 2>/dev/null; echo "$MY_VALUE"; })
+assert_equals "prompt_with_default accepts a final line without a newline" "new" "$PWD_VALUE"
+assert_false "prompt_with_default fails when stdin closes without input" 'prompt_with_default MY_VALUE "Value" </dev/null 2>/dev/null'
+
+# 17. Test the deploy.sh call sites of the prompt helpers. handle_prompt treats
+# "skip" as success, so it must not guard a yes branch, and a "no" answer
+# returns 1, so a bare call needs "|| true" to keep the ERR trap from firing.
+DEPLOY_SH="${REPO_ROOT}/scripts/deploy.sh"
+handle_prompt_guards_branch() {
+  grep -nE "(if|\|\|) +handle_prompt [\"']" "$DEPLOY_SH"
+}
+bare_handle_prompt_without_true() {
+  grep -E "^[[:space:]]*handle_prompt [\"']" "$DEPLOY_SH" \
+    | grep -vE '\|\| true[[:space:]]*$'
+}
+assert_false "deploy.sh guards no yes branch with handle_prompt" 'handle_prompt_guards_branch'
+assert_false "deploy.sh ends every bare handle_prompt call with || true" 'bare_handle_prompt_without_true'
+# shellcheck disable=SC2016
+assert_true "deploy.sh passes the failing status to error_handler" 'grep -qF "trap '"'"'error_handler \$LINENO \$?'"'"' ERR" "$DEPLOY_SH"'
+
 echo ""
 echo "Summary: ${TEST_COUNT} shell unit tests run, ${FAIL_COUNT} failures."
 

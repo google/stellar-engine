@@ -307,41 +307,39 @@ wait_for_consistency() {
 # Setup error handling with trap
 # Usage: setup_error_handling [cleanup_function_name]
 setup_error_handling() {
-    cleanup_function="${1:-cleanup}"
-
-    # Error handler
-    error_handler() {
-        local line_no=$1
-        local exit_code=$2
-        log_error "Script failed at line $line_no with exit code $exit_code"
-
-        # Call cleanup function if it exists
-        if declare -f "$cleanup_function" > /dev/null; then
-            log_info "Running cleanup..."
-            "$cleanup_function"
-        fi
-
-        exit "$exit_code"
-    }
-
+    ERROR_CLEANUP_FUNCTION="${1:-cleanup}"
     trap 'error_handler $LINENO $?' ERR
 }
 
-# ERR trap handler used by deploy.sh
+# ERR trap handler shared by deploy.sh and setup_error_handling. It records
+# the failed operation and line in state/last_operation_${PREFIX}.env, runs
+# the cleanup function, and exits with the status of the failing command.
+# OPERATION_NAME defaults to deploy, and ERROR_CLEANUP_FUNCTION defaults to
+# cleanup.
+# Usage: trap 'error_handler $LINENO $?' ERR
 error_handler() {
-    local line_no=$1
+    # Capture $? before any other command resets it to 0. The explicit second
+    # argument takes precedence when the trap passes it.
     local exit_code=$?
+    local line_no="${1:-unknown}"
+    if [[ $# -ge 2 ]]; then
+        exit_code=$2
+    fi
     log_error "Script failed at line $line_no with exit code $exit_code"
 
     # Save deployment state for potential recovery
     if [[ -n "${PREFIX:-}" ]]; then
-        local state_dir="${SCRIPT_DIR}/state"
-        mkdir -p "$state_dir"
-        echo "LAST_FAILED_OPERATION=deploy" >> "${state_dir}/last_operation_${PREFIX}.env" 2>/dev/null || true
-        echo "LAST_FAILED_LINE=$line_no" >> "${state_dir}/last_operation_${PREFIX}.env" 2>/dev/null || true
+        local state_dir="${SCRIPT_DIR:-.}/state"
+        local state_file="${state_dir}/last_operation_${PREFIX}.env"
+        mkdir -p "$state_dir" 2>/dev/null || true
+        echo "LAST_FAILED_OPERATION=${OPERATION_NAME:-deploy}" >> "$state_file" 2>/dev/null || true
+        echo "LAST_FAILED_LINE=$line_no" >> "$state_file" 2>/dev/null || true
     fi
 
-    cleanup
+    local cleanup_function="${ERROR_CLEANUP_FUNCTION:-cleanup}"
+    if declare -f "$cleanup_function" > /dev/null; then
+        "$cleanup_function"
+    fi
     exit "$exit_code"
 }
 
@@ -470,7 +468,11 @@ promptUser() {
     return 0
 }
 
-# Helper function to handle promptUser return codes properly
+# Wrap promptUser for optional steps where "skip" counts as success.
+# Returns 0 for "yes" and "skip", and 1 for "no" or a failed command. Callers
+# outside an if condition append "|| true" so a "no" answer does not fire the
+# ERR trap.
+# Usage: handle_prompt "Prompt message" [commands...] || true
 handle_prompt() {
     local prompt="$1"
     shift
@@ -488,7 +490,9 @@ handle_prompt() {
     fi
 }
 
-# Handle prompts where skip should be treated as "no" (for if statements)
+# Wrap promptUser for if conditions, where only "yes" takes the then branch.
+# Returns 0 for "yes", and 1 for "no", "skip", or a failed command.
+# Usage: if handle_prompt_if "Prompt message" [commands...]; then ...; fi
 handle_prompt_if() {
     local prompt="$1"
     shift
@@ -496,11 +500,31 @@ handle_prompt_if() {
 
     if promptUser "$prompt" "${commands[@]}"; then
         return 0  # Success - user chose "yes"
-    else
-        local exit_code=$?
-        # Both "no" and "skip" return failure for if statements
+    fi
+    # Both "no" and "skip" return failure for if statements
+    return 1
+}
+
+# Read a value into the named variable and offer its current value as the
+# default, so pressing Enter keeps it. Returns 1 when stdin closes without
+# input, which stops validation loops from spinning forever.
+# Usage: prompt_with_default VAR_NAME "Prompt message"
+prompt_with_default() {
+    local var_name="$1"
+    local prompt="$2"
+    local current="${!var_name:-}"
+    local input=""
+
+    if [[ -n "$current" ]]; then
+        prompt="${prompt} [${current}]"
+    fi
+
+    if ! read -r -p "${prompt}: " input && [[ -z "$input" ]]; then
+        log_error "No input available for ${var_name}"
         return 1
     fi
+
+    printf -v "$var_name" '%s' "${input:-$current}"
 }
 
 # Confirm destructive operation with explicit "DELETE" typing
