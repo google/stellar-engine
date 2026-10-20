@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Google LLC
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,6 +60,42 @@ output "psa_addresses" {
     for address in google_compute_global_address.psa :
     address.name => address
   }
+}
+
+output "psc" {
+  description = "Allocated resources for PSC endpoints."
+  value = merge(
+    {
+      for k, v in local.global_psc :
+      k => {
+        address = {
+          address = google_compute_global_address.psc[k].address
+          id      = google_compute_global_address.psc[k].id
+          name    = google_compute_global_address.psc[k].name
+        }
+        forwarding_rule = {
+          id                = try(google_compute_global_forwarding_rule.psc_consumer[k].id, null)
+          name              = try(google_compute_global_forwarding_rule.psc_consumer[k].name, null)
+          psc_connection_id = try(google_compute_global_forwarding_rule.psc_consumer[k].psc_connection_id, null)
+        }
+      }
+    },
+    {
+      for k, v in local.regional_psc :
+      k => {
+        address = {
+          address = google_compute_address.psc[k].address
+          id      = google_compute_address.psc[k].id
+          name    = google_compute_address.psc[k].name
+        }
+        forwarding_rule = {
+          id                = try(google_compute_forwarding_rule.psc_consumer[k].id, null)
+          name              = try(google_compute_forwarding_rule.psc_consumer[k].name, null)
+          psc_connection_id = try(google_compute_forwarding_rule.psc_consumer[k].psc_connection_id, null)
+        }
+      }
+    }
+  )
 }
 
 output "psc_addresses" {

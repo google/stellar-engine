@@ -1,5 +1,5 @@
 /**
- * Copyright 2025 Google LLC
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,4 +63,102 @@ variable "iam_by_principals" {
   type        = map(list(string))
   default     = {}
   nullable    = false
+}
+
+variable "iam_by_principals_conditional" {
+  description = "Authoritative IAM binding in {PRINCIPAL => {roles = [roles], condition = {cond}}} format. Principals need to be statically defined to avoid errors. Condition is required."
+  type = map(object({
+    roles = list(string)
+    condition = object({
+      expression  = string
+      title       = string
+      description = optional(string)
+    })
+  }))
+  default  = {}
+  nullable = false
+  validation {
+    condition = alltrue([
+      for k, v in var.iam_by_principals_conditional : v.condition != null
+    ])
+    error_message = "The `condition` attribute is required. Use `iam_by_principals` for non-conditional bindings."
+  }
+  validation {
+    condition = alltrue([
+      for title, conditions in {
+        for k, v in var.iam_by_principals_conditional :
+        v.condition.title => v.condition...
+      } :
+      length(distinct(conditions)) == 1
+    ])
+    error_message = "IAM bindings with the same condition title must have identical expressions and descriptions."
+  }
+}
+
+variable "iam_deny_policies" {
+  description = "IAM Deny policies to be applied to the project."
+  type = map(object({
+    display_name = optional(string)
+    rules = list(object({
+      description        = optional(string)
+      denied_principals  = list(string)
+      denied_permissions = list(string)
+      denial_condition = optional(object({
+        expression  = string
+        title       = optional(string)
+        description = optional(string)
+        location    = optional(string)
+      }))
+      exception_principals  = optional(list(string), [])
+      exception_permissions = optional(list(string), [])
+    }))
+  }))
+  default  = {}
+  nullable = false
+  validation {
+    # Ensure denied_principals and denied_permissions are explicitly not null
+    # (to prevent HCL evaluation errors in loops) and contain at least one
+    # element (required by the GCP API).
+    condition = alltrue(flatten([
+      for k, v in var.iam_deny_policies : [
+        for r in v.rules : (
+          try(length(r.denied_principals) > 0, false) &&
+          try(length(r.denied_permissions) > 0, false)
+        )
+      ]
+    ]))
+    error_message = "Each rule in iam_deny_policies must have at least one denied principal and one denied permission."
+  }
+}
+
+variable "service_agents_folder_bindings" {
+  description = "Additive IAM bindings for this project's service agents on external folders, in key => binding format."
+  type = map(object({
+    service = string
+    folder  = string
+    role    = string
+    condition = optional(object({
+      expression  = string
+      title       = string
+      description = optional(string)
+    }))
+  }))
+  nullable = false
+  default  = {}
+}
+
+variable "service_agents_project_bindings" {
+  description = "Additive IAM bindings for this project's service agents on external projects, in key => binding format."
+  type = map(object({
+    service = string
+    project = string
+    role    = string
+    condition = optional(object({
+      expression  = string
+      title       = string
+      description = optional(string)
+    }))
+  }))
+  nullable = false
+  default  = {}
 }

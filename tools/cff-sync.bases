@@ -3,9 +3,9 @@
 # local copy never recorded it. The script updates the release after a sync.
 #
 # <directory under modules/> <upstream module> <base release>
-biglake-catalog biglake-catalog v38.0.0
-cloud-config-container cloud-config-container v38.0.0
-project-factory project-factory v38.0.0
-datafusion-se datafusion v35.0.0
-gke-cluster-standard-se gke-cluster-standard v35.0.0
-spanner-instance-se spanner-instance v35.1.0
+biglake-catalog biglake-catalog v59.2.0
+cloud-config-container cloud-config-container v59.2.0
+project-factory project-factory v59.2.0
+datafusion-se datafusion v59.2.0
+gke-cluster-standard-se gke-cluster-standard v59.2.0
+spanner-instance-se spanner-instance v59.2.0
