@@ -19,6 +19,7 @@ import enum
 import logging
 import pathlib
 import re
+import sys
 
 import click
 
@@ -80,6 +81,8 @@ def main(dirs, prefix_length=None, failed_only=False):
     for dir_name in dirs:
         for name in get_names(dir_name):
             names.append(name)
+    if not names:
+        raise click.UsageError(f"no names found in {', '.join(dirs)}")
     names.sort()
     source_just = max(len(k) for k in MOD_LIMITS)
     name_just = max(len(n.name) for n in names)
@@ -103,7 +106,8 @@ def main(dirs, prefix_length=None, failed_only=False):
                 f"({name_length})"
             )
 
-    return 0 if not errors else 1
+    # Click ignores the return value of a command, so exit explicitly.
+    sys.exit(1 if errors else 0)
 
 
 if __name__ == "__main__":

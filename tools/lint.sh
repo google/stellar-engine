@@ -33,7 +33,7 @@ echo -- Links --
 uv run --locked python tools/check_links.py --no-show-summary "$PWD"
 
 echo -- FAST Names --
-uv run --locked python tools/check_names.py --prefix-length=10 --failed-only fast/stages
+uv run --locked python tools/check_names.py --prefix-length=10 --failed-only fast/stages-aw
 
 echo -- Python formatting --
 uv run --locked ruff format --check "$PWD"
