@@ -256,7 +256,7 @@ def main(
     else:
         try:
             open(changelog, "w").write(result)
-        except (IOError, OSError):
+        except IOError, OSError:
             raise SystemExit("Cannot write to changelog file.")
 
 

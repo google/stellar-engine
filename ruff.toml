@@ -17,7 +17,9 @@
 
 line-length = 80
 indent-width = 4
-target-version = "py311"
+# The tools/ scripts and the root tests/ suite run on the Python version that
+# the root pyproject.toml pins.
+target-version = "py314"
 extend-exclude = [
   "*.ipynb",
   ".terraform",
@@ -25,6 +27,11 @@ extend-exclude = [
   "venv",
   "node_modules",
 ]
+
+# Blueprint code runs on the interpreter of whoever deploys the blueprint, so
+# keep it free of syntax that only newer Python versions accept.
+[per-file-target-version]
+"blueprints/**/*.py" = "py311"
 
 [format]
 

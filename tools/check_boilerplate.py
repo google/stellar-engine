@@ -62,7 +62,7 @@ def main(base_dirs):
                             continue
                         if not _MATCH_RE.search(content):
                             errors.append(fpath)
-                    except (IOError, OSError):
+                    except IOError, OSError:
                         warnings.append(fpath)
     if warnings:
         print("The following files cannot be accessed:")

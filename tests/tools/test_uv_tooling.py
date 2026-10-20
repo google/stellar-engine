@@ -44,6 +44,20 @@ class TestUvTooling(unittest.TestCase):
         )
         self.assertEqual(int(upper), int(lower) + 1)
 
+    def test_ruff_targets_the_pinned_python(self):
+        root = _load_toml("pyproject.toml")
+        ruff = _load_toml("ruff.toml")
+        lower = re.match(
+            r">=3\.(\d+)", root["project"]["requires-python"]
+        ).group(1)
+        self.assertEqual(ruff["target-version"], f"py3{lower}")
+
+    def test_ruff_keeps_blueprints_on_an_older_python(self):
+        ruff = _load_toml("ruff.toml")
+        self.assertEqual(
+            ruff["per-file-target-version"]["blueprints/**/*.py"], "py311"
+        )
+
     def test_root_project_is_not_a_workspace(self):
         root = _load_toml("pyproject.toml")
         self.assertFalse(root["tool"]["uv"]["package"])
