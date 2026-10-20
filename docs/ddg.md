@@ -444,6 +444,7 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.au
 - Copy the sample `terraform.tfvars` file and configure your network settings:
   - `cp terraform.tfvars.sample terraform.tfvars`
 - Update custom subnets, proxy subnets, firewall rules, named CIDRs, and DNS response policy rules directly inside **`terraform.tfvars`**.
+- Replace every `<region>` placeholder in **`terraform.tfvars`** with the `regions.primary` value from the Stage 0 **`terraform.tfvars`** file.
 - Run `terraform init`
   - `terraform apply`
   - Type `yes` when prompted
@@ -502,6 +503,7 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.au
 - Copy the sample `terraform.tfvars` file and configure your network settings:
   - `cp terraform.tfvars.sample terraform.tfvars`
 - Update custom subnets (including mgmt), proxy subnets, firewall rules, named CIDRs, and DNS response policy rules directly inside **`terraform.tfvars`**.
+- Replace every `<region>` placeholder in **`terraform.tfvars`** with the `regions.primary` value from the Stage 0 **`terraform.tfvars`** file.
 - Run `terraform init`
 - Run `terraform apply`
   - Type `yes` when prompted

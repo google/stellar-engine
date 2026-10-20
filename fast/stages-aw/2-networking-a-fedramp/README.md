@@ -6,6 +6,7 @@ This stage deploys the networking infrastructure recommended with an Assured Wor
 
 - Earlier design material referenced a separate `2-networking-c-fedramp-mod` stage using Cloud NGFW endpoints in a single VPC. That pattern was superseded by consolidating FedRAMP Moderate, FedRAMP High, and IL2 into `2-networking-a-fedramp` so all three share a consistent VDSS (Landing + DMZ) topology (SC-7, AC-4), with `kms_protection_level` (`SOFTWARE` vs. `HSM`) controlling key protection (SC-12, SC-13).
 - While the Stage 0 `FEDRAMP_MODERATE` organization policy template only denies `in:asia-east2-locations` and `in:global`, this networking stage is validated and supported for US regions (`in:us-locations`, such as `us-east4`, `us-west1`, and `us-central1`).
+- Replace every `<region>` placeholder in the sample `terraform.tfvars` file with the `regions.primary` value from Stage 0, because the stage validates that the first tenant subnet of each environment uses that region.
 - `IL2` workloads land on `2-networking-a-fedramp`; `IL4` and `IL5` workloads use `2-networking-b-il5-ngfw`.
 
 ## Firewall Governance Coexistence
