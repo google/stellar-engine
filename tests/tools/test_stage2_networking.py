@@ -135,6 +135,26 @@ class TestStage2Networking(unittest.TestCase):
     self.assertIn('output "ngfw_ssh_private_key_secret_id"', outputs_tf)
     self.assertIn("--secret=ngfw-ssh-private-key", readme_md)
 
+  def test_ngfw_landing_gateway_and_samples_follow_configured_region(self):
+    ngfw_tf = (_IL5_NET_DIR / 'ngfw.tf').read_text(encoding='utf-8')
+    self.assertNotIn('"us-east4/', ngfw_tf)
+    self.assertIn(
+        'module.vdss-vpc.subnets["${each.value}/landing-default"]'
+        '.gateway_address',
+        ngfw_tf,
+    )
+
+    vars_tf = (_IL5_NET_DIR / 'variables.tf').read_text(encoding='utf-8')
+    self.assertIn('s.region if s.name == "landing-default"', vars_tf)
+
+    for stage_dir in (_FEDRAMP_NET_DIR, _IL5_NET_DIR):
+      with self.subTest(stage=stage_dir.name):
+        sample = (stage_dir / 'terraform.tfvars.sample').read_text(
+            encoding='utf-8'
+        )
+        self.assertIn('region        = "<region>"', sample)
+        self.assertNotRegex(sample, r'region\s*=\s*"us-')
+
 
 if __name__ == '__main__':
   unittest.main()

@@ -322,6 +322,25 @@ variable "subnets" {
   })))
   default  = {}
   nullable = false
+  validation {
+    condition = alltrue([
+      for r in values(var.regions) :
+      contains([
+        for s in try(var.subnets.landing, []) :
+        s.region if s.name == "landing-default"
+      ], r)
+    ])
+    error_message = "subnets.landing needs a subnet named landing-default in every region of var.regions: the NGFW instance templates and the bootstrap.xml landing gateway index that subnet by region."
+  }
+  validation {
+    condition = alltrue([
+      for k in keys(var.envs_folders) :
+      try([
+        for s in var.subnets[lower(k)] : s if s.tenant != null
+      ][0].region, null) == var.regions.primary
+    ])
+    error_message = "Every environment in envs_folders needs a subnet list under subnets[lower(<env>)] whose first subnet with a non-null tenant is in regions.primary: the NGFW bootstrap.xml tenant routes and the stage outputs index that subnet."
+  }
 }
 
 variable "tenant_accounts" {

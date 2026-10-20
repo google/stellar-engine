@@ -344,7 +344,8 @@ To enable PGA access from on premises advertise the private/restricted ranges vi
 Regions are defined via the `regions` variable which sets up a mapping between the `regions.primary` and `regions.secondary` logical names and actual GCP region names. If you need to change regions from the defaults:
 
 - change the values of the mappings in the `regions` variable to the regions you are going to use
-- change the regions in the factory subnet files in the `data` folder
+- replace every `<region>` placeholder in the `terraform.tfvars` file with the `regions.primary` value from Stage 0
+- keep the `landing-default` subnet in `regions.primary`, because the NGFW bootstrap configuration reads its gateway address from that region
 
 ##  Configuring Palo Alto NGFWs
 
@@ -389,7 +390,7 @@ If you are redeploying this stage with the same prefix, please run "pre-redeploy
 | [organization](variables.tf#L214) | Organization details. | <code title="object&#40;&#123;&#10;  domain      &#61; string&#10;  id          &#61; number&#10;  customer_id &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [prefix](variables.tf#L230) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
 | [regions](variables.tf#L274) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code title="object&#40;&#123;&#10;  primary &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [tenant_accounts](variables.tf#L327) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code title="map&#40;object&#40;&#123;&#10;  tenant          &#61; string&#10;  env             &#61; string&#10;  main_project    &#61; string&#10;  admin_principal &#61; string&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [tenant_accounts](variables.tf#L346) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code title="map&#40;object&#40;&#123;&#10;  tenant          &#61; string&#10;  env             &#61; string&#10;  main_project    &#61; string&#10;  admin_principal &#61; string&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [assured_workloads](variables.tf#L22) | Assured Workloads configuration. | <code>any</code> |  | <code>null</code> |
 | [billing_override](variables.tf#L49) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code title="object&#40;&#123;&#10;  project         &#61; string&#10;  billing_project &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [cidrs](variables.tf#L58) | Named CIDR ranges to use in firewall rules. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
@@ -412,7 +413,7 @@ If you are redeploying this stage with the same prefix, please run "pre-redeploy
 | [service_accounts](variables.tf#L282) | Automation service accounts in name => email format. | <code title="object&#40;&#123;&#10;  data-platform-dev    &#61; string&#10;  data-platform-prod   &#61; string&#10;  gke-dev              &#61; string&#10;  gke-prod             &#61; string&#10;  project-factory-dev  &#61; string&#10;  project-factory-prod &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [spoke_project_iam](variables.tf#L296) | Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [subnets](variables.tf#L303) | VPC subnet configurations keyed by network name. | <code title="map&#40;list&#40;object&#40;&#123;&#10;  name                             &#61; string&#10;  ip_cidr_range                    &#61; string&#10;  region                           &#61; string&#10;  description                      &#61; optional&#40;string&#41;&#10;  enable_private_access            &#61; optional&#40;bool, true&#41;&#10;  allow_subnet_cidr_routes_overlap &#61; optional&#40;bool&#41;&#10;  flow_logs_config &#61; optional&#40;object&#40;&#123;&#10;    aggregation_interval &#61; optional&#40;string&#41;&#10;    filter_expression    &#61; optional&#40;string&#41;&#10;    flow_sampling        &#61; optional&#40;number&#41;&#10;    metadata             &#61; optional&#40;string&#41;&#10;    metadata_fields      &#61; optional&#40;list&#40;string&#41;&#41;&#10;  &#125;&#41;&#41;&#10;  secondary_ip_ranges &#61; optional&#40;map&#40;string&#41;&#41;&#10;  iam                 &#61; optional&#40;map&#40;list&#40;string&#41;&#41;, &#123;&#125;&#41;&#10;  tenant              &#61; optional&#40;string&#41;&#10;&#125;&#41;&#41;&#41;">map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [vmseries_image](variables.tf#L341) | The image name from which to boot an instance, including a license type (bundle/flex) and version. | <code>string</code> |  | <code>&#34;vmseries-112&#34;</code> |
+| [vmseries_image](variables.tf#L360) | The image name from which to boot an instance, including a license type (bundle/flex) and version. | <code>string</code> |  | <code>&#34;vmseries-112&#34;</code> |
 
 ## Outputs
 
