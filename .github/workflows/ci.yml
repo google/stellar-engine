@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
       security-events: write
     steps:
       - name: Checkout Repository
@@ -23,16 +22,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Run tfsec
-        uses: aquasecurity/tfsec-pr-commenter-action@1015a3975c7f1400ee4d9f423a7786a3df9fcbec
-        with:
-          tfsec_args: --soft-fail
-          github_token: ${{ github.token }}
-
       - name: Run Trivy vulnerability scanner in repo mode
         uses: aquasecurity/trivy-action@6abccf398f78b4c337599c0656f933d91efb91a0
         with:
           scan-type: 'fs'
+          scanners: 'vuln,secret,misconfig'
           ignore-unfixed: true
           format: 'sarif'
           output: 'trivy-results.sarif'
