@@ -80,3 +80,33 @@ alert_email = "<alert_email>"
 # SOFTWARE for FEDRAMP_MODERATE, HSM for all other regimes (including FEDRAMP_HIGH and IL5).
 # Explicitly set to "SOFTWARE" or "HSM" to override the default.
 # kms_protection_level = "HSM"
+
+# CI/CD repository configuration example
+# Option A: Secure Source Manager (SSM)
+# cicd_repositories = {
+#   bootstrap = {
+#     name   = "fast-bootstrap"
+#     type   = "ssm"
+#     branch = "main"
+#   }
+#   resman = {
+#     name   = "fast-resman"
+#     type   = "ssm"
+#     branch = "main"
+#   }
+# }
+# Option B: GitHub/GitLab (requires federated_identity_providers)
+# cicd_repositories = {
+#   bootstrap = {
+#     identity_provider = "github"
+#     name              = "my-org/my-bootstrap-repo"
+#     type              = "github"
+#     branch            = "main"
+#   }
+#   resman = {
+#     identity_provider = "github"
+#     name              = "my-org/my-resman-repo"
+#     type              = "github"
+#     branch            = "main"
+#   }
+# }

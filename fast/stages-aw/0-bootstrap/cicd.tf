@@ -37,7 +37,7 @@ locals {
       v != null
       &&
       (
-        try(v.type, null) == "sourcerepo"
+        try(v.type, null) == "ssm"
         ||
         contains(
           keys(local.workload_identity_providers),
@@ -65,42 +65,53 @@ locals {
   }
 }
 
-# source repository
+# secure source manager instance and repository
 
 module "automation-tf-cicd-repo" {
-  source = "../../../modules/source-repository"
-  for_each = {
-    for k, v in local.cicd_repositories : k => v if v.type == "sourcerepo"
-  }
-  project_id = module.automation-project.project_id
-  name       = each.value.name
-  iam = {
-    "roles/source.admin" = [
-      each.key == "bootstrap"
-      ? module.automation-tf-bootstrap-sa.iam_email
-      : module.automation-tf-resman-sa.iam_email
-    ]
-    "roles/source.reader" = concat(
-      [module.automation-tf-cicd-sa[each.key].iam_email],
-      each.key == "bootstrap"
-      ? [module.automation-tf-bootstrap-r-sa.iam_email]
-      : [module.automation-tf-resman-r-sa.iam_email]
-    )
-  }
-  triggers = {
-    "fast-0-${each.key}" = {
-      filename        = ".cloudbuild/workflow.yaml"
-      included_files  = ["**/*tf", ".cloudbuild/workflow.yaml"]
-      service_account = module.automation-tf-cicd-sa[each.key].id
-      substitutions   = {}
-      template = {
-        project_id  = null
-        branch_name = each.value.branch
-        repo_name   = each.value.name
-        tag_name    = null
+  source      = "../../../modules/secure-source-manager-instance"
+  project_id  = module.automation-project.project_id
+  location    = "us-east1" #us-central1, us-east1
+  instance_id = "ssm-instance"
+
+  repositories = {
+    for k, v in local.cicd_repositories : v.name => {
+      description = "FAST Secure Source Manager repository for ${k} stage."
+      initial_config = {
+        default_branch = coalesce(v.branch, "main")
       }
+      iam = {
+        "roles/securesourcemanager.repoAdmin" = [
+          k == "bootstrap"
+          ? module.automation-tf-bootstrap-sa.iam_email
+          : module.automation-tf-resman-sa.iam_email
+        ]
+        "roles/securesourcemanager.repoReader" = concat(
+          [module.automation-tf-cicd-sa[k].iam_email],
+          k == "bootstrap"
+          ? [module.automation-tf-bootstrap-r-sa.iam_email]
+          : [module.automation-tf-resman-r-sa.iam_email]
+        )
+      }
+    } if v.type == "ssm"
+  }
+}
+
+resource "google_cloudbuild_trigger" "automation-tf-cicd-trigger" {
+  for_each = {
+    for k, v in local.cicd_repositories : k => v if v.type == "ssm"
+  }
+  project = module.automation-project.project_id
+  name    = "fast-0-${each.key}"
+
+  repository_event_config {
+    repository = module.automation-tf-cicd-repo.repositories[each.value.name].id
+    push {
+      branch = "^${coalesce(each.value.branch, "main")}$"
     }
   }
+
+  filename        = ".cloudbuild/workflow.yaml"
+  service_account = module.automation-tf-cicd-sa[each.key].id
 }
 
 # SAs used by CI/CD workflows to impersonate automation SAs
@@ -113,7 +124,7 @@ module "automation-tf-cicd-sa" {
   display_name = "Terraform CI/CD ${each.key} service account."
   prefix       = local.prefix
   iam = (
-    each.value.type == "sourcerepo"
+    each.value.type == "ssm"
     # used directly from the cloud build trigger for source repos
     ? {}
     # impersonated via workload identity federation for external repos
@@ -150,7 +161,7 @@ module "automation-tf-cicd-r-sa" {
   display_name = "Terraform CI/CD ${each.key} service account (read-only)."
   prefix       = local.prefix
   iam = (
-    each.value.type == "sourcerepo"
+    each.value.type == "ssm"
     # build trigger for read-only SA is optionally defined by users
     ? {}
     # impersonated via workload identity federation for external repos

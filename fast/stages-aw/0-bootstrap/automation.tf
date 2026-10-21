@@ -67,10 +67,8 @@ module "automation-project" {
     "roles/iam.workloadIdentityPoolViewer" = [
       module.automation-tf-resman-r-sa.iam_email
     ]
-    "roles/source.admin" = [
-      module.automation-tf-resman-sa.iam_email
-    ]
-    "roles/source.reader" = [
+    "roles/securesourcemanager.instanceAccessor" = [
+      module.automation-tf-resman-sa.iam_email,
       module.automation-tf-resman-r-sa.iam_email
     ]
     "roles/storage.admin" = [
@@ -166,6 +164,7 @@ module "automation-project" {
       "iamcredentials.googleapis.com",
       "orgpolicy.googleapis.com",
       "pubsub.googleapis.com",
+      "securesourcemanager.googleapis.com",
       "servicenetworking.googleapis.com",
       "serviceusage.googleapis.com",
       "stackdriver.googleapis.com",
