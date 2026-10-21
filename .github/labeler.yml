@@ -21,12 +21,6 @@
           - 'docs/**'
           - '*.md'
 
-"Project Management":
-  - changed-files:
-      - any-glob-to-any-file:
-          - '.github/**'
-          - '.gemini/**'
-
 "Framework - FedRAMP Moderate":
   - changed-files:
       - any-glob-to-any-file: 'blueprints/fedramp-moderate/**'

@@ -22,8 +22,8 @@
 #   Major updates arrive one per pull request.
 # - Commit prefixes produce titles such as "ci(deps): bump ..." that pass
 #   the semantic-pr.yml title check.
-# - Labels stay empty because the labeler.yml workflow applies the curated
-#   labels by path.
+# - Each entry sets its Dependencies - <Ecosystem> label, while the labeler.yml
+#   workflow applies the curated scope and framework labels by path.
 # - Terraform provider versions stay out of scope. The default-versions.tf
 #   file sets them for every versions.tf copy at once, and tools/lint.sh
 #   expects the copies to match it.
@@ -40,7 +40,8 @@ updates:
     commit-message:
       prefix: "ci"
       include: "scope"
-    labels: []
+    labels:
+      - "Dependencies - GitHub Actions"
     groups:
       github-actions:
         update-types:
@@ -58,7 +59,8 @@ updates:
     commit-message:
       prefix: "build"
       include: "scope"
-    labels: []
+    labels:
+      - "Dependencies - Python"
     groups:
       uv:
         update-types:
@@ -74,7 +76,8 @@ updates:
     commit-message:
       prefix: "build"
       include: "scope"
-    labels: []
+    labels:
+      - "Dependencies - Docker"
 
   - package-ecosystem: "npm"
     directory: "/blueprints/fedramp-high/cloud-functions/src-code"
@@ -85,4 +88,5 @@ updates:
     commit-message:
       prefix: "build"
       include: "scope"
-    labels: []
+    labels:
+      - "Dependencies - JavaScript"

@@ -30,6 +30,12 @@ _MANIFESTS = {
     "npm": "package.json",
     "uv": "uv.lock",
 }
+_EXPECTED_LABELS = {
+    "docker": ["Dependencies - Docker"],
+    "github-actions": ["Dependencies - GitHub Actions"],
+    "npm": ["Dependencies - JavaScript"],
+    "uv": ["Dependencies - Python"],
+}
 
 
 def _load_updates():
@@ -86,7 +92,10 @@ class TestDependabot(unittest.TestCase):
                     update["commit-message"]["prefix"], _SILENT_PREFIXES
                 )
                 self.assertEqual(update["commit-message"]["include"], "scope")
-                self.assertEqual(update["labels"], [])
+                self.assertEqual(
+                    update["labels"],
+                    _EXPECTED_LABELS[update["package-ecosystem"]],
+                )
 
 
 if __name__ == "__main__":

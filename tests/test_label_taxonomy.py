@@ -24,6 +24,10 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 _CURATED_LABELS = frozenset(
     {
         "Bug",
+        "Dependencies - Docker",
+        "Dependencies - GitHub Actions",
+        "Dependencies - JavaScript",
+        "Dependencies - Python",
         "Documentation",
         "Duplicate",
         "Enhancement",
@@ -60,6 +64,7 @@ class TestLabelTaxonomy(unittest.TestCase):
         config = yaml.safe_load(labeler_path.read_text(encoding="utf-8"))
         self.assertIsInstance(config, dict)
         self.assertTrue(set(config.keys()).issubset(_CURATED_LABELS))
+        self.assertNotIn("Project Management", config)
         self.assertNotEqual(
             config.get("Gemini - Enterprise"),
             config.get("Gemini - Government"),
@@ -95,6 +100,15 @@ class TestLabelTaxonomy(unittest.TestCase):
         config = json.loads(config_path.read_text(encoding="utf-8"))
         self.assertEqual(config.get("label"), "Release - Pending")
         self.assertEqual(config.get("release-label"), "Release - Tagged")
+
+    def test_dependabot_uses_only_curated_labels(self):
+        dependabot_path = _REPO_ROOT / ".github/dependabot.yml"
+        config = yaml.safe_load(dependabot_path.read_text(encoding="utf-8"))
+        for update in config.get("updates", []):
+            with self.subTest(ecosystem=update.get("package-ecosystem")):
+                labels = update.get("labels", [])
+                self.assertTrue(labels)
+                self.assertTrue(set(labels).issubset(_CURATED_LABELS))
 
 
 if __name__ == "__main__":
