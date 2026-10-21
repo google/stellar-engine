@@ -24,7 +24,7 @@ jobs:
           persist-credentials: false
 
       - name: Run tfsec
-        uses: aquasecurity/tfsec-pr-commenter-action@1015a3975c7f1400ee4d9f423a7786a3df9fcbec
+        uses: aquasecurity/tfsec-pr-commenter-action@7a44c5dcde5dfab737363e391800629e27b6376b
         with:
           tfsec_args: --soft-fail
           github_token: ${{ github.token }}
