@@ -101,6 +101,20 @@ class TestLabelTaxonomy(unittest.TestCase):
         self.assertEqual(config.get("label"), "Release - Pending")
         self.assertEqual(config.get("release-label"), "Release - Tagged")
 
+    def test_release_docs_and_workflow_omit_warning_symbol(self):
+        for rel_path in ("RELEASES.md", "CHANGELOG.md"):
+            content = (_REPO_ROOT / rel_path).read_text(encoding="utf-8")
+            self.assertNotIn("\u26a0", content)
+        workflow = (_REPO_ROOT / ".github/workflows/release.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("s/### \u26a0 {{title}}/### {{title}}/g", workflow)
+        self.assertIn(
+            "s/note.title = 'BREAKING CHANGES'/"
+            "note.title = 'Breaking Changes'/g",
+            workflow,
+        )
+
     def test_dependabot_uses_only_curated_labels(self):
         dependabot_path = _REPO_ROOT / ".github/dependabot.yml"
         config = yaml.safe_load(dependabot_path.read_text(encoding="utf-8"))

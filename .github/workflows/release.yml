@@ -15,6 +15,13 @@ jobs:
     if: github.repository == 'google/stellar-engine'
     runs-on: ubuntu-latest
     steps:
+      - name: Configure Breaking Changes Heading
+        run: |
+          for dir in "${RUNNER_TEMP}/../_actions/googleapis/release-please-action/"*/dist; do
+            sed -i 's/### ⚠ {{title}}/### {{title}}/g' "${dir}/template1.hbs"
+            sed -i "s/note.title = 'BREAKING CHANGES'/note.title = 'Breaking Changes'/g" "${dir}/index.js"
+          done
+
       - name: Generate Release
         id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
