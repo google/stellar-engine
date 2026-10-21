@@ -30,7 +30,7 @@ jobs:
           github_token: ${{ github.token }}
 
       - name: Run Trivy vulnerability scanner in repo mode
-        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
+        uses: aquasecurity/trivy-action@6abccf398f78b4c337599c0656f933d91efb91a0
         with:
           scan-type: 'fs'
           ignore-unfixed: true
