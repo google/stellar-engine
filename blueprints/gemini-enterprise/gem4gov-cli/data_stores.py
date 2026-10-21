@@ -65,8 +65,8 @@ def validate_data_store(credentials, project_id, data_store_id):
 
     try:
         # Parse attributes from data store used for validation
-        name = data_store.get("name", None)
-        id = name.split("/")[-1]
+        name = data_store.get("name")
+        id = name.split("/")[-1] if name else data_store_id
         display_name = data_store.get("displayName", None)
         industry_vertical = data_store.get("industryVertical", None)
         solution_types = data_store.get("solutionTypes", [])
@@ -146,13 +146,17 @@ def list_data_stores(credentials, project_id):
                 if "SOLUTION_TYPE_SEARCH" in ds.get("solutionTypes", [])
             ]
 
-        if valid_data_stores:
-            click.echo("Select a data store:")
-            for i, ds in enumerate(valid_data_stores):
-                click.echo(
-                    f"{i + 1}) {ds['displayName']} "
-                    f"({ds['name'].split('/')[-1]})"
-                )
+        if not valid_data_stores:
+            click.echo(
+                click.style("No valid data stores found.", fg=(255, 165, 0))
+            )
+            return None
+
+        click.echo("Select a data store:")
+        for i, ds in enumerate(valid_data_stores):
+            click.echo(
+                f"{i + 1}) {ds['displayName']} ({ds['name'].split('/')[-1]})"
+            )
 
         choice = click.prompt(
             "Please enter the number for your response",
