@@ -169,9 +169,9 @@ module "cluster" {
     }
   }
   enable_features = {
-    enable_shielded_nodes = true
-    dataplane_v2          = true
-    binary_authorization  = true
+    shielded_nodes       = true
+    dataplane_v2         = true
+    binary_authorization = true
     database_encryption = {
       state    = "ENCRYPTED"
       key_name = module.kms.keys.default.id
