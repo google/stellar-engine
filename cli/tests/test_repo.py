@@ -69,7 +69,7 @@ def test_required_roles_match_ddg(repo):
 
 def test_required_apis(repo):
     apis = repo.required_apis()
-    assert "cloudresourcemanager.googleapis.com" in apis
+    assert {"cloudresourcemanager.googleapis.com"} <= set(apis)
     assert all(api.endswith(".googleapis.com") for api in apis)
 
 
@@ -80,7 +80,9 @@ def test_prerequisites_doc_lists_every_script_api(repo):
 
 
 def test_ddg_requires_monitoring_api(repo):
-    assert "monitoring.googleapis.com" in _ddg_prerequisites(repo.root)
+    assert "/apis/api/monitoring.googleapis.com/overview" in _ddg_prerequisites(
+        repo.root
+    )
     assert checks.EXTRA_APIS == ("monitoring.googleapis.com",)
 
 

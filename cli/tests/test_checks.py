@@ -680,7 +680,7 @@ class TestProject:
         found = by_id(checks.check_project(make_ctx()))
         apis = found["project.apis"]
         assert apis.status == Status.FAIL
-        assert "monitoring.googleapis.com" in apis.detail
+        assert apis.detail == "Not enabled: monitoring.googleapis.com."
         assert "gcloud services enable monitoring.googleapis.com" in (
             remedy(apis)
         )
