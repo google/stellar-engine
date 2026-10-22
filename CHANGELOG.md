@@ -1,6 +1,45 @@
 # Changelog
 
 
+## [5.0.0](https://github.com/google/stellar-engine/compare/v4.2.0...v5.0.0) (2026-10-22)
+
+
+### Breaking Changes
+
+* **modules:** remove deprecated unreferenced cloud-run v1 module ([#298](https://github.com/google/stellar-engine/issues/298)) ([05f9084](https://github.com/google/stellar-engine/commit/05f9084c7fc46a264bd5f414a980cc5e6901e43b))
+  * Removes the legacy `modules/cloud-run` v1 wrapper module and its `docs/tdd.md` and `modules/README.md` catalog references so all Cloud Run deployments standardize on `modules/cloud-run-v2` and `modules/cloud-run-v2-se`.
+* **repo:** adopt snake_case resource and kebab-case module labels ([#310](https://github.com/google/stellar-engine/issues/310)) ([813e0a8](https://github.com/google/stellar-engine/commit/813e0a85715ae4813149d0f1f72aafc904a79ba7))
+  * Renames Terraform resource labels to `snake_case` and module call labels to `kebab-case` across FAST stages and blueprints, adds `moved` blocks so existing Terraform states migrate without recreation, and enforces both conventions via `.tflint.hcl` and `.github/workflows/ci.yml`.
+
+
+### Features
+
+* **cli:** add the stellar command with preflight checks ([#305](https://github.com/google/stellar-engine/issues/305)) ([0fb5fcb](https://github.com/google/stellar-engine/commit/0fb5fcb3bf7970059353509b611e3cf8a7eadcca))
+  * Introduces the `stellar` Python CLI under `cli/` with automated GCP organization, billing, IAM, quota, and regional compliance preflight checks and adds the `Stellar CLI Tests & Code Quality` workflow job in `.github/workflows/ci.yml`.
+* **repo:** replace yapf with ruff, adopt 4-space Google Python Style Guide formatting, and run tooling in a locked uv Python 3.14 environment ([#302](https://github.com/google/stellar-engine/issues/302), [#323](https://github.com/google/stellar-engine/issues/323), [#325](https://github.com/google/stellar-engine/issues/325)) ([7595e07](https://github.com/google/stellar-engine/commit/7595e0790674569e6bc7056d5721fd410ab5e4b4), [17de1fa](https://github.com/google/stellar-engine/commit/17de1faf18b5d2b30007e3c530a5a858abfc6947), [faa743d](https://github.com/google/stellar-engine/commit/faa743dbb3b2dc94624c7f197bfbe44a8422ce63))
+  * Migrates repository Python formatting and linting from `yapf` and `flake8` to `ruff==0.17.1` with 4-space indentation across 251 files, records the reformat commit in `.git-blame-ignore-revs`, and pins all test and lint dependencies in `pyproject.toml` and `uv.lock` on Python 3.14.
+* **stages:** support essential_contacts maps, spoke_project_iam, and NGFW SSH key secrets ([#283](https://github.com/google/stellar-engine/issues/283)) ([d3f7d08](https://github.com/google/stellar-engine/commit/d3f7d08171ac52a718565da6b795f77ad44710ae))
+  * Updates `0-bootstrap` to accept `essential_contacts` category maps, wires `spoke_project_iam` bindings into `2-networking-a-fedramp` and `2-networking-b-il5-ngfw`, and stores generated bastion and NGFW SSH private keys in Secret Manager instead of solely in Terraform state outputs.
+
+
+### Bug Fixes
+
+* **2-networking:** derive the IL5 NGFW landing gateway from the configured region ([#301](https://github.com/google/stellar-engine/issues/301)) ([5bee8f5](https://github.com/google/stellar-engine/commit/5bee8f5914c84978c0ac414dd756c380f23ff413))
+  * Computes the default IL5 NGFW landing subnet gateway IP dynamically from `var.regions.primary` instead of hardcoding a `us-east4` CIDR address in `fast/stages-aw/2-networking-b-il5-ngfw/ngfw.tf`.
+* **fast:** match stage-links.sh impersonation patterns to the real stage service accounts ([#300](https://github.com/google/stellar-engine/issues/300)) ([d8634b3](https://github.com/google/stellar-engine/commit/d8634b3b183c14b8c690d871ce3d2a740c128bbe))
+  * Aligns the service account regex patterns in `fast/stage-links.sh` with the actual Stage 0 through Stage 3 automation service account emails so stage link generation resolves impersonation credentials reliably.
+* **folder:** split CA_PROTECTED_B, IL5, HIPAA, and HITRUST in assured_workload_config validation ([#296](https://github.com/google/stellar-engine/issues/296)) ([41c89fb](https://github.com/google/stellar-engine/commit/41c89fb698316e823e5a07b62dfbb588c9a9b281))
+  * Separates `CA_PROTECTED_B`, `IL5`, `HIPAA`, and `HITRUST` into distinct allowed strings in `modules/folder/variables.tf` so Assured Workloads folder configurations validate each compliance regime accurately.
+* **gemini-enterprise:** harden analytics container permissions, variable validations, and token generation ([#285](https://github.com/google/stellar-engine/issues/285)) ([2b11211](https://github.com/google/stellar-engine/commit/2b112119e7563de3cd1202886e85d4efae3d8da0))
+  * Runs the Gemini Enterprise analytics Streamlit container as a non-root user, validates `compliance_regime` and project inputs in `gemini-stage-0/variables.tf`, and hardens OAuth access token retrieval in `deploy.sh` and `gem4gov.py`.
+* **modules:** fix health check and backend service configs in net-lb-ext, net-lb-int, and net-lb-proxy-int ([#297](https://github.com/google/stellar-engine/issues/297)) ([ad0370d](https://github.com/google/stellar-engine/commit/ad0370d6bba6ee62df83da593c46cac07ce1093a))
+  * Corrects health check protocol blocks in `modules/net-lb-ext` and `modules/net-lb-int` to read `each.value` instead of undefined `var.health_check_config` attributes and removes unsupported attributes from `google_compute_region_backend_service` in `modules/net-lb-proxy-int`.
+* **repo:** fix repo-wide lint failures, make tools/lint.sh fail closed, and enforce Repository Lint and Trivy misconfig scanning in CI ([#286](https://github.com/google/stellar-engine/issues/286), [#334](https://github.com/google/stellar-engine/issues/334)) ([e8c4616](https://github.com/google/stellar-engine/commit/e8c4616154fc2af4e3fa3684a6b5d45693460c57), [04d37e6](https://github.com/google/stellar-engine/commit/04d37e61634139393c7f33ec79937e7cf982610c))
+  * Updates `tools/lint.sh` to track failing checks in `FAILED_CHECKS` and exit non-zero on any failure, sorts Terraform variable and output declarations and refreshes `tfdoc` tables across 83 module and blueprint files, adds or normalizes Apache 2.0 headers across 21 files, replaces `tfsec-pr-commenter-action` with `aquasecurity/trivy-action` misconfiguration scanning, and enforces `bash tools/lint.sh` via the `Repository Lint` job in `.github/workflows/ci.yml`.
+* **scripts:** make deploy.sh exit on failure and honor no and skip answers ([#303](https://github.com/google/stellar-engine/issues/303)) ([39a1c6a](https://github.com/google/stellar-engine/commit/39a1c6a33bf9be08a5561f9ed692b08c3810da78))
+  * Updates `scripts/common-functions.sh` and `scripts/deploy.sh` to propagate non-zero exit codes when stage commands fail and to respect `no` and `skip` confirmation responses during interactive deployment prompts.
+
+
 ## [4.2.0](https://github.com/google/stellar-engine/compare/v4.1.0...v4.2.0) (2026-10-17)
 
 
