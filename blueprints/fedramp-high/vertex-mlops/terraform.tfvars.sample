@@ -15,7 +15,8 @@ region       = "us-central" # us-central1 is recommended
 
 notebooks = {
   "notebook-00" = {
-    type = "USER_MANAGED"
+    type  = "USER_MANAGED"
+    owner = "user@example.com"
   }
 }
 

@@ -30,6 +30,7 @@ The blueprint will deploy all the required resources to have a fully functional 
 ## Instructions
 ### Deploy the experimentation environment
 - Create a `terraform.tfvars` file and specify the variables to match your desired configuration. You can use the provided `terraform.tfvars.sample` as reference.
+- For a `USER_MANAGED` notebook, set its optional `owner` to the user email that should be listed as the Workbench instance owner. `MANAGED` notebooks require `owner`.
 - Before choosing a region to create your resources in, it is recommended to view your system [quotas](https://console.cloud.google.com/iam-admin/quotas) in order to check which regions have access to GPU and TPU accelerators. If you choose a region where the quota is 0, you will have to request a quota increase (common accelerators are NVIDIA_A100 and NVIDIA_H100). It is recommended to create project resources in the 'us-central1' region.
 - When configuring your network settings, remeber that you must use a shared VPC. It is recomended that you have a separate 'networking project' that manages network traffic, and share this VPC to any projects that need access to it. This shared VPC must have internet access or JupyterLabs will not work. In addition, the account that runs the terraform code must have the Compute Shared VPC Admin role at an organization level. 
 - Run `terraform init` and `terraform apply`

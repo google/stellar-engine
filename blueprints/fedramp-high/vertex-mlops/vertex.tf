@@ -118,7 +118,7 @@ resource "google_workbench_instance" "playground" {
 
   disable_proxy_access = false
 
-  instance_owners = try(tolist(var.notebooks[each.key].owner), null)
+  instance_owners = var.notebooks[each.key].owner == null ? null : [var.notebooks[each.key].owner]
 
   depends_on = [
     google_project_iam_member.shared_vpc,
