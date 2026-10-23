@@ -87,6 +87,7 @@ The `.github/workflows/cff-sync.yml` workflow runs the sync every Monday against
 - The workflow never overwrites a branch that holds commits from anyone but the bot, and comments on the pull request once per new release instead.
 - The workflow opens the pull request as a draft when files conflict or when the release needs a new provider major version.
 - A maintainer can start a run for a specific release from the Actions tab with the `to` input.
+- The workflow sets up uv before the sync, because the script formats tracked Python files with the `ruff` version that the root `uv.lock` file pins.
 
 The workflow needs repository configuration that only maintainers can set.
 

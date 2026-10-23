@@ -66,7 +66,10 @@ mkdir -p "${WORK}/tools" "${WORK}/modules/alpha" "${WORK}/.github"
 cp "${REPO_ROOT}/tools/cff-sync-pr.sh" "${WORK}/tools/"
 cp "${REPO_ROOT}/.github/pull_request_template.md" "${WORK}/.github/"
 printf 'v1\n' >"${WORK}/modules/alpha/main.tf"
-printf 'alpha alpha v1.0.0\n' >"${WORK}/tools/cff-sync.bases"
+mkdir -p "${WORK}/tests/fixtures"
+printf 'fixture v1\n' >"${WORK}/tests/fixtures/shared.tf"
+printf 'alpha alpha v1.0.0\ntests/fixtures tests/fixtures v1.0.0\n' \
+  >"${WORK}/tools/cff-sync.bases"
 git -C "${WORK}" add -A
 git -C "${WORK}" -c user.name=Test -c user.email=test@example.com \
   commit -q -m base
@@ -133,6 +136,32 @@ printf '<!-- cff-sync:v2.0.0 -->\n' >"${GH_COMMENTS_FILE}"
 run_pr "v3" 1
 assert_true "comments only once per release" \
   '! grep -q "^pr comment" "${GH_LOG}"'
+
+# 5. A sync that changes only a tracked path outside modules/ still commits.
+git -C "${WORK}" checkout -q -B main origin/main
+printf 'fixture v2\n' >"${WORK}/tests/fixtures/shared.tf"
+printf 'new fixture\n' >"${WORK}/tests/fixtures/new.tf"
+sed -i.bak 's/^tests\/fixtures tests\/fixtures v1.0.0$/tests\/fixtures tests\/fixtures v2.0.0/' \
+  "${WORK}/tools/cff-sync.bases"
+rm -f "${WORK}/tools/cff-sync.bases.bak"
+: >"${GH_LOG}"
+rm -f "${GH_PR_NUMBER_FILE}"
+(
+  cd "${WORK}"
+  SYNC_BRANCH=chore/cff-sync-paths TARGET=v2.0.0 CONFLICTS=0 \
+    PROVIDER_MAJOR_CHANGE=false REPORT="${TMP}/report.md" \
+    bash tools/cff-sync-pr.sh >"${TMP}/paths.txt" 2>&1
+)
+PATHS_HEAD="$(git -C "${TMP}/remote.git" rev-parse --verify --quiet \
+  refs/heads/chore/cff-sync-paths || true)"
+assert_true "pushes a sync that changes only a tracked path" \
+  '[[ -n "${PATHS_HEAD}" ]]'
+assert_true "commits the changed file of a tracked path" \
+  '[[ "$(git -C "${TMP}/remote.git" show "${PATHS_HEAD}:tests/fixtures/shared.tf")" == "fixture v2" ]]'
+assert_true "commits a new file of a tracked path" \
+  'git -C "${TMP}/remote.git" cat-file -e "${PATHS_HEAD}:tests/fixtures/new.tf"'
+assert_true "names modules and tooling in the title" \
+  'grep "^pr create" "${GH_LOG}" | grep -q "modules and tooling to v2.0.0"'
 
 echo ""
 echo "Summary: ${TEST_COUNT} tests run, ${FAIL_COUNT} failures."

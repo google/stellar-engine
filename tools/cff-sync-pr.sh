@@ -31,7 +31,7 @@ set -euo pipefail
 : "${TARGET:?}" "${CONFLICTS:?}" "${PROVIDER_MAJOR_CHANGE:?}" "${REPORT:?}"
 SYNC_BRANCH="${SYNC_BRANCH:-chore/cff-sync}"
 BASE_BRANCH="${BASE_BRANCH:-main}"
-TITLE="chore(modules): sync Cloud Foundation Fabric modules to ${TARGET}"
+TITLE="chore(modules): sync Cloud Foundation Fabric modules and tooling to ${TARGET}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO_ROOT}"
@@ -47,6 +47,14 @@ git config user.email "${BOT_EMAIL}"
 
 git switch --quiet -C "${SYNC_BRANCH}"
 git add -A modules tools/cff-sync.bases
+# The sync also writes the repository paths that tools/cff-sync.bases lists
+# with a slash in the first field, such as the README tooling.
+while read -r path; do
+  if [[ -e "${path}" ]] || git ls-files --error-unmatch -- "${path}" \
+    >/dev/null 2>&1; then
+    git add -A -- "${path}"
+  fi
+done < <(awk '!/^#/ && $1 ~ /\// { print $1 }' tools/cff-sync.bases 2>/dev/null)
 if git diff --cached --quiet; then
   echo "The sync changed nothing."
   exit 0
@@ -96,9 +104,10 @@ trap 'rm -f "${BODY}"' EXIT
 {
   echo "## Description"
   echo
-  echo "This automated pull request syncs the modules that track upstream Cloud"
-  echo "Foundation Fabric to ${TARGET}. The \`tools/sync-from-cff.sh\` script"
-  echo "three-way merged each module from its recorded base release, as the"
+  echo "This automated pull request syncs the modules and the repository tooling"
+  echo "that track upstream Cloud Foundation Fabric to ${TARGET}. The"
+  echo "\`tools/sync-from-cff.sh\` script three-way merged each module and"
+  echo "tracked path from its recorded base release, as the"
   echo "\`docs/upstream-sync.md\` guide describes."
   echo
   if [[ "${CONFLICTS}" != "0" ]]; then

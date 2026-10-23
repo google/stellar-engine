@@ -62,6 +62,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # The sync formats tracked Python files with the repository ruff.
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
       - name: Run Sync
         id: sync
         env:

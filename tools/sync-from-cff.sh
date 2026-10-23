@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Syncs the modules under modules/ from upstream Cloud Foundation Fabric.
+# Syncs the modules under modules/ from upstream Cloud Foundation Fabric,
+# plus the repository paths that tools/cff-sync.bases lists, such as the
+# test fixtures and the README tooling.
 #
 # Each module records the Fabric release it was last synced from in the
 # module_name of its versions.tf file, for example
@@ -22,8 +24,10 @@
 # The script three-way merges every file of each module from that base
 # release to the target release, so local changes survive and conflicts
 # surface instead of being overwritten. Modules without a Fabric module_name
-# exist only in Stellar Engine and are skipped. docs/upstream-sync.md
-# describes the procedure.
+# exist only in Stellar Engine and are skipped. Python files outside modules/
+# keep the repository ruff formatting, so the script formats both upstream
+# sides the same way before it compares and merges them.
+# docs/upstream-sync.md describes the procedure.
 #
 # Exit codes: 0 when the sync is clean, 3 when files conflict, 1 on errors.
 
@@ -50,7 +54,8 @@ Usage: tools/sync-from-cff.sh [options]
 Options:
   --to TAG|latest          Fabric release to sync to. Default: latest.
   --upstream URL|PATH      Fabric repository. Default: ${DEFAULT_UPSTREAM}
-  --modules NAME[,NAME]    Sync only these directories under modules/.
+  --modules NAME[,NAME]    Sync only these directories under modules/ or
+                           paths from tools/cff-sync.bases.
   --conflict-style STYLE   markers leaves conflict markers in the files;
                            ours keeps the local file and only reports the
                            conflict. Default: markers.
@@ -85,8 +90,26 @@ esac
 
 cd "${REPO_ROOT}"
 
-if [[ ${DRY_RUN} -eq 0 && -n "$(git status --porcelain -- modules tools/cff-sync.bases)" ]]; then
-  die "modules/ or tools/cff-sync.bases has uncommitted changes; commit or discard them first"
+# Repository paths outside modules/ that tools/cff-sync.bases tracks: lines
+# whose first field contains a slash, as "<local path> <upstream path> <tag>".
+TRACKED_PATHS=()
+if [[ -f "${BASES_FILE}" ]]; then
+  while read -r path; do
+    TRACKED_PATHS+=("${path}")
+  done < <(awk '!/^#/ && $1 ~ /\// { print $1 }' "${BASES_FILE}")
+fi
+
+if [[ ${DRY_RUN} -eq 0 && -n "$(git status --porcelain -- modules tools/cff-sync.bases ${TRACKED_PATHS[@]+"${TRACKED_PATHS[@]}"})" ]]; then
+  die "modules/, tools/cff-sync.bases or a tracked path has uncommitted changes; commit or discard them first"
+fi
+
+# PY_FORMAT formats Python source from stdin for the path in its last
+# argument. CFF_SYNC_PY_FORMAT overrides it, for example in tests.
+if [[ -n "${CFF_SYNC_PY_FORMAT:-}" ]]; then
+  read -r -a PY_FORMAT <<<"${CFF_SYNC_PY_FORMAT}"
+else
+  PY_FORMAT=(uv run --project "${REPO_ROOT}" --locked --quiet ruff format
+    --stdin-filename)
 fi
 
 WORK="$(mktemp -d)"
@@ -165,6 +188,21 @@ write_entry() {
   fi
 }
 
+# formatted_entry ENTRY PATH prints ENTRY unchanged, or for a Python file
+# outside modules/ the entry of its content after PY_FORMAT, which the
+# script writes to the object database so write_entry can read it.
+formatted_entry() {
+  local entry="$1" path="$2" id
+  if [[ -z "${entry}" || "${path}" == modules/* || "${path}" != *.py ||
+    "${entry}" != [FX]:* ]]; then
+    printf '%s\n' "${entry}"
+    return 0
+  fi
+  id="$(git cat-file blob "${entry#?:}" | "${PY_FORMAT[@]}" "${path}" |
+    git hash-object -w --stdin)" || die "cannot format ${path}"
+  printf '%s:%s\n' "${entry%%:*}" "${id}"
+}
+
 # Records one result line: module, status, path. A "conflict" kept a line
 # conflict, and a "conflict-kept" kept the local copy of a path that cannot
 # merge line by line: a deletion on one side, a link or a binary file.
@@ -174,9 +212,10 @@ record() {
   printf '%s\t%s\t%s\n' "$1" "$2" "$3" >>"${RESULTS}"
 }
 
-# Collects the modules that track upstream: dir, upstream name, base tag and
-# where the base comes from. A module_name in versions.tf takes precedence over
-# tools/cff-sync.bases, which covers modules that upstream ships without one.
+# Collects the modules and paths that track upstream: name, local root,
+# upstream root, base tag and where the base comes from. A module_name in
+# versions.tf takes precedence over tools/cff-sync.bases, which covers modules
+# that upstream ships without one and the tracked repository paths.
 MODULES="${WORK}/modules.tsv"
 : >"${MODULES}"
 SKIPPED="${WORK}/skipped.txt"
@@ -192,54 +231,81 @@ for path in modules/*/; do
   fi
   if [[ -n "${line}" ]]; then
     [[ "${line}" =~ ${MODULE_NAME_RE} ]]
-    printf '%s\t%s\t%s\t%s\n' "${dir}" "${BASH_REMATCH[1]}" \
-      "${BASH_REMATCH[2]}" versions >>"${MODULES}"
+    printf '%s\tmodules/%s\tmodules/%s\t%s\t%s\n' "${dir}" "${dir}" \
+      "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" versions >>"${MODULES}"
     continue
   fi
   entry=""
   if [[ -f "${BASES_FILE}" ]]; then
-    entry="$(awk -v d="${dir}" '!/^#/ && $1 == d { print $2 "\t" $3; exit }' \
+    entry="$(awk -v d="${dir}" '!/^#/ && $1 == d { print "modules/" $2 "\t" $3; exit }' \
       "${BASES_FILE}")"
   fi
   if [[ -n "${entry}" ]]; then
-    printf '%s\t%s\t%s\n' "${dir}" "${entry}" bases >>"${MODULES}"
+    printf '%s\tmodules/%s\t%s\t%s\n' "${dir}" "${dir}" "${entry}" bases \
+      >>"${MODULES}"
   else
     echo "${dir}" >>"${SKIPPED}"
   fi
 done
+if [[ -f "${BASES_FILE}" ]]; then
+  awk '!/^#/ && $1 ~ /\// { print $1 "\t" $1 "\t" $2 "\t" $3 "\tpaths" }' \
+    "${BASES_FILE}" | while IFS=$'\t' read -r name rest; do
+    if [[ -z "${ONLY_MODULES}" || ",${ONLY_MODULES}," == *",${name},"* ]]; then
+      printf '%s\t%s\n' "${name}" "${rest}" >>"${MODULES}"
+    fi
+  done
+fi
 [[ -s "${MODULES}" ]] || die "no modules with a Fabric module_name found"
 
 fetch_tag "${TO}"
-cut -f 3 "${MODULES}" | sort -u | while read -r tag; do
+cut -f 4 "${MODULES}" | sort -u | while read -r tag; do
   fetch_tag "${tag}"
 done
 TARGET="refs/cff/${TO}"
 
-# sync_file DIR UPSTREAM BASE PATH merges one file of one module.
+# join ROOT PATH prints ROOT/PATH, or ROOT for the empty PATH of a tracked
+# single file.
+join() {
+  if [[ -z "$2" ]]; then
+    printf '%s\n' "$1"
+  else
+    printf '%s/%s\n' "$1" "$2"
+  fi
+}
+
+# sync_file NAME ROOT UPSTREAM_ROOT BASE PATH merges one file of one module
+# or tracked path.
 sync_file() {
-  local dir="$1" up="$2" base="$3" path="$4"
-  local local_path="modules/${dir}/${path}"
+  local dir="$1" root="$2" up="$3" base="$4" path="$5"
+  local local_path
+  local_path="$(join "${root}" "${path}")"
   local b t o
-  b="$(entry "refs/cff/${base}" "modules/${up}/${path}")"
-  t="$(entry "${TARGET}" "modules/${up}/${path}")"
+  b="$(entry "refs/cff/${base}" "$(join "${up}" "${path}")")"
+  t="$(entry "${TARGET}" "$(join "${up}" "${path}")")"
+  # Upstream left the path alone, so neither side needs formatting.
+  if [[ "${b}" == "${t}" ]]; then
+    return 0
+  fi
+  b="$(formatted_entry "${b}" "${local_path}")"
+  t="$(formatted_entry "${t}" "${local_path}")"
   o="$(local_entry "${local_path}")"
 
   if [[ "${b}" == "${t}" ]]; then
     return 0
   fi
   if [[ "${o}" == "${t}" ]]; then
-    record "${dir}" "already-current" "${path}"
+    record "${dir}" "already-current" "${local_path}"
     return 0
   fi
   if [[ "${o}" == "${b}" ]]; then
     if [[ -z "${t}" ]]; then
-      record "${dir}" "deleted" "${path}"
+      record "${dir}" "deleted" "${local_path}"
       [[ ${DRY_RUN} -eq 1 ]] || rm -f "${local_path}"
     else
       if [[ -z "${b}" ]]; then
-        record "${dir}" "added" "${path}"
+        record "${dir}" "added" "${local_path}"
       else
-        record "${dir}" "updated" "${path}"
+        record "${dir}" "updated" "${local_path}"
       fi
       [[ ${DRY_RUN} -eq 1 ]] || write_entry "${t}" "${local_path}"
     fi
@@ -247,7 +313,7 @@ sync_file() {
   fi
   # Both sides changed the path. Only regular files can merge line by line.
   if [[ "${b}" != [FX]:* || "${t}" != [FX]:* || "${o}" != [FX]:* ]]; then
-    record "${dir}" "conflict-kept" "${path}"
+    record "${dir}" "conflict-kept" "${local_path}"
     return 0
   fi
   git cat-file blob "${b#?:}" >"${WORK}/base"
@@ -258,35 +324,47 @@ sync_file() {
     -L "fabric ${TO}" "${WORK}/ours" "${WORK}/base" "${WORK}/theirs" ||
     status=$?
   if [[ ${status} -eq 0 ]]; then
-    record "${dir}" "merged" "${path}"
+    record "${dir}" "merged" "${local_path}"
     [[ ${DRY_RUN} -eq 1 ]] || cp "${WORK}/ours" "${local_path}"
   elif [[ ${status} -gt 127 ]]; then
     # git merge-file fails this way on binary files.
-    record "${dir}" "conflict-kept" "${path}"
+    record "${dir}" "conflict-kept" "${local_path}"
   else
-    record "${dir}" "conflict" "${path}"
+    record "${dir}" "conflict" "${local_path}"
     if [[ ${DRY_RUN} -eq 0 && "${CONFLICT_STYLE}" == "markers" ]]; then
       cp "${WORK}/ours" "${local_path}"
     fi
   fi
 }
 
-while IFS=$'\t' read -r dir up base source; do
-  if [[ -z "$(git ls-tree "${TARGET}" "modules/${up}")" ]]; then
-    record "${dir}" "removed-upstream" "modules/${up}"
+# relative_paths REF ROOT lists the files under ROOT in REF relative to ROOT,
+# or an empty line when ROOT is a single file.
+relative_paths() {
+  if [[ "$(git cat-file -t "$1:$2" 2>/dev/null)" == "blob" ]]; then
+    echo ""
+  else
+    git -c core.quotePath=false ls-tree -r --name-only "$1" -- "$2/" |
+      sed "s|^$2/||"
+  fi
+}
+
+while IFS=$'\t' read -r dir root up base source; do
+  if [[ -z "$(git ls-tree "${TARGET}" -- "${up}")" ]]; then
+    record "${dir}" "removed-upstream" "${up}"
     continue
   fi
   {
-    git -c core.quotePath=false ls-tree -r --name-only "refs/cff/${base}" \
-      "modules/${up}/" | sed "s|^modules/${up}/||"
-    git -c core.quotePath=false ls-tree -r --name-only "${TARGET}" \
-      "modules/${up}/" | sed "s|^modules/${up}/||"
-    git -c core.quotePath=false ls-files "modules/${dir}/" |
-      sed "s|^modules/${dir}/||"
+    relative_paths "refs/cff/${base}" "${up}"
+    relative_paths "${TARGET}" "${up}"
+    if [[ -f "${root}" ]]; then
+      echo ""
+    else
+      git -c core.quotePath=false ls-files "${root}/" | sed "s|^${root}/||"
+    fi
   } | sort -u >"${WORK}/files"
   while IFS= read -r path; do
-    is_ignored "${path}" && continue
-    sync_file "${dir}" "${up}" "${base}" "${path}"
+    [[ -n "${path}" ]] && is_ignored "${path}" && continue
+    sync_file "${dir}" "${root}" "${up}" "${base}" "${path}"
   done <"${WORK}/files"
   # With the ours style nobody resolves the kept conflicts before the commit,
   # so such a module keeps its base release and the next run merges the
@@ -294,24 +372,24 @@ while IFS=$'\t' read -r dir up base source; do
   if [[ "${CONFLICT_STYLE}" == "ours" ]] &&
     awk -F '\t' -v d="${dir}" '$1 == d && $2 ~ /^conflict/ { f = 1 } END { exit !f }' \
       "${RESULTS}"; then
-    record "${dir}" "base-kept" "modules/${dir}"
+    record "${dir}" "base-kept" "${root}"
     # An updated versions.tf already names the target, so restore the base.
     if [[ ${DRY_RUN} -eq 0 && "${source}" == "versions" ]]; then
       sed -E -i.bak "s#(cloud-foundation-fabric/modules/[A-Za-z0-9_.-]+:)v[0-9]+\.[0-9]+\.[0-9]+-tf#\1${base}-tf#" \
-        "modules/${dir}/versions.tf"
-      rm -f "modules/${dir}/versions.tf.bak"
+        "${root}/versions.tf"
+      rm -f "${root}/versions.tf.bak"
     fi
   elif [[ ${DRY_RUN} -eq 0 ]]; then
     # Record the target release as the new base, also when the module kept a
     # locally modified versions.tf.
     if [[ "${source}" == "versions" ]]; then
       sed -E -i.bak "s#(cloud-foundation-fabric/modules/[A-Za-z0-9_.-]+:)v[0-9]+\.[0-9]+\.[0-9]+-tf#\1${TO}-tf#" \
-        "modules/${dir}/versions.tf"
-      rm -f "modules/${dir}/versions.tf.bak"
+        "${root}/versions.tf"
+      rm -f "${root}/versions.tf.bak"
     else
-      sed -E -i.bak "s#^(${dir}[[:space:]]+[^[:space:]]+[[:space:]]+)v[0-9]+\.[0-9]+\.[0-9]+#\1${TO}#" \
-        "${BASES_FILE}"
-      rm -f "${BASES_FILE}.bak"
+      awk -v d="${dir}" -v to="${TO}" \
+        '!/^#/ && $1 == d { sub(/v[0-9]+\.[0-9]+\.[0-9]+$/, to) } { print }' \
+        "${BASES_FILE}" >"${WORK}/bases" && cp "${WORK}/bases" "${BASES_FILE}"
     fi
   fi
 done <"${MODULES}"
@@ -346,7 +424,7 @@ if [[ ${DRY_RUN} -eq 0 ]]; then
     done | sort -u >"${MISSING}"
 fi
 
-OLDEST_BASE="$(cut -f 3 "${MODULES}" | sort -V | head -n 1)"
+OLDEST_BASE="$(cut -f 4 "${MODULES}" | sort -V | head -n 1)"
 BASE_RANGE="$(provider_range "refs/cff/${OLDEST_BASE}")"
 TARGET_RANGE="$(provider_range "${TARGET}")"
 PROVIDER_MAJOR_CHANGE=false
@@ -376,9 +454,9 @@ write_report() {
   echo
   echo "### Modules"
   echo
-  echo "| Module | Upstream | Base | Updated | Added | Deleted | Merged | Conflicts |"
+  echo "| Module or path | Upstream | Base | Updated | Added | Deleted | Merged | Conflicts |"
   echo "| --- | --- | --- | --- | --- | --- | --- | --- |"
-  while IFS=$'\t' read -r dir up base _; do
+  while IFS=$'\t' read -r dir _ up base _; do
     local row=()
     for status in updated added deleted merged conflict; do
       row+=("$(awk -F '\t' -v d="${dir}" -v s="${status}" \
@@ -397,7 +475,7 @@ write_report() {
         echo "These files have line conflicts and kept the local copy."
       fi
       echo
-      awk -F '\t' '$2 == "conflict" { printf "- `modules/%s/%s`\n", $1, $3 }' \
+      awk -F '\t' '$2 == "conflict" { printf "- `%s`\n", $3 }' \
         "${RESULTS}"
       echo
     fi
@@ -405,7 +483,7 @@ write_report() {
       echo "These paths kept the local copy, because one side deleted them or"
       echo "they are links or binary files. Merge them by hand."
       echo
-      awk -F '\t' '$2 == "conflict-kept" { printf "- `modules/%s/%s`\n", $1, $3 }' \
+      awk -F '\t' '$2 == "conflict-kept" { printf "- `%s`\n", $3 }' \
         "${RESULTS}"
       echo
     fi
@@ -434,7 +512,8 @@ write_report() {
     echo "  documentation baseline in the same pull request."
   fi
   echo
-  up_names="$(cut -f 2 "${MODULES}" | sort -u)"
+  up_names="$(awk -F '\t' '$5 != "paths" { sub(/^modules\//, "", $3); print $3 }' \
+    "${MODULES}" | sort -u)"
   echo "### Upstream modules not vendored"
   echo
   git ls-tree --name-only "${TARGET}" modules/ | sed 's|^modules/||' |
@@ -512,10 +591,10 @@ if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
   } >>"${GITHUB_OUTPUT}"
 fi
 
-echo "Synced $(wc -l <"${MODULES}" | tr -d ' ') modules to ${TO}:" \
+echo "Synced $(wc -l <"${MODULES}" | tr -d ' ') modules and paths to ${TO}:" \
   "${CHANGED} files changed, ${CONFLICTS} conflicts."
 if [[ "${CONFLICTS}" -gt 0 ]]; then
-  awk -F '\t' '$2 ~ /^conflict/ { print "  " $2 ": modules/" $1 "/" $3 }' \
+  awk -F '\t' '$2 ~ /^conflict/ { print "  " $2 ": " $3 }' \
     "${RESULTS}"
   exit 3
 fi

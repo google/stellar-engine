@@ -96,6 +96,12 @@ git -C "${UP}" init -q
   printf 'delta v1\n' >modules/delta/main.tf
   versions_tf project v1.0.0 6 >modules/project/versions.tf
   versions_tf newmod v1.0.0 6 >modules/newmod/versions.tf
+  mkdir -p tests/fixtures tests/examples tools
+  printf 'fixture v1\n' >tests/fixtures/shared.tf
+  printf 'old fixture\n' >tests/fixtures/old.tf
+  printf 'def a():\n  return 1\n\n\ndef b():\n  return 2\n' >tools/tool.py
+  printf 'def helper():\n  return 1\n' >tests/examples/utils.py
+  printf 'not tracked\n' >tests/examples/test_plan.py
   printf '# Changelog\n' >CHANGELOG.md
   git add -A && git commit -q -m v1 && git tag v1.0.0
 
@@ -116,6 +122,12 @@ git -C "${UP}" init -q
   versions_tf gamma v2.0.0 7 >modules/gamma/versions.tf
   printf 'delta v2\n' >modules/delta/main.tf
   versions_tf project v2.0.0 7 >modules/project/versions.tf
+  printf 'fixture v2\n' >tests/fixtures/shared.tf
+  printf 'new fixture\n' >tests/fixtures/new.tf
+  git rm -q tests/fixtures/old.tf
+  printf 'def a():\n  return 10\n\n\ndef b():\n  return 2\n' >tools/tool.py
+  printf 'def helper():\n  return 2\n' >tests/examples/utils.py
+  printf 'not tracked v2\n' >tests/examples/test_plan.py
   cat >CHANGELOG.md <<'EOF'
 # Changelog
 
@@ -296,6 +308,81 @@ status=0
 "${BASH}" "${FORK}/tools/sync-from-cff.sh" --upstream "file://${UP}" --to v2.0.0 \
   >/dev/null 2>&1 || status=$?
 assert_equals "refuses to run on an uncommitted bases file" "1" "${status}"
+
+# 6. Tracked repository paths outside modules/.
+FORK="${TMP}/fork-paths"
+new_fork "${FORK}"
+(
+  cd "${FORK}"
+  git -C "${UP}" archive v1.0.0 tests/fixtures tests/examples/utils.py \
+    tools/tool.py | tar -x -C .
+  # The local copy uses 4-space indents and a local change far from the
+  # upstream change.
+  printf 'def a():\n    return 1\n\n\ndef b():\n    return 3\n' >tools/tool.py
+  printf 'def helper():\n    return 1\n' >tests/examples/utils.py
+  {
+    printf 'tests/fixtures tests/fixtures v1.0.0\n'
+    printf 'tests/examples/utils.py tests/examples/utils.py v1.0.0\n'
+    printf 'tools/tool.py tools/tool.py v1.0.0\n'
+  } >>tools/cff-sync.bases
+  printf '#!/bin/bash\nsed "s/^  /    /"\n' >"${TMP}/fake-format.sh"
+  git add -A && git commit -q -m "track paths"
+)
+status=0
+CFF_SYNC_PY_FORMAT="bash ${TMP}/fake-format.sh" "${BASH}" \
+  "${FORK}/tools/sync-from-cff.sh" --upstream "file://${UP}" --to v2.0.0 \
+  --modules tests/fixtures,tests/examples/utils.py,tools/tool.py \
+  --report "${TMP}/report-paths.md" >"${TMP}/out-paths.txt" 2>&1 ||
+  status=$?
+assert_equals "syncs tracked paths without conflicts" "0" "${status}"
+assert_equals "updates a file in a tracked directory" "fixture v2" \
+  "$(cat "${FORK}/tests/fixtures/shared.tf")"
+assert_true "adds a file to a tracked directory" \
+  '[[ -f "${FORK}/tests/fixtures/new.tf" ]]'
+assert_true "deletes a file from a tracked directory" \
+  '[[ ! -e "${FORK}/tests/fixtures/old.tf" ]]'
+assert_equals "updates a tracked single file" "$(printf 'def helper():\n    return 2')" \
+  "$(cat "${FORK}/tests/examples/utils.py")"
+assert_true "leaves untracked files next to a tracked file alone" \
+  '[[ ! -e "${FORK}/tests/examples/test_plan.py" ]]'
+assert_equals "merges a formatted Python file with a local change" \
+  "$(printf 'def a():\n    return 10\n\n\ndef b():\n    return 3')" \
+  "$(cat "${FORK}/tools/tool.py")"
+assert_true "records the new base of a tracked path" \
+  'grep -qx "tests/fixtures tests/fixtures v2.0.0" "${FORK}/tools/cff-sync.bases"'
+assert_true "records the new base of a tracked file" \
+  'grep -qx "tools/tool.py tools/tool.py v2.0.0" "${FORK}/tools/cff-sync.bases"'
+assert_true "keeps the module entries of cff-sync.bases" \
+  'grep -qx "delta delta v1.0.0" "${FORK}/tools/cff-sync.bases"'
+assert_true "reports a tracked path" \
+  'grep -q "| \`tests/fixtures\` | \`tests/fixtures\` | v1.0.0 |" "${TMP}/report-paths.md"'
+
+FORK="${TMP}/fork-paths-conflict"
+new_fork "${FORK}"
+(
+  cd "${FORK}"
+  git -C "${UP}" archive v1.0.0 tools/tool.py | tar -x -C .
+  printf 'def a():\n    return 5\n\n\ndef b():\n    return 2\n' >tools/tool.py
+  printf 'tools/tool.py tools/tool.py v1.0.0\n' >>tools/cff-sync.bases
+  git add -A && git commit -q -m "track a conflicting file"
+)
+status=0
+CFF_SYNC_PY_FORMAT="bash ${TMP}/fake-format.sh" "${BASH}" \
+  "${FORK}/tools/sync-from-cff.sh" --upstream "file://${UP}" --to v2.0.0 \
+  --modules tools/tool.py --conflict-style ours >"${TMP}/out-conflict.txt" \
+  2>&1 || status=$?
+assert_equals "reports a conflict in a tracked file" "3" "${status}"
+assert_true "names the conflicting tracked file" \
+  'grep -q "conflict: tools/tool.py" "${TMP}/out-conflict.txt"'
+assert_true "keeps the base of a tracked file with conflicts" \
+  'grep -qx "tools/tool.py tools/tool.py v1.0.0" "${FORK}/tools/cff-sync.bases"'
+
+printf 'dirty\n' >>"${FORK}/tools/tool.py"
+status=0
+CFF_SYNC_PY_FORMAT="bash ${TMP}/fake-format.sh" "${BASH}" \
+  "${FORK}/tools/sync-from-cff.sh" --upstream "file://${UP}" --to v2.0.0 \
+  >/dev/null 2>&1 || status=$?
+assert_equals "refuses to run on an uncommitted tracked path" "1" "${status}"
 
 echo ""
 echo "Summary: ${TEST_COUNT} tests run, ${FAIL_COUNT} failures."
