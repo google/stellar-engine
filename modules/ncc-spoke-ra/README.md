@@ -266,5 +266,5 @@ Policies are created on the router with their map key as name, and peers referen
 
 ## Fixtures
 
-- compute-vm-nva.tf
+- [compute-vm-nva.tf](../../tests/fixtures/compute-vm-nva.tf)
 <!-- END TFDOC -->

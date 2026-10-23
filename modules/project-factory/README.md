@@ -26,7 +26,6 @@ The code is meant to be executed by a high level service account with powerful p
 ## Contents
 
 <!-- BEGIN TOC -->
-- [Contents](#contents)
 - [Folder hierarchy](#folder-hierarchy)
 - [Projects](#projects)
   - [Factory-wide project defaults, merges, optionals](#factory-wide-project-defaults-merges-optionals)

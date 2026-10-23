@@ -43,16 +43,16 @@ To try out the new notebook, you can use the provided code sample (the .ipynb fi
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [network_config](variables.tf#L43) | Shared VPC network configurations to use. | <code title="object&#40;&#123;&#10;  network_project_id &#61; string&#10;  network_name       &#61; string&#10;  subnetwork_name    &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [notebooks](variables.tf#L57) | Vertex AI Workbench instances to be deployed, keyed by name. | <code title="map&#40;object&#40;&#123;&#10;  type             &#61; optional&#40;string, &#34;USER_MANAGED&#34;&#41;&#10;  machine_type     &#61; optional&#40;string, &#34;n1-standard-4&#34;&#41;&#10;  internal_ip_only &#61; optional&#40;bool, true&#41;&#10;  owner            &#61; optional&#40;string&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [project_config](variables.tf#L83) | Provide 'billing_account_id' value if project creation is needed, uses existing 'project_id' if null. Parent is in 'folders/nnn' or 'organizations/nnn' format. | <code title="object&#40;&#123;&#10;  billing_account_id &#61; optional&#40;string&#41;&#10;  parent             &#61; optional&#40;string&#41;&#10;  project_id         &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [network_config](variables.tf#L43) | Shared VPC network configurations to use. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [notebooks](variables.tf#L57) | Vertex AI Workbench instances to be deployed, keyed by name. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [project_config](variables.tf#L83) | Provide 'billing_account_id' value if project creation is needed, uses existing 'project_id' if null. Parent is in 'folders/nnn' or 'organizations/nnn' format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [bucket_name](variables.tf#L18) | GCS bucket name to store the Vertex AI artifacts. | <code>string</code> |  | <code>null</code> |
 | [dataset_name](variables.tf#L24) | BigQuery Dataset to store the training data. | <code>string</code> |  | <code>null</code> |
 | [deletion_protection](variables.tf#L30) | Prevent Terraform from destroying data storage resources (storage buckets, GKE clusters, CloudSQL instances) in this blueprint. When this field is set in Terraform state, a terraform destroy or terraform apply that would delete data storage resources will fail. | <code>bool</code> |  | <code>true</code> |
 | [labels](variables.tf#L37) | Labels to be assigned at project level. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
 | [prefix](variables.tf#L77) | Prefix used for various resource creation. | <code>string</code> |  | <code>null</code> |
 | [region](variables.tf#L97) | Region used for regional resources. | <code>string</code> |  | <code>&#34;us-central1&#34;</code> |
-| [service_encryption_keys](variables.tf#L103) | Cloud KMS to use to encrypt different services. Key location should match service region. | <code title="object&#40;&#123;&#10;  aiplatform &#61; optional&#40;string&#41;&#10;  bq         &#61; optional&#40;string&#41;&#10;  notebooks  &#61; optional&#40;string&#41;&#10;  storage    &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [service_encryption_keys](variables.tf#L103) | Cloud KMS to use to encrypt different services. Key location should match service region. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 

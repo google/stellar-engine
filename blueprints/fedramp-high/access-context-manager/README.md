@@ -73,13 +73,13 @@ To check service perimeters: Go to VPC Service Control and it should be listed i
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [access_levels](variables.tf#L15) | List of access levels to create. Each access level is a map containing 'name', 'description', and 'conditions'. | <code title="list&#40;object&#40;&#123;&#10;  name        &#61; string&#10;  description &#61; string&#10;  conditions &#61; list&#40;object&#40;&#123;&#10;    ip_subnetworks &#61; list&#40;string&#41;&#10;    members        &#61; list&#40;string&#41;&#10;    negate         &#61; bool&#10;    device_policy &#61; object&#40;&#123;&#10;      require_screen_lock &#61; bool&#10;    &#125;&#41;&#10;    regions &#61; list&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#41;">list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [access_levels](variables.tf#L15) | List of access levels to create. Each access level is a map containing 'name', 'description', and 'conditions'. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [access_policy_title](variables.tf#L32) | The title for the Access Context Manager policy. | <code>string</code> | ✓ |  |
 | [domain](variables.tf#L37) | Domain of the project that you will be using. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L42) | The project ID where the Access Context Manager resources will be created. | <code>string</code> | ✓ |  |
 | [organization_id](variables.tf#L47) | The organization ID. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L52) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
-| [service_perimeters](variables.tf#L57) | List of service perimeters to create. Each service perimeter is a map containing 'name', 'description', 'status', and 'resources'. | <code title="list&#40;object&#40;&#123;&#10;  name        &#61; string&#10;  description &#61; string&#10;  status &#61; object&#40;&#123;&#10;    restricted_services &#61; list&#40;string&#41;&#10;    resources           &#61; list&#40;string&#41;&#10;  &#125;&#41;&#10;&#125;&#41;&#41;">list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [service_perimeters](variables.tf#L57) | List of service perimeters to create. Each service perimeter is a map containing 'name', 'description', 'status', and 'resources'. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 
 ## Outputs
 

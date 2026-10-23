@@ -96,7 +96,7 @@ Run `terraform apply -target google_org_policy_policy.allow_external_lb` after c
 | [network_name](variables.tf#L72) | Host network for IDS and GCE instance deployment. | <code>string</code> | ✓ |  |
 | [network_project_id](variables.tf#L77) | The Landing Project ID. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L94) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
-| [iap_oauth2_client](variables.tf#L32) | Optional custom OAuth client for IAP, created in the console. IAP uses a Google-managed OAuth client when this is null, which only admits users of the same organization. | <code title="object&#40;&#123;&#10;  id     &#61; string&#10;  secret &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [iap_oauth2_client](variables.tf#L32) | Optional custom OAuth client for IAP, created in the console. IAP uses a Google-managed OAuth client when this is null, which only admits users of the same organization. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [ids_name](variables.tf#L42) | Name of IDS. | <code>string</code> |  | <code>&#34;cnap-ids&#34;</code> |
 | [ids_private_ip_prefix_length](variables.tf#L48) | The length of the IDS Private IP Prefix. | <code>number</code> |  | <code>24</code> |
 | [machine_type](variables.tf#L54) | The type of machine to use. | <code>string</code> |  | <code>&#34;n2d-highcpu-2&#34;</code> |

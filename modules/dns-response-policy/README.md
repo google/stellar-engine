@@ -207,5 +207,5 @@ module "dns-policy" {
 
 ## Fixtures
 
-- dns-response-policy.tf
+- [dns-response-policy.tf](../../tests/fixtures/dns-response-policy.tf)
 <!-- END TFDOC -->

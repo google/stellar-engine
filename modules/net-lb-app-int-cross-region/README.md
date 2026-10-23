@@ -908,5 +908,5 @@ When deploying changes to load balancer configuration please refer to [net-lb-ap
 
 ## Fixtures
 
-- compute-mig.tf
+- [compute-mig.tf](../../tests/fixtures/compute-mig.tf)
 <!-- END TFDOC -->
