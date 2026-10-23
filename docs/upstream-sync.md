@@ -1,6 +1,6 @@
 # Upstream sync
 
-Stellar Engine vendors the reusable modules under `modules/` from upstream [Cloud Foundation Fabric](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric), and a weekly pull request keeps them close to the latest Fabric release. Small, regular syncs keep upstream fixes flowing in and keep each merge reviewable.
+Stellar Engine vendors the reusable modules under `modules/`, the README tooling and its test fixtures from upstream [Cloud Foundation Fabric](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric), and a weekly pull request keeps them close to the latest Fabric release. Small, regular syncs keep upstream fixes flowing in and keep each merge reviewable.
 
 <!-- BEGIN TOC -->
 - [1. Base release tracking](#1-base-release-tracking)
@@ -19,6 +19,9 @@ Every synced module records the Fabric release it last merged, so the sync knows
 - A Stellar Engine copy such as `modules/organization-se/` records the upstream module that it tracks, here `organization`.
 - The `tools/cff-sync.bases` file records the release for modules that upstream ships without a `module_name`, such as `modules/cloud-config-container/`.
 - Modules with neither record exist only in Stellar Engine, such as `modules/cis-log-metrics/`, and the sync leaves them alone.
+- The `tools/cff-sync.bases` file also records the release of each tracked repository path outside `modules/`. Such an entry names a directory or a single file, and its local path contains a slash, which sets it apart from a module entry.
+- The tracked paths are the `tools/tfdoc.py` and `tools/check_documentation.py` README tools, the `tests/examples/utils.py` directive parser that `tools/tfdoc.py` imports, and the `tests/fixtures/` files that module README examples name.
+- Python files outside `modules/` keep the repository `ruff format` style. The script formats the base and the target copy the same way before it compares and merges them, so the indentation difference from upstream never conflicts.
 - The `tools/cff-sync.ignore` file lists paths that the sync never writes, such as the OpenTofu `versions.tofu` files that `.gemini/styleguide.md` forbids.
 
 The stages under `fast/stages-aw/` derive from the FAST stage generation that Fabric replaced in v44.0.0 and removed in v47.0.0. The sync never touches them, so maintainers port stage changes from upstream by hand.
@@ -27,7 +30,7 @@ The stages under `fast/stages-aw/` derive from the FAST stage generation that Fa
 
 The `tools/sync-from-cff.sh` script three-way merges each file of each tracked module from its base release to the target release.
 
-1. Start from a clean `modules/` directory on a new branch.
+1. Start from a clean `modules/` directory and clean tracked paths on a new branch.
 2. Preview the result with `tools/sync-from-cff.sh --to <tag> --dry-run --report /tmp/cff-sync.md`.
 3. Run the sync with `tools/sync-from-cff.sh --to <tag>`. The `--to latest` option picks the newest release tag.
 4. Resolve the conflict markers that the script leaves in files that both sides changed, and merge by hand the paths that the report lists as kept, such as a file that one side deleted.
@@ -46,16 +49,16 @@ A sync pull request merges only after these checks pass.
 - No conflict markers remain, and each resolution keeps the local changes in section 4 unless upstream now provides them.
 - Every root under `fast/stages-aw/` and `blueprints/` passes `terraform init -backend=false` and `terraform validate`, and callers follow every module interface change that the report lists.
 - The repository baseline in `default-versions.tf`, `.gemini/styleguide.md` and the documentation matches the provider and Terraform versions that the synced modules require.
-- The README of every module with a local interface change has tables regenerated with the `tools/tfdoc.py` script of the target Fabric release.
-- `tools/tflint.sh`, `terraform fmt -recursive -check` and `bash tools/run_tests.sh` pass.
+- The README of every module with a local interface change has tables regenerated with the `tools/tfdoc.py` script, which the sync keeps at the target Fabric release.
+- `bash tools/lint.sh` and `bash tools/run_tests.sh` pass.
 - A fresh deployment of stages 0 to 3 and a plan against an existing deployment of the previous release both succeed in a test organization.
 - The pull request has a Breaking Changes section with an `upgrade-note` whenever callers, tfvars files or state need changes.
 
 ## 4. Local changes
 
-Stellar Engine keeps these changes on top of the upstream modules. Each sync preserves them until upstream ships an equivalent, and then removes the entry here.
+Stellar Engine keeps these changes on top of the upstream modules and tracked paths. Each sync preserves them until upstream ships an equivalent, and then removes the entry here.
 
-| Module | Local change |
+| Module or path | Local change |
 | --- | --- |
 | `project` | A precondition fails when the prefixed project ID or name exceeds 30 characters. |
 | `project` | Terraform ignores `auto_create_network` and a `gcloud` step deletes the default network. |
@@ -75,6 +78,9 @@ Stellar Engine keeps these changes on top of the upstream modules. Each sync pre
 | `gke-cluster-standard`, `gke-cluster-standard-se` | Shielded GKE Nodes default to on. |
 | `pubsub` | The module keeps the `name` output. |
 | `net-vpc-peering` | Variable descriptions are more detailed. |
+| `tools/tfdoc.py` | The script follows the repository Python style, creates missing parser contexts, matches the README markers non-greedily, and escapes pipes in output descriptions. |
+| `tools/check_documentation.py` | The labels name each failure, the description, order, period and type checks run only on READMEs with tables, and output description failures report their own state. |
+| `tests/examples/utils.py` | The parser follows the repository Python style and drops unused imports. |
 
 The `cloud-run-v2-se` copy matches the upstream `cloud-run-v2` module since the v59.2.0 sync, so a later change can point its callers to `modules/cloud-run-v2/` and remove the copy.
 
