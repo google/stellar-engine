@@ -43,5 +43,5 @@ Hybrid connectivity is not deployed by either networking option and must be desi
 ## Security (3)
 
 - [Security](3-security/README.md)
-This stage provides an added layer of security to deployment. To further secure your environment, please see the [Security Best Practices Guide](https://docs.google.com/document/d/1uv62Fqg73r9oJNP-NPZebpzoBom8rOgLoHkiMZPutbo/edit?tab=t.0#heading=h.gjdgxs). You will need to request access if you do not already have it.
+This stage provides an added layer of security to deployment. To further secure your environment, please see the [Security Best Practices Guide](../../docs/security-best-practices.md).
 

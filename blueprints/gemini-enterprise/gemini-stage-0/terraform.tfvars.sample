@@ -24,7 +24,7 @@ terraform_state_bucket = "prefx-iac-core-state-0"
 # Get your organization ID via `gcloud organizations list`
 # Then run `gcloud access-context-manager policies list --organization [ORGANIZATION_ID]`
 # The access_policy_number value will be the NAME column
-access_policy_number = 250001080040
+access_policy_number = 123456789012
 
 geolocation = "us"
 region      = "us-east4"
