@@ -75,7 +75,7 @@ module "dmz-vpc" {
     logging = var.dns.enable_logging
   }
   create_googleapis_routes = {
-    private    = true
+    private    = false
     restricted = true
   }
   subnets = try(var.subnets.dmz, [])
@@ -108,7 +108,7 @@ module "vdss-vpc" {
   }
   # Set explicit routes for googleapis in case the default route is deleted
   create_googleapis_routes = {
-    private    = true
+    private    = false
     restricted = true
   }
 }

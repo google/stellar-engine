@@ -28,7 +28,7 @@ locals {
           { service_name = "pubsub.googleapis.com" },
           { service_name = "storage.googleapis.com" },
         ]
-        resources = ["projects/${var.logging.project_number}"]
+        resources = ["projects/${coalesce(var.logging.project_number, var.logging.project_id)}"]
       }
     }
   }
@@ -85,9 +85,7 @@ module "vpc-sc" {
       spec = (
         var.vpc_sc.perimeter_default.dry_run ? local.vpc_sc_perimeter : null
       )
-      status = (
-        !var.vpc_sc.perimeter_default.dry_run ? local.vpc_sc_perimeter : null
-      )
+      status                    = local.vpc_sc_perimeter
       use_explicit_dry_run_spec = var.vpc_sc.perimeter_default.dry_run
     }
   }

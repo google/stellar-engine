@@ -14,15 +14,17 @@
 # limitations under the License.
 
 
+set -euo pipefail
+
 echo "--- Verifying Deployment Service Account Status ---"
 echo ""
 
 # Discover the Infrastructure-as-Code (IaC) core project
-IAC_PROJECT=$(gcloud projects list --filter="projectId~'-prod-iac-core-0$'" --format="value(projectId)")
+IAC_PROJECT=$(gcloud projects list --filter="projectId~'-iac-core-0$'" --format="value(projectId)")
 
 # Check if a unique project was found
 if [ -z "$IAC_PROJECT" ]; then
-  echo "⚠️ WARNING: No IaC core project found ending in '-prod-iac-core-0'."
+  echo "⚠️ WARNING: No IaC core project found ending in '-iac-core-0'."
   exit 1
 elif [ $(echo "$IAC_PROJECT" | wc -l) -ne 1 ]; then
   echo "⚠️ WARNING: Multiple possible IaC core projects found. Please verify manually:"

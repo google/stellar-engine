@@ -14,8 +14,38 @@
 # limitations under the License.
 
 
+set -euo pipefail
+shopt -s nullglob
+
 # Default list of service account names
-VALID_NAMES=("bootstrap" "resman" "networking" "security")
+VALID_NAMES=(
+  "bootstrap"
+  "bootstrap-r"
+  "resman"
+  "resman-r"
+  "networking"
+  "networking-r"
+  "security"
+  "security-r"
+  "project-factory-dev"
+  "project-factory-dev-r"
+  "project-factory-prod"
+  "project-factory-prod-r"
+  "data-platform-dev"
+  "data-platform-dev-r"
+  "data-platform-prod"
+  "data-platform-prod-r"
+  "gke-dev"
+  "gke-dev-r"
+  "gke-prod"
+  "gke-prod-r"
+  "gcve-dev"
+  "gcve-dev-r"
+  "gcve-prod"
+  "gcve-prod-r"
+  "sandbox"
+  "sandbox-r"
+)
 
 # Initialize variables
 ACTION="disable"  # Default action is to disable
