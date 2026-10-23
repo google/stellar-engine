@@ -37,6 +37,7 @@ output "name" {
 output "random_secret" {
   description = "Generated secret."
   value       = local.secret
+  sensitive   = true
 }
 
 output "self_link" {
@@ -66,4 +67,5 @@ output "tunnels" {
     for name in keys(var.tunnels) :
     name => google_compute_vpn_tunnel.tunnels[name]
   }
+  sensitive = true
 }

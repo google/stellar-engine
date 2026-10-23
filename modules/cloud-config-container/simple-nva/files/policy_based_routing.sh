@@ -16,6 +16,10 @@
 
 IF_NAME=$1
 IF_NUMBER=$(echo $IF_NAME | sed -e s/eth//)
+if ! [[ "$IF_NUMBER" =~ ^[0-9]+$ ]]; then
+  echo "Invalid interface number: $IF_NUMBER" >&2
+  exit 1
+fi
 IF_GW=$(curl http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/$IF_NUMBER/gateway -H "Metadata-Flavor: Google")
 IF_IP=$(curl http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/$IF_NUMBER/ip -H "Metadata-Flavor: Google")
 IF_NETMASK=$(curl http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/$IF_NUMBER/subnetmask -H "Metadata-Flavor: Google")
@@ -41,7 +45,7 @@ do
 
   # remove previously configure PBR for old LB removed from network interface
   # first get list of PBR on this network interface and retrieve LB IP addresses
-  PBR_LB_IPS_STR=$(ip rule list | grep "hc-$IF_NAME" | cut -f 2 -d " " |  tr -s '\n' ' ')
+  PBR_LB_IPS_STR=$(ip rule list | grep -w "hc-$IF_NAME" | cut -f 2 -d " " |  tr -s '\n' ' ')
   PBR_LB_IPS=($PBR_LB_IPS_STR)
 
   # iterate over PBR LB IP addresses

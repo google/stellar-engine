@@ -26,14 +26,17 @@ resource "google_access_context_manager_access_level" "access_levels" {
   description = each.value.description
 
   basic {
-    conditions {
-      ip_subnetworks = each.value.conditions[0].ip_subnetworks
-      members        = each.value.conditions[0].members
-      negate         = each.value.conditions[0].negate
-      device_policy {
-        require_screen_lock = each.value.conditions[0].device_policy.require_screen_lock
+    dynamic "conditions" {
+      for_each = each.value.conditions
+      content {
+        ip_subnetworks = conditions.value.ip_subnetworks
+        members        = conditions.value.members
+        negate         = conditions.value.negate
+        device_policy {
+          require_screen_lock = conditions.value.device_policy.require_screen_lock
+        }
+        regions = conditions.value.regions
       }
-      regions = each.value.conditions[0].regions
     }
   }
 }

@@ -149,8 +149,9 @@ resource "google_compute_region_url_map" "default" {
           : [route_action.value.url_rewrite]
         )
         content {
-          host_rewrite        = url_rewrite.value.host
-          path_prefix_rewrite = url_rewrite.value.path_prefix
+          host_rewrite          = url_rewrite.value.host
+          path_prefix_rewrite   = url_rewrite.value.path_prefix
+          path_template_rewrite = url_rewrite.value.path_template
         }
       }
       dynamic "weighted_backend_services" {
@@ -210,6 +211,35 @@ resource "google_compute_region_url_map" "default" {
       prefix_redirect        = r.value.prefix
       redirect_response_code = r.value.response_code
       strip_query            = r.value.strip_query
+    }
+  }
+
+  dynamic "header_action" {
+    for_each = (
+      var.urlmap_config.header_action == null
+      ? []
+      : [var.urlmap_config.header_action]
+    )
+    iterator = h
+    content {
+      request_headers_to_remove  = h.value.request_remove
+      response_headers_to_remove = h.value.response_remove
+      dynamic "request_headers_to_add" {
+        for_each = coalesce(h.value.request_add, {})
+        content {
+          header_name  = request_headers_to_add.key
+          header_value = request_headers_to_add.value.value
+          replace      = request_headers_to_add.value.replace
+        }
+      }
+      dynamic "response_headers_to_add" {
+        for_each = coalesce(h.value.response_add, {})
+        content {
+          header_name  = response_headers_to_add.key
+          header_value = response_headers_to_add.value.value
+          replace      = response_headers_to_add.value.replace
+        }
+      }
     }
   }
 
@@ -368,8 +398,9 @@ resource "google_compute_region_url_map" "default" {
                   : [route_action.value.url_rewrite]
                 )
                 content {
-                  host_rewrite        = url_rewrite.value.host
-                  path_prefix_rewrite = url_rewrite.value.path_prefix
+                  host_rewrite          = url_rewrite.value.host
+                  path_prefix_rewrite   = url_rewrite.value.path_prefix
+                  path_template_rewrite = url_rewrite.value.path_template
                 }
               }
               dynamic "weighted_backend_services" {
@@ -500,7 +531,7 @@ resource "google_compute_region_url_map" "default" {
                   exact_match   = h.value.type == "exact" ? h.value.value : null
                   invert_match  = h.value.invert_match
                   prefix_match  = h.value.type == "prefix" ? h.value.value : null
-                  present_match = h.value.type == "present" ? h.value.value : null
+                  present_match = h.value.type == "present" ? true : null
                   regex_match   = h.value.type == "regex" ? h.value.value : null
                   suffix_match  = h.value.type == "suffix" ? h.value.value : null
                   dynamic "range_match" {

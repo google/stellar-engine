@@ -195,8 +195,9 @@ variable "ssl_certificates" {
       private_key = string
     })), {})
   })
-  default  = {}
-  nullable = false
+  default   = {}
+  nullable  = false
+  sensitive = true
 }
 
 

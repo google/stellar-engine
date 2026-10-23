@@ -35,8 +35,11 @@ resource "google_access_context_manager_service_perimeter" "bridge" {
     }
   }
 
-  status {
-    resources = each.value.status_resources == null ? [] : each.value.status_resources
+  dynamic "status" {
+    for_each = each.value.status_resources == null ? [] : [""]
+    content {
+      resources = each.value.status_resources
+    }
   }
 
   # lifecycle {

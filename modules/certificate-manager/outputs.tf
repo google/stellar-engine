@@ -22,6 +22,7 @@ output "certificate_ids" {
 output "certificates" {
   description = "Certificates."
   value       = google_certificate_manager_certificate.certificates
+  sensitive   = true
 }
 
 output "dns_authorizations" {

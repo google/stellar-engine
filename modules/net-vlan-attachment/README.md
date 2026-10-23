@@ -658,7 +658,7 @@ module "example-va-b" {
 | [ipsec_gateway_ip_ranges](variables.tf#L41) | IPSec Gateway IP Ranges. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
 | [mtu](variables.tf#L47) | The MTU associated to the VLAN attachment (1440 / 1500). | <code>number</code> |  | <code>1500</code> |
 | [partner_interconnect_config](variables.tf#L63) | Partner interconnect configuration. | <code title="object&#40;&#123;&#10;  edge_availability_domain &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [vpn_gateways_ip_range](variables.tf#L115) | The IP range (cidr notation) to be used for the GCP VPN gateways. If null IPSec over Interconnect is not enabled. | <code>string</code> |  | <code>null</code> |
+| [vpn_gateways_ip_range](variables.tf#L116) | The IP range (cidr notation) to be used for the GCP VPN gateways. If null IPSec over Interconnect is not enabled. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs
 
@@ -666,10 +666,10 @@ module "example-va-b" {
 |---|---|:---:|
 | [attachment](outputs.tf#L17) | VLAN Attachment resource. |  |
 | [id](outputs.tf#L22) | Fully qualified VLAN attachment id. |  |
-| [md5_configuration](outputs.tf#L27) | MD5 configuration. |  |
-| [name](outputs.tf#L38) | The name of the VLAN attachment created. |  |
-| [pairing_key](outputs.tf#L43) | Opaque identifier of an PARTNER attachment used to initiate provisioning with a selected partner. |  |
-| [router](outputs.tf#L48) | Router resource (only if auto-created). |  |
-| [router_interface](outputs.tf#L53) | Router interface created for the VLAN attachment. |  |
-| [router_name](outputs.tf#L58) | Router name. |  |
+| [md5_configuration](outputs.tf#L27) | MD5 configuration. | ✓ |
+| [name](outputs.tf#L39) | The name of the VLAN attachment created. |  |
+| [pairing_key](outputs.tf#L44) | Opaque identifier of an PARTNER attachment used to initiate provisioning with a selected partner. | ✓ |
+| [router](outputs.tf#L50) | Router resource (only if auto-created). |  |
+| [router_interface](outputs.tf#L55) | Router interface created for the VLAN attachment. |  |
+| [router_name](outputs.tf#L60) | Router name. |  |
 <!-- END TFDOC -->

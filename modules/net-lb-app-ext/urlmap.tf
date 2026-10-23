@@ -174,8 +174,9 @@ resource "google_compute_url_map" "default" {
           : [route_action.value.url_rewrite]
         )
         content {
-          host_rewrite        = url_rewrite.value.host
-          path_prefix_rewrite = url_rewrite.value.path_prefix
+          host_rewrite          = url_rewrite.value.host
+          path_prefix_rewrite   = url_rewrite.value.path_prefix
+          path_template_rewrite = url_rewrite.value.path_template
         }
       }
       dynamic "weighted_backend_services" {
@@ -789,7 +790,7 @@ resource "google_compute_url_map" "default" {
                   exact_match   = h.value.type == "exact" ? h.value.value : null
                   invert_match  = h.value.invert_match
                   prefix_match  = h.value.type == "prefix" ? h.value.value : null
-                  present_match = h.value.type == "present" ? h.value.value : null
+                  present_match = h.value.type == "present" ? true : null
                   regex_match   = h.value.type == "regex" ? h.value.value : null
                   suffix_match  = h.value.type == "suffix" ? h.value.value : null
                   dynamic "range_match" {

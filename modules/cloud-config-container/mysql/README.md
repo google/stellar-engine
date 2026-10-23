@@ -72,7 +72,6 @@ module "cos-mysql" {
 # tftest modules=0 resources=0
 ```
 <!-- BEGIN TFDOC -->
-
 ## Variables
 
 | name | description | type | required | default |
@@ -89,6 +88,5 @@ module "cos-mysql" {
 
 | name | description | sensitive |
 |---|---|:---:|
-| [cloud_config](outputs.tf#L17) | Rendered cloud-config file to be passed as user-data instance metadata. |  |
-
+| [cloud_config](outputs.tf#L17) | Rendered cloud-config file to be passed as user-data instance metadata. | ✓ |
 <!-- END TFDOC -->

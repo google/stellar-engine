@@ -123,12 +123,12 @@ module "vpngw-a" {
 
 | name | description | sensitive |
 |---|---|:---:|
-| [bgp_peers](outputs.tf#L18) | BGP peer resources. |  |
-| [external_gateway](outputs.tf#L25) | External VPN gateway resource. |  |
-| [id](outputs.tf#L30) | Fully qualified VPN gateway id. |  |
-| [random_secret](outputs.tf#L35) | Generated secret. |  |
-| [router](outputs.tf#L40) | Router resource (only if auto-created). |  |
-| [router_name](outputs.tf#L45) | Router name. |  |
-| [self_link](outputs.tf#L50) | HA VPN gateway self link. |  |
-| [tunnels](outputs.tf#L55) | VPN tunnel resources. |  |
+| [bgp_peers](outputs.tf#L18) | BGP peer resources. | ✓ |
+| [external_gateway](outputs.tf#L26) | External VPN gateway resource. |  |
+| [id](outputs.tf#L31) | Fully qualified VPN gateway id. |  |
+| [random_secret](outputs.tf#L36) | Generated secret. | ✓ |
+| [router](outputs.tf#L42) | Router resource (only if auto-created). |  |
+| [router_name](outputs.tf#L47) | Router name. |  |
+| [self_link](outputs.tf#L52) | HA VPN gateway self link. |  |
+| [tunnels](outputs.tf#L57) | VPN tunnel resources. |  |
 <!-- END TFDOC -->

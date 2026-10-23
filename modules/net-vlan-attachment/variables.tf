@@ -109,7 +109,8 @@ variable "router_config" {
     keepalive = optional(number)
     name      = optional(string, "router")
   })
-  nullable = false
+  nullable  = false
+  sensitive = true
 }
 
 variable "vpn_gateways_ip_range" {

@@ -90,8 +90,9 @@ variable "backend_service_configs" {
       }))
     }))
   }))
-  default  = {}
-  nullable = false
+  default   = {}
+  nullable  = false
+  sensitive = true
   validation {
     condition = alltrue([
       for backend_service in values(var.backend_service_configs) : contains(

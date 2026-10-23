@@ -70,6 +70,7 @@ variable "tunnels" {
       remote = list(string)
     })
   }))
-  default  = {}
-  nullable = false
+  default   = {}
+  nullable  = false
+  sensitive = true
 }

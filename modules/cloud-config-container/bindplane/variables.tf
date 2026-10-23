@@ -29,6 +29,7 @@ variable "bindplane_config" {
 variable "bindplane_license" {
   description = "BindPlane server license."
   type        = string
+  sensitive   = true
 }
 
 variable "cloud_config" {
@@ -68,6 +69,7 @@ variable "files" {
 variable "password" {
   description = "Default admin user password."
   type        = string
+  sensitive   = true
 }
 
 variable "runcmd_post" {

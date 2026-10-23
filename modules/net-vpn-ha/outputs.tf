@@ -20,6 +20,7 @@ output "bgp_peers" {
   value = {
     for k, v in google_compute_router_peer.bgp_peer : k => v
   }
+  sensitive = true
 }
 
 output "external_gateway" {
@@ -48,6 +49,7 @@ output "md5_keys" {
       name = v.bgp_peer.md5_authentication_key.name
     }
   }
+  sensitive = true
 }
 
 output "name" {
@@ -58,6 +60,7 @@ output "name" {
 output "random_secret" {
   description = "Generated secret."
   value       = local.secret
+  sensitive   = true
 }
 
 output "router" {
@@ -81,6 +84,7 @@ output "shared_secrets" {
     for k, v in var.tunnels
     : k => coalesce(v.shared_secret, local.secret)
   }
+  sensitive = true
 }
 
 output "tunnel_names" {
@@ -105,4 +109,5 @@ output "tunnels" {
     for name in keys(var.tunnels) :
     name => try(google_compute_vpn_tunnel.tunnels[name], null)
   }
+  sensitive = true
 }

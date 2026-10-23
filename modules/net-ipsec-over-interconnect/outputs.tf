@@ -20,6 +20,7 @@ output "bgp_peers" {
   value = {
     for k, v in google_compute_router_peer.default : k => v
   }
+  sensitive = true
 }
 
 output "external_gateway" {
@@ -35,6 +36,7 @@ output "id" {
 output "random_secret" {
   description = "Generated secret."
   value       = local.secret
+  sensitive   = true
 }
 
 output "router" {
