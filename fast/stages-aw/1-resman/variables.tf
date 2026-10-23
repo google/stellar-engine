@@ -189,7 +189,9 @@ variable "custom_roles" {
 variable "envs_folders" {
   description = "List of environments to be created for projects to go into."
   type = map(object({
-    admin = string
+    admin                  = string
+    org_policies           = optional(map(any), {})
+    org_policies_data_path = optional(string)
   }))
 }
 
@@ -340,6 +342,10 @@ variable "tenants" {
       domain      = string
       id          = number
     }))
+    org_policies              = optional(map(any), {})
+    org_policies_data_path    = optional(string)
+    iac_project_org_policies  = optional(map(any), {})
+    main_project_org_policies = optional(map(any), {})
   }))
   nullable = false
   default  = {}
