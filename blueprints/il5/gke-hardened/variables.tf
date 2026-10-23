@@ -12,6 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "config_sync_secret_type" {
+  description = "Authentication type for Config Sync Git repository (e.g., ssh, gcenode, gcpserviceaccount, token)."
+  type        = string
+  default     = "ssh"
+  validation {
+    condition     = contains(["ssh", "cookiefile", "gcenode", "gcpserviceaccount", "token"], var.config_sync_secret_type)
+    error_message = "config_sync_secret_type must be one of ssh, cookiefile, gcenode, gcpserviceaccount, or token."
+  }
+}
+
 variable "gatekeeper_sa" {
   description = "The service account Gatekeeper uses to push metrics to GCP."
   type        = string
@@ -181,11 +191,10 @@ variable "region" {
 }
 
 # tflint-ignore: terraform_unused_declarations
-
 variable "remove_default_node_pool" {
   description = "The Default NodePool remove it or not."
   type        = bool
-  # default     = false
+  default     = true
 }
 
 variable "snapshot_max_retention_days" {

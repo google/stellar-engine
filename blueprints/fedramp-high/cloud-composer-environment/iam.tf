@@ -24,10 +24,12 @@ resource "google_project_iam_member" "composer_service_agent" {
   member  = google_project_service_identity.composer_agent.member
 }
 
-resource "google_project_iam_member" "composer_network_user" {
-  project = var.network_project_id
-  role    = "roles/compute.networkUser"
-  member  = google_project_service_identity.composer_agent.member
+resource "google_compute_subnetwork_iam_member" "composer_network_user" {
+  project    = var.network_project_id
+  region     = var.region
+  subnetwork = data.google_compute_subnetwork.subnetwork.name
+  role       = "roles/compute.networkUser"
+  member     = google_project_service_identity.composer_agent.member
 }
 
 resource "google_project_iam_member" "composer_vpc_agent" {

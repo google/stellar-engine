@@ -23,7 +23,20 @@ resource "google_project_service" "translate" {
   disable_on_destroy = false
 }
 
-data "google_project" "project" {}
+data "google_project" "project" {
+  project_id = var.main_project_id
+}
+
+resource "google_kms_crypto_key_iam_member" "service_agents_kms" {
+  for_each = var.kms_key_self_link != null ? toset([
+    "serviceAccount:service-${data.google_project.project.number}@gs-project-accounts.iam.gserviceaccount.com",
+    "serviceAccount:service-${data.google_project.project.number}@gcp-sa-workflows.iam.gserviceaccount.com",
+  ]) : toset([])
+  crypto_key_id = var.kms_key_self_link
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = each.value
+  depends_on    = [google_project_service.translate]
+}
 
 moved {
   from = module.input_bucket
@@ -38,6 +51,11 @@ module "input-bucket" {
   location                    = var.region
   force_destroy               = true
   uniform_bucket_level_access = true
+  encryption_key              = var.kms_key_self_link
+  iam = {
+    "roles/storage.objectViewer" = [google_service_account.workflow_sa.member]
+  }
+  depends_on = [google_kms_crypto_key_iam_member.service_agents_kms]
 }
 
 moved {
@@ -53,11 +71,30 @@ module "output-bucket" {
   location                    = var.region
   force_destroy               = true
   uniform_bucket_level_access = true
+  encryption_key              = var.kms_key_self_link
+  iam = {
+    "roles/storage.objectViewer"  = [google_service_account.workflow_sa.member]
+    "roles/storage.objectCreator" = [google_service_account.workflow_sa.member]
+  }
+  depends_on = [google_kms_crypto_key_iam_member.service_agents_kms]
 }
 
 resource "google_service_account" "workflow_sa" {
+  project      = var.main_project_id
   account_id   = "translate-workflow-sa"
   display_name = "Workflows Service Account."
+}
+
+resource "google_project_iam_member" "workflow_sa_roles" {
+  for_each = toset([
+    "roles/workflows.invoker",
+    "roles/logging.logWriter",
+    "roles/serviceusage.serviceUsageConsumer",
+    "roles/cloudtranslate.user",
+  ])
+  project = var.main_project_id
+  role    = each.value
+  member  = google_service_account.workflow_sa.member
 }
 
 module "workflows" {
@@ -77,17 +114,10 @@ module "workflows" {
     target_lang   = var.target_lang
     parent        = "projects/${var.main_project_id}/locations/us-central1"
   }
-  iam = {
-    "roles/workflows.invoker"                 = [google_service_account.workflow_sa.member],
-    "roles/logging.logWriter"                 = [google_service_account.workflow_sa.member],
-    "roles/serviceusage.serviceUsageConsumer" = [google_service_account.workflow_sa.member],
-    "roles/storage.objectViewer"              = [google_service_account.workflow_sa.member],
-    "roles/storage.objectCreator"             = [google_service_account.workflow_sa.member],
-    "roles/storage.insightsCollectorService"  = [google_service_account.workflow_sa.member],
-    "roles/cloudtranslate.user"               = [google_service_account.workflow_sa.member],
-  }
   depends_on = [
     google_project_service.translate,
     google_service_account.workflow_sa,
+    google_project_iam_member.workflow_sa_roles,
+    google_kms_crypto_key_iam_member.service_agents_kms,
   ]
 }

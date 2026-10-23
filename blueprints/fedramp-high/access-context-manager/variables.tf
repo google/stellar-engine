@@ -62,6 +62,13 @@ variable "service_perimeters" {
     status = object({
       restricted_services = list(string)
       resources           = list(string)
+      access_levels       = optional(list(string), [])
+      vpc_accessible_services = optional(object({
+        enable_restriction = optional(bool, true)
+        allowed_services   = optional(list(string), [])
+      }))
+      ingress_policies = optional(list(any), [])
+      egress_policies  = optional(list(any), [])
     })
   }))
 }

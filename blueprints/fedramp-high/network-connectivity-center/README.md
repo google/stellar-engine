@@ -94,12 +94,13 @@ To verify a successful deployment:
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [gcp_region](variables.tf#L15) | The Google Cloud region to be used as the default for regional resources and the provider. Note: NCC Hubs are global resources. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L20) | The Google Cloud Project ID where the NCC hub will be created. | <code>string</code> | ✓ |  |
-| [ncc_hub_name](variables.tf#L25) | The name of the created Network Connectivity Center hub. | <code>string</code> |  | <code>&#34;example-ncc-hub&#34;</code> |
-| [psc_prop](variables.tf#L31) | Whether or not Private Service Connect connections can be propagated to other spokes in the network. | <code>bool</code> |  | <code>false</code> |
-| [spokes](variables.tf#L37) | A map of spoke names to VPC Network self-links (e.g., 'projects/<PROJECT_ID>/global/networks/<VPC_NAME>') to be added to the NCC hub. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [topology](variables.tf#L44) | The topology of the network. Can be MESH or STAR. | <code>string</code> |  | <code>&#34;MESH&#34;</code> |
+| [gcp_region](variables.tf#L21) | The Google Cloud region to be used as the default for regional resources and the provider. Note: NCC Hubs are global resources. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L26) | The Google Cloud Project ID where the NCC hub will be created. | <code>string</code> | ✓ |  |
+| [center_spoke_names](variables.tf#L15) | Optional list of spoke names in var.spokes to assign to the center group when topology is STAR. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
+| [ncc_hub_name](variables.tf#L31) | The name of the created Network Connectivity Center hub. | <code>string</code> |  | <code>&#34;example-ncc-hub&#34;</code> |
+| [psc_prop](variables.tf#L37) | Whether or not Private Service Connect connections can be propagated to other spokes in the network. | <code>bool</code> |  | <code>false</code> |
+| [spokes](variables.tf#L43) | A map of spoke names to VPC Network self-links (e.g., 'projects/<PROJECT_ID>/global/networks/<VPC_NAME>') to be added to the NCC hub. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [topology](variables.tf#L50) | The topology of the network. Can be MESH or STAR. | <code>string</code> |  | <code>&#34;MESH&#34;</code> |
 
 ## Outputs
 

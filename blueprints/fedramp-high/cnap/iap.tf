@@ -45,8 +45,11 @@ resource "google_project_service_identity" "iap_sa" {
   service = "iap.googleapis.com"
 }
 
-resource "google_project_iam_member" "iap_sa_cloudrun_invoker" {
-  project = var.main_project_id
-  role    = "roles/run.invoker"
-  member  = google_project_service_identity.iap_sa.member
+resource "google_cloud_run_v2_service_iam_member" "iap_sa_cloudrun_invoker" {
+  for_each = google_cloud_run_v2_service.cloud_run_apps
+  project  = var.main_project_id
+  location = var.region
+  name     = each.value.name
+  role     = "roles/run.invoker"
+  member   = google_project_service_identity.iap_sa.member
 }

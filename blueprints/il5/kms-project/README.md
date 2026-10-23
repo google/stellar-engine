@@ -12,6 +12,7 @@ This blueprint demonstrates how to manage existing Google Cloud Key Management S
 | [email](variables.tf#L20) | Email address of a user to grant permissions on KMS keys (if used in `existing_kms_keys.iam_members`). | <code>string</code> |  | <code>&#34;null &#35; Made optional, as it might not always be used&#34;</code> |
 | [existing_kms_keys](variables.tf#L31) | A map where keys are the names of existing CryptoKeys within the specified KeyRing, and values are objects defining additional properties (e.g., IAM members to add). | <code title="map&#40;object&#40;&#123;&#10;  iam_members       &#61; optional&#40;map&#40;list&#40;string&#41;&#41;, &#123;&#125;&#41; &#35; Example: &#123; &#34;roles&#47;cloudkms.cryptoKeyEncrypterDecrypter&#34; &#61; &#91;&#34;serviceAccount:...&#34;, &#34;user:...&#34;&#93; &#125;&#10;  rotation_period_s &#61; optional&#40;number&#41;                &#35; Example for managing rotation on existing keys &#40;in seconds&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [group_email](variables.tf#L45) | An email address that represents a Google group to grant permissions on KMS keys (if used in `existing_kms_keys.iam_members`). | <code>string</code> |  | <code>&#34;null &#35; Made optional, as it might not always be used&#34;</code> |
+| [rotation_period_s](variables.tf#L56) | Default key rotation period in seconds when not specified on an individual entry in existing_kms_keys. | <code>number</code> |  | <code>7776000</code> |
 
 ## Outputs
 

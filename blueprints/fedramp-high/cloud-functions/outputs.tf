@@ -13,8 +13,8 @@
 # limitations under the License.
 
 output "artifact_registry_iam_member" {
-  description = "IAM member assigned to roles/artifactregistry.createOnPushWriter."
-  value       = google_project_iam_member.artifactregistry_create_on_push_writer.member
+  description = "IAM member assigned to Artifact Registry repository permissions."
+  value       = module.service-account-runner.iam_email
 }
 
 output "bucket" {
@@ -38,6 +38,6 @@ output "logging_iam_member" {
 }
 
 output "storage_object_admin_iam_member" {
-  description = "IAM member assigned to roles/storage.objectAdmin."
-  value       = google_project_iam_member.storage_object_user.member
+  description = "IAM member assigned to Cloud Storage bucket objectUser permissions."
+  value       = module.service-account-runner.iam_email
 }

@@ -27,7 +27,7 @@ data "google_project" "current" {
 # }
 
 resource "google_service_account" "gke" {
-  account_id = "gke-${var.main_project_id}"
+  account_id = substr("gke-${var.main_project_id}", 0, 28)
   project    = var.main_project_id
 }
 
@@ -82,7 +82,7 @@ resource "google_gke_hub_feature_membership" "configmanagement_feature_member" {
       enabled       = true
       git {
         sync_repo   = var.source_repo
-        secret_type = "none"
+        secret_type = var.config_sync_secret_type
         sync_branch = var.source_branch
         policy_dir  = var.source_dir
       }
@@ -147,9 +147,8 @@ module "cluster" {
     }
   }
   default_nodepool = {
-    initial_node_count       = var.gke_initial_node_per_zone
-    remove_pool              = false
-    remove_default_node_pool = true
+    initial_node_count = var.gke_initial_node_per_zone
+    remove_pool        = coalesce(var.remove_default_node_pool, true)
   }
   node_config = {
     # CIS Compliance Benchmark 4.3
@@ -220,7 +219,8 @@ module "compute-vm" {
   zone          = "us-east4-a"
   instance_type = "e2-medium"
   service_account = {
-    scopes = ["cloud-platform"]
+    auto_create = true
+    scopes      = ["cloud-platform"]
   }
   snapshot_schedules = {
     daily-backup = {

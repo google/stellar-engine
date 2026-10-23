@@ -58,6 +58,12 @@ variable "instance_name" {
   type        = string
 }
 
+variable "kms_key_name" {
+  description = "Cloud KMS key name used for Cloud Spanner database CMEK encryption."
+  type        = string
+  default     = null
+}
+
 variable "main_project_id" {
   description = "Project to deploy Cloud Spanner instance."
   type        = string

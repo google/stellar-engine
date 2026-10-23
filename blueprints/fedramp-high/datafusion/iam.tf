@@ -14,19 +14,14 @@
 
 resource "google_service_account" "datafusion_sa" {
   project      = var.main_project_id
-  account_id   = "df-${var.main_project_id}"
+  account_id   = substr("df-${var.main_project_id}", 0, 28)
   display_name = "Dataproc Worker Service Account"
 }
 
-resource "google_project_iam_member" "datafusion_agent_network_user_main_project" {
-  project    = var.main_project_id
-  role       = "roles/compute.networkUser"
-  member     = "serviceAccount:${google_project_service_identity.datafusion_agent.email}"
-  depends_on = [time_sleep.datafusion_service_propagation]
-}
-
-resource "google_project_iam_member" "datafusion_agent_network_user_network_project" {
+resource "google_compute_subnetwork_iam_member" "datafusion_agent_network_user_network_project" {
   project    = var.network_project_id
+  region     = var.region
+  subnetwork = data.google_compute_subnetwork.subnetwork.name
   role       = "roles/compute.networkUser"
   member     = "serviceAccount:${google_project_service_identity.datafusion_agent.email}"
   depends_on = [time_sleep.datafusion_service_propagation]

@@ -55,11 +55,12 @@ Go to Firestore in the GCP Console. Select Firestore Studio to "Start Collection
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [firestore_database_name](variables.tf#L25) | The name of the Firestore database instance. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L36) | The main project ID of the Google Cloud project. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L41) | The location ID where the Firestore database will be created. | <code>string</code> | ✓ |  |
+| [firestore_database_name](variables.tf#L35) | The name of the Firestore database instance. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L46) | The main project ID of the Google Cloud project. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L51) | The location ID where the Firestore database will be created. | <code>string</code> | ✓ |  |
 | [backup_schedule](variables.tf#L15) | The Backup schedule - select daily or weekly in your tfvars. | <code title="object&#40;&#123;&#10;  retention         &#61; string&#10;  daily_recurrence  &#61; optional&#40;bool, false&#41;&#10;  weekly_recurrence &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [kms_key_name](variables.tf#L30) | The KMS key name used to encrypt the Firestore database. | <code>string</code> |  | <code>null</code> |
+| [deletion_policy](variables.tf#L25) | Deletion policy for the Firestore database (ABANDON or DELETE). | <code>string</code> |  | <code>&#34;ABANDON&#34;</code> |
+| [kms_key_name](variables.tf#L40) | The KMS key name used to encrypt the Firestore database. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs
 

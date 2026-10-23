@@ -31,10 +31,10 @@ Enable the following APIs in your GCP project by running the enable-apis.sh scri
 
 | name | description | sensitive |
 |---|---|:---:|
-| [artifact_registry_iam_member](outputs.tf#L15) | IAM member assigned to roles/artifactregistry.createOnPushWriter. |  |
+| [artifact_registry_iam_member](outputs.tf#L15) | IAM member assigned to Artifact Registry repository permissions. |  |
 | [bucket](outputs.tf#L20) | Bucket holding function source code. |  |
 | [cloud_build_iam_member](outputs.tf#L25) | IAM member assigned to roles/cloudbuild.builds.builder. |  |
 | [kms_crypto_key_iam_binding_members](outputs.tf#L30) | IAM members assigned to roles/cloudkms.cryptoKeyEncrypterDecrypter for the specified KMS key. |  |
 | [logging_iam_member](outputs.tf#L35) | IAM member assigned to roles/logging.logWriter. |  |
-| [storage_object_admin_iam_member](outputs.tf#L40) | IAM member assigned to roles/storage.objectAdmin. |  |
+| [storage_object_admin_iam_member](outputs.tf#L40) | IAM member assigned to Cloud Storage bucket objectUser permissions. |  |
 <!-- END TFDOC -->

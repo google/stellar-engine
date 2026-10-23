@@ -43,16 +43,18 @@ Use GCP console to verify if the resources have been created.
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [composer_env_name](variables.tf#L16) | Name of the Composer environment. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L27) | Main project ID. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L32) | Full path to VPC. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L37) | The ID of the landing zone project where the VPC is. | <code>string</code> | ✓ |  |
-| [subnetwork_name](variables.tf#L66) | The name of the existing subnetwork to use within the specified VPC network and region. | <code>string</code> | ✓ |  |
-| [composer_version](variables.tf#L21) | Cloud composer version. | <code>string</code> |  | <code>&#34;composer-3-airflow-2&#34;</code> |
-| [region](variables.tf#L42) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [sa_account_id](variables.tf#L48) | Service account id. | <code>string</code> |  | <code>&#34;composer-env-account&#34;</code> |
-| [sa_display_name](variables.tf#L54) | Service account display name. | <code>string</code> |  | <code>&#34;Service Account for Composer Environment&#34;</code> |
-| [service_agent_version](variables.tf#L60) | Composer Service Agent version. This must correspond to Composer version. | <code>string</code> |  | <code>&#34;roles&#47;composer.ServiceAgentV3Ext&#34;</code> |
+| [composer_env_name](variables.tf#L15) | Name of the Composer environment. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L32) | Main project ID. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L37) | Full path to VPC. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L42) | The ID of the landing zone project where the VPC is. | <code>string</code> | ✓ |  |
+| [subnetwork_name](variables.tf#L71) | The name of the existing subnetwork to use within the specified VPC network and region. | <code>string</code> | ✓ |  |
+| [composer_version](variables.tf#L20) | Cloud composer version. | <code>string</code> |  | <code>&#34;composer-3-airflow-2&#34;</code> |
+| [kms_key_name](variables.tf#L26) | The Cloud KMS key resource name used for CMEK encryption of the Composer environment. | <code>string</code> |  | <code>null</code> |
+| [region](variables.tf#L47) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [sa_account_id](variables.tf#L53) | Service account id. | <code>string</code> |  | <code>&#34;composer-env-account&#34;</code> |
+| [sa_display_name](variables.tf#L59) | Service account display name. | <code>string</code> |  | <code>&#34;Service Account for Composer Environment&#34;</code> |
+| [service_agent_version](variables.tf#L65) | Composer Service Agent version. This must correspond to Composer version. | <code>string</code> |  | <code>&#34;roles&#47;composer.ServiceAgentV3Ext&#34;</code> |
+| [web_server_allowed_ip_ranges](variables.tf#L76) | Allowed IP ranges for the Cloud Composer Airflow web server. | <code title="list&#40;object&#40;&#123;&#10;  value       &#61; string&#10;  description &#61; optional&#40;string&#41;&#10;&#125;&#41;&#41;">list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#91;&#93;</code> |
 
 ## Outputs
 

@@ -64,6 +64,9 @@ module "input-bucket" {
   force_destroy               = true
   uniform_bucket_level_access = true
   encryption_key              = var.kms_key_name
+  iam = {
+    "roles/storage.objectViewer" = [google_service_account.workflow_sa.member]
+  }
 }
 
 moved {
@@ -80,6 +83,10 @@ module "output-bucket" {
   force_destroy               = true
   uniform_bucket_level_access = true
   encryption_key              = var.kms_key_name
+  iam = {
+    "roles/storage.objectViewer"  = [google_service_account.workflow_sa.member]
+    "roles/storage.objectCreator" = [google_service_account.workflow_sa.member]
+  }
 }
 
 module "workflows" {
@@ -99,16 +106,10 @@ module "workflows" {
     processor_id  = google_document_ai_processor.processor.id
     location      = var.region
   }
-  iam = {
-    "roles/workflows.invoker"                 = [google_service_account.workflow_sa.member],
-    "roles/logging.logWriter"                 = [google_service_account.workflow_sa.member],
-    "roles/serviceusage.serviceUsageConsumer" = [google_service_account.workflow_sa.member],
-    "roles/documentai.apiUser"                = [google_service_account.workflow_sa.member],
-    "roles/storage.objectViewer"              = [google_service_account.workflow_sa.member],
-    "roles/storage.objectCreator"             = [google_service_account.workflow_sa.member],
-  }
   depends_on = [
     google_project_service.documentai,
     google_service_account.workflow_sa,
+    google_project_iam_member.workflow_sa_roles,
+    google_kms_crypto_key_iam_member.service_agents_kms,
   ]
 }

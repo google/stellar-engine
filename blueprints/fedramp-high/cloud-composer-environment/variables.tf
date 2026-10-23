@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 variable "composer_env_name" {
   description = "Name of the Composer environment."
   type        = string
@@ -22,6 +21,12 @@ variable "composer_version" {
   description = "Cloud composer version."
   type        = string
   default     = "composer-3-airflow-2"
+}
+
+variable "kms_key_name" {
+  description = "The Cloud KMS key resource name used for CMEK encryption of the Composer environment."
+  type        = string
+  default     = null
 }
 
 variable "main_project_id" {
@@ -66,4 +71,13 @@ variable "service_agent_version" {
 variable "subnetwork_name" {
   description = "The name of the existing subnetwork to use within the specified VPC network and region."
   type        = string
+}
+
+variable "web_server_allowed_ip_ranges" {
+  description = "Allowed IP ranges for the Cloud Composer Airflow web server."
+  type = list(object({
+    value       = string
+    description = optional(string)
+  }))
+  default = []
 }

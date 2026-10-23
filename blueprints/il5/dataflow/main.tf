@@ -53,7 +53,8 @@ resource "google_project_service" "dataflow_api" {
 }
 
 resource "google_service_account" "dataflow_worker" {
-  account_id   = var.main_project_id
+  project      = var.main_project_id
+  account_id   = substr(var.main_project_id, 0, 28)
   display_name = "Dataflow Worker Storage Account"
 }
 
@@ -137,7 +138,7 @@ resource "google_dataflow_job" "job" {
 
   parameters = var.parameters
 
-  network    = var.network_project_id
+  network    = var.network_name
   subnetwork = data.google_compute_subnetwork.subnetwork.self_link
 
   ip_configuration = "WORKER_IP_PRIVATE" # Required for IL5
