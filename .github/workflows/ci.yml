@@ -46,6 +46,9 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+          limit-severities-for-sarif: true
+          trivyignores: '.trivyignore.yaml'
+          skip-dirs: 'modules/net-lb-int/recipe-ilb-next-hop,modules/net-lb-app-int-cross-region/recipe-cross-reg-ilb-mig,modules/net-lb-app-int-cross-region/recipe-cross-reg-ilb-psc'
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@c4dd10e44af883a891fe31ced449bcb4a6728b9b
