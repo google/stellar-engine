@@ -40,6 +40,7 @@ output "gcr_domain" {
 output "iap_config" {
   value       = google_app_engine_application.app.iap
   description = "IAP configuration."
+  sensitive   = true
 }
 
 output "id" {

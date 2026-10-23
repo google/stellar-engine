@@ -34,6 +34,20 @@ resource "google_cloud_scheduler_job" "job" {
       uri         = var.http_target.uri
       body        = var.http_target.body
       headers     = var.http_target.headers
+      dynamic "oauth_token" {
+        for_each = try(var.http_target.oauth_token, null) != null ? [var.http_target.oauth_token] : []
+        content {
+          service_account_email = oauth_token.value.service_account_email
+          scope                 = oauth_token.value.scope
+        }
+      }
+      dynamic "oidc_token" {
+        for_each = try(var.http_target.oidc_token, null) != null ? [var.http_target.oidc_token] : []
+        content {
+          service_account_email = oidc_token.value.service_account_email
+          audience              = oidc_token.value.audience
+        }
+      }
     }
   }
 

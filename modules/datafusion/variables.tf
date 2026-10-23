@@ -18,6 +18,12 @@
 #                                DtaFusion variables                          #
 ###############################################################################
 
+variable "dataproc_service_account" {
+  description = "Service account for DataProc connection."
+  type        = string
+  default     = null
+}
+
 variable "description" {
   description = "DataFuzion instance description."
   type        = string
@@ -52,6 +58,12 @@ variable "ip_allocation_create" {
   description = "Create Ip range for datafusion instance."
   type        = bool
   default     = true
+}
+
+variable "kms_key" {
+  description = "Full path to KMS key."
+  type        = string
+  default     = null
 }
 
 variable "labels" {

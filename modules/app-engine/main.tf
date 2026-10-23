@@ -21,9 +21,13 @@ resource "google_app_engine_application" "app" {
   database_type  = var.database_type
   serving_status = var.serving_status
 
-  iap {
-    oauth2_client_id     = var.iap.oauth2_client_id
-    oauth2_client_secret = var.iap.oauth2_client_secret
+  dynamic "iap" {
+    for_each = var.iap != null ? [var.iap] : []
+    content {
+      enabled              = iap.value.enabled
+      oauth2_client_id     = iap.value.oauth2_client_id
+      oauth2_client_secret = iap.value.oauth2_client_secret
+    }
   }
 
   feature_settings {

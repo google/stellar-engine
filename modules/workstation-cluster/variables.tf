@@ -59,7 +59,7 @@ variable "network_config" {
 variable "private_cluster_config" {
   description = "Private cluster config."
   type = object({
-    enable_private_endpoint = optional(bool, false)
+    enable_private_endpoint = optional(bool, true)
     allowed_projects        = optional(list(string))
   })
   nullable = false
@@ -96,12 +96,12 @@ variable "workstation_configs" {
       pool_size                    = optional(number)
       boot_disk_size_gb            = optional(number)
       tags                         = optional(list(string))
-      disable_public_ip_addresses  = optional(bool, false)
+      disable_public_ip_addresses  = optional(bool, true)
       enable_nested_virtualization = optional(bool, false)
       shielded_instance_config = optional(object({
-        enable_secure_boot          = optional(bool, false)
-        enable_vtpm                 = optional(bool, false)
-        enable_integrity_monitoring = optional(bool, false)
+        enable_secure_boot          = optional(bool, true)
+        enable_vtpm                 = optional(bool, true)
+        enable_integrity_monitoring = optional(bool, true)
       }))
       enable_confidential_compute = optional(bool, false)
       accelerators = optional(list(object({
@@ -113,10 +113,20 @@ variable "workstation_configs" {
     iam_bindings = optional(map(object({
       role    = string
       members = list(string)
+      condition = optional(object({
+        expression  = string
+        title       = string
+        description = optional(string)
+      }))
     })), {})
     iam_bindings_additive = optional(map(object({
       role   = string
       member = string
+      condition = optional(object({
+        expression  = string
+        title       = string
+        description = optional(string)
+      }))
     })), {})
     labels           = optional(map(string))
     max_workstations = optional(number)
@@ -143,10 +153,20 @@ variable "workstation_configs" {
       iam_bindings = optional(map(object({
         role    = string
         members = list(string)
+        condition = optional(object({
+          expression  = string
+          title       = string
+          description = optional(string)
+        }))
       })), {})
       iam_bindings_additive = optional(map(object({
         role   = string
         member = string
+        condition = optional(object({
+          expression  = string
+          title       = string
+          description = optional(string)
+        }))
       })), {})
       labels = optional(map(string))
     })), {})

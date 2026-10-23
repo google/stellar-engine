@@ -56,10 +56,20 @@ variable "environments" {
     iam_bindings = optional(map(object({
       role    = string
       members = list(string)
+      condition = optional(object({
+        expression  = string
+        title       = string
+        description = optional(string)
+      }))
     })), {})
     iam_bindings_additive = optional(map(object({
       role   = string
       member = string
+      condition = optional(object({
+        expression  = string
+        title       = string
+        description = optional(string)
+      }))
     })), {})
     node_config = optional(object({
       min_node_count = optional(number)

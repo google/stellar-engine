@@ -119,3 +119,10 @@ resource "google_service_account" "trigger_service_account" {
   account_id   = "tf-cr-trigger-${var.name}"
   display_name = "Terraform trigger for Cloud Run ${var.name}."
 }
+
+resource "google_project_iam_member" "trigger_event_receiver" {
+  count   = local.trigger_sa_create ? 1 : 0
+  project = var.project_id
+  role    = "roles/eventarc.eventReceiver"
+  member  = "serviceAccount:${local.trigger_sa_email}"
+}

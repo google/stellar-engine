@@ -439,6 +439,29 @@ resource "google_alloydb_instance" "primary_read_pools" {
     cpu_count = each.value.cpu_count
   }
 
+  dynamic "client_connection_config" {
+    for_each = var.client_connection_config != null ? [""] : []
+    content {
+      require_connectors = var.client_connection_config.require_connectors
+      dynamic "ssl_config" {
+        for_each = var.client_connection_config.ssl_config != null ? [""] : []
+        content {
+          ssl_mode = var.client_connection_config.ssl_config.ssl_mode
+        }
+      }
+    }
+  }
+
+  dynamic "query_insights_config" {
+    for_each = var.query_insights_config != null ? [""] : []
+    content {
+      query_string_length     = var.query_insights_config.query_string_length
+      record_application_tags = var.query_insights_config.record_application_tags
+      record_client_address   = var.query_insights_config.record_client_address
+      query_plans_per_minute  = var.query_insights_config.query_plans_per_minute
+    }
+  }
+
   depends_on = [google_alloydb_instance.primary]
 }
 
@@ -462,6 +485,29 @@ resource "google_alloydb_instance" "secondary_read_pools" {
 
   machine_config {
     cpu_count = each.value.cpu_count
+  }
+
+  dynamic "client_connection_config" {
+    for_each = var.client_connection_config != null ? [""] : []
+    content {
+      require_connectors = var.client_connection_config.require_connectors
+      dynamic "ssl_config" {
+        for_each = var.client_connection_config.ssl_config != null ? [""] : []
+        content {
+          ssl_mode = var.client_connection_config.ssl_config.ssl_mode
+        }
+      }
+    }
+  }
+
+  dynamic "query_insights_config" {
+    for_each = var.query_insights_config != null ? [""] : []
+    content {
+      query_string_length     = var.query_insights_config.query_string_length
+      record_application_tags = var.query_insights_config.record_application_tags
+      record_client_address   = var.query_insights_config.record_client_address
+      query_plans_per_minute  = var.query_insights_config.query_plans_per_minute
+    }
   }
 
   # This depends on the secondary instance, which also uses 'count'

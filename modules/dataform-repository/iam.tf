@@ -17,6 +17,8 @@
 resource "google_dataform_repository_iam_binding" "authoritative" {
   provider   = google-beta
   for_each   = var.iam
+  project    = var.project_id
+  region     = var.region
   role       = each.key
   members    = each.value
   repository = google_dataform_repository.default.name
@@ -25,6 +27,8 @@ resource "google_dataform_repository_iam_binding" "authoritative" {
 resource "google_dataform_repository_iam_binding" "bindings" {
   provider   = google-beta
   for_each   = var.iam_bindings
+  project    = var.project_id
+  region     = var.region
   role       = each.value.role
   members    = each.value.members
   repository = google_dataform_repository.default.name
@@ -42,6 +46,8 @@ resource "google_dataform_repository_iam_binding" "bindings" {
 resource "google_dataform_repository_iam_member" "bindings" {
   provider   = google-beta
   for_each   = var.iam_bindings_additive
+  project    = var.project_id
+  region     = var.region
   role       = each.value.role
   member     = each.value.member
   repository = google_dataform_repository.default.name

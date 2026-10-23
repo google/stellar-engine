@@ -22,16 +22,11 @@ locals {
       k if try(index(v, r), null) != null
     ]
   }
-  _exchange_iam_bindings = {
-    for key, iam_bindings in var.iam_bindings :
-    iam_bindings.role => iam_bindings.members
-  }
   exchange_iam = {
-    for role in distinct(concat(keys(var.iam), keys(local._exchange_iam_principals), keys(local._exchange_iam_bindings))) :
+    for role in distinct(concat(keys(var.iam), keys(local._exchange_iam_principals))) :
     role => concat(
       try(var.iam[role], []),
       try(local._exchange_iam_principals[role], []),
-      try(local._exchange_iam_bindings[role], []),
     )
   }
   listing_iam = flatten([
@@ -55,6 +50,23 @@ resource "google_bigquery_analytics_hub_data_exchange_iam_binding" "exchange_iam
   members          = each.value
 }
 
+resource "google_bigquery_analytics_hub_data_exchange_iam_binding" "bindings" {
+  for_each         = var.iam_bindings
+  project          = google_bigquery_analytics_hub_data_exchange.data_exchange.project
+  location         = google_bigquery_analytics_hub_data_exchange.data_exchange.location
+  data_exchange_id = google_bigquery_analytics_hub_data_exchange.data_exchange.data_exchange_id
+  role             = each.value.role
+  members          = each.value.members
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
+}
+
 resource "google_bigquery_analytics_hub_data_exchange_iam_member" "exchange_iam_members" {
   for_each         = var.iam_bindings_additive
   project          = google_bigquery_analytics_hub_data_exchange.data_exchange.project
@@ -62,6 +74,14 @@ resource "google_bigquery_analytics_hub_data_exchange_iam_member" "exchange_iam_
   data_exchange_id = google_bigquery_analytics_hub_data_exchange.data_exchange.data_exchange_id
   role             = each.value.role
   member           = each.value.member
+  dynamic "condition" {
+    for_each = each.value.condition == null ? [] : [""]
+    content {
+      expression  = each.value.condition.expression
+      title       = each.value.condition.title
+      description = each.value.condition.description
+    }
+  }
 }
 
 resource "google_bigquery_analytics_hub_listing_iam_binding" "listing_iam_bindings" {

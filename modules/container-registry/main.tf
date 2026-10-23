@@ -21,7 +21,7 @@ resource "google_container_registry" "registry" {
 
 resource "google_storage_bucket_iam_binding" "bindings" {
   for_each = var.iam
-  bucket   = google_container_registry.registry.id
+  bucket   = google_container_registry.registry.bucket_self_link
   role     = each.key
   members  = each.value
 }

@@ -626,7 +626,7 @@ resource "google_pubsub_topic" "notifications" {
     try(var.enable_features.upgrade_notifications.topic_id, null) == null ? 1 : 0
   )
   project = var.project_id
-  name    = "gke-pubsub-notifications"
+  name    = "${var.name}-pubsub-notifications"
   labels = {
     content = "gke-notifications"
   }

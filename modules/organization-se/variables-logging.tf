@@ -35,8 +35,8 @@ variable "logging_exclusions" {
 variable "logging_settings" {
   description = "Default settings for logging resources."
   type = object({
-    # TODO: add support for CMEK
     disable_default_sink = optional(bool)
+    kms_key_name         = optional(string)
     storage_location     = optional(string)
   })
   default = null
@@ -61,9 +61,9 @@ variable "logging_sinks" {
   validation {
     condition = alltrue([
       for k, v in var.logging_sinks :
-      !v.intercept_children || (v.include_children && v.type == "project")
+      !v.intercept_children || (v.include_children && v.type == "logging")
     ])
-    error_message = "'type' must be set to 'project' if 'intercept_children' is 'true'."
+    error_message = "'type' must be set to 'logging' if 'intercept_children' is 'true'."
   }
   validation {
     condition = alltrue([
