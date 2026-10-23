@@ -34,7 +34,7 @@ Evaluate diffs and static analysis findings from a skeptical maintainer perspect
 
 ### 3.1 Module interfaces
 
-* Keep Terraform and provider version constraints aligned with each directory's `versions.tf` file and the repository baseline with `required_version = ">= 1.10.2"` and provider `version = ">= 6.21.0, < 7.0.0"`.
+* Keep Terraform and provider version constraints aligned with each directory's `versions.tf` file and the repository baseline with `required_version = ">= 1.12.2"` and provider `version = ">= 8.6.0, < 9.0.0"`.
 * Never commit OpenTofu `versions.tofu` files or edit provider version constraints in individual modules out of sync with the repository baseline.
 * Declare `provider = google-beta` explicitly on resources and attributes that require the beta provider under the active `versions.tf` constraints, including `google_cloud_run_v2_worker_pool`, `google_kms_autokey_config`, `google_folder_service_identity`, and `google_spanner_instance`.
 * Prefer compact `object({...})` variables with `optional()` attributes over proliferating scalar variables, omitting explicit defaults on `optional()` when the underlying provider default should apply.

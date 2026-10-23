@@ -39,12 +39,11 @@ If this is a completely new org and you need to create an access policy, you may
 
 ### 4. Oauth2 Consent Screen
 
-Configure an Oauth2 Consent screen for your project here https://console.cloud.google.com/apis/credentials/consent
+IAP uses a Google-managed OAuth client by default, so the blueprint needs no OAuth configuration for users in your organization.
 
-It doesn't matter if it's external or internal, so do whatever meets your system requirements. Internal is better for testing.
-For test setup, just use all the defaults and don't assign any extra scopes.
-
-Once it's created, run `gcloud alpha iap oauth-brands list` to look up the number and add the value to `.tfvars`
+- To admit users outside your organization, configure the OAuth consent screen at https://console.cloud.google.com/apis/credentials/consent, then create an OAuth client in the console.
+- Pass that client to the blueprint through the `iap_oauth2_client` variable, with its `id` and `secret` attributes.
+- Terraform can no longer create OAuth brands or clients, because Google shut down the IAP OAuth Admin API that the `google_iap_brand` and `google_iap_client` resources used.
 
 ### 5. Proxy Only Subnet
 
@@ -93,18 +92,18 @@ Run `terraform apply -target google_org_policy_policy.allow_external_lb` after c
 | [access_policy_number](variables.tf#L17) | There can only be one Access Policy per GCP Org. Use gcloud access-context-manager policies list --organization <org-number> to list it. | <code>number</code> | ✓ |  |
 | [default_backend](variables.tf#L22) | The default backend for traffic at the load-balancer. Must match the key of one of the backends in the data/apps.yaml file. | <code>string</code> | ✓ |  |
 | [domain](variables.tf#L27) | FQDN for the load-balancer hosted apps, where the subdomain will be prepended to. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L50) | The GCP Project name. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L62) | Host network for IDS and GCE instance deployment. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L67) | The Landing Project ID. | <code>string</code> | ✓ |  |
-| [oauth_brand_number](variables.tf#L72) | External Oauth2 consent screens can only be configured via the interactive console. After configuring it, use `gcloud alpha iap oauth-brands list` to lookup the brand id number. | <code>number</code> | ✓ |  |
-| [region](variables.tf#L89) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
-| [ids_name](variables.tf#L32) | Name of IDS. | <code>string</code> |  | <code>&#34;cnap-ids&#34;</code> |
-| [ids_private_ip_prefix_length](variables.tf#L38) | The length of the IDS Private IP Prefix. | <code>number</code> |  | <code>24</code> |
-| [machine_type](variables.tf#L44) | The type of machine to use. | <code>string</code> |  | <code>&#34;n2d-highcpu-2&#34;</code> |
-| [net_project](variables.tf#L55) | GCP Project to the VPC belongs to. (Defaults to the variable project if not defined). | <code>string</code> |  | <code>null</code> |
-| [packet_mirroring_policy_name](variables.tf#L77) | Name of packet mirror policy. | <code>string</code> |  | <code>&#34;cnap-packet-mirror&#34;</code> |
-| [prefix](variables.tf#L83) | Prefix for naming resources in this blueprint. | <code>string</code> |  | <code>&#34;cnap&#34;</code> |
-| [severity](variables.tf#L94) | Display name of the service account to create. | <code>string</code> |  | <code>&#34;MEDIUM&#34;</code> |
-| [subnetwork_list](variables.tf#L100) | Subnet list to monitor with Cloud IDS. | <code>list&#40;any&#41;</code> |  | <code>null</code> |
-| [subnetwork_name](variables.tf#L106) | Subnet for deploying the instances. | <code>string</code> |  | <code>&#34;default-us-east4&#34;</code> |
+| [main_project_id](variables.tf#L60) | The GCP Project name. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L72) | Host network for IDS and GCE instance deployment. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L77) | The Landing Project ID. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L94) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
+| [iap_oauth2_client](variables.tf#L32) | Optional custom OAuth client for IAP, created in the console. IAP uses a Google-managed OAuth client when this is null, which only admits users of the same organization. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [ids_name](variables.tf#L42) | Name of IDS. | <code>string</code> |  | <code>&#34;cnap-ids&#34;</code> |
+| [ids_private_ip_prefix_length](variables.tf#L48) | The length of the IDS Private IP Prefix. | <code>number</code> |  | <code>24</code> |
+| [machine_type](variables.tf#L54) | The type of machine to use. | <code>string</code> |  | <code>&#34;n2d-highcpu-2&#34;</code> |
+| [net_project](variables.tf#L65) | GCP Project to the VPC belongs to. (Defaults to the variable project if not defined). | <code>string</code> |  | <code>null</code> |
+| [packet_mirroring_policy_name](variables.tf#L82) | Name of packet mirror policy. | <code>string</code> |  | <code>&#34;cnap-packet-mirror&#34;</code> |
+| [prefix](variables.tf#L88) | Prefix for naming resources in this blueprint. | <code>string</code> |  | <code>&#34;cnap&#34;</code> |
+| [severity](variables.tf#L99) | Display name of the service account to create. | <code>string</code> |  | <code>&#34;MEDIUM&#34;</code> |
+| [subnetwork_list](variables.tf#L105) | Subnet list to monitor with Cloud IDS. | <code>list&#40;any&#41;</code> |  | <code>null</code> |
+| [subnetwork_name](variables.tf#L111) | Subnet for deploying the instances. | <code>string</code> |  | <code>&#34;default-us-east4&#34;</code> |
 <!-- END TFDOC -->

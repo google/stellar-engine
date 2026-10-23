@@ -1,5 +1,5 @@
 /**
- * Copyright 2024 Google LLC
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,10 +41,37 @@ variable "cleanup_policy_dry_run" {
   default     = null
 }
 
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    artifact_registries = optional(map(string), {})
+    condition_vars      = optional(map(map(string)), {})
+    custom_roles        = optional(map(string), {})
+    iam_principals      = optional(map(string), {})
+    kms_keys            = optional(map(string), {})
+    locations           = optional(map(string), {})
+    project_ids         = optional(map(string), {})
+    secrets             = optional(map(string), {})
+    tag_values          = optional(map(string), {})
+    tag_vars = optional(object({
+      projects     = optional(map(map(string)), {})
+      organization = optional(map(string), {})
+    }), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "description" {
   description = "An optional description for the repository."
   type        = string
   default     = "Terraform-managed registry"
+}
+
+variable "enable_vulnerability_scanning" {
+  description = "Whether vulnerability scanning should be enabled in the repository."
+  type        = bool
+  default     = null
 }
 
 variable "encryption_key" {
@@ -96,6 +123,14 @@ variable "format" {
       standard = optional(bool)
     }))
     go = optional(object({
+      remote = optional(object({
+        common_repository           = optional(string)
+        disable_upstream_validation = optional(bool)
+        upstream_credentials = optional(object({
+          username                = string
+          password_secret_version = string
+        }))
+      }))
       standard = optional(bool)
     }))
     googet = optional(object({
@@ -104,6 +139,7 @@ variable "format" {
     maven = optional(object({
       remote = optional(object({
         public_repository = optional(string)
+        common_repository = optional(string)
         custom_repository = optional(string)
 
         disable_upstream_validation = optional(bool)
@@ -124,6 +160,7 @@ variable "format" {
     npm = optional(object({
       remote = optional(object({
         public_repository = optional(string)
+        common_repository = optional(string)
         custom_repository = optional(string)
 
         disable_upstream_validation = optional(bool)
@@ -141,6 +178,7 @@ variable "format" {
     python = optional(object({
       remote = optional(object({
         public_repository = optional(string)
+        common_repository = optional(string)
         custom_repository = optional(string)
 
         disable_upstream_validation = optional(bool)
@@ -216,4 +254,20 @@ variable "name" {
 variable "project_id" {
   description = "Registry project id."
   type        = string
+}
+
+variable "tag_bindings" {
+  description = "Tag bindings for this repository, in key => tag value id format."
+  type        = map(string)
+  nullable    = false
+  default     = {}
+}
+
+variable "universe" {
+  description = "GCP universe where to deploy the project. The prefix will be prepended to the project id."
+  type = object({
+    package_domain = string
+    prefix         = string
+  })
+  default = null
 }

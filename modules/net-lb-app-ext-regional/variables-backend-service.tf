@@ -19,16 +19,24 @@
 variable "backend_service_configs" {
   description = "Backend service level configuration."
   type = map(object({
+    name                            = optional(string)
+    description                     = optional(string, "Terraform managed.")
     affinity_cookie_ttl_sec         = optional(number)
     connection_draining_timeout_sec = optional(number)
     enable_cdn                      = optional(bool)
     health_checks                   = optional(list(string), ["default"])
-    log_sample_rate                 = optional(number)
-    port_name                       = optional(string)
-    project_id                      = optional(string)
-    protocol                        = optional(string)
-    security_policy                 = optional(string)
-    session_affinity                = optional(string)
+    log_config = optional(object({
+      enable          = optional(bool)
+      sample_rate     = optional(number)
+      optional_mode   = optional(string)
+      optional_fields = optional(list(string))
+    }))
+    port_name          = optional(string)
+    project_id         = optional(string)
+    protocol           = optional(string)
+    security_policy    = optional(string)
+    session_affinity   = optional(string)
+    locality_lb_policy = optional(string)
     strong_session_affinity_cookie = optional(object({
       name = optional(string)
       path = optional(string, "/")
@@ -39,12 +47,10 @@ variable "backend_service_configs" {
     }))
     timeout_sec = optional(number)
     backends = list(object({
-      # group renamed to backend
-      backend         = string
+      group           = string
       balancing_mode  = optional(string, "UTILIZATION")
       capacity_scaler = optional(number, 1)
       description     = optional(string, "Terraform managed.")
-      failover        = optional(bool, false)
       max_connections = optional(object({
         per_endpoint = optional(number)
         per_group    = optional(number)
@@ -102,8 +108,8 @@ variable "backend_service_configs" {
       }))
     }))
     iap_config = optional(object({
-      oauth2_client_id            = string
-      oauth2_client_secret        = string
+      oauth2_client_id            = optional(string)
+      oauth2_client_secret        = optional(string)
       oauth2_client_secret_sha256 = optional(string)
     }))
     outlier_detection = optional(object({
@@ -125,6 +131,11 @@ variable "backend_service_configs" {
         nanos   = optional(number)
       }))
     }))
+    tls_settings = optional(object({
+      authentication_config = optional(string)
+      sni                   = optional(string)
+      subject_alt_names     = optional(list(string))
+    }))
   }))
   default  = {}
   nullable = false
@@ -133,9 +144,8 @@ variable "backend_service_configs" {
       for backend_service in values(var.backend_service_configs) : contains(
         [
           "NONE", "CLIENT_IP", "CLIENT_IP_NO_DESTINATION",
-          "CLIENT_IP_PORT_PROTO", "CLIENT_IP_PROTO",
-          "GENERATED_COOKIE", "HTTP_COOKIE", "HEADER_FIELD",
-          "STRONG_COOKIE_AFFINITY"
+          "CLIENT_IP_PORT_PROTO", "CLIENT_IP_PROTO", "GENERATED_COOKIE",
+          "HEADER_FIELD", "HTTP_COOKIE", "STRONG_COOKIE_AFFINITY"
         ],
         coalesce(backend_service.session_affinity, "NONE")
       )
@@ -150,6 +160,18 @@ variable "backend_service_configs" {
       )
     ])
     error_message = "strong_session_affinity_cookie is required when session_affinity is STRONG_COOKIE_AFFINITY."
+  }
+  validation {
+    condition = alltrue([
+      for backend_service in values(var.backend_service_configs) : contains(
+        [
+          "ROUND_ROBIN", "LEAST_REQUEST", "RING_HASH",
+          "RANDOM", "ORIGINAL_DESTINATION", "MAGLEV"
+        ],
+        coalesce(backend_service.locality_lb_policy, "ROUND_ROBIN")
+      )
+    ])
+    error_message = "Invalid locality lb policy value."
   }
   validation {
     condition = alltrue(flatten([

@@ -21,24 +21,6 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Modules synced from upstream Cloud Foundation Fabric before Fabric adopted
-# the naming rule in v55.4.0. The upstream sync that #308 tracks brings the
-# upstream renames, moved blocks and tflint-ignore annotations, and removes
-# this list.
-UPSTREAM_PENDING_SYNC=(
-  modules/billing-account
-  modules/folder
-  modules/iam-service-account
-  modules/ncc-spoke-ra
-  modules/net-firewall-policy
-  modules/net-lb-int/recipe-ilb-next-hop
-  modules/net-vpc-firewall
-  modules/net-vpn-dynamic
-  modules/net-vpn-static
-  modules/organization
-  modules/project
-)
-
 # Only the naming rule is enforced for now, because the recommended preset
 # still reports existing findings. Label names are static, so tflint does not
 # need to evaluate module calls, which also avoids evaluation errors in
@@ -48,16 +30,6 @@ TFLINT_ARGS=(
   --only=terraform_naming_convention
   --call-module-type=none
 )
-
-is_pending_sync() {
-  local dir="$1" pending
-  for pending in "${UPSTREAM_PENDING_SYNC[@]}"; do
-    if [[ "${dir}" == "${pending}" || "${dir}" == "${pending}"/* ]]; then
-      return 0
-    fi
-  done
-  return 1
-}
 
 command -v tflint >/dev/null || {
   echo "tflint not found; install it from https://github.com/terraform-linters/tflint"
@@ -69,9 +41,6 @@ cd "${REPO_ROOT}"
 FAILED=0
 TOTAL=0
 while IFS= read -r dir; do
-  if is_pending_sync "${dir}"; then
-    continue
-  fi
   TOTAL=$((TOTAL + 1))
   if ! tflint --chdir="${dir}" "${TFLINT_ARGS[@]}" "$@"; then
     echo "tflint failed in ${dir}"

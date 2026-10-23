@@ -28,7 +28,7 @@ module "datafusion" {
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [accelerators](variables.tf#L20) | Accelerators. | <code title="object&#40;&#123;&#10;  accelerator_type &#61; optional&#40;string&#41;&#10;  state            &#61; optional&#40;string&#41;&#10;&#125;&#41;&#10;&#10;&#10;default &#61; null">object&#40;&#123;&#8230;default &#61; null</code> | ✓ |  |
+| [accelerators](variables.tf#L20) | Accelerators. | <code>object&#40;&#123;&#8230;default &#61; null</code> | ✓ |  |
 | [landing_project_id](variables.tf#L95) | Landing project ID. | <code>string</code> | ✓ |  |
 | [name](variables.tf#L100) | Name of the DataFusion instance. | <code>string</code> | ✓ |  |
 | [network](variables.tf#L105) | Name of the network in the project with which the tenant project will be peered for executing pipelines in the form of projects/{project-id}/global/networks/{network}. | <code>string</code> | ✓ |  |

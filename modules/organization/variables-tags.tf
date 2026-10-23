@@ -18,6 +18,8 @@ variable "network_tags" {
   description = "Network tags by key name. If `id` is provided, key creation is skipped. The `iam` attribute behaves like the similarly named one at module level."
   type = map(object({
     description = optional(string, "Managed by the Terraform organization module.")
+    id          = optional(string)
+    network     = string # project_id/vpc_name or "ALL" to toggle GCE_FIREWALL purpose
     iam         = optional(map(list(string)), {})
     iam_bindings = optional(map(object({
       members = list(string)
@@ -37,10 +39,9 @@ variable "network_tags" {
         description = optional(string)
       }))
     })), {})
-    id      = optional(string)
-    network = string # project_id/vpc_name
     values = optional(map(object({
       description = optional(string, "Managed by the Terraform organization module.")
+      id          = optional(string)
       iam         = optional(map(list(string)), {})
       iam_bindings = optional(map(object({
         members = list(string)
@@ -76,6 +77,13 @@ variable "network_tags" {
     )
     error_message = "Use an empty map instead of null as value."
   }
+  validation {
+    condition = alltrue([
+      for k, v in var.network_tags :
+      v.network == "ALL" || can(regex("^[a-z][a-z0-9-]{4,28}[a-z0-9]/[a-z](?:[-a-z0-9]*[a-z0-9])?$", v.network))
+    ])
+    error_message = "The network attribute must be 'ALL' or a valid VPC network URI (project_id/vpc_name)."
+  }
 }
 
 variable "tag_bindings" {
@@ -88,8 +96,9 @@ variable "tag_bindings" {
 variable "tags" {
   description = "Tags by key name. If `id` is provided, key or value creation is skipped. The `iam` attribute behaves like the similarly named one at module level."
   type = map(object({
-    description = optional(string, "Managed by the Terraform organization module.")
-    iam         = optional(map(list(string)), {})
+    allowed_values_regex = optional(string)
+    description          = optional(string, "Managed by the Terraform organization module.")
+    iam                  = optional(map(list(string)), {})
     iam_bindings = optional(map(object({
       members = list(string)
       role    = string
@@ -148,4 +157,23 @@ variable "tags" {
     )
     error_message = "Use an empty map instead of null as value."
   }
+  validation {
+    condition = alltrue([
+      for k, v in var.tags :
+      v.allowed_values_regex == null || (
+        length(v.values) == 0
+      )
+    ])
+    error_message = "If allowed_values_regex is set, values must not be set."
+  }
+}
+
+variable "tags_config" {
+  description = "Fine-grained control on tag resource and IAM creation."
+  type = object({
+    force_context_ids = optional(bool, false)
+    ignore_iam        = optional(bool, false)
+  })
+  nullable = false
+  default  = {}
 }

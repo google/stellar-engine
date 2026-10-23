@@ -15,9 +15,10 @@
  */
 
 locals {
+  _quota_factory_path = pathexpand(coalesce(var.factories_config.quotas, "-"))
   _quota_factory_data_raw = merge([
-    for f in try(fileset(var.factories_config.quotas, "*.yaml"), []) :
-    yamldecode(file("${var.factories_config.quotas}/${f}"))
+    for f in try(fileset(local._quota_factory_path, "*.yaml"), []) :
+    yamldecode(file("${local._quota_factory_path}/${f}"))
   ]...)
   # simulate applying defaults to data coming from yaml files
   _quota_factory_data = {
@@ -34,13 +35,21 @@ locals {
 }
 
 resource "google_cloud_quotas_quota_preference" "default" {
-  for_each      = local.quotas
-  parent        = "projects/${local.project.project_id}"
-  name          = each.key
-  service       = each.value.service
-  dimensions    = each.value.dimensions
-  quota_id      = each.value.quota_id
-  contact_email = each.value.contact_email
+  for_each   = local.quotas
+  parent     = "projects/${local.project.project_id}"
+  name       = each.key
+  service    = each.value.service
+  dimensions = each.value.dimensions
+  quota_id   = each.value.quota_id
+  contact_email = (
+    each.value.contact_email == null
+    ? null
+    : lookup(
+      local.ctx.email_addresses,
+      each.value.contact_email,
+      each.value.contact_email
+    )
+  )
   justification = each.value.justification
   quota_config {
     preferred_value = each.value.preferred_value

@@ -46,16 +46,13 @@ trap 'rm -rf "${TMP}"' EXIT
 
 # Builds a minimal repository that uses the real script and configuration.
 mkdir -p "${TMP}/tools" "${TMP}/fast/stage" "${TMP}/blueprints/bp" \
-  "${TMP}/modules/project" "${TMP}/modules/own"
+  "${TMP}/modules/own"
 cp "${REPO_ROOT}/tools/tflint.sh" "${TMP}/tools/"
 cp "${REPO_ROOT}/.tflint.hcl" "${TMP}/"
 printf 'resource "null_resource" "good_name" {}\n' >"${TMP}/fast/stage/main.tf"
 printf 'module "good-name" {\n  source = "../../modules/own"\n}\n' \
   >"${TMP}/blueprints/bp/main.tf"
 printf 'resource "null_resource" "own" {}\n' >"${TMP}/modules/own/main.tf"
-# modules/project is on the pending list, so its violation is skipped.
-printf 'resource "null_resource" "pending-sync" {}\n' \
-  >"${TMP}/modules/project/main.tf"
 
 run() {
   local status=0
@@ -64,8 +61,6 @@ run() {
 }
 
 assert_equals "passes when every label follows the convention" "0" "$(run)"
-assert_equals "skips the modules that wait for the upstream sync" "0" \
-  "$(grep -c 'modules/project' "${TMP}/out.txt" || true)"
 
 printf 'resource "null_resource" "bad-name" {}\n' >"${TMP}/fast/stage/bad.tf"
 assert_equals "fails on a resource label with a dash" "1" "$(run)"

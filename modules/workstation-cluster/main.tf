@@ -15,24 +15,43 @@
  */
 
 locals {
-  workstations = merge(flatten([for k1, v1 in var.workstation_configs :
-    { for k2, v2 in v1.workstations :
-      "${k1}-${k2}" => merge({
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    } if !endswith(k, "_vars")
+  }
+  ctx_p = "$"
+  workstation_configs = merge(
+    var.workstation_configs, local.f_workstation_configs
+  )
+  workstations = merge(flatten([
+    for k1, v1 in local.workstation_configs : {
+      for k2, v2 in v1.workstations : "${k1}-${k2}" => merge({
         workstation_config_id = k1
         workstation_id        = k2
-  }, v2) }])...)
+      }, v2)
+    }
+  ])...)
 }
 
 resource "google_workstations_workstation_cluster" "cluster" {
   provider               = google-beta
   workstation_cluster_id = var.id
-  project                = var.project_id
-  display_name           = var.display_name
-  network                = var.network_config.network
-  subnetwork             = var.network_config.subnetwork
-  location               = var.location
-  annotations            = var.annotations
-  labels                 = var.labels
+  project = lookup(
+    local.ctx.project_ids, var.project_id, var.project_id
+  )
+  display_name = var.display_name
+  location = lookup(
+    local.ctx.locations, var.location, var.location
+  )
+  network = lookup(
+    local.ctx.networks, var.network_config.network, var.network_config.network
+  )
+  subnetwork = lookup(
+    local.ctx.subnetworks, var.network_config.subnetwork, var.network_config.subnetwork
+  )
+  annotations = var.annotations
+  labels      = var.labels
   dynamic "private_cluster_config" {
     for_each = var.private_cluster_config == null ? [] : [""]
     content {
@@ -49,28 +68,38 @@ resource "google_workstations_workstation_cluster" "cluster" {
 }
 
 resource "google_workstations_workstation_config" "configs" {
-  for_each                = var.workstation_configs
+  for_each                = local.workstation_configs
   provider                = google-beta
   project                 = google_workstations_workstation_cluster.cluster.project
-  workstation_config_id   = each.key
-  workstation_cluster_id  = google_workstations_workstation_cluster.cluster.workstation_cluster_id
   location                = google_workstations_workstation_cluster.cluster.location
+  workstation_cluster_id  = google_workstations_workstation_cluster.cluster.workstation_cluster_id
+  workstation_config_id   = each.key
+  annotations             = each.value.annotations
+  display_name            = each.value.display_name
+  enable_audit_agent      = each.value.enable_audit_agent
+  labels                  = each.value.labels
   max_usable_workstations = each.value.max_workstations
+  replica_zones           = each.value.replica_zones
   idle_timeout = (
-    each.value.timeouts.idle == null ? null : "${each.value.timeouts.idle}s"
+    try(each.value.timeouts.idle, null) == null
+    ? null
+    : "${each.value.timeouts.idle}s"
   )
   running_timeout = (
-    each.value.timeouts.running == null ? null : "${each.value.timeouts.running}s"
+    try(each.value.timeouts.running, null) == null
+    ? null :
+    "${each.value.timeouts.running}s"
   )
-  replica_zones = each.value.replica_zones
-  annotations   = each.value.annotations
-  labels        = each.value.labels
   dynamic "host" {
     for_each = each.value.gce_instance == null ? [] : [""]
     content {
       gce_instance {
-        machine_type                 = each.value.gce_instance.machine_type
-        service_account              = each.value.gce_instance.service_account
+        machine_type = each.value.gce_instance.machine_type
+        service_account = each.value.gce_instance.service_account == null ? null : lookup(
+          local.ctx.iam_principals,
+          each.value.gce_instance.service_account,
+          each.value.gce_instance.service_account
+        )
         service_account_scopes       = each.value.gce_instance.service_account_scopes
         pool_size                    = each.value.gce_instance.pool_size
         boot_disk_size_gb            = each.value.gce_instance.boot_disk_size_gb
@@ -94,8 +123,25 @@ resource "google_workstations_workstation_config" "configs" {
         dynamic "accelerators" {
           for_each = each.value.gce_instance.accelerators
           content {
-            type  = accelerators.value.type
-            count = accelerators.value.count
+            type  = accelerators.key
+            count = accelerators.value
+          }
+        }
+        dynamic "boost_configs" {
+          for_each = each.value.gce_instance.boost_configs
+          content {
+            id                           = boost_configs.key
+            machine_type                 = boost_configs.value.machine_type
+            boot_disk_size_gb            = boost_configs.value.boot_disk_size_gb
+            enable_nested_virtualization = boost_configs.value.enable_nested_virtualization
+            pool_size                    = boost_configs.value.pool_size
+            dynamic "accelerators" {
+              for_each = boost_configs.value.accelerators
+              content {
+                type  = accelerators.key
+                count = accelerators.value
+              }
+            }
           }
         }
       }
@@ -115,8 +161,16 @@ resource "google_workstations_workstation_config" "configs" {
   dynamic "encryption_key" {
     for_each = each.value.encryption_key == null ? [] : [""]
     content {
-      kms_key                 = each.value.encryption_key.kms_key
-      kms_key_service_account = each.value.encryption_key.kms_key_service_account
+      kms_key = each.value.encryption_key.kms_key
+      kms_key_service_account = (
+        each.value.encryption_key.kms_key_service_account == null
+        ? null
+        : lookup(
+          local.ctx.iam_principals,
+          each.value.encryption_key.kms_key_service_account,
+          each.value.encryption_key.kms_key_service_account
+        )
+      )
     }
   }
   dynamic "persistent_directories" {
@@ -126,10 +180,11 @@ resource "google_workstations_workstation_config" "configs" {
       dynamic "gce_pd" {
         for_each = persistent_directories.value.gce_pd == null ? [] : [""]
         content {
-          size_gb        = persistent_directories.value.gce_pd.size_gb
-          fs_type        = persistent_directories.value.gce_pd.fs_type
-          disk_type      = persistent_directories.value.gce_pd.disk_type
-          reclaim_policy = persistent_directories.value.gce_pd.reclaim_policy
+          size_gb         = persistent_directories.value.gce_pd.size_gb
+          fs_type         = persistent_directories.value.gce_pd.fs_type
+          disk_type       = persistent_directories.value.gce_pd.disk_type
+          reclaim_policy  = persistent_directories.value.gce_pd.reclaim_policy
+          source_snapshot = persistent_directories.value.gce_pd.source_snapshot
         }
       }
     }
@@ -144,8 +199,8 @@ resource "google_workstations_workstation" "workstations" {
   workstation_config_id  = google_workstations_workstation_config.configs[each.value.workstation_config_id].workstation_config_id
   workstation_cluster_id = google_workstations_workstation_cluster.cluster.workstation_cluster_id
   location               = google_workstations_workstation_cluster.cluster.location
+  display_name           = each.value.display_name
   labels                 = each.value.labels
   env                    = each.value.env
   annotations            = each.value.annotations
 }
-

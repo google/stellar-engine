@@ -30,10 +30,11 @@ The blueprint will deploy all the required resources to have a fully functional 
 ## Instructions
 ### Deploy the experimentation environment
 - Create a `terraform.tfvars` file and specify the variables to match your desired configuration. You can use the provided `terraform.tfvars.sample` as reference.
-- For a `USER_MANAGED` notebook, set its optional `owner` to the user email that should be listed as the Workbench instance owner. `MANAGED` notebooks require `owner`.
+- Set the optional `owner` of a notebook to the user email that should be listed as the Workbench instance owner.
 - Before choosing a region to create your resources in, it is recommended to view your system [quotas](https://console.cloud.google.com/iam-admin/quotas) in order to check which regions have access to GPU and TPU accelerators. If you choose a region where the quota is 0, you will have to request a quota increase (common accelerators are NVIDIA_A100 and NVIDIA_H100). It is recommended to create project resources in the 'us-central1' region.
 - When configuring your network settings, remeber that you must use a shared VPC. It is recomended that you have a separate 'networking project' that manages network traffic, and share this VPC to any projects that need access to it. This shared VPC must have internet access or JupyterLabs will not work. In addition, the account that runs the terraform code must have the Compute Shared VPC Admin role at an organization level. 
 - Run `terraform init` and `terraform apply`
+- Every entry in the `notebooks` variable creates a Vertex AI Workbench instance. The `type` attribute accepts only `USER_MANAGED`, because Google-managed notebooks reached end of life and Google provider 8 removed the `google_notebooks_runtime` resource.
 
 ## Demo
 To try out the new notebook, you can use the provided code sample (the .ipynb file), adapted from [here](https://github.com/GoogleCloudPlatform/vertex-ai-samples/blob/main/notebooks/community/model_garden/model_garden_pytorch_flux.ipynb). Alternatively, you can view the list of [Vertex AI code samples](https://cloud.google.com/vertex-ai/docs/samples) to find one that you like. Simply open the Google Cloud Console and navigate to Vertex AI workbenches. Under the list of instances, you should see your newly created workbench instance. Click on the button that says "Open JupyterLab" to use your workbench. Within JupyterLab, you should see the option to upload files. Upload a demo notebook, then update the variables as necessary (in the provided demo, you will have to update BUCKET_URI, REGION, and PROJECT_ID).
@@ -42,21 +43,21 @@ To try out the new notebook, you can use the provided code sample (the .ipynb fi
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [network_config](variables.tf#L43) | Shared VPC network configurations to use. | <code title="object&#40;&#123;&#10;  network_project_id &#61; string&#10;  network_name       &#61; string&#10;  subnetwork_name    &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [notebooks](variables.tf#L57) | Vertex AI workbenches to be deployed. Service Account runtime/instances deployed. | <code title="map&#40;object&#40;&#123;&#10;  type             &#61; string&#10;  machine_type     &#61; optional&#40;string, &#34;n1-standard-4&#34;&#41;&#10;  internal_ip_only &#61; optional&#40;bool, true&#41;&#10;  idle_shutdown    &#61; optional&#40;bool, true&#41;&#10;  owner            &#61; optional&#40;string&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [project_config](variables.tf#L89) | Provide 'billing_account_id' value if project creation is needed, uses existing 'project_id' if null. Parent is in 'folders/nnn' or 'organizations/nnn' format. | <code title="object&#40;&#123;&#10;  billing_account_id &#61; optional&#40;string&#41;&#10;  parent             &#61; optional&#40;string&#41;&#10;  project_id         &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [network_config](variables.tf#L43) | Shared VPC network configurations to use. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [notebooks](variables.tf#L57) | Vertex AI Workbench instances to be deployed, keyed by name. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [project_config](variables.tf#L83) | Provide 'billing_account_id' value if project creation is needed, uses existing 'project_id' if null. Parent is in 'folders/nnn' or 'organizations/nnn' format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [bucket_name](variables.tf#L18) | GCS bucket name to store the Vertex AI artifacts. | <code>string</code> |  | <code>null</code> |
 | [dataset_name](variables.tf#L24) | BigQuery Dataset to store the training data. | <code>string</code> |  | <code>null</code> |
 | [deletion_protection](variables.tf#L30) | Prevent Terraform from destroying data storage resources (storage buckets, GKE clusters, CloudSQL instances) in this blueprint. When this field is set in Terraform state, a terraform destroy or terraform apply that would delete data storage resources will fail. | <code>bool</code> |  | <code>true</code> |
 | [labels](variables.tf#L37) | Labels to be assigned at project level. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [prefix](variables.tf#L83) | Prefix used for various resource creation. | <code>string</code> |  | <code>null</code> |
-| [region](variables.tf#L103) | Region used for regional resources. | <code>string</code> |  | <code>&#34;us-central1&#34;</code> |
-| [service_encryption_keys](variables.tf#L109) | Cloud KMS to use to encrypt different services. Key location should match service region. | <code title="object&#40;&#123;&#10;  aiplatform &#61; optional&#40;string&#41;&#10;  bq         &#61; optional&#40;string&#41;&#10;  notebooks  &#61; optional&#40;string&#41;&#10;  storage    &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [prefix](variables.tf#L77) | Prefix used for various resource creation. | <code>string</code> |  | <code>null</code> |
+| [region](variables.tf#L97) | Region used for regional resources. | <code>string</code> |  | <code>&#34;us-central1&#34;</code> |
+| [service_encryption_keys](variables.tf#L103) | Cloud KMS to use to encrypt different services. Key location should match service region. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
 | [notebook](outputs.tf#L17) | Vertex AI notebook ids. |  |
-| [project_id](outputs.tf#L25) | Project ID. |  |
+| [project_id](outputs.tf#L24) | Project ID. |  |
 <!-- END TFDOC -->

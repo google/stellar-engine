@@ -24,12 +24,19 @@ output "id" {
   value       = try(google_network_connectivity_hub.hub[0].id, null)
 }
 
+output "route_policies" {
+  description = "BGP route policy ids, keyed by route policy key."
+  value = {
+    for k, v in google_compute_router_route_policy.default : k => v.id
+  }
+}
+
 output "router" {
   description = "Cloud Router resource."
   value       = google_compute_router.cr
 }
 
-output "spoke-ra" {
+output "spoke_ra" {
   description = "NCC spoke resource."
-  value       = google_network_connectivity_spoke.spoke-ra
+  value       = google_network_connectivity_spoke.spoke_ra
 }

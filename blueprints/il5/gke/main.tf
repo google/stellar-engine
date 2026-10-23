@@ -282,11 +282,11 @@ moved {
 }
 
 module "bastion-vm" {
-  source        = "../../../modules/compute-vm"
-  project_id    = var.main_project_id
-  name          = var.bastion_vm_name
-  zone          = var.bastion_vm_zone
-  instance_type = var.bastion_vm_machine_type
+  source       = "../../../modules/compute-vm"
+  project_id   = var.main_project_id
+  name         = var.bastion_vm_name
+  zone         = var.bastion_vm_zone
+  machine_type = var.bastion_vm_machine_type
   service_account = {
     email  = google_service_account.gke_cluster_sa.email
     scopes = ["cloud-platform"]
@@ -307,7 +307,7 @@ module "bastion-vm" {
 
   boot_disk = {
     snapshot_schedule = ["daily-backup"]
-    initialize_params = {
+    source = {
       image = var.bastion_vm_image
     }
   }

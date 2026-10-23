@@ -49,6 +49,22 @@ def _directories(update):
     return {update["directory"]}
 
 
+def _is_synced_from_fabric(manifest_dir):
+    """Reports whether tools/sync-from-cff.sh owns the manifest directory.
+
+    The sync records the upstream release in each module's versions.tf file.
+    Upstream Dependabot updates those manifests, so local updates would only
+    conflict with the next sync.
+    """
+    parts = pathlib.PurePosixPath(manifest_dir).parts
+    if len(parts) < 3 or parts[1] != "modules":
+        return False
+    versions = _REPO_ROOT / "modules" / parts[2] / "versions.tf"
+    return versions.is_file() and "# Fabric release:" in versions.read_text(
+        encoding="utf-8"
+    )
+
+
 def _tracked_manifest_dirs(file_name):
     output = subprocess.run(
         ["git", "ls-files", f"*{file_name}"],
@@ -79,8 +95,23 @@ class TestDependabot(unittest.TestCase):
                 for update in updates:
                     if update["package-ecosystem"] == ecosystem:
                         covered |= _directories(update)
-                missing = _tracked_manifest_dirs(file_name) - covered
+                missing = {
+                    d
+                    for d in _tracked_manifest_dirs(file_name) - covered
+                    if not _is_synced_from_fabric(d)
+                }
                 self.assertFalse(missing, f"no {ecosystem} entry for {missing}")
+
+    def test_only_fabric_modules_skip_coverage(self):
+        self.assertTrue(
+            _is_synced_from_fabric(
+                "/modules/api-gateway/recipe-multi-region/function"
+            )
+        )
+        self.assertFalse(
+            _is_synced_from_fabric("/modules/intrusion-detection-system")
+        )
+        self.assertFalse(_is_synced_from_fabric("/blueprints/x/modules/y"))
 
     def test_every_update_waits_and_uses_a_silent_prefix(self):
         for update in _load_updates():

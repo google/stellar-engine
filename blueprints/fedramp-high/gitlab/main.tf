@@ -105,12 +105,12 @@ module "net-firewall" {
 }
 
 module "compute-vm" {
-  source        = "../../../modules/compute-vm"
-  name          = var.vm_name
-  project_id    = var.project_id
-  zone          = "${var.zone}-a"
-  instance_type = "n1-standard-8"
-  tags          = ["gitlab"]
+  source       = "../../../modules/compute-vm"
+  name         = var.vm_name
+  project_id   = var.project_id
+  zone         = "${var.zone}-a"
+  machine_type = "n1-standard-8"
+  tags         = ["gitlab"]
   snapshot_schedules = {
     daily-backup = {
       schedule = {
@@ -127,9 +127,11 @@ module "compute-vm" {
 
   boot_disk = {
     snapshot_schedule = ["daily-backup"]
-    initialize_params = {
+    source = {
       image = var.compute_image
-      size  = 40
+    }
+    initialize_params = {
+      size = 40
     }
   }
   network_interfaces = [
@@ -193,12 +195,12 @@ module "application-lb" {
   source     = "../../../modules/net-lb-app-ext-regional"
   project_id = var.project_id
   name       = var.lb_name
-  vpc        = var.network
+  vpc_config = { network = var.network }
   region     = var.region
   backend_service_configs = {
     default = {
       backends = [
-        { backend = google_compute_instance_group.umig.id }
+        { group = google_compute_instance_group.umig.id }
       ]
       protocol = "HTTP"
     }
@@ -254,6 +256,8 @@ module "cluster" {
   access_config = {
     private_nodes = true
     ip_access = {
+      # Fabric v59 omits authorized networks without ranges; keep them on.
+      authorized_ranges = {}
       private_endpoint_config = {
         global_access = false
       }

@@ -5,7 +5,6 @@ This module allows managing [Data Catalog Tag](https://cloud.google.com/data-cat
 ## TODO
 
 - Add support for entries different than Bigquery resources.
-- Add support to BOOL when [issue](https://github.com/hashicorp/terraform-provider-google/issues/16856) is fixed.
 - Add support to RICHTEXT when [issue](https://github.com/hashicorp/terraform-provider-google/issues/13597) is fixed.
 
 ## Examples
@@ -33,6 +32,9 @@ module "data-catalog-tag" {
         }
         pii = {
           enum_value = "NONE"
+        }
+        bool = {
+          bool_value = true
         }
       }
     }
@@ -88,7 +90,7 @@ module "data-catalog-tag" {
 
 ### Factory
 
-Similarly to other modules, a rules factory (see Resource Factories) is also included here to allow tags management via descriptive configuration files.
+Similarly to other modules, a rules factory is also included here to allow tags management via descriptive configuration files.
 
 Factory configuration is via one optional attributes in the `factory_config_path` variable specifying the path where tags files are stored.
 
@@ -128,20 +130,22 @@ parent: projects/project-data-product/datasets/exposure
 location: europe-west1
 template: projects/project-datagov/locations/europe-west1/tagTemplates/test
 fields:
-  owner_email: 
+  owner_email:
     string_value: example@example.com
-  num: 
+  num:
     double_value: 5
-  pii: 
+  pii:
     enum_value: NONE
+  bool:
+    bool_value: true
 ```
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [factories_config](variables.tf#L17) | Paths to data files and folders that enable factory functionality. | <code title="object&#40;&#123;&#10;  tags &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [tags](variables.tf#L26) | Tags definitions in the form {TAG => TAG_DEFINITION}. | <code title="map&#40;object&#40;&#123;&#10;  project_id &#61; string&#10;  parent     &#61; string&#10;  column     &#61; optional&#40;string&#41;&#10;  location   &#61; string&#10;  template   &#61; string&#10;  fields &#61; map&#40;object&#40;&#123;&#10;    double_value    &#61; optional&#40;number&#41;&#10;    string_value    &#61; optional&#40;string&#41;&#10;    timestamp_value &#61; optional&#40;string&#41;&#10;    enum_value      &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [factories_config](variables.tf#L17) | Paths to data files and folders that enable factory functionality. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [tags](variables.tf#L26) | Tags definitions in the form {TAG => TAG_DEFINITION}. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 

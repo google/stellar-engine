@@ -52,13 +52,13 @@ resource "google_kms_crypto_key_iam_member" "compute_agent_kms_access" {
 
 # Google Compute Engine VM Module
 module "compute-engine-vm" {
-  source        = "../../../modules/compute-vm"
-  project_id    = var.main_project_id
-  zone          = var.zone
-  name          = var.instance_name
-  instance_type = var.instance_type
+  source       = "../../../modules/compute-vm"
+  project_id   = var.main_project_id
+  zone         = var.zone
+  name         = var.instance_name
+  machine_type = var.instance_type
 
-  confidential_compute = true # CIS Compliance Benchmark 4.11 - Must use compliant instance type
+  confidential_compute = "SEV" # CIS Compliance Benchmark 4.11 - Must use compliant instance type
 
   network_interfaces = [{
     network    = data.google_compute_network.network.self_link
@@ -93,19 +93,19 @@ module "compute-engine-vm" {
     }
   }
 
-  attached_disks = [
-    {
+  attached_disks = {
+    data-disk = {
       auto_delete       = var.auto_delete
-      size              = 20
-      name              = "data-disk"
       snapshot_schedule = ["daily-backup"]
-      kms_key_self_link = data.google_kms_crypto_key.default.id
+      initialize_params = {
+        size = 20
+      }
     }
-  ]
+  }
 
   boot_disk = {
     snapshot_schedule = ["daily-backup"]
-    initialize_params = {
+    source = {
       image = "cos-cloud/cos-stable"
     }
   }

@@ -29,6 +29,16 @@ variable "domain" {
   type        = string
 }
 
+variable "iap_oauth2_client" {
+  description = "Optional custom OAuth client for IAP, created in the console. IAP uses a Google-managed OAuth client when this is null, which only admits users of the same organization."
+  type = object({
+    id     = string
+    secret = string
+  })
+  default   = null
+  sensitive = true
+}
+
 variable "ids_name" {
   description = "Name of IDS."
   type        = string
@@ -67,11 +77,6 @@ variable "network_name" {
 variable "network_project_id" {
   description = "The Landing Project ID."
   type        = string
-}
-
-variable "oauth_brand_number" {
-  description = "External Oauth2 consent screens can only be configured via the interactive console. After configuring it, use `gcloud alpha iap oauth-brands list` to lookup the brand id number."
-  type        = number
 }
 
 variable "packet_mirroring_policy_name" {

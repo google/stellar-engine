@@ -20,54 +20,8 @@ module "service-account-notebook" {
   name       = "notebook-sa"
 }
 
-resource "google_notebooks_runtime" "runtime" {
-  for_each = { for k, v in var.notebooks : k => v if v.type == "MANAGED" }
-  name     = "${local.prefix}${each.key}"
-  project  = module.project.project_id
-  location = var.region
-  access_config {
-    access_type   = "SINGLE_USER"
-    runtime_owner = try(var.notebooks[each.key].owner, null)
-  }
-  software_config {
-    enable_health_monitoring = true
-    idle_shutdown            = var.notebooks[each.key].idle_shutdown
-  }
-  virtual_machine {
-    virtual_machine_config {
-      machine_type     = var.notebooks[each.key].machine_type
-      network          = local.vpc
-      subnet           = local.subnet
-      internal_ip_only = var.notebooks[each.key].internal_ip_only
-      dynamic "encryption_config" {
-        for_each = var.service_encryption_keys.notebooks == null ? [] : [1]
-        content {
-          kms_key = var.service_encryption_keys.notebooks
-        }
-      }
-      shielded_instance_config {
-        enable_secure_boot          = true
-        enable_vtpm                 = true
-        enable_integrity_monitoring = true
-      }
-      metadata = {
-        notebook-disable-nbconvert = "false"
-        notebook-disable-downloads = "true"
-        notebook-disable-terminal  = "false"
-        notebook-disable-root      = "true"
-      }
-      data_disk {
-        initialize_params {
-          disk_size_gb = "100"
-          disk_type    = "PD_STANDARD"
-        }
-      }
-    }
-  }
-}
-
 resource "google_workbench_instance" "playground" {
-  for_each = { for k, v in var.notebooks : k => v if v.type == "USER_MANAGED" }
+  for_each = var.notebooks
   name     = "${local.prefix}${each.key}"
   location = "${var.region}-b"
   project  = module.project.project_id

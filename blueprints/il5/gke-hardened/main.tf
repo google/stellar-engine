@@ -115,8 +115,12 @@ module "vpc" {
       name          = var.subnetwork_name
       region        = var.region
       secondary_ip_ranges = {
-        pods     = var.subnetwork_secondary_ip_range_pods_1
-        services = var.subnetwork_secondary_ip_range_services_1
+        pods = {
+          ip_cidr_range = var.subnetwork_secondary_ip_range_pods_1
+        }
+        services = {
+          ip_cidr_range = var.subnetwork_secondary_ip_range_services_1
+        }
       }
       # CIS Compliance Benchmark 3.8
       flow_logs_config = {
@@ -130,6 +134,10 @@ module "vpc" {
   dns_policy = {
     logging = true # CIS Compliance Benchmark 2.12
   }
+  # Fabric v59 adds a DirectPath route by default; keep the previous routes.
+  create_googleapis_routes = {
+    directpath = false
+  }
 }
 
 module "cluster" {
@@ -138,48 +146,55 @@ module "cluster" {
   name                = var.gke_cluster_name
   location            = var.region
   deletion_protection = false
-  vpc_config = {
-    master_ipv4_cidr_block = var.gke_vpc_master_ipv4_cidr_block
-    network                = module.vpc.self_link
-    subnetwork             = module.vpc.subnet_self_links["${var.region}/${var.subnetwork_name}"]
-    master_authorized_ranges = {
-      internal-vms = var.master_authorized_ranges_ip_ranges
+  access_config = {
+    dns_access = {
+      allow_external_traffic = false
     }
+    ip_access = {
+      authorized_ranges = {
+        internal-vms = var.master_authorized_ranges_ip_ranges
+      }
+      disable_public_endpoint = var.gke_cluster_enable_private_endpoint
+      private_endpoint_config = {
+        global_access = var.gke_cluster_master_global_access
+      }
+    }
+    master_ipv4_cidr_block = var.gke_vpc_master_ipv4_cidr_block
+    private_nodes          = true
+  }
+  vpc_config = {
+    network    = module.vpc.self_link
+    subnetwork = module.vpc.subnet_self_links["${var.region}/${var.subnetwork_name}"]
   }
   default_nodepool = {
-    initial_node_count       = var.gke_initial_node_per_zone
-    remove_pool              = false
-    remove_default_node_pool = true
+    initial_node_count = var.gke_initial_node_per_zone
+    remove_pool        = false
   }
   node_config = {
-    # CIS Compliance Benchmark 4.3
-    metadata = {
-      block-project-ssh-keys = true
-    }
     boot_disk_kms_key = module.kms.keys.default.id
 
     # CIS Compliance Benchmark 4.1/ 4.2
     service_account = google_service_account.gke.email
 
     tags = var.node_config_tags
-
-    machine_type = var.node_machine_type
-    confidential_nodes = {
-      enabled = true # CIS Compliance Benchmark 4.11 - Must also choose compatible instance type
-    }
+  }
+  # The previous module defaults, kept so the existing cluster does not change.
+  enable_addons = {
+    dns_cache                      = false
+    gce_persistent_disk_csi_driver = false
+    gcp_filestore_csi_driver       = false
+    gcs_fuse_csi_driver            = false
   }
   enable_features = {
-    shielded_nodes       = true
-    dataplane_v2         = true
     binary_authorization = true
+    cost_management      = false
+    dataplane_v2         = true
+    fqdn_network_policy  = false
+    shielded_nodes       = true
     database_encryption = {
       state    = "ENCRYPTED"
       key_name = module.kms.keys.default.id
     }
-  }
-  private_cluster_config = {
-    enable_private_endpoint = var.gke_cluster_enable_private_endpoint
-    master_global_access    = var.gke_cluster_master_global_access
   }
   depends_on = [module.vpc, module.kms]
 }
@@ -214,11 +229,11 @@ module "cluster-nodepool" {
 }
 
 module "compute-vm" {
-  source        = "../../../modules/compute-vm"
-  name          = "bastion-vm"
-  project_id    = var.main_project_id
-  zone          = "us-east4-a"
-  instance_type = "e2-medium"
+  source       = "../../../modules/compute-vm"
+  name         = "bastion-vm"
+  project_id   = var.main_project_id
+  zone         = "us-east4-a"
+  machine_type = "e2-medium"
   service_account = {
     scopes = ["cloud-platform"]
   }
@@ -238,7 +253,7 @@ module "compute-vm" {
 
   boot_disk = {
     snapshot_schedule = ["daily-backup"]
-    initialize_params = {
+    source = {
       image = "projects/cos-cloud/global/images/cos-105-17412-495-45"
     }
   }

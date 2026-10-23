@@ -20,11 +20,20 @@
 # access levels are needed, switch to the
 # google_access_context_manager_access_levels resource
 
+locals {
+  access_levels = {
+    for k, v in google_access_context_manager_access_level.basic : k => v.id
+  }
+  ctx_access_levels = merge(local.ctx.access_levels, {
+    for k, v in local.access_levels : "$access_levels:${k}" => v
+  })
+}
+
 resource "google_access_context_manager_access_level" "basic" {
   for_each    = merge(local.data.access_levels, var.access_levels)
   parent      = "accessPolicies/${local.access_policy}"
   name        = "accessPolicies/${local.access_policy}/accessLevels/${each.key}"
-  title       = each.key
+  title       = coalesce(each.value.title, each.key)
   description = each.value.description
 
   basic {
@@ -34,8 +43,14 @@ resource "google_access_context_manager_access_level" "basic" {
       for_each = toset(each.value.conditions)
       iterator = c
       content {
-        ip_subnetworks         = c.value.ip_subnetworks
-        members                = c.value.members
+        ip_subnetworks = c.value.ip_subnetworks
+        members = flatten([
+          for i in c.value.members : (
+            startswith(i, "$identity_sets:")
+            ? lookup(local.ctx.identity_sets, i, [i])
+            : lookup(local.ctx.iam_principals_list, i, [i])
+          )
+        ])
         negate                 = c.value.negate
         regions                = c.value.regions
         required_access_levels = coalesce(c.value.required_access_levels, [])
@@ -51,7 +66,7 @@ resource "google_access_context_manager_access_level" "basic" {
             allowed_encryption_statuses = (
               dp.value.allowed_encryption_statuses
             )
-            require_admin_approval = dp.value.key.require_admin_approval
+            require_admin_approval = dp.value.require_admin_approval
             require_corp_owned     = dp.value.require_corp_owned
             require_screen_lock    = dp.value.require_screen_lock
 

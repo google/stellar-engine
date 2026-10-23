@@ -29,12 +29,19 @@ variable "backend_service_config" {
       ratio                     = optional(number)
     }))
     locality_lb_policy = optional(string)
-    log_sample_rate    = optional(number)
-    name               = optional(string)
-    port_name          = optional(string)
-    protocol           = optional(string, "UNSPECIFIED")
-    session_affinity   = optional(string)
-    timeout_sec        = optional(number)
+    log_config = optional(object({
+      enable          = optional(bool)
+      sample_rate     = optional(number)
+      optional_mode   = optional(string)
+      optional_fields = optional(list(string))
+    }))
+    name             = optional(string)
+    description      = optional(string, "Terraform managed.")
+    port_name        = optional(string)
+    protocol         = optional(string, "UNSPECIFIED")
+    security_policy  = optional(string)
+    session_affinity = optional(string)
+    timeout_sec      = optional(number)
   })
   default  = {}
   nullable = false
@@ -75,10 +82,17 @@ variable "backends" {
   nullable = false
 }
 
-variable "description" {
-  description = "Optional description used for resources."
-  type        = string
-  default     = "Terraform managed."
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    addresses         = optional(map(string), {})
+    locations         = optional(map(string), {})
+    project_ids       = optional(map(string), {})
+    security_policies = optional(map(string), {})
+    subnets           = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
 }
 
 variable "forwarding_rules_config" {
@@ -100,6 +114,8 @@ variable "forwarding_rules_config" {
 variable "group_configs" {
   description = "Optional unmanaged groups to create. Can be referenced in backends via outputs."
   type = map(object({
+    name        = optional(string)
+    description = optional(string, "Terraform managed.")
     zone        = string
     instances   = optional(list(string))
     named_ports = optional(map(number), {})

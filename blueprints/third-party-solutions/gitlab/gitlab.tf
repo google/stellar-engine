@@ -62,11 +62,11 @@ module "gitlab-sa" {
 }
 
 module "gitlab-instance" {
-  source        = "../../../modules/compute-vm"
-  project_id    = module.project.project_id
-  zone          = coalesce(var.gitlab_instance_config.zone, "${var.region}-a")
-  name          = var.gitlab_instance_config.name
-  instance_type = var.gitlab_instance_config.instance_type
+  source       = "../../../modules/compute-vm"
+  project_id   = module.project.project_id
+  zone         = coalesce(var.gitlab_instance_config.zone, "${var.region}-a")
+  name         = var.gitlab_instance_config.name
+  machine_type = var.gitlab_instance_config.instance_type
   snapshot_schedules = {
     daily-backup = {
       schedule = {
@@ -83,23 +83,26 @@ module "gitlab-instance" {
 
   boot_disk = {
     snapshot_schedule = ["daily-backup"]
-    initialize_params = {
+    source = {
       image = "projects/cos-cloud/global/images/family/cos-stable"
-      size  = var.gitlab_instance_config.boot_disk.size
-      type  = var.gitlab_instance_config.boot_disk.type
+    }
+    initialize_params = {
+      size = var.gitlab_instance_config.boot_disk.size
+      type = var.gitlab_instance_config.boot_disk.type
     }
   }
-  attached_disks = [
-    {
-      name              = "data"
-      size              = var.gitlab_instance_config.data_disk.size
-      type              = var.gitlab_instance_config.data_disk.type
+  attached_disks = {
+    data = {
       snapshot_schedule = ["daily-backup"]
-      options = {
+      initialize_params = {
         replica_zone = var.gitlab_instance_config.replica_zone
+        size         = var.gitlab_instance_config.data_disk.size
+        # The previous module interface ignored data_disk.type and created
+        # pd-balanced disks, so the fixed type keeps existing data disks.
+        type = "pd-balanced"
       }
     }
-  ]
+  }
   network_interfaces = [
     {
       network    = var.network_config.network_self_link

@@ -1,0 +1,17 @@
+# Base releases for modules that tools/sync-from-cff.sh cannot read from a
+# module_name in versions.tf, because upstream ships them without one or the
+# local copy never recorded it. The script updates the release after a sync.
+#
+# <directory under modules/> <upstream module> <base release>
+biglake-catalog biglake-catalog v59.2.0
+cloud-config-container cloud-config-container v59.2.0
+project-factory project-factory v59.2.0
+
+# Repository paths outside modules/ that the sync tracks, a directory or a
+# single file. A first field with a slash marks such an entry.
+#
+# <local path> <upstream path> <base release>
+tests/examples/utils.py tests/examples/utils.py v59.2.0
+tests/fixtures tests/fixtures v59.2.0
+tools/check_documentation.py tools/check_documentation.py v59.2.0
+tools/tfdoc.py tools/tfdoc.py v59.2.0

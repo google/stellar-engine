@@ -1,11 +1,11 @@
 /**
- * Copyright 2023 Google LLC
+ * Copyright 2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,85 +15,43 @@
  */
 
 locals {
-  # distinct is needed to make the expanding function argument work
-  iam = flatten([
-    for secret, roles in var.iam : [
-      for role, members in roles : {
-        secret  = secret
-        role    = role
-        members = members
-      }
-    ]
-  ])
-  version_pairs = flatten([
-    for secret, versions in var.versions : [
-      for name, attrs in versions : merge(attrs, { name = name, secret = secret })
-    ]
-  ])
-  version_keypairs = {
-    for pair in local.version_pairs : "${pair.secret}:${pair.name}" => pair
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    } if !endswith(k, "_vars")
   }
-}
-
-resource "google_secret_manager_secret" "default" {
-  for_each            = var.secrets
-  project             = var.project_id
-  secret_id           = each.key
-  labels              = lookup(var.labels, each.key, null)
-  expire_time         = each.value.expire_time
-  version_destroy_ttl = each.value.version_destroy_ttl
-
-  dynamic "replication" {
-    for_each = each.value.locations == null ? [""] : []
-    content {
-      auto {
-        dynamic "customer_managed_encryption" {
-          for_each = try(lookup(each.value.keys, "global", null) == null ? [] : [""], [])
-          content {
-            kms_key_name = each.value.keys["global"]
-          }
-        }
+  ctx_p       = "$"
+  project_id  = lookup(local.ctx.project_ids, var.project_id, var.project_id)
+  tag_project = coalesce(var.project_number, var.project_id)
+  tag_bindings = merge([
+    for k, v in var.secrets : {
+      for kk, vv in v.tag_bindings : "${k}/${kk}" => {
+        location = v.location
+        secret   = k
+        tag      = vv
       }
     }
+    if v.tag_bindings != null
+  ]...)
+  _tag_bindings = {
+    for k, v in local.tag_bindings : k => lookup(local.ctx.tag_values, v.tag, v.tag)
   }
-
-  dynamic "replication" {
-    for_each = each.value.locations == null ? [] : [""]
-    content {
-      user_managed {
-        dynamic "replicas" {
-          for_each = each.value.locations
-          iterator = location
-          content {
-            location = location.value
-            dynamic "customer_managed_encryption" {
-              for_each = try(lookup(each.value.keys, location.value, null) == null ? [] : [""], [])
-              content {
-                kms_key_name = each.value.keys[location.value]
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+  versions = flatten([
+    for k, v in var.secrets : [
+      for sk, sv in v.versions : merge(sv, {
+        secret   = k
+        version  = sk
+        location = v.location
+      })
+    ]
+  ])
 }
 
-resource "google_secret_manager_secret_version" "default" {
-  provider       = google-beta
-  for_each       = local.version_keypairs
-  secret         = google_secret_manager_secret.default[each.value.secret].id
-  enabled        = each.value.enabled
-  secret_data_wo = each.value.data
-}
-
-resource "google_secret_manager_secret_iam_binding" "default" {
-  provider = google-beta
-  for_each = {
-    for binding in local.iam : "${binding.secret}.${binding.role}" => binding
-  }
-  role      = each.value.role
-  secret_id = google_secret_manager_secret.default[each.value.secret].id
-  members   = each.value.members
-}
-
+# resource "google_kms_key_handle" "my_key_handle" {
+#   provider               = google-beta
+#   for_each               = var.kms_autokey_config
+#   project                = var.project_id
+#   name                   = each.key
+#   location               = each.value
+#   resource_type_selector = "secretmanager.googleapis.com/Secret"
+# }

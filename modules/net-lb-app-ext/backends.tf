@@ -17,15 +17,27 @@
 # tfdoc:file:description Backend groups and backend buckets resources.
 
 resource "google_compute_backend_bucket" "default" {
-  for_each                = var.backend_buckets_config
-  project                 = var.project_id
-  name                    = "${var.name}-${each.key}"
+  for_each = var.backend_buckets_config
+  project = (
+    each.value.project_id == null
+    ? local.project_id
+    : each.value.project_id
+  )
+  name                    = coalesce(each.value.name, "${var.name}-${each.key}")
   bucket_name             = each.value.bucket_name
   compression_mode        = each.value.compression_mode
   custom_response_headers = each.value.custom_response_headers
   description             = each.value.description
-  edge_security_policy    = each.value.edge_security_policy
-  enable_cdn              = each.value.enable_cdn
+  edge_security_policy = (
+    each.value.edge_security_policy == null
+    ? null
+    : lookup(
+      local.ctx.security_policies,
+      each.value.edge_security_policy,
+      each.value.edge_security_policy
+    )
+  )
+  enable_cdn = each.value.enable_cdn
 
   dynamic "cdn_policy" {
     for_each = each.value.cdn_policy == null ? [] : [each.value.cdn_policy]
@@ -43,7 +55,7 @@ resource "google_compute_backend_bucket" "default" {
         for_each = (
           p.value.bypass_cache_on_request_headers == null
           ? []
-          : [p.value.bypass_cache_on_request_headers]
+          : p.value.bypass_cache_on_request_headers
         )
         iterator = h
         content {

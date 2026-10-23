@@ -15,9 +15,10 @@
  */
 
 locals {
+  _factory_tag_template_path = pathexpand(coalesce(var.factories_config.tags, "-"))
   _factory_tag_template = {
-    for f in try(fileset(var.factories_config.tags, "*.yaml"), []) :
-    trimsuffix(f, ".yaml") => yamldecode(file("${var.factories_config.tags}/${f}"))
+    for f in try(fileset(local._factory_tag_template_path, "*.yaml"), []) :
+    trimsuffix(f, ".yaml") => yamldecode(file("${local._factory_tag_template_path}/${f}"))
   }
 
   factory_tag_template = merge(local._factory_tag_template, var.tags)
@@ -25,13 +26,19 @@ locals {
 
 resource "google_data_catalog_tag" "engine" {
   for_each = local.factory_tag_template
-  parent   = "projects/${each.value.project_id}/locations/${each.value.location}/entryGroups/@bigquery/entries/${trim(base64encode(each.value.parent), "=")}"
+  parent = format(
+    "projects/%s/locations/%s/entryGroups/@bigquery/entries/%s",
+    each.value.project_id,
+    each.value.location,
+    replace(replace(trim(base64encode(each.value.parent), "="), "+", "-"), "/", "_")
+  )
   column   = try(each.value.column, null)
   template = each.value.template
   dynamic "fields" {
     for_each = each.value.fields
     content {
       field_name      = fields.key
+      bool_value      = try(fields.value.bool_value, null)
       double_value    = try(fields.value.double_value, null)
       enum_value      = try(fields.value.enum_value, null)
       string_value    = try(fields.value.string_value, null)
