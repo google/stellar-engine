@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -euo pipefail
 
 # Color definitions
 RED='\033[0;31m'
@@ -65,7 +66,8 @@ echo -e "${GREEN}Current IAM policy fetched successfully${NC}"
 
 # Parse the roles to be added from sample file
 echo -e "${BLUE}Parsing roles from template file...${NC}"
-ROLES_TO_ADD=$(sed "s/{USER}/$USER_EMAIL/g" "$SAMPLE_PATH" | jq '.bindings')
+ESCAPED_USER_EMAIL=$(printf '%s\n' "$USER_EMAIL" | sed 's/[&/\]/\\&/g')
+ROLES_TO_ADD=$(sed "s/{USER}/${ESCAPED_USER_EMAIL}/g" "$SAMPLE_PATH" | jq '.bindings')
 
 # Display current user's roles
 echo -e "${YELLOW}Current roles for $USER_EMAIL:${NC}"

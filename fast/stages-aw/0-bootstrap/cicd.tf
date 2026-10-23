@@ -95,7 +95,7 @@ module "automation-tf-cicd-repo" {
       substitutions   = {}
       template = {
         project_id  = null
-        branch_name = each.value.branch
+        branch_name = each.value.branch == null ? "^main$" : "^${trim(each.value.branch, "^$")}$"
         repo_name   = each.value.name
         tag_name    = null
       }
@@ -118,20 +118,18 @@ module "automation-tf-cicd-sa" {
     ? {}
     # impersonated via workload identity federation for external repos
     : {
-      "roles/iam.workloadIdentityUser" = [
+      "roles/iam.workloadIdentityUser" = (
         each.value.branch == null
-        ? format(
-          local.workload_identity_providers_defs[each.value.type].principal_repo,
-          google_iam_workload_identity_pool.default[0].name,
-          each.value.name
-        )
-        : format(
-          local.workload_identity_providers_defs[each.value.type].principal_branch,
-          google_iam_workload_identity_pool.default[0].name,
-          each.value.name,
-          each.value.branch
-        )
-      ]
+        ? []
+        : [
+          format(
+            local.workload_identity_providers_defs[each.value.type].principal_branch,
+            google_iam_workload_identity_pool.default[0].name,
+            each.value.name,
+            each.value.branch
+          )
+        ]
+      )
     }
   )
   iam_project_roles = {

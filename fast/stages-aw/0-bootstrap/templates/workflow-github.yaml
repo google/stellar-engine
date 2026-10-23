@@ -141,6 +141,8 @@ jobs:
         env:
           PLAN: $${{steps.tf-plan.outputs.stdout}}\n$${{steps.tf-plan.outputs.stderr}}
           VALIDATE: $${{steps.tf-validate.outputs.stdout}}
+          TF_WORKING_DIR: $${{env.tf_actions_working_dir}}
+          GH_WORKFLOW: $${{github.workflow}}
         with:
           script: |
             const output = `### Terraform Initialization \`$${{steps.tf-init.outcome}}\`
@@ -167,7 +169,7 @@ jobs:
 
             ### Terraform Apply \`$${{steps.tf-apply.outcome}}\`
 
-            *Pusher: @$${{github.actor}}, Action: \`$${{github.event_name}}\`, Working Directory: \`$${{env.tf_actions_working_dir}}\`, Workflow: \`$${{github.workflow}}\`*`;
+            *Pusher: @$${{github.actor}}, Action: \`$${{github.event_name}}\`, Working Directory: \`$${process.env.TF_WORKING_DIR}\`, Workflow: \`$${process.env.GH_WORKFLOW}\`*`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -180,6 +182,9 @@ jobs:
         name: Post comment to Pull Request (abbreviated)
         uses: actions/github-script@v6
         if: github.event_name == 'pull_request' && steps.pr-comment.outcome != 'success'
+        env:
+          TF_WORKING_DIR: $${{env.tf_actions_working_dir}}
+          GH_WORKFLOW: $${{github.workflow}}
         with:
           script: |
             const output = `### Terraform Initialization \`$${{steps.tf-init.outcome}}\`
@@ -192,7 +197,7 @@ jobs:
 
             ### Terraform Apply \`$${{steps.tf-apply.outcome}}\`
 
-            *Pusher: @$${{github.actor}}, Action: \`$${{github.event_name}}\`, Working Directory: \`$${{env.tf_actions_working_dir}}\`, Workflow: \`$${{github.workflow}}\`*`;
+            *Pusher: @$${{github.actor}}, Action: \`$${{github.event_name}}\`, Working Directory: \`$${process.env.TF_WORKING_DIR}\`, Workflow: \`$${process.env.GH_WORKFLOW}\`*`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

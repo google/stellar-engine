@@ -32,6 +32,10 @@ locals {
     local.branch_optional_sa_lists.pf-dev,
     local.branch_optional_sa_lists.pf-prod,
   )
+  billing_ext_admins = [
+    local.principals.gcp-billing-admins,
+    local.principals.gcp-organization-admins,
+  ]
   billing_mode = (
     var.billing_account.no_iam
     ? null
@@ -54,7 +58,7 @@ resource "google_billing_account_iam_member" "billing_ext_admin" {
 
 resource "google_billing_account_iam_member" "billing_ext_costsmanager" {
   for_each = toset(
-    local.billing_mode == "resource" ? local.billing_ext_users : []
+    local.billing_mode == "resource" ? local.billing_ext_admins : []
   )
   billing_account_id = var.billing_account.id
   role               = "roles/billing.costsManager"

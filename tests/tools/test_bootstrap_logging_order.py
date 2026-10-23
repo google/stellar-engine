@@ -134,10 +134,51 @@ class TestBootstrapLoggingOrder(unittest.TestCase):
         )
         self.assertIn("sa_admin_scoped", automation_tf)
         self.assertIn("sa_token_creator_devops", automation_tf)
+        self.assertIn("local.cicd_bootstrap_sa_email", automation_tf)
         self.assertIn(
             "!resource.name.endsWith('/serviceAccounts/%s')",
             automation_tf,
         )
+
+    def test_stage0_and_stage1_security_hardening(self):
+        cicd_tf = (_BOOTSTRAP_DIR / "cicd.tf").read_text(encoding="utf-8")
+        self.assertIn('each.value.branch == null ? "^main$"', cicd_tf)
+        self.assertIn("each.value.branch == null\n        ? []", cicd_tf)
+
+        net_constraint = (
+            _BOOTSTRAP_DIR / "data/custom-constraint-policies/networking.yaml"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "resource.sourceRanges.exists(range, range == '0.0.0.0/0' "
+            "|| range == '::/0')",
+            net_constraint,
+        )
+
+        net_policy = (
+            _BOOTSTRAP_DIR / "data/custom-org-policies/networking_policy.yaml"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("832634261155", net_policy)
+
+        storage_viewer = (
+            _BOOTSTRAP_DIR / "data/custom-roles/storage_viewer.yaml"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("storage.objects.create", storage_viewer)
+
+        resman_dir = _REPO_ROOT / "fast/stages-aw/1-resman"
+        kms_tf = (resman_dir / "kms.tf").read_text(encoding="utf-8")
+        self.assertIn(
+            'module.tenant-project-keys[each.key].key_ids["gcs"]', kms_tf
+        )
+
+        tenants_tf = (resman_dir / "branch-tenants.tf").read_text(
+            encoding="utf-8"
+        )
+        self.assertNotIn("local.tenant_iam[each.value.tenant.name]", tenants_tf)
+        self.assertIn("local.tenant_iam[each.key]", tenants_tf)
+
+        outputs_tf = (resman_dir / "outputs.tf").read_text(encoding="utf-8")
+        self.assertIn("service_accounts = {", outputs_tf)
+        self.assertIn("tf_providers_files = {", outputs_tf)
 
 
 if __name__ == "__main__":

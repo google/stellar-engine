@@ -17,8 +17,10 @@
 # tfdoc:file:description Automation project and resources.
 
 locals {
-  cicd_resman_sa   = try(module.automation-tf-cicd-sa["resman"].iam_email, "")
-  cicd_resman_r_sa = try(module.automation-tf-cicd-r-sa["resman"].iam_email, "")
+  cicd_bootstrap_sa_email   = try(module.automation-tf-cicd-sa["bootstrap"].email, "")
+  cicd_bootstrap_r_sa_email = try(module.automation-tf-cicd-r-sa["bootstrap"].email, "")
+  cicd_resman_sa            = try(module.automation-tf-cicd-sa["resman"].iam_email, "")
+  cicd_resman_r_sa          = try(module.automation-tf-cicd-r-sa["resman"].iam_email, "")
 }
 
 module "automation-project" {
@@ -37,7 +39,6 @@ module "automation-project" {
   # human (groups) IAM bindings
   iam_by_principals = {
     (local.principals.gcp-organization-admins) = [
-      "roles/iam.serviceAccountTokenCreator",
       "roles/iam.workloadIdentityPoolAdmin"
     ]
   }
@@ -61,10 +62,8 @@ module "automation-project" {
     "roles/iam.serviceAccountViewer" = [
       module.automation-tf-resman-r-sa.iam_email
     ]
-    "roles/iam.workloadIdentityPoolAdmin" = [
-      module.automation-tf-resman-sa.iam_email
-    ]
     "roles/iam.workloadIdentityPoolViewer" = [
+      module.automation-tf-resman-sa.iam_email,
       module.automation-tf-resman-r-sa.iam_email
     ]
     "roles/source.admin" = [
@@ -108,21 +107,27 @@ module "automation-project" {
         title       = "exclude_bootstrap_sa"
         description = "Prevent modifying the privileged bootstrap service accounts."
         expression = format(
-          "!resource.name.endsWith('/serviceAccounts/%s') && !resource.name.endsWith('/serviceAccounts/%s')",
+          "!resource.name.endsWith('/serviceAccounts/%s') && !resource.name.endsWith('/serviceAccounts/%s') && !resource.name.endsWith('/serviceAccounts/%s') && !resource.name.endsWith('/serviceAccounts/%s')",
           module.automation-tf-bootstrap-sa.email,
-          module.automation-tf-bootstrap-r-sa.email
+          module.automation-tf-bootstrap-r-sa.email,
+          local.cicd_bootstrap_sa_email,
+          local.cicd_bootstrap_r_sa_email
         )
       }
     }
     sa_token_creator_devops = {
-      members = [local.principals.gcp-devops]
-      role    = "roles/iam.serviceAccountTokenCreator"
+      members = [
+        local.principals.gcp-devops,
+        local.principals.gcp-organization-admins,
+      ]
+      role = "roles/iam.serviceAccountTokenCreator"
       condition = {
         title       = "exclude_bootstrap_sa_impersonation"
-        description = "Prevent gcp-devops from impersonating the bootstrap service account."
+        description = "Prevent impersonating the bootstrap service accounts via project-wide grant."
         expression = format(
-          "!resource.name.endsWith('/serviceAccounts/%s')",
-          module.automation-tf-bootstrap-sa.email
+          "!resource.name.endsWith('/serviceAccounts/%s') && !resource.name.endsWith('/serviceAccounts/%s')",
+          module.automation-tf-bootstrap-sa.email,
+          local.cicd_bootstrap_sa_email
         )
       }
     }

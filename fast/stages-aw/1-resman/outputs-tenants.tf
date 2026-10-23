@@ -97,10 +97,11 @@ moved {
 }
 
 resource "google_storage_bucket_object" "tenant_core_tfvars" {
-  for_each = local.tenant_tfvars
-  bucket   = var.automation.outputs_bucket
-  name     = "tfvars/tenant/${basename(each.key)}.auto.tfvars.json"
-  content  = jsonencode(each.value)
+  for_each     = local.tenant_tfvars
+  bucket       = var.automation.outputs_bucket
+  name         = "tfvars/tenant/${basename(each.key)}.auto.tfvars.json"
+  content      = sensitive(jsonencode(each.value))
+  kms_key_name = "projects/${var.automation.project_id}/locations/${var.regions.primary}/keyRings/gcs/cryptoKeys/gcs"
 }
 
 moved {
@@ -109,10 +110,11 @@ moved {
 }
 
 resource "google_storage_bucket_object" "tenant_core_providers" {
-  for_each = local.tenant_core_providers
-  bucket   = var.automation.outputs_bucket
-  name     = "providers/tenant/${basename(each.key)}-providers.tf"
-  content  = each.value
+  for_each     = local.tenant_core_providers
+  bucket       = var.automation.outputs_bucket
+  name         = "providers/tenant/${basename(each.key)}-providers.tf"
+  content      = sensitive(each.value)
+  kms_key_name = "projects/${var.automation.project_id}/locations/${var.regions.primary}/keyRings/gcs/cryptoKeys/gcs"
 }
 
 # tenant tfvars and providers
@@ -139,10 +141,11 @@ moved {
 }
 
 resource "google_storage_bucket_object" "tenant_self_tfvars" {
-  for_each = local.tenant_tfvars
-  bucket   = module.tenant-self-iac-gcs-outputs[each.key].name
-  name     = "tfvars/${basename(each.key)}.auto.tfvars.json"
-  content  = jsonencode(each.value)
+  for_each     = local.tenant_tfvars
+  bucket       = module.tenant-self-iac-gcs-outputs[each.key].name
+  name         = "tfvars/${basename(each.key)}.auto.tfvars.json"
+  content      = sensitive(jsonencode(each.value))
+  kms_key_name = module.tenant-project-keys[each.key].key_ids["gcs"]
 }
 
 moved {
@@ -151,8 +154,9 @@ moved {
 }
 
 resource "google_storage_bucket_object" "tenant_self_providers" {
-  for_each = local.tenant_self_providers
-  bucket   = module.tenant-self-iac-gcs-outputs[each.key].name
-  name     = "providers/${basename(each.key)}-providers.tf"
-  content  = each.value
+  for_each     = local.tenant_self_providers
+  bucket       = module.tenant-self-iac-gcs-outputs[each.key].name
+  name         = "providers/${basename(each.key)}-providers.tf"
+  content      = sensitive(each.value)
+  kms_key_name = module.tenant-project-keys[each.key].key_ids["gcs"]
 }
