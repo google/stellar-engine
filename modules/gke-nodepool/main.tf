@@ -169,6 +169,12 @@ resource "google_container_node_pool" "nodepool" {
     )
     tags = var.tags
 
+    dynamic "confidential_nodes" {
+      for_each = var.node_config.confidential_nodes != null ? [""] : []
+      content {
+        enabled = var.node_config.confidential_nodes
+      }
+    }
     dynamic "ephemeral_storage_config" {
       for_each = var.node_config.ephemeral_ssd_count != null ? [""] : []
       content {

@@ -155,7 +155,7 @@ variable "node_disk_size_gb" {
 }
 
 variable "node_machine_type" {
-  description = "The Node Machine type to be used in the NodePool."
+  description = "The node machine type, which must support Confidential GKE Nodes, such as the N2D, C2D or C3D series."
   type        = string
   default     = "n2d-standard-2"
 }
