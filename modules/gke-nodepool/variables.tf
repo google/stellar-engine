@@ -66,6 +66,7 @@ variable "node_config" {
   description = "Node-level configuration."
   type = object({
     boot_disk_kms_key   = optional(string)
+    confidential_nodes  = optional(bool)
     disk_size_gb        = optional(number)
     disk_type           = optional(string, "pd-balanced")
     ephemeral_ssd_count = optional(number)

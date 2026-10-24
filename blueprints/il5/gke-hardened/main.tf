@@ -152,21 +152,12 @@ module "cluster" {
     remove_default_node_pool = true
   }
   node_config = {
-    # CIS Compliance Benchmark 4.3
-    metadata = {
-      block-project-ssh-keys = true
-    }
     boot_disk_kms_key = module.kms.keys.default.id
 
     # CIS Compliance Benchmark 4.1/ 4.2
     service_account = google_service_account.gke.email
 
     tags = var.node_config_tags
-
-    machine_type = var.node_machine_type
-    confidential_nodes = {
-      enabled = true # CIS Compliance Benchmark 4.11 - Must also choose compatible instance type
-    }
   }
   enable_features = {
     shielded_nodes       = true
@@ -205,6 +196,12 @@ module "cluster-nodepool" {
     boot_disk_kms_key = module.kms.keys.default.id
     disk_size_gb      = var.node_disk_size_gb
     machine_type      = var.node_machine_type
+    # CIS Compliance Benchmark 4.11, needs a confidential machine type
+    confidential_nodes = true
+    # CIS Compliance Benchmark 4.3
+    metadata = {
+      block-project-ssh-keys = "true"
+    }
     shielded_instance_config = {
       enable_secure_boot          = true
       enable_integrity_monitoring = true

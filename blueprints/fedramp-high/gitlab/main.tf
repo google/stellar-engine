@@ -234,26 +234,19 @@ module "cluster" {
       pods     = "gitlab-pod-range"
       services = "gitlab-service-range"
     }
-    master_authorized_ranges = {
-      internal-vms = "10.203.0.0/16"
-    }
-
   }
   default_nodepool = {
-    remove_pool              = true
-    remove_default_node_pool = true
+    remove_pool = true
   }
   node_config = {
     boot_disk_kms_key = var.kms_key
-
-    machine_type = "n2d-standard-2"
-    confidential_nodes = {
-      enabled = true
-    }
   }
   access_config = {
     private_nodes = true
     ip_access = {
+      authorized_ranges = {
+        internal-vms = "10.203.0.0/16"
+      }
       private_endpoint_config = {
         global_access = false
       }
@@ -281,7 +274,9 @@ module "gke-node-pool" {
   node_config = {
     boot_disk_kms_key = var.kms_key
     disk_size_gb      = 10
-    machine_type      = "n2d-standard-2"
+    # Confidential GKE Nodes need a confidential machine type such as N2D.
+    confidential_nodes = true
+    machine_type       = "n2d-standard-2"
     shielded_instance_config = {
       enable_secure_boot          = true
       enable_integrity_monitoring = true
