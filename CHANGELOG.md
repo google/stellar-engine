@@ -1,6 +1,19 @@
 # Changelog
 
 
+## [5.0.1](https://github.com/google/stellar-engine/compare/v5.0.0...v5.0.1) (2026-10-24)
+
+
+### Bug Fixes
+
+* **0-bootstrap:** use DENY condition on custom.kmsRotation so key destroy succeeds ([#284](https://github.com/google/stellar-engine/issues/284)) ([e107746](https://github.com/google/stellar-engine/commit/e107746e4fb6cbe4c8ce75f108984bf1279689d3))
+* **blueprints:** apply Workbench notebook owners ([#338](https://github.com/google/stellar-engine/issues/338)) ([fc19ec4](https://github.com/google/stellar-engine/commit/fc19ec4eb3e6f4e2b9fb0b74cfd68713517b16af))
+* **blueprints:** configure GitLab Cloud SQL private network ([#339](https://github.com/google/stellar-engine/issues/339)) ([7a5c594](https://github.com/google/stellar-engine/commit/7a5c5942463197b8e0bf03e6ce2a70e01ad14c99))
+* **blueprints:** return the il5/gke bastion external IP ([#343](https://github.com/google/stellar-engine/issues/343)) ([568f5a6](https://github.com/google/stellar-engine/commit/568f5a6f0b115a1139c3652b2e63b8a427168d54))
+* **fast:** omit log sink ingress without logging ([#340](https://github.com/google/stellar-engine/issues/340)) ([d0159cb](https://github.com/google/stellar-engine/commit/d0159cb40a3d5b29cd48ef8ce4deddb9afa5f968))
+* **gem4gov-cli:** handle empty data store lists and missing data store names ([#336](https://github.com/google/stellar-engine/issues/336)) ([80b7d4a](https://github.com/google/stellar-engine/commit/80b7d4a24669114345155af41e84f8ebab51a4c4))
+* **gke:** enable shielded nodes by default and fix gke-hardened feature key ([#341](https://github.com/google/stellar-engine/issues/341)) ([a3c90fe](https://github.com/google/stellar-engine/commit/a3c90fed5efd9d1962f1e26da6cee248c2eaaa09))
+
 ## [5.0.0](https://github.com/google/stellar-engine/compare/v4.2.0...v5.0.0) (2026-10-22)
 
 
