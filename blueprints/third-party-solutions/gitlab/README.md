@@ -247,7 +247,7 @@ if required and when the prompt appears, click on “confirm”.
 Otherwise, in your console of choice:
 
 ```bash
-git clone https://github.com/gcp-stellar-engine/stellar-engine.git
+git clone https://github.com/google/stellar-engine.git
 ```
 
 Before you deploy the architecture, you will need at least the following

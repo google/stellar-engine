@@ -1155,5 +1155,5 @@ if promptUser "Stage 3 - Security -"; then
     # handle_prompt "Would you like to delete the bootstrap project?" "./delete_gcp_project.sh --project-id=${BOOTSTRAP_PROJECT_ID}"
 
     echo "Congratulations, you have finished Stage 3! Please see the SBPG linked below for further hardening."
-    echo 'https://docs.google.com/document/d/1uv62Fqg73r9oJNP-NPZebpzoBom8rOgLoHkiMZPutbo/edit?usp=drive_link'
+    echo 'https://github.com/google/stellar-engine/blob/main/docs/security-best-practices.md'
 fi

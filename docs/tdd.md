@@ -45,7 +45,7 @@ Specifically, Stellar Engine:
 This document is not intended to inform users on Security Best Practices. For
 information on post deployment recommendations, please see the [Security Best
 Practices Guide
-(SBPG)](https://docs.google.com/document/d/1uv62Fqg73r9oJNP-NPZebpzoBom8rOgLoHkiMZPutbo/edit?tab=t.0#heading=h.gjdgxs).
+(SBPG)](security-best-practices.md).
 
 # 2.0 Executive Summary
 
