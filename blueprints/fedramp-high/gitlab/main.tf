@@ -273,10 +273,15 @@ module "gke-node-pool" {
   node_count = var.nodepool_node_count
   node_config = {
     boot_disk_kms_key = var.kms_key
-    disk_size_gb      = 10
+    # Confidential GKE Nodes need a boot disk larger than 15 GB.
+    disk_size_gb = 30
     # Confidential GKE Nodes need a confidential machine type such as N2D.
     confidential_nodes = true
     machine_type       = "n2d-standard-2"
+    # CIS GKE Benchmark 4.3.
+    metadata = {
+      block-project-ssh-keys = "true"
+    }
     shielded_instance_config = {
       enable_secure_boot          = true
       enable_integrity_monitoring = true
