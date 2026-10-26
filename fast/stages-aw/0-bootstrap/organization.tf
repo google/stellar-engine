@@ -288,7 +288,7 @@ module "organization" {
         role    = module.organization.custom_role_id["organization_iam_admin"]
         condition = {
           expression = format(
-            "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
+            "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
             join(",", formatlist("'%s'", [
               "roles/accesscontextmanager.policyAdmin",
               "roles/cloudasset.viewer",
@@ -311,7 +311,7 @@ module "organization" {
         role    = module.organization.custom_role_id["organization_iam_admin"]
         condition = {
           expression = format(
-            "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
+            "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
             join(",", formatlist("'%s'", [
               "roles/billing.admin",
               "roles/billing.costsManager",

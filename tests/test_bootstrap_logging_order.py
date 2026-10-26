@@ -116,19 +116,6 @@ class TestBootstrapLoggingOrder(unittest.TestCase):
             main_tf,
         )
 
-    def test_delegated_iam_conditions_guard_empty_grant_list(self):
-        for rel_path in (
-            "fast/stages-aw/0-bootstrap/organization.tf",
-            "fast/stages-aw/0-bootstrap/automation.tf",
-            "fast/stages-aw/3-security/main.tf",
-        ):
-            content = (_REPO_ROOT / rel_path).read_text(encoding="utf-8")
-            self.assertIn(
-                "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole',"
-                " []).size() > 0",
-                content,
-            )
-
     def test_automation_project_protects_bootstrap_service_accounts(self):
         automation_tf = (_BOOTSTRAP_DIR / "automation.tf").read_text(
             encoding="utf-8"

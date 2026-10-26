@@ -94,7 +94,7 @@ module "automation-project" {
         title       = "resman_delegated_grant"
         description = "Resource manager service account delegated grant."
         expression = format(
-          "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly(['%s'])",
+          "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly(['%s'])",
           "roles/serviceusage.serviceUsageConsumer"
         )
       }
