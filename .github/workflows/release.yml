@@ -34,6 +34,8 @@ jobs:
           for dir in "${RUNNER_TEMP}/../_actions/googleapis/release-please-action/"*/dist; do
             sed -i 's/### ⚠ {{title}}/### {{title}}/g' "${dir}/template1.hbs"
             sed -i "s/note.title = 'BREAKING CHANGES'/note.title = 'Breaking Changes'/g" "${dir}/index.js"
+            sed -i "s/const NOTES_DELIMITER = '---'/const NOTES_DELIMITER = '<!-- release-please-notes -->'/g" "${dir}/index.js"
+            sed -i "s/await this.github.commentOnIssue(comment, pullRequest.number);/void 0;/g" "${dir}/index.js"
           done
 
       - name: Generate Release

@@ -114,6 +114,16 @@ class TestLabelTaxonomy(unittest.TestCase):
             "note.title = 'Breaking Changes'/g",
             workflow,
         )
+        self.assertIn(
+            "s/const NOTES_DELIMITER = '---'/"
+            "const NOTES_DELIMITER = '<!-- release-please-notes -->'/g",
+            workflow,
+        )
+        self.assertIn(
+            "s/await this.github.commentOnIssue(comment, pullRequest.number);/"
+            "void 0;/g",
+            workflow,
+        )
 
     def test_dependabot_uses_only_curated_labels(self):
         dependabot_path = _REPO_ROOT / ".github/dependabot.yml"
