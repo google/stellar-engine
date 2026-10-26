@@ -1,6 +1,39 @@
 # Changelog
 
 
+## [5.1.0](https://github.com/google/stellar-engine/compare/v5.0.0...v5.1.0) (2026-10-26)
+
+
+### Features
+
+* **0-bootstrap:** support pre-created projects and workloads ([#355](https://github.com/google/stellar-engine/issues/355)) ([4c67f6b](https://github.com/google/stellar-engine/commit/4c67f6bbd2195c602fa2601cbf88c68477dea155))
+  * Adds `var.project_deletion_policies` (`automation`, `billing`, `logging`) to `fast/stages-aw/0-bootstrap` and ignores `resource_settings` lifecycle changes on `google_assured_workloads_workload.primary` so imported pre-created Stage 0 projects and Assured Workloads workloads are not replaced during `terraform apply` or deleted during `terraform destroy`.
+* **tests:** flatten test suite into tests/ and expand unit coverage ([#299](https://github.com/google/stellar-engine/issues/299)) ([5839cff](https://github.com/google/stellar-engine/commit/5839cffc815f5734dee055199c3efc6f64e8eacf))
+  * Flattens `tests/gem4gov_cli/`, `tests/tools/`, and `tests/scripts/` into a single `tests/` directory, removes redundant wrapper scripts, and expands Python and shell unit test suites to 103 single-scenario Python tests and 90 shell tests.
+
+
+### Bug Fixes
+
+* **0-bootstrap:** use DENY condition on custom.kmsRotation so key destroy succeeds ([#284](https://github.com/google/stellar-engine/issues/284)) ([e107746](https://github.com/google/stellar-engine/commit/e107746e4fb6cbe4c8ce75f108984bf1279689d3))
+  * Switches `custom.kmsRotation` in `fast/stages-aw/0-bootstrap/data/custom-constraint-policies/cloudkms.yaml` to an `action_type: DENY` condition (`has(resource.rotationPeriod) && resource.rotationPeriod > duration('7776000s')`) so KMS keys cannot exceed a 90-day rotation period while `terraform destroy` can clear `rotationPeriod` prior to key destruction.
+* **blueprints:** apply Workbench notebook owners ([#338](https://github.com/google/stellar-engine/issues/338)) ([fc19ec4](https://github.com/google/stellar-engine/commit/fc19ec4eb3e6f4e2b9fb0b74cfd68713517b16af))
+  * Wraps `var.notebooks[each.key].owner` as a single-element list `[var.notebooks[each.key].owner]` when set on `google_workbench_instance.playground` in `blueprints/fedramp-high/vertex-mlops/vertex.tf` instead of calling `tolist()` on a string, which previously failed type conversion and evaluated to `null`.
+* **blueprints:** configure GitLab Cloud SQL private network ([#339](https://github.com/google/stellar-engine/issues/339)) ([7a5c594](https://github.com/google/stellar-engine/commit/7a5c5942463197b8e0bf03e6ce2a70e01ad14c99))
+  * Passes `var.network_config.network_self_link` via `network_config.connectivity.psa_config.private_network` in `blueprints/third-party-solutions/gitlab/services.tf` instead of the undeclared `psa_configs` list attribute so the GitLab Cloud SQL instance attaches to the private VPC network.
+* **blueprints:** return the il5/gke bastion external IP ([#343](https://github.com/google/stellar-engine/issues/343)) ([568f5a6](https://github.com/google/stellar-engine/commit/568f5a6f0b115a1139c3652b2e63b8a427168d54))
+  * Reads `module.bastion-vm.external_ip` in `blueprints/il5/gke/outputs.tf` instead of the undeclared `network_interfaces` attribute so `bastion_vm_public_ip` returns the bastion external IP address when NAT is configured.
+* **cli:** ignore deleted folders in the preflight folder check ([#356](https://github.com/google/stellar-engine/issues/356)) ([54943ac](https://github.com/google/stellar-engine/commit/54943ac498a8fe49ca97c030d410df1770eca8b1))
+  * Filters folder searches by `state=ACTIVE` in `cli/src/stellar_engine/gcp/live.py` so `naming.folder` preflight checks ignore `DELETE_REQUESTED` folders left behind by prior Assured Workloads deletions.
+* **fast:** omit log sink ingress without logging ([#340](https://github.com/google/stellar-engine/issues/340)) ([d0159cb](https://github.com/google/stellar-engine/commit/d0159cb40a3d5b29cd48ef8ce4deddb9afa5f968))
+  * Gates the `"fast-org-log-sinks"` VPC Service Controls perimeter ingress policy reference on `var.logging != null` in `fast/stages-aw/3-security/vpc-sc.tf` so default perimeter configuration succeeds when `var.logging` is `null`.
+* **gem4gov-cli:** handle empty data store lists and missing data store names ([#336](https://github.com/google/stellar-engine/issues/336)) ([80b7d4a](https://github.com/google/stellar-engine/commit/80b7d4a24669114345155af41e84f8ebab51a4c4))
+  * Guards missing `name` fields and empty search data store lists in `blueprints/gemini-enterprise/gem4gov-cli/data_stores.py` and adds a container `HEALTHCHECK` instruction to `blueprints/gemini-enterprise/analytics/Dockerfile`.
+* **gke:** enable shielded nodes by default and fix gke-hardened feature key ([#341](https://github.com/google/stellar-engine/issues/341)) ([a3c90fe](https://github.com/google/stellar-engine/commit/a3c90fed5efd9d1962f1e26da6cee248c2eaaa09))
+  * Defaults `enable_features.shielded_nodes` to `true` in `modules/gke-cluster-standard` and `modules/gke-cluster-standard-se` and updates `blueprints/il5/gke-hardened/main.tf` from `enable_shielded_nodes` to `shielded_nodes` so GKE clusters enforce Shielded Nodes by default.
+* **modules:** fix the datafusion-se README example and accelerators row ([#354](https://github.com/google/stellar-engine/issues/354)) ([28429c0](https://github.com/google/stellar-engine/commit/28429c0433f9eaeeadf97d5ad6d324042972eb02))
+  * Updates the `modules/datafusion-se` README example to reference `datafusion-se` with `kms_key` and removes a blank line in `modules/datafusion-se/variables.tf` so `tools/tfdoc.py` renders the `accelerators` variable default accurately.
+
+
 ## [5.0.0](https://github.com/google/stellar-engine/compare/v4.2.0...v5.0.0) (2026-10-22)
 
 
