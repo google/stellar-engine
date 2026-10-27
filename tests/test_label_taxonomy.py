@@ -124,6 +124,8 @@ class TestLabelTaxonomy(unittest.TestCase):
             "void 0;/g",
             workflow,
         )
+        self.assertIn("/tmp/release_sub_bullets.json", workflow)
+        self.assertIn("Ensure Curated Release PR Labels", workflow)
 
     def test_dependabot_uses_only_curated_labels(self):
         dependabot_path = _REPO_ROOT / ".github/dependabot.yml"
