@@ -197,6 +197,7 @@ variable "factories_config" {
   description = "Configuration for the resource factories or external data."
   type = object({
     checklist_data = optional(string)
+    org_policies   = optional(string, "data/org-policies")
   })
   nullable = false
   default  = {}
