@@ -100,11 +100,15 @@ locals {
         resman-r    = module.automation-tf-resman-r-sa.email
       }
     }
-    custom_roles = module.organization.custom_role_id
+    custom_roles = local.custom_roles
     logging = {
-      project_id        = module.log-export-project.project_id
-      project_number    = module.log-export-project.number
-      writer_identities = module.organization.sink_writer_identities
+      project_id     = module.log-export-project.project_id
+      project_number = module.log-export-project.number
+      writer_identities = (
+        var.deploy_org_resources.logging_sinks
+        ? module.organization[0].sink_writer_identities
+        : module.root-folder-config[0].sink_writer_identities
+      )
     }
     assured_workloads      = merge(var.assured_workloads, { "folder" = local.assured_workload_folder })
     common_services_folder = module.branch-common-services-folder.folder.name
@@ -113,12 +117,13 @@ locals {
   }
 
   tfvars_globals = {
-    billing_account = var.billing_account
-    fast_features   = var.fast_features
-    groups          = local.principals
-    organization    = var.organization
-    prefix          = var.prefix
-    regime_mapping  = var.regime_mapping
+    billing_account      = var.billing_account
+    deploy_org_resources = var.deploy_org_resources
+    fast_features        = var.fast_features
+    groups               = local.principals
+    organization         = var.organization
+    prefix               = var.prefix
+    regime_mapping       = var.regime_mapping
   }
 }
 
@@ -161,7 +166,7 @@ output "common_services_folder" {
 
 output "custom_roles" {
   description = "Organization-level custom roles."
-  value       = module.organization.custom_role_id
+  value       = local.custom_roles
 }
 
 output "kms_protection_level" {

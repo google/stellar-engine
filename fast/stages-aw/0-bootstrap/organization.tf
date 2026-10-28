@@ -166,7 +166,7 @@ locals {
 # import org policy constraints enabled by default in new orgs since February 2024
 import {
   for_each = (
-    var.org_policies_config.import_defaults && var.bootstrap_user == null
+    var.deploy_org_resources.org_policies && var.org_policies_config.import_defaults && var.bootstrap_user == null
     ? toset([
       # source: https://cloud.google.com/resource-manager/docs/secure-by-default-organizations#organization_policies_enforced_on_organization_resources
       # listed in the order as on page
@@ -182,10 +182,11 @@ import {
     ]) : toset([])
   )
   id = "organizations/${var.organization.id}/policies/${each.key}"
-  to = module.organization.google_org_policy_policy.default[each.key]
+  to = module.organization[0].google_org_policy_policy.default[each.key]
 }
 
 module "organization-logging" {
+  count = var.deploy_org_resources.logging_settings ? 1 : 0
   # Preconfigure organization-wide logging settings to ensure project
   # log buckets (_Default, _Required) are created in the location
   # specified by local.locations.logging. This separate
@@ -222,7 +223,7 @@ resource "google_assured_workloads_workload" "primary" {
 module "no-compliance-folder" {
   count      = var.assured_workloads.regime == "COMPLIANCE_REGIME_UNSPECIFIED" ? 1 : 0
   source     = "../../../modules/folder"
-  parent     = module.organization-logging.id
+  parent     = "organizations/${var.organization.id}"
   name       = "StellarEngine-${var.prefix}"
   depends_on = [module.organization-logging]
   logging_settings = {
@@ -240,6 +241,33 @@ locals {
       "folders/${google_assured_workloads_workload.primary[0].resources[0].resource_id}"
     )
   ) : try(module.no-compliance-folder[0].folder.id, null)
+  custom_roles = (
+    var.deploy_org_resources.custom_roles
+    ? module.organization[0].custom_role_id
+    : {}
+  )
+  deploy_org_module = (
+    var.deploy_org_resources.custom_roles ||
+    var.deploy_org_resources.iam ||
+    var.deploy_org_resources.logging_sinks ||
+    var.deploy_org_resources.org_policies
+  )
+  deploy_root_folder_config = (
+    !var.deploy_org_resources.iam ||
+    !var.deploy_org_resources.logging_settings ||
+    !var.deploy_org_resources.logging_sinks
+  )
+  org_only_roles = [
+    "roles/axt.admin",
+    "roles/billing.admin",
+    "roles/billing.costsManager",
+    "roles/billing.user",
+    "roles/billing.viewer",
+    "roles/iam.organizationRoleAdmin",
+    "roles/iam.organizationRoleViewer",
+    "roles/iam.workforcePoolAdmin",
+    "roles/resourcemanager.organizationAdmin",
+  ]
 }
 
 module "branch-common-services-folder" {
@@ -254,10 +282,11 @@ module "branch-common-services-folder" {
 
 
 module "organization" {
+  count           = local.deploy_org_module ? 1 : 0
   source          = "../../../modules/organization-se"
-  organization_id = module.organization-logging.id
+  organization_id = "organizations/${var.organization.id}"
   prefix          = var.prefix
-  iam_by_principals = {
+  iam_by_principals = !var.deploy_org_resources.iam ? {} : {
     for k in distinct(concat(keys(local.iam_principals), keys(var.iam_by_principals))) :
     k => distinct(concat(
       try(local.iam_principals[k], []),
@@ -265,7 +294,7 @@ module "organization" {
     ))
   }
   # machine (service accounts) IAM bindings
-  iam = merge(
+  iam = !var.deploy_org_resources.iam ? {} : merge(
     {
       for k, v in local.iam : k => distinct(concat(v, lookup(var.iam, k, [])))
     },
@@ -274,29 +303,37 @@ module "organization" {
     }
   )
   # additive bindings, used for roles co-managed by different stages
-  iam_bindings_additive = merge(
+  iam_bindings_additive = !var.deploy_org_resources.iam ? {} : merge(
     local.iam_bindings_additive,
     var.iam_bindings_additive
   )
   # delegated role grant for resource manager service account
-  iam_bindings = merge(
+  iam_bindings = !var.deploy_org_resources.iam ? {} : merge(
     {
       organization_iam_admin_conditional = {
         members = [module.automation-tf-resman-sa.iam_email]
-        role    = module.organization.custom_role_id["organization_iam_admin"]
+        role = (
+          var.deploy_org_resources.custom_roles
+          ? local.custom_roles["organization_iam_admin"]
+          : "roles/resourcemanager.organizationAdmin"
+        )
         condition = {
           expression = format(
             "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
-            join(",", formatlist("'%s'", [
-              "roles/accesscontextmanager.policyAdmin",
-              "roles/cloudasset.viewer",
-              "roles/compute.orgFirewallPolicyAdmin",
-              "roles/compute.xpnAdmin",
-              "roles/orgpolicy.policyAdmin",
-              "roles/orgpolicy.policyViewer",
-              "roles/resourcemanager.organizationViewer",
-              module.organization.custom_role_id["tenant_network_admin"]
-            ]))
+            join(",", formatlist("'%s'", concat(
+              [
+                "roles/accesscontextmanager.policyAdmin",
+                "roles/cloudasset.viewer",
+                "roles/compute.orgFirewallPolicyAdmin",
+                "roles/compute.xpnAdmin",
+                "roles/orgpolicy.policyAdmin",
+                "roles/orgpolicy.policyViewer",
+                "roles/resourcemanager.organizationViewer",
+              ],
+              var.deploy_org_resources.custom_roles ? [
+                local.custom_roles["tenant_network_admin"]
+              ] : []
+            )))
           )
           title       = "automation_sa_delegated_grants"
           description = "Automation service account delegated grants."
@@ -306,7 +343,11 @@ module "organization" {
     local.billing_mode != "org" ? {} : {
       organization_billing_conditional = {
         members = [module.automation-tf-resman-sa.iam_email]
-        role    = module.organization.custom_role_id["organization_iam_admin"]
+        role = (
+          var.deploy_org_resources.custom_roles
+          ? local.custom_roles["organization_iam_admin"]
+          : "roles/resourcemanager.organizationAdmin"
+        )
         condition = {
           expression = format(
             "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
@@ -322,21 +363,27 @@ module "organization" {
       }
     }
   )
-  contacts     = var.bootstrap_user != null ? {} : local.essential_contacts
-  custom_roles = var.custom_roles
+  contacts     = !var.deploy_org_resources.iam || var.bootstrap_user != null ? {} : local.essential_contacts
+  custom_roles = var.deploy_org_resources.custom_roles ? var.custom_roles : {}
   factories_config = {
-    custom_roles = var.factories_config.custom_roles
+    custom_roles = var.deploy_org_resources.custom_roles ? var.factories_config.custom_roles : null
     org_policies = (
-      var.bootstrap_user != null ? null : var.factories_config.org_policy
+      !var.deploy_org_resources.org_policies || var.bootstrap_user != null
+      ? null
+      : var.factories_config.org_policy
     )
-    org_policy_custom_constraints = "./data/custom-constraint-policies/"
+    org_policy_custom_constraints = (
+      var.deploy_org_resources.org_policies
+      ? "./data/custom-constraint-policies/"
+      : null
+    )
     context = {
       org_policies = {
         root_node = var.organization.id
       }
     }
   }
-  logging_sinks = {
+  logging_sinks = !var.deploy_org_resources.logging_sinks ? {} : {
     for name, attrs in var.log_sinks : name => {
       bq_partitioned_table = attrs.type == "bigquery"
       destination          = local.log_sink_destinations[name].id
@@ -344,6 +391,81 @@ module "organization" {
       type                 = attrs.type
     }
   }
-  org_policies = var.bootstrap_user != null ? null : local.org_policies
+  org_policies = (
+    !var.deploy_org_resources.org_policies || var.bootstrap_user != null
+    ? {}
+    : local.org_policies
+  )
 
+}
+
+module "root-folder-config" {
+  count         = local.deploy_root_folder_config ? 1 : 0
+  source        = "../../../modules/folder"
+  folder_create = false
+  id            = local.assured_workload_folder
+  contacts      = var.deploy_org_resources.iam || var.bootstrap_user != null ? {} : local.essential_contacts
+  iam_by_principals = var.deploy_org_resources.iam ? {} : {
+    for k in distinct(concat(keys(local.iam_principals), keys(var.iam_by_principals))) :
+    k => [
+      for role in distinct(concat(
+        try(local.iam_principals[k], []),
+        try(var.iam_by_principals[k], [])
+      )) : role if !contains(local.org_only_roles, role)
+    ]
+  }
+  iam = var.deploy_org_resources.iam ? {} : {
+    for k, v in merge(
+      {
+        for k, v in local.iam : k => distinct(concat(v, lookup(var.iam, k, [])))
+      },
+      {
+        for k, v in var.iam : k => v if lookup(local.iam, k, null) == null
+      }
+    ) : k => v if !contains(local.org_only_roles, k)
+  }
+  iam_bindings_additive = var.deploy_org_resources.iam ? {} : {
+    for k, v in merge(
+      local.iam_bindings_additive,
+      var.iam_bindings_additive
+    ) : k => v if !contains(local.org_only_roles, v.role)
+  }
+  iam_bindings = var.deploy_org_resources.iam ? {} : {
+    folder_iam_admin_conditional = {
+      members = [module.automation-tf-resman-sa.iam_email]
+      role    = "roles/resourcemanager.folderIamAdmin"
+      condition = {
+        expression = format(
+          "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
+          join(",", formatlist("'%s'", concat(
+            [
+              "roles/accesscontextmanager.policyAdmin",
+              "roles/cloudasset.viewer",
+              "roles/compute.orgFirewallPolicyAdmin",
+              "roles/compute.xpnAdmin",
+              "roles/orgpolicy.policyAdmin",
+              "roles/orgpolicy.policyViewer",
+              "roles/resourcemanager.folderViewer",
+            ],
+            var.deploy_org_resources.custom_roles ? [
+              local.custom_roles["tenant_network_admin"]
+            ] : []
+          )))
+        )
+        title       = "automation_sa_delegated_grants"
+        description = "Automation service account delegated grants."
+      }
+    }
+  }
+  logging_settings = var.deploy_org_resources.logging_settings ? null : {
+    storage_location = local.locations.logging
+  }
+  logging_sinks = var.deploy_org_resources.logging_sinks ? {} : {
+    for name, attrs in var.log_sinks : name => {
+      bq_partitioned_table = attrs.type == "bigquery"
+      destination          = local.log_sink_destinations[name].id
+      filter               = attrs.filter
+      type                 = attrs.type
+    }
+  }
 }
