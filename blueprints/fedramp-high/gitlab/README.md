@@ -151,7 +151,7 @@ The setup should now be complete and GitLab will now have HTTPS enabled.
 | [net_project](variables.tf#L69) | Project name of the spoke network. This project has the Stellar Engine deployed default VPC and is in the Networking folder. | <code>string</code> | ✓ |  |
 | [network](variables.tf#L74) | Network path to use for cluster, VM, and load balancer. | <code>string</code> | ✓ |  |
 | [network_name](variables.tf#L79) | Network name to use for Firewall rules. E.G. test-net-spoke. | <code>string</code> | ✓ |  |
-| [nodepool_node_count](variables.tf#L84) | Number of node per zone in the Nodepool. | <code title="object&#40;&#123;&#10;  current &#61; optional&#40;number&#41;&#10;  initial &#61; number&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [nodepool_node_count](variables.tf#L84) | Number of node per zone in the Nodepool. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [project_id](variables.tf#L93) | Project ID where the GitLab cluster, VM, and load balancer will be deployed to. | <code>string</code> | ✓ |  |
 | [sa](variables.tf#L104) | Service account to run GKE and VM. | <code>string</code> | ✓ |  |
 | [subnetwork](variables.tf#L109) | Subnet path to use for cluster, VM, and load balancer. | <code>string</code> | ✓ |  |

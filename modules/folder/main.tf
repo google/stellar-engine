@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Google LLC
+ * Copyright 2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,33 @@
  */
 
 locals {
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    } if !endswith(k, "_vars")
+  }
+  ctx_p = "$"
+  _folder_id = (
+    var.id == null
+    ? null
+    : lookup(local.ctx.folder_ids, var.id, var.id)
+  )
   folder_id = (
     var.assured_workload_config == null
     ? (
       var.folder_create
-      ? try(google_folder.folder[0].id, null)
-      : var.id
+      ? coalesce(local._folder_id, try(google_folder.folder[0].id, ""))
+      : local._folder_id
     )
+    # pick the consumer folder, as resources also include the encryption keys
+    # project; the last fallback keeps the folder_number split valid
     : try(
       format("folders/%s", one([
         for r in google_assured_workloads_workload.folder[0].resources :
         r.resource_id if r.resource_type == "CONSUMER_FOLDER"
       ])),
       format("folders/%s", google_assured_workloads_workload.folder[0].resources[0].resource_id),
-      ""
+      "folders/"
     )
   )
   # Some APIs, such as the folder logging settings, take the bare number.
@@ -36,13 +49,13 @@ locals {
     local.folder_id == null ? null : trimprefix(local.folder_id, "folders/")
   )
   aw_parent = (
-    # Assured Workload only accepls folder as a parent and uses organization as a parent when no value provided.
+    # Assured Workload only accepts folder as a parent and uses organization as a parent when no value provided.
     var.parent == null
     ? null
     : (
       try(startswith(var.parent, "folders/"))
       ? var.parent
-      : null
+      : lookup(local.ctx.folder_ids, var.parent, null)
     )
   )
 }
@@ -50,15 +63,28 @@ locals {
 resource "google_folder" "folder" {
   count               = var.folder_create && var.assured_workload_config == null ? 1 : 0
   display_name        = substr(var.name, 0, 30)
-  parent              = var.parent
+  parent              = lookup(local.ctx.folder_ids, var.parent, var.parent)
   deletion_protection = var.deletion_protection
 }
 
+resource "google_kms_autokey_config" "default" {
+  provider = google-beta
+  count    = var.autokey_config != null ? 1 : 0
+  folder   = local.folder_id
+  key_project = try(
+    "projects/${local.ctx.project_ids[var.autokey_config.project]}",
+    "projects/${local.ctx.project_numbers[var.autokey_config.project]}",
+    var.autokey_config.project
+  )
+}
+
 resource "google_essential_contacts_contact" "contact" {
-  provider                            = google-beta
-  for_each                            = var.contacts
-  parent                              = local.folder_id
-  email                               = each.key
+  provider = google-beta
+  for_each = var.contacts
+  parent   = local.folder_id
+  email = lookup(
+    local.ctx.email_addresses, each.key, each.key
+  )
   language_tag                        = "en"
   notification_category_subscriptions = each.value
   depends_on = [
@@ -76,14 +102,15 @@ resource "google_compute_firewall_policy_association" "default" {
 }
 
 resource "google_assured_workloads_workload" "folder" {
-  count                     = (var.assured_workload_config != null && var.folder_create) ? 1 : 0
-  compliance_regime         = var.assured_workload_config.compliance_regime
-  display_name              = var.assured_workload_config.display_name
-  location                  = var.assured_workload_config.location
-  organization              = var.assured_workload_config.organization
-  enable_sovereign_controls = var.assured_workload_config.enable_sovereign_controls
-  labels                    = var.assured_workload_config.labels
-  partner                   = var.assured_workload_config.partner
+  count                        = (var.assured_workload_config != null && var.folder_create) ? 1 : 0
+  compliance_regime            = var.assured_workload_config.compliance_regime
+  display_name                 = var.assured_workload_config.display_name
+  location                     = var.assured_workload_config.location
+  organization                 = templatestring(var.assured_workload_config.organization, var.context.condition_vars)
+  enable_sovereign_controls    = var.assured_workload_config.enable_sovereign_controls
+  labels                       = var.assured_workload_config.labels
+  partner                      = var.assured_workload_config.partner
+  provisioned_resources_parent = local.aw_parent
   dynamic "partner_permissions" {
     for_each = try(var.assured_workload_config.partner_permissions, null) == null ? [] : [""]
     content {
@@ -92,9 +119,6 @@ resource "google_assured_workloads_workload" "folder" {
       service_access_approver      = var.assured_workload_config.partner_permissions.service_access_approver
     }
   }
-
-  provisioned_resources_parent = local.aw_parent
-
   resource_settings {
     display_name  = var.name
     resource_type = "CONSUMER_FOLDER"

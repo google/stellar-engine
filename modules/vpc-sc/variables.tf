@@ -39,6 +39,7 @@ variable "access_levels" {
       vpc_subnets            = optional(map(list(string)), {})
     })), [])
     description = optional(string)
+    title       = optional(string)
   }))
   default  = {}
   nullable = false
@@ -56,11 +57,61 @@ variable "access_levels" {
     condition = alltrue([
       for k, v in var.access_levels : alltrue([
         for condition in v.conditions : alltrue([
-          for member in condition.members : can(regex("^(?:serviceAccount:|user:)", member))
+          for member in condition.members :
+          can(regex("^(?:serviceAccount:|user:|group:)", member))
         ])
       ])
     ])
-    error_message = "Invalid `conditions[].members`. It needs to start with on of the prefixes: 'serviceAccount:' or 'user:'."
+    error_message = "Invalid `conditions[].members`. It needs to start with on of the prefixes: 'serviceAccount:', 'user:' or 'group:'."
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.access_levels : alltrue([
+        for condition in v.conditions : (
+          try(
+            condition.device_policy.allowed_encryption_statuses, null
+          ) == null
+          ? true
+          : alltrue([
+            for status in(
+              condition.device_policy.allowed_encryption_statuses
+            ) :
+            contains([
+              "ENCRYPTION_UNSPECIFIED",
+              "ENCRYPTION_UNSUPPORTED",
+              "UNENCRYPTED",
+              "ENCRYPTED"
+            ], status)
+          ])
+        )
+      ])
+    ])
+    error_message = "Invalid `allowed_encryption_statuses` value."
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.access_levels : alltrue([
+        for condition in v.conditions : (
+          try(
+            condition.device_policy.allowed_device_management_levels, null
+          ) == null
+          ? true
+          : alltrue([
+            for level in(
+              condition.device_policy.allowed_device_management_levels
+            ) :
+            contains([
+              "MANAGEMENT_UNSPECIFIED",
+              "NONE",
+              "BASIC",
+              "COMPLETE",
+              "CHROME_ENTERPRISE"
+            ], level)
+          ])
+        )
+      ])
+    ])
+    error_message = "Invalid `allowed_device_management_levels` value."
   }
 }
 
@@ -79,6 +130,24 @@ variable "access_policy_create" {
   default = null
 }
 
+variable "context" {
+  description = "External context used in replacements."
+  type = object({
+    access_levels    = optional(map(string), {})
+    condition_vars   = optional(map(map(string)), {})
+    folder_ids       = optional(map(string), {})
+    iam_principals   = optional(map(string), {})
+    identity_sets    = optional(map(list(string)), {})
+    organization_ids = optional(map(string), {})
+    project_numbers  = optional(map(number), {})
+    psc_endpoints    = optional(map(string), {})
+    resource_sets    = optional(map(list(string)), {})
+    service_sets     = optional(map(list(string)), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "egress_policies" {
   description = "Egress policy definitions that can be referenced in perimeters."
   type = map(object({
@@ -87,6 +156,7 @@ variable "egress_policies" {
       access_levels = optional(list(string), [])
       identity_type = optional(string)
       identities    = optional(list(string))
+      psc_endpoints = optional(list(string), [])
       resources     = optional(list(string), [])
     })
     to = object({
@@ -97,6 +167,7 @@ variable "egress_policies" {
         service_name         = string
       })), [])
       resources = optional(list(string))
+      roles     = optional(list(string))
     })
   }))
   default  = {}
@@ -124,10 +195,10 @@ variable "egress_policies" {
 variable "factories_config" {
   description = "Paths to folders that enable factory functionality."
   type = object({
-    access_levels       = optional(string)
-    egress_policies     = optional(string)
-    ingress_policies    = optional(string)
-    restricted_services = optional(string, "data/restricted-services.yaml")
+    access_levels    = optional(string)
+    egress_policies  = optional(string)
+    ingress_policies = optional(string)
+    perimeters       = optional(string)
   })
   nullable = false
   default  = {}
@@ -177,6 +248,7 @@ variable "ingress_policies" {
       access_levels = optional(list(string), [])
       identity_type = optional(string)
       identities    = optional(list(string))
+      psc_endpoints = optional(list(string), [])
       resources     = optional(list(string), [])
     })
     to = object({
@@ -186,6 +258,7 @@ variable "ingress_policies" {
         service_name         = string
       })), [])
       resources = optional(list(string))
+      roles     = optional(list(string))
     })
   }))
   default  = {}
@@ -210,44 +283,42 @@ variable "ingress_policies" {
   }
 }
 
-variable "service_perimeters_bridge" {
-  description = "Bridge service perimeters."
-  type = map(object({
-    spec_resources            = optional(list(string))
-    status_resources          = optional(list(string))
-    use_explicit_dry_run_spec = optional(bool, false)
-  }))
-  default = {}
-}
-
-variable "service_perimeters_regular" {
+variable "perimeters" {
   description = "Regular service perimeters."
   type = map(object({
-    description = optional(string)
+    description               = optional(string)
+    ignore_resource_changes   = optional(bool, false)
+    title                     = optional(string)
+    use_explicit_dry_run_spec = optional(bool, false)
     spec = optional(object({
-      access_levels       = optional(list(string))
-      resources           = optional(list(string))
-      restricted_services = optional(list(string))
-      egress_policies     = optional(list(string))
-      ingress_policies    = optional(list(string))
+      access_levels       = optional(list(string), [])
+      egress_policies     = optional(list(string), [])
+      ingress_policies    = optional(list(string), [])
+      restricted_services = optional(list(string), [])
+      resources           = optional(list(string), [])
       vpc_accessible_services = optional(object({
         allowed_services   = list(string)
         enable_restriction = optional(bool, true)
       }))
     }))
     status = optional(object({
-      access_levels       = optional(list(string))
-      resources           = optional(list(string))
-      restricted_services = optional(list(string))
-      egress_policies     = optional(list(string))
-      ingress_policies    = optional(list(string))
+      access_levels       = optional(list(string), [])
+      egress_policies     = optional(list(string), [])
+      ingress_policies    = optional(list(string), [])
+      resources           = optional(list(string), [])
+      restricted_services = optional(list(string), [])
       vpc_accessible_services = optional(object({
         allowed_services   = list(string)
-        enable_restriction = bool
+        enable_restriction = optional(bool, true)
       }))
     }))
-    use_explicit_dry_run_spec = optional(bool, false)
   }))
   default  = {}
   nullable = false
+}
+
+variable "project_id_search_scope" {
+  description = "Set this to an organization or folder ID to use Cloud Asset Inventory to automatically translate project ids to numbers."
+  type        = string
+  default     = null
 }

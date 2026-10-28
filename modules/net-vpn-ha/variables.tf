@@ -14,6 +14,20 @@
  * limitations under the License.
  */
 
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    addresses    = optional(map(string), {})
+    locations    = optional(map(string), {})
+    networks     = optional(map(string), {})
+    project_ids  = optional(map(string), {})
+    routers      = optional(map(string), {})
+    vpn_gateways = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "name" {
   description = "VPN Gateway name (if an existing VPN Gateway is not used), and prefix used for dependent resources."
   type        = string
@@ -64,11 +78,55 @@ variable "router_config" {
       all_subnets = bool
       ip_ranges   = map(string)
     }))
+    route_policies = optional(map(object({
+      type = string
+      terms = list(object({
+        priority = number
+        match = object({
+          expression  = string
+          title       = optional(string)
+          description = optional(string)
+          location    = optional(string)
+        })
+        actions = list(object({
+          expression  = string
+          title       = optional(string)
+          description = optional(string)
+          location    = optional(string)
+        }))
+      }))
+    })), {})
     keepalive     = optional(number)
     name          = optional(string)
     override_name = optional(string)
   })
   nullable = false
+
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.router_config.route_policies : [
+        for t in v.terms :
+        t.priority >= 0 && t.priority < 2147483648
+      ]
+    ]))
+    error_message = "Route policy term priority must be between 0 (inclusive) and 2147483648 (exclusive)."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.router_config.route_policies :
+      length(v.terms) == length(distinct([for t in v.terms : t.priority]))
+    ])
+    error_message = "Route policy term priority must be unique within the policy."
+  }
+
+  validation {
+    condition = alltrue([
+      for k, v in var.router_config.route_policies :
+      contains(["IMPORT", "EXPORT"], v.type)
+    ])
+    error_message = "Route policy type must be IMPORT or EXPORT."
+  }
 }
 
 variable "tunnels" {
@@ -82,10 +140,16 @@ variable "tunnels" {
         all_subnets = bool
         ip_ranges   = map(string)
       }))
+      custom_learned_ip_ranges = optional(object({
+        route_priority = optional(number, 1000)
+        ip_ranges      = map(string)
+      }))
       md5_authentication_key = optional(object({
         name = string
         key  = optional(string)
       }))
+      export_policies = optional(list(string))
+      import_policies = optional(list(string))
       ipv6 = optional(object({
         nexthop_address      = optional(string)
         peer_nexthop_address = optional(string)
@@ -94,7 +158,20 @@ variable "tunnels" {
     })
     # each BGP session on the same Cloud Router must use a unique /30 CIDR
     # from the 169.254.0.0/16 block.
-    bgp_session_range               = string
+    bgp_session_range = string
+    cipher_suite = optional(object({
+      phase1 = optional(object({
+        dh         = optional(list(string))
+        encryption = optional(list(string))
+        integrity  = optional(list(string))
+        prf        = optional(list(string))
+      }))
+      phase2 = optional(object({
+        encryption = optional(list(string))
+        integrity  = optional(list(string))
+        pfs        = optional(list(string))
+      }))
+    }))
     ike_version                     = optional(number, 2)
     name                            = optional(string)
     peer_external_gateway_interface = optional(number)

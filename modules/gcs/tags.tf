@@ -14,13 +14,24 @@
  * limitations under the License.
  */
 
+locals {
+  _tag_bindings = {
+    for k, v in var.tag_bindings : k => lookup(local.ctx.tag_values, v, v)
+  }
+}
+
 resource "google_tags_location_tag_binding" "binding" {
-  for_each  = var.tag_bindings
-  parent    = "//storage.googleapis.com/projects/_/buckets/${local._name}"
-  tag_value = each.value
-  location  = var.location
+  for_each = var.tag_bindings
+  parent   = "//storage.googleapis.com/projects/_/buckets/${local._name}"
+  tag_value = templatestring(
+    local._tag_bindings[each.key], var.context.tag_vars
+  )
+  location = lookup(local.ctx.locations, var.location, var.location)
   depends_on = [
     google_storage_bucket.bucket,
     google_storage_bucket_iam_binding.bindings
   ]
+  lifecycle {
+    replace_triggered_by = [google_storage_bucket.bucket[0].id]
+  }
 }

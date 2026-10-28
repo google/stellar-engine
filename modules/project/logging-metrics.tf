@@ -1,5 +1,5 @@
 /**
- * Copyright 2025 Google LLC
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,13 +63,18 @@ locals {
 }
 
 resource "google_logging_metric" "metrics" {
-  for_each         = local.metrics
-  project          = local.project.project_id
-  name             = each.key
-  filter           = each.value.filter
-  description      = each.value.description
-  disabled         = each.value.disabled
-  bucket_name      = each.value.bucket_name
+  for_each    = local.metrics
+  project     = local.project.project_id
+  name        = each.key
+  filter      = each.value.filter
+  description = each.value.description
+  disabled    = each.value.disabled
+  bucket_name = try(
+    # first try to check the context
+    local.ctx.log_buckets[each.value.bucket_name],
+    # if nothing else, use the provided channel as is
+    each.value.bucket_name
+  )
   value_extractor  = each.value.value_extractor
   label_extractors = each.value.label_extractors
 

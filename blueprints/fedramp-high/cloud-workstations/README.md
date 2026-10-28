@@ -42,7 +42,7 @@ Cloud Workstations provides preconfigured, customizable, and secure managed deve
 | [network_name](variables.tf#L60) | The name of the network. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L71) | The Google Cloud region. | <code>string</code> | ✓ |  |
 | [subnetwork_name](variables.tf#L76) | The name of the subnet. | <code>string</code> | ✓ |  |
-| [workstations](variables.tf#L81) | The workstations that will be created based on the configuration. | <code title="map&#40;object&#40;&#123;&#10;  env   &#61; optional&#40;map&#40;string&#41;&#41;&#10;  users &#61; optional&#40;list&#40;string&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [workstations](variables.tf#L81) | The workstations that will be created based on the configuration. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [cluster_id](variables.tf#L15) | The ID of the workstation cluster. | <code>string</code> |  | <code>&#34;example-workstation-cluster&#34;</code> |
 | [config_id](variables.tf#L21) | The ID of the workstation configuration. | <code>string</code> |  | <code>&#34;example-workstation-config&#34;</code> |
 | [core_project_id](variables.tf#L27) | The Project ID where the kms key is located. | <code>string</code> |  | <code>null</code> |

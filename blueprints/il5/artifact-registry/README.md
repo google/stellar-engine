@@ -112,7 +112,7 @@ To add more Docker registries, simply add new objects below `docker:`
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
 | [core_project_id](variables.tf#L15) | Core project ID. | <code>string</code> | ✓ |  |
-| [developer_registries](variables.tf#L20) | A map of developer registries and readers/writers for those developer registries. | <code title="map&#40;object&#40;&#123;&#10;  readers &#61; optional&#40;list&#40;string&#41;&#41;&#10;  writers &#61; optional&#40;list&#40;string&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [developer_registries](variables.tf#L20) | A map of developer registries and readers/writers for those developer registries. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [kms_key_name](variables.tf#L28) | The full self-link (projects/../locations/../keyRings/../cryptoKeys/..) of the existing KMS key to use for disk encryption. | <code>string</code> | ✓ |  |
 | [kms_keyring_name](variables.tf#L33) | Keyring attributes. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L38) | GCP Project to deploy Google Artifact Registries into. | <code>string</code> | ✓ |  |

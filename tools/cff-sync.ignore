@@ -1,0 +1,9 @@
+# Paths that tools/sync-from-cff.sh never adds, updates or deletes, relative
+# to each module directory. A pattern ending in / matches a directory at any
+# depth; other patterns match the relative path or the file name as a glob.
+
+# The styleguide forbids committing OpenTofu version files.
+versions.tofu
+
+# Upstream keeps broken recipes and examples here.
+__need_fixing/

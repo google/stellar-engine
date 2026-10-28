@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2023 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,6 +13,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#    "click",
+#    "marko",
+# ]
+# ///
 """Generate tables for Terraform root module files, outputs and variables.
 
 This tool generates nicely formatted Markdown tables from Terraform source
@@ -41,22 +49,25 @@ import collections
 import enum
 import glob
 import os
+from pathlib import Path
 import re
 import string
+import sys
 import urllib.parse
 
 import click
 import marko
 
+try:
+    from examples.utils import get_tftest_directive
+except ImportError:
+    BASEDIR = Path(__file__).parents[1]
+    sys.path.append(str(BASEDIR / "tests"))
+    from examples.utils import get_tftest_directive
+
 __version__ = "2.1.0"
 
-# COUNT_TEST_RE copied from tests/examples/test_plan.py
-COUNT_TEST_RE = re.compile(
-    r"# tftest +modules=(?P<modules>\d+) +resources=(?P<resources>\d+)"
-    + r"(?: +files=(?P<files>[\w@,_-]+))?"
-    + r"(?: +fixtures=(?P<fixtures>[\w@,_/.-]+))?"
-    + r"(?: +inventory=(?P<inventory>[\w\-.]+))?"
-)
+# TODO(ludomagno): decide if we want to support variables*.tf and outputs*.tf
 FILE_DESC_DEFAULTS = {
     "main.tf": "Module-level locals and resources.",
     "outputs.tf": "Module outputs.",
@@ -71,7 +82,7 @@ FILE_RE_RESOURCES = re.compile(r'(?sm)resource\s+"([^"]+)"')
 HEREDOC_RE = re.compile(r"(?sm)^<<\-?END(\s*.*?)\s*END$")
 MARK_BEGIN = "<!-- BEGIN TFDOC -->"
 MARK_END = "<!-- END TFDOC -->"
-MARK_OPTS_RE = re.compile(r"(?sm)<!-- TFDOC OPTS ((?:[a-z_]+:[0-1]\s*?)+) -->")
+MARK_OPTS_RE = re.compile(r"(?sm)<!-- TFDOC OPTS ((?:[a-z_]+:\S+\s*?)+) -->")
 OUT_ENUM = enum.Enum("O", "OPEN ATTR ATTR_DATA CLOSE COMMENT TXT SKIP")
 OUT_RE = re.compile(r"""(?smx)
     # output open
@@ -111,7 +122,7 @@ VAR_RE = re.compile(r"""(?smx)
     (?:^(.*?)$)
 """)
 VAR_RE_TYPE = re.compile(r"([\(\{\}\)])")
-VAR_TEMPLATE = ("default", "description", "type", "nullable")
+VAR_TEMPLATE = ("default", "description", "type", "nullable", "sensitive")
 
 Document = collections.namedtuple(
     "Document", "content files variables outputs recipes", defaults=[None]
@@ -171,28 +182,38 @@ def _parse(body, enum=VAR_ENUM, re=VAR_RE, template=VAR_TEMPLATE):
                 item.setdefault(context, []).append(data)
 
 
-def create_toc(readme):
+def _extract_title(element):
+    "Extract and format text from marko elements."
+    if isinstance(element, str):
+        return element
+    if hasattr(element, "children"):
+        if isinstance(element.children, str):
+            if element.get_type() == "CodeSpan":
+                return f"`{element.children}`"
+            return element.children
+        elif isinstance(element.children, list):
+            inner = "".join(_extract_title(c) for c in element.children)
+            if element.get_type() == "StrongEmphasis":
+                return f"**{inner}**"
+            elif element.get_type() == "Emphasis":
+                return f"*{inner}*"
+            return inner
+    return ""
+
+
+def create_toc(readme, skip=["contents"]):
     "Create a Markdown table of contents a for README."
     doc = marko.parse(readme)
     lines = []
     headings = [x for x in doc.children if x.get_type() == "Heading"]
+    skip = skip or []
     for h in headings[1:]:
-        if not h.children:
-            continue
-        first_child = h.children[0]
-        title = (
-            first_child.children
-            if isinstance(getattr(first_child, "children", None), str)
-            else "".join(
-                c.children
-                if isinstance(getattr(c, "children", None), str)
-                else ""
-                for c in h.children
-            )
-        )
+        title = _extract_title(h)
         slug = title.lower().strip()
         slug = re.sub(r"[^\w\s-]", "", slug)
         slug = re.sub(r"[-\s]+", "-", slug)
+        if slug in skip:
+            continue
         link = f"- [{title}](#{slug})"
         indent = "  " * (h.level - 2)
         lines.append(f"{indent}{link}")
@@ -200,7 +221,12 @@ def create_toc(readme):
 
 
 def create_tfref(
-    module_path, files=False, show_extra=False, exclude_files=None, readme=None
+    module_path,
+    files=False,
+    show_extra=False,
+    exclude_files=None,
+    readme=None,
+    hover=False,
 ):
     "Return tfdoc mark and generated content."
     if readme:
@@ -208,6 +234,8 @@ def create_tfref(
         opts = get_tfref_opts(readme)
         files = opts.get("files", files)
         show_extra = opts.get("show_extra", show_extra)
+        if "exclude" in opts:
+            exclude_files = (exclude_files or []) + [opts["exclude"]]
     abspath = os.path.abspath(module_path)
     try:
         if os.path.dirname(abspath).endswith("/modules"):
@@ -239,7 +267,13 @@ def create_tfref(
 
 
 def format_tfref(
-    outputs, variables, files, fixtures, recipes=None, show_extra=False
+    outputs,
+    variables,
+    files,
+    fixtures,
+    recipes=None,
+    show_extra=False,
+    hover=False,
 ):
     "Return formatted document."
     buffer = []
@@ -251,7 +285,7 @@ def format_tfref(
         buffer += list(format_tfref_files(files))
     if variables:
         buffer += ["", "## Variables", ""]
-        buffer += list(format_tfref_variables(variables, show_extra))
+        buffer += list(format_tfref_variables(variables, show_extra, hover))
     if outputs:
         buffer += ["", "## Outputs", ""]
         buffer += list(format_tfref_outputs(outputs, show_extra))
@@ -295,10 +329,7 @@ def format_tfref_files(items):
 def format_tfref_fixtures(items):
     "Format fixtures table."
     for x in items:
-        if os.sep in x or "/" in x:
-            yield f"- [{os.path.basename(x)}]({x})"
-        else:
-            yield f"- {x}"
+        yield f"- [{os.path.basename(x)}]({x})"
 
 
 def format_tfref_outputs(items, show_extra=True):
@@ -333,7 +364,7 @@ def format_tfref_recipes(recipes):
         yield f"- [{r.title}]({r.path})"
 
 
-def format_tfref_variables(items, show_extra=True):
+def format_tfref_variables(items, show_extra=True, hover=False):
     "Format variables table."
     if not items:
         return
@@ -361,9 +392,13 @@ def format_tfref_variables(items, show_extra=True):
                     value = "…"
                 else:
                     value = f"{value[0]}…{value[-1].strip()}"
-                vars[k] = (
-                    f'<code title="{_escape(title)}">{_escape(value)}</code>'
-                )
+                if hover:
+                    vars[k] = (
+                        f'<code title="{_escape(title)}">'
+                        f"{_escape(value)}</code>"
+                    )
+                else:
+                    vars[k] = f"<code>{_escape(value)}</code>"
         format = (
             f"| [{i.name}]({i.file}#L{i.line}) | {i.description or ''} | "
             f"{vars['type']} "
@@ -398,7 +433,7 @@ def get_tfref_opts(readme):
     try:
         for o in m.group(1).split():
             k, v = o.split(":")
-            opts[k] = bool(int(v))
+            opts[k] = v if k == "exclude" else bool(int(v))
     except (TypeError, ValueError) as e:
         raise SystemExit(f"incorrect option mark: {e}")
     return opts
@@ -446,18 +481,18 @@ def parse_fixtures(basepath, readme):
         if isinstance(child, marko.block.FencedCode):
             if child.lang == "hcl":
                 code = child.children[0].children
-                if match := COUNT_TEST_RE.search(code):
-                    if fixtures := match.group("fixtures"):
+                if directive := get_tftest_directive(code):
+                    if fixtures := directive.kwargs.get("fixtures"):
                         for fixture in fixtures.split(","):
                             fixture_full = os.path.join(
                                 REPO_ROOT, "tests", fixture
                             )
-                            if os.path.exists(fixture_full):
-                                used_fixtures.add(
-                                    os.path.relpath(fixture_full, basepath)
-                                )
-                            else:
-                                used_fixtures.add(os.path.basename(fixture))
+                            if not os.path.exists(fixture_full):
+                                raise SystemExit(f"Unknown fixture: {fixture}")
+                            fixture_relative = os.path.relpath(
+                                fixture_full, basepath
+                            )
+                            used_fixtures.add(fixture_relative)
     yield from sorted(used_fixtures)
 
 
@@ -493,7 +528,9 @@ def parse_outputs(basepath, exclude_files=None):
 
 def parse_recipes(module_path, module_url):
     "Find and return module recipes."
-    for dirpath, _, filenames in os.walk(module_path):
+    for dirpath, dirnames, filenames in os.walk(module_path):
+        # sort in place so recipe order does not depend on the filesystem
+        dirnames.sort()
         name = os.path.basename(dirpath)
         if name.startswith("recipe-") and "README.md" in filenames:
             try:
@@ -583,36 +620,48 @@ def render_toc(readme, toc):
 
 
 @click.command()
-@click.argument("module_path", type=click.Path(exists=True))
+@click.argument("module_paths", type=click.Path(exists=True), nargs=-1)
 @click.option("--exclude-file", "-x", multiple=True)
 @click.option("--files/--no-files", default=False)
 @click.option("--replace/--no-replace", default=True)
 @click.option("--show-extra/--no-show-extra", default=False)
 @click.option("--toc-only", is_flag=True, default=False)
+@click.option("--toc-skip", multiple=True, default=["contents"])
+@click.option("--hover", is_flag=True, default=False)
 def main(
-    module_path=None,
+    module_paths=None,
     exclude_file=None,
     files=False,
     replace=True,
     show_extra=True,
     toc_only=False,
+    toc_skip=["contents"],
+    hover=False,
 ):
     "Program entry point."
-    readme_path = os.path.join(module_path, "README.md")
-    readme = get_readme(readme_path)
-    if not toc_only:
-        doc = create_tfref(module_path, files, show_extra, exclude_file, readme)
-        readme = render_tfref(readme, doc.content)
-    toc = create_toc(readme)
-    readme = render_toc(readme, toc)
-    if replace:
-        try:
-            with open(readme_path, "w", encoding="utf-8") as f:
-                f.write(readme)
-        except (IOError, OSError) as e:
-            raise SystemExit(f"Error replacing README {readme_path}: {e}")
-    else:
-        print(readme)
+    if not module_paths:
+        return
+    for module_path in module_paths:
+        if toc_only and module_path.endswith(".md"):
+            readme_path = module_path
+        else:
+            readme_path = os.path.join(module_path, "README.md")
+        readme = get_readme(readme_path)
+        if not toc_only:
+            doc = create_tfref(
+                module_path, files, show_extra, exclude_file, readme, hover
+            )
+            readme = render_tfref(readme, doc.content)
+        toc = create_toc(readme, toc_skip)
+        readme = render_toc(readme, toc)
+        if replace:
+            try:
+                with open(readme_path, "w", encoding="utf-8") as f:
+                    f.write(readme)
+            except (IOError, OSError) as e:
+                raise SystemExit(f"Error replacing README {readme_path}: {e}")
+        else:
+            print(readme)
 
 
 if __name__ == "__main__":

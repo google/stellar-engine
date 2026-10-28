@@ -62,15 +62,47 @@ variable "name" {
   default     = null
 }
 
+variable "network_config" {
+  description = "Network configuration."
+  type = object({
+    enable_private_nodes = optional(bool)
+    pod_range = optional(object({
+      cidr   = optional(string)
+      create = optional(bool, false)
+      name   = optional(string)
+    }), {})
+    additional_node_network_configs = optional(list(object({
+      network    = string
+      subnetwork = string
+    })), [])
+    additional_pod_network_configs = optional(list(object({
+      subnetwork          = string
+      secondary_pod_range = string
+      max_pods_per_node   = string
+    })), [])
+    total_egress_bandwidth_tier        = optional(string)
+    pod_cidr_overprovisioning_disabled = optional(bool, false)
+  })
+  default = null
+}
+
 variable "node_config" {
   description = "Node-level configuration."
   type = object({
-    boot_disk_kms_key   = optional(string)
-    confidential_nodes  = optional(bool)
-    disk_size_gb        = optional(number)
-    disk_type           = optional(string, "pd-balanced")
-    ephemeral_ssd_count = optional(number)
-    gcfs                = optional(bool, false)
+    boot_disk = optional(object({
+      kms_key                = optional(string)
+      size_gb                = optional(number)
+      type                   = optional(string)
+      provisioned_iops       = optional(number)
+      provisioned_throughput = optional(number)
+    }))
+    boot_disk_kms_key                 = optional(string) # usage of this is discouraged
+    confidential_nodes                = optional(bool)
+    disk_size_gb                      = optional(number)                # usage of this is discouraged
+    disk_type                         = optional(string, "pd-balanced") # usage of this is discouraged
+    ephemeral_ssd_count               = optional(number)
+    ephemeral_storage_local_ssd_count = optional(number)
+    gcfs                              = optional(bool, false)
     guest_accelerator = optional(object({
       count = number
       type  = string
@@ -84,10 +116,18 @@ variable "node_config" {
     gvnic                = optional(bool, false)
     image_type           = optional(string)
     kubelet_config = optional(object({
-      cpu_manager_policy   = string
-      cpu_cfs_quota        = optional(bool)
-      cpu_cfs_quota_period = optional(string)
-      pod_pids_limit       = optional(number)
+      cpu_manager_policy                     = string
+      cpu_cfs_quota                          = optional(bool)
+      cpu_cfs_quota_period                   = optional(string)
+      insecure_kubelet_readonly_port_enabled = optional(string)
+      pod_pids_limit                         = optional(number)
+      container_log_max_size                 = optional(string)
+      container_log_max_files                = optional(number)
+      image_gc_low_threshold_percent         = optional(number)
+      image_gc_high_threshold_percent        = optional(number)
+      image_minimum_gc_age                   = optional(string)
+      image_maximum_gc_age                   = optional(string)
+      allowed_unsafe_sysctls                 = optional(list(string), [])
     }))
     linux_node_config = optional(object({
       sysctls     = optional(map(string))
@@ -104,7 +144,34 @@ variable "node_config" {
       enable_secure_boot          = optional(bool)
     }))
     spot                          = optional(bool)
+    flex_start                    = optional(bool)
     workload_metadata_config_mode = optional(string)
+    advanced_machine_features = optional(object({
+      enable_nested_virtualization = optional(bool)
+      threads_per_core             = optional(number)
+    }))
+    containerd_config = optional(object({
+      private_registry_access_config = optional(object({
+        certificate_authority_domain_config = optional(list(object({
+          fqdns                                            = list(string)
+          gcp_secret_manager_certificate_config_secret_uri = string
+        })))
+      }))
+      writable_cgroups = optional(bool)
+      registry_hosts = optional(map(object({
+        hosts = optional(map(object({
+          capabilities                     = optional(list(string))
+          override_path                    = optional(bool)
+          dial_timeout                     = optional(string)
+          header                           = optional(map(list(string)))
+          ca_gcp_secret_manager_secret_uri = optional(string)
+          client = optional(object({
+            cert_gcp_secret_manager_secret_uri = string
+            key_gcp_secret_manager_secret_uri  = optional(string)
+          }))
+        })), {})
+      })), {})
+    }))
   })
   default  = {}
   nullable = false
@@ -168,20 +235,16 @@ variable "nodepool_config" {
     upgrade_settings = optional(object({
       max_surge       = number
       max_unavailable = number
+      strategy        = optional(string)
+      blue_green_settings = optional(object({
+        node_pool_soak_duration = optional(string)
+        standard_rollout_policy = optional(object({
+          batch_percentage    = optional(number)
+          batch_node_count    = optional(number)
+          batch_soak_duration = optional(string)
+        }))
+      }))
     }))
-  })
-  default = null
-}
-
-variable "pod_range" {
-  description = "Pod secondary range configuration."
-  type = object({
-    secondary_pod_range = object({
-      name                 = string
-      cidr                 = optional(string)
-      create               = optional(bool)
-      enable_private_nodes = optional(bool)
-    })
   })
   default = null
 }
@@ -199,6 +262,12 @@ variable "reservation_affinity" {
     values                   = optional(list(string))
   })
   default = null
+}
+
+variable "resource_manager_tags" {
+  description = "A map of resource manager tag keys and values to be attached to the nodes for managing Compute Engine firewalls using Network Firewall Policies."
+  type        = map(string)
+  default     = null
 }
 
 variable "service_account" {

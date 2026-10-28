@@ -18,11 +18,6 @@ resource "google_project_service" "project_service" {
   service = "iap.googleapis.com"
 }
 
-resource "google_iap_client" "project_client" {
-  display_name = "CNAP Client"
-  brand        = "projects/${data.google_project.project.number}/brands/${var.oauth_brand_number}"
-}
-
 resource "google_iap_web_region_backend_service_iam_binding" "binding" {
   for_each                   = local.apps
   project                    = var.main_project_id

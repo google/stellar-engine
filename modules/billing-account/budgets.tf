@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Google LLC
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,25 @@
  * limitations under the License.
  */
 
+locals {
+  ctx_notification_channels = merge(
+    local.ctx.notification_channels,
+    {
+      for k, v in google_monitoring_notification_channel.default :
+      "$notification_channels:${k}" => v.id
+    }
+  )
+}
+
 resource "google_monitoring_notification_channel" "default" {
   for_each    = var.budget_notification_channels
   description = each.value.description
   display_name = coalesce(
     each.value.display_name, "Budget email notification ${each.key}."
   )
-  project      = each.value.project_id
+  project = lookup(
+    local.ctx.project_ids, each.value.project_id, each.value.project_id
+  )
   enabled      = each.value.enabled
   force_delete = each.value.force_delete
   type         = each.value.type
@@ -35,6 +47,15 @@ resource "google_monitoring_notification_channel" "default" {
     }
   }
 }
+
+# resource "terraform_data" "defaults_preconditions" {
+#   lifecycle {
+#     precondition {
+#       condition     = local.factory_budgets == null
+#       error_message = yamlencode(local.factory_budgets)
+#     }
+#   }
+# }
 
 resource "google_billing_budget" "default" {
   for_each        = merge(local.factory_budgets, var.budgets)
@@ -68,13 +89,27 @@ resource "google_billing_budget" "default" {
         : "INCLUDE_ALL_CREDITS"
       )
     )
+    credit_types = try(each.value.filter.credit_types_treatment.include_specified, null)
     labels = each.value.filter.label == null ? null : {
       (each.value.filter.label.key) = each.value.filter.label.value
     }
-    projects           = each.value.filter.projects
-    resource_ancestors = each.value.filter.resource_ancestors
-    services           = each.value.filter.services
-    subaccounts        = each.value.filter.subaccounts
+    projects = concat(
+      [
+        for v in each.value.filter.projects : try(
+          try("projects/${local.ctx.project_numbers[v]}", v), v
+        )
+      ],
+      lookup(local.ctx.project_sets, "$project_sets:${each.key}", [])
+    )
+    resource_ancestors = concat(
+      [
+        for v in each.value.filter.resource_ancestors :
+        lookup(local.ctx.folder_ids, v, v)
+      ],
+      lookup(local.ctx.folder_sets, "$folder_sets:${each.key}", [])
+    )
+    services    = each.value.filter.services
+    subaccounts = each.value.filter.subaccounts
     dynamic "custom_period" {
       for_each = try(each.value.filter.period.custom, null) != null ? [""] : []
       content {
@@ -95,7 +130,7 @@ resource "google_billing_budget" "default" {
     }
   }
   dynamic "threshold_rules" {
-    for_each = toset(each.value.threshold_rules)
+    for_each = each.value.threshold_rules
     iterator = rule
     content {
       threshold_percent = rule.value.percent
@@ -117,8 +152,8 @@ resource "google_billing_budget" "default" {
         rule.value.monitoring_notification_channels == null
         ? null
         : [
-          for v in rule.value.monitoring_notification_channels : try(
-            google_monitoring_notification_channel.default[v].id, v
+          for v in rule.value.monitoring_notification_channels : lookup(
+            local.ctx_notification_channels, v, v
           )
         ]
       )

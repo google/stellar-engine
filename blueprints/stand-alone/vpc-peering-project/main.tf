@@ -60,7 +60,9 @@ moved {
 }
 
 module "vpc-networks" {
-  source                          = "../../../modules/net-vpc"
+  source = "../../../modules/net-vpc"
+  # Fabric v59 adds a DirectPath route by default; keep the previous routes.
+  create_googleapis_routes        = { directpath = false }
   for_each                        = local.vpc_configs
   project_id                      = each.value.project_id
   name                            = each.value.name

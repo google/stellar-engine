@@ -15,9 +15,10 @@
  */
 
 locals {
+  _custom_constraints_factory_path = pathexpand(coalesce(var.factories_config.org_policy_custom_constraints, "-"))
   _custom_constraints_factory_data_raw = merge([
-    for f in try(fileset(var.factories_config.org_policy_custom_constraints, "*.yaml"), []) :
-    yamldecode(file("${var.factories_config.org_policy_custom_constraints}/${f}"))
+    for f in try(fileset(local._custom_constraints_factory_path, "*.yaml"), []) :
+    yamldecode(file("${local._custom_constraints_factory_path}/${f}"))
   ]...)
   _custom_constraints_factory_data = {
     for k, v in local._custom_constraints_factory_data_raw :
@@ -52,7 +53,7 @@ resource "google_org_policy_custom_constraint" "constraint" {
   display_name   = each.value.display_name
   description    = each.value.description
   action_type    = each.value.action_type
-  condition      = each.value.condition
+  condition      = templatestring(each.value.condition, var.context.condition_vars)
   method_types   = each.value.method_types
   resource_types = each.value.resource_types
 }

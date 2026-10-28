@@ -19,18 +19,44 @@
 locals {
   logging_sinks = {
     for k, v in var.logging_sinks :
-    # rewrite destination and type when type="project"
-    k => merge(v, v.type != "project" ? {} : {
-      destination = "projects/${v.destination}"
-      type        = "logging"
-    })
+    # expand destination contexts
+    k => merge(v,
+      v.type != "bigquery" ? {} : {
+        destination = lookup(
+          local.ctx.bigquery_datasets, v.destination, v.destination
+        )
+      },
+      v.type != "logging" ? {} : {
+        destination = lookup(
+          local.ctx.log_buckets, v.destination, v.destination
+        )
+      },
+      v.type != "project" ? {} : {
+        api         = "logging"
+        destination = "projects/${lookup(local.ctx.project_ids, v.destination, v.destination)}"
+      },
+      v.type != "pubsub" ? {} : {
+        destination = lookup(
+          local.ctx.pubsub_topics, v.destination, v.destination
+        )
+      },
+      v.type != "storage" ? {} : {
+        destination = lookup(
+          local.ctx.storage_buckets, v.destination, v.destination
+        )
+      }
+    )
   }
   sink_bindings = {
     for type in ["bigquery", "logging", "project", "pubsub", "storage"] :
     type => {
-      for name, sink in var.logging_sinks :
+      for name, sink in local.logging_sinks :
       name => sink if sink.iam && sink.type == type
     }
+  }
+  sink_bucket_expressions = {
+    for name, sink in local.sink_bindings["logging"] :
+    name => "resource.name.endsWith('locations/${split("/", sink.destination)[3]}/buckets/${split("/", sink.destination)[5]}')"
   }
 }
 
@@ -38,7 +64,16 @@ resource "google_logging_organization_settings" "default" {
   count                = var.logging_settings != null ? 1 : 0
   organization         = local.organization_id_numeric
   disable_default_sink = var.logging_settings.disable_default_sink
-  storage_location     = var.logging_settings.storage_location
+  kms_key_name = (
+    var.logging_settings.kms_key_name == null
+    ? null
+    : lookup(local.ctx.kms_keys, var.logging_settings.kms_key_name, var.logging_settings.kms_key_name)
+  )
+  storage_location = (
+    var.logging_settings.storage_location == null
+    ? null
+    : lookup(local.ctx.locations, var.logging_settings.storage_location, var.logging_settings.storage_location)
+  )
 }
 
 resource "google_organization_iam_audit_config" "default" {
@@ -48,30 +83,35 @@ resource "google_organization_iam_audit_config" "default" {
   dynamic "audit_log_config" {
     for_each = { for k, v in each.value : k => v if v != null }
     content {
-      log_type         = audit_log_config.key
-      exempted_members = audit_log_config.value.exempted_members
+      log_type = audit_log_config.key
+      exempted_members = [
+        for m in try(audit_log_config.value.exempted_members, []) :
+        lookup(local.ctx.iam_principals, m, m)
+      ]
     }
   }
 }
 
 resource "google_logging_organization_sink" "sink" {
-  for_each           = local.logging_sinks
-  name               = each.key
-  description        = coalesce(each.value.description, "${each.key} (Terraform-managed).")
+  for_each = local.logging_sinks
+  name     = each.key
+  description = (
+    each.value.description == null
+    ? "${each.key} (Terraform-managed)."
+    : each.value.description
+  )
   org_id             = local.organization_id_numeric
-  destination        = "${each.value.type}.googleapis.com/${each.value.destination}"
+  destination        = "${lookup(each.value, "api", each.value.type)}.googleapis.com/${each.value.destination}"
   filter             = each.value.filter
   include_children   = each.value.include_children
   intercept_children = each.value.intercept_children
   disabled           = each.value.disabled
-
   dynamic "bigquery_options" {
     for_each = each.value.type == "bigquery" ? [""] : []
     content {
       use_partitioned_tables = each.value.bq_partitioned_table
     }
   }
-
   dynamic "exclusions" {
     for_each = each.value.exclusions
     iterator = exclusion
@@ -135,11 +175,10 @@ resource "google_project_iam_member" "bucket_sinks_binding" {
   project  = split("/", each.value.destination)[1]
   role     = "roles/logging.bucketWriter"
   member   = google_logging_organization_sink.sink[each.key].writer_identity
-
   condition {
     title       = "${each.key} bucket writer"
     description = "Grants bucketWriter to ${google_logging_organization_sink.sink[each.key].writer_identity} used by log sink ${each.key} on ${var.organization_id}"
-    expression  = "resource.name.endsWith('${each.value.destination}')"
+    expression  = local.sink_bucket_expressions[each.key]
   }
 }
 

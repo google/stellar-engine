@@ -72,6 +72,8 @@ module "dmz-vpc" {
     logging = var.dns.enable_logging
   }
   create_googleapis_routes = {
+    # Fabric v59 adds a DirectPath route by default; keep the previous routes.
+    directpath = false
     private    = true
     restricted = true
   }
@@ -105,6 +107,8 @@ module "vdss-vpc" {
   }
   # Set explicit routes for googleapis in case the default route is deleted
   create_googleapis_routes = {
+    # Fabric v59 adds a DirectPath route by default; keep the previous routes.
+    directpath = false
     private    = true
     restricted = true
   }
@@ -136,6 +140,8 @@ module "mgmt-vpc" {
   }
   # Set explicit routes for googleapis in case the default route is deleted
   create_googleapis_routes = {
+    # Fabric v59 adds a DirectPath route by default; keep the previous routes.
+    directpath = false
     private    = true
     restricted = true
   }

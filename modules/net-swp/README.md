@@ -14,6 +14,7 @@ When deploying SWP, the required ad-hoc [Cloud Router](https://cloud.google.com/
 - [PSC service attachments](#psc-service-attachments)
 - [Secure Web Proxy with rules](#secure-web-proxy-with-rules)
 - [Secure Web Proxy with TLS inspection](#secure-web-proxy-with-tls-inspection)
+- [Secure Web Proxy as transparent proxy](#secure-web-proxy-as-transparent-proxy)
 - [Factories](#factories)
 - [Variables](#variables)
 - [Outputs](#outputs)
@@ -78,7 +79,7 @@ module "secure-web-proxy" {
 
 ## Secure Web Proxy with rules
 
-This example shows different ways of definining policy rules, including how to leverage substition for internally generated URL maps, or externally defined resources.
+This example shows different ways of defining policy rules, including how to leverage substitution for internally generated URL maps, or externally defined resources.
 
 ```hcl
 module "secure-web-proxy" {
@@ -274,6 +275,79 @@ module "secure-web-proxy" {
 # tftest modules=1 resources=3 inventory=tls-no-ip.yaml
 ```
 
+## Secure Web Proxy as transparent proxy
+To use Secure Web Proxy as transparent proxy, define it as a default gateway for the tag or create policy based routes as described in the [documentation](https://cloud.google.com/secure-web-proxy/docs/deploy-next-hop). Secure Web Proxy passes only traffic on the ports that it listens. Configure rules as documented in earlier sections.
+
+```hcl
+locals {
+  swp_name = "gateway"
+}
+
+module "vpc" {
+  source     = "./fabric/modules/net-vpc"
+  project_id = var.project_id
+  name       = "swp-network"
+  routes = {
+    gateway = {
+      dest_range    = "0.0.0.0/0",
+      priority      = 100
+      tags          = ["swp"] # only traffic from instances tagged 'swp' will be inspected
+      next_hop_type = "ilb",
+      next_hop      = module.addresses.internal_addresses[local.swp_name].address
+    }
+  }
+  subnets_proxy_only = [ # SWP requires proxy-only subnet
+    {
+      ip_cidr_range = "10.0.1.0/24"
+      name          = "regional-proxy"
+      region        = var.region
+      active        = true
+    }
+  ]
+  subnets = [
+    {
+      ip_cidr_range = "10.0.2.0/24"
+      name          = "production"
+      region        = var.region
+    }
+  ]
+}
+
+module "addresses" {
+  source     = "./fabric/modules/net-address"
+  project_id = var.project_id
+  internal_addresses = {
+    (local.swp_name) = {
+      region     = var.region
+      subnetwork = module.vpc.subnet_self_links["${var.region}/production"]
+    }
+  }
+}
+
+module "secure-web-proxy" {
+  source     = "./fabric/modules/net-swp"
+  project_id = var.project_id
+  region     = var.region
+  name       = local.swp_name
+  network    = module.vpc.id
+  subnetwork = module.vpc.subnets["${var.region}/production"].id
+  gateway_config = {
+    addresses             = [module.addresses.internal_addresses[local.swp_name].address]
+    next_hop_routing_mode = true
+    ports                 = [80, 443] # specify all ports to be intercepted
+  }
+  policy_rules = {
+    proxy-rule = {
+      priority        = 100
+      session_matcher = "true" # pass all traffic
+      tls_inspect     = false
+    }
+  }
+}
+
+# tftest inventory=transparent-proxy.yaml e2e
+```
+
 ## Factories
 
 URL lists and policies rules can also be defined via YAML-based factories, similarly to several other modules. Data coming from factories is internally merged with variables data, with factories having precedence in case duplicate keys are present in both.
@@ -345,7 +419,7 @@ matcher_args:
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [gateway_config](variables.tf#L40) | Optional Secure Web Gateway configuration. | <code title="object&#40;&#123;&#10;  addresses                &#61; optional&#40;list&#40;string&#41;, &#91;&#93;&#41;&#10;  delete_router_on_destroy &#61; optional&#40;bool, true&#41;&#10;  labels                   &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;  next_hop_routing_mode    &#61; optional&#40;bool, false&#41;&#10;  ports                    &#61; optional&#40;list&#40;string&#41;, &#91;443&#93;&#41;&#10;  scope                    &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [gateway_config](variables.tf#L40) | Optional Secure Web Gateway configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [name](variables.tf#L53) | Name of the Secure Web Proxy resource. | <code>string</code> | ✓ |  |
 | [network](variables.tf#L58) | Name of the network the Secure Web Proxy is deployed into. | <code>string</code> | ✓ |  |
 | [project_id](variables.tf#L108) | Project id of the project that holds the network. | <code>string</code> | ✓ |  |
@@ -353,12 +427,12 @@ matcher_args:
 | [subnetwork](variables.tf#L133) | Name of the subnetwork the Secure Web Proxy is deployed into. | <code>string</code> | ✓ |  |
 | [certificates](variables.tf#L17) | List of certificates to be used for Secure Web Proxy. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
 | [description](variables.tf#L24) | Optional description for the created resources. | <code>string</code> |  | <code>&#34;Managed by Terraform.&#34;</code> |
-| [factories_config](variables.tf#L30) | Path to folder with YAML resource description data files. | <code title="object&#40;&#123;&#10;  policy_rules &#61; optional&#40;string&#41;&#10;  url_lists    &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [policy_rules](variables.tf#L63) | Policy rules definitions. Merged with policy rules defined via the factory. | <code title="map&#40;object&#40;&#123;&#10;  priority            &#61; number&#10;  allow               &#61; optional&#40;bool, true&#41;&#10;  description         &#61; optional&#40;string&#41;&#10;  enabled             &#61; optional&#40;bool, true&#41;&#10;  application_matcher &#61; optional&#40;string&#41;&#10;  session_matcher     &#61; optional&#40;string&#41;&#10;  tls_inspect         &#61; optional&#40;bool&#41;&#10;  matcher_args &#61; optional&#40;object&#40;&#123;&#10;    application &#61; optional&#40;list&#40;string&#41;, &#91;&#93;&#41;&#10;    session     &#61; optional&#40;list&#40;string&#41;, &#91;&#93;&#41;&#10;  &#125;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [policy_rules_contexts](variables.tf#L97) | Replacement contexts for policy rules matcher arguments. | <code title="object&#40;&#123;&#10;  secure_tags      &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;  service_accounts &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;  url_lists        &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [service_attachment](variables.tf#L118) | PSC service attachment configuration. | <code title="object&#40;&#123;&#10;  nat_subnets           &#61; list&#40;string&#41;&#10;  automatic_connection  &#61; optional&#40;bool, false&#41;&#10;  consumer_accept_lists &#61; optional&#40;map&#40;string&#41;, &#123;&#125;&#41;&#10;  consumer_reject_lists &#61; optional&#40;list&#40;string&#41;&#41;&#10;  description           &#61; optional&#40;string&#41;&#10;  domain_name           &#61; optional&#40;string&#41;&#10;  enable_proxy_protocol &#61; optional&#40;bool, false&#41;&#10;  reconcile_connections &#61; optional&#40;bool&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [tls_inspection_config](variables.tf#L138) | TLS inspection configuration. | <code title="object&#40;&#123;&#10;  create_config &#61; optional&#40;object&#40;&#123;&#10;    ca_pool               &#61; optional&#40;string, null&#41;&#10;    description           &#61; optional&#40;string, null&#41;&#10;    exclude_public_ca_set &#61; optional&#40;bool, false&#41;&#10;  &#125;&#41;, null&#41;&#10;  id &#61; optional&#40;string, null&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [url_lists](variables.tf#L159) | URL lists. | <code title="map&#40;object&#40;&#123;&#10;  values      &#61; list&#40;string&#41;&#10;  description &#61; optional&#40;string&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [factories_config](variables.tf#L30) | Path to folder with YAML resource description data files. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [policy_rules](variables.tf#L63) | Policy rules definitions. Merged with policy rules defined via the factory. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [policy_rules_contexts](variables.tf#L97) | Replacement contexts for policy rules matcher arguments. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [service_attachment](variables.tf#L118) | PSC service attachment configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [tls_inspection_config](variables.tf#L138) | TLS inspection configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [url_lists](variables.tf#L159) | URL lists. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 

@@ -35,7 +35,7 @@ module "datafusion" {
 | [project_id](variables.tf#L121) | Project ID. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L126) | DataFusion region. | <code>string</code> | ✓ |  |
 | [subnet](variables.tf#L131) | Full path to subnet. | <code>string</code> | ✓ |  |
-| [accelerators](variables.tf#L20) | Accelerators. | <code title="object&#40;&#123;&#10;  accelerator_type &#61; optional&#40;string&#41;&#10;  state            &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [accelerators](variables.tf#L20) | Accelerators. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [connection_type](variables.tf#L29) | Connection type for datafusion. | <code>string</code> |  | <code>&#34;PRIVATE_SERVICE_CONNECT_INTERFACES&#34;</code> |
 | [dataproc_service_account](variables.tf#L40) | Service account for DataProc connection. | <code>string</code> |  | <code>null</code> |
 | [description](variables.tf#L46) | DataFusion instance description. | <code>string</code> |  | <code>&#34;Terraform managed.&#34;</code> |
