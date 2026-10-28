@@ -19,7 +19,9 @@ locals {
     for sa in distinct(compact([
       var.service_accounts.data-platform-dev,
       var.service_accounts.project-factory-dev,
-      var.service_accounts.project-factory-prod
+      var.service_accounts.project-factory-prod,
+      var.service_accounts.gke-dev,
+      var.service_accounts.gcve-dev,
     ])) : "serviceAccount:${sa}"
   ]
 }
