@@ -30,7 +30,7 @@ locals {
     dmz_vpc      = module.dmz-vpc.id
     landing_vpc  = module.vdss-vpc.id
   }
-  host_project_ids = module.env-spoke-vpc
+  host_project_ids = [for k, v in module.env-spoke-projects : v.project_id]
   host_project_numbers = {
     prod-landing = module.vdss-host-project.number
   }
