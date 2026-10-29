@@ -81,7 +81,7 @@ mark_stage_complete() {
     local stage_id=$1
     log_info "Marking $stage_id as complete..."
     # Update current session variable
-    eval "${stage_id}_DESTROYED=true"
+    printf -v "${stage_id}_DESTROYED" "true"
     # Persist to file
     # Persist to file
     # Persist to file
@@ -421,11 +421,11 @@ if [ ! -f "$SCRIPT_DIR"/config.env ] || promptUser "Would you like to update/ove
         if [[ -n "$current_val" ]]; then
             read -r -p "$prompt_text [$current_val]: " input
             if [[ -n "$input" ]]; then
-                eval "$var_name=\"$input\""
+                printf -v "$var_name" '%s' "$input"
             fi
         else
             read -r -p "$prompt_text: " input
-            eval "$var_name=\"$input\""
+            printf -v "$var_name" '%s' "$input"
         fi
     }
 

@@ -262,6 +262,10 @@ variable "service_accounts" {
   type = object({
     data-platform-dev    = string
     data-platform-prod   = string
+    gke-dev              = optional(string, null)
+    gke-prod             = optional(string, null)
+    gcve-dev             = optional(string, null)
+    gcve-prod            = optional(string, null)
     project-factory-dev  = string
     project-factory-prod = string
   })
