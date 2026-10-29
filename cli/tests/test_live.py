@@ -48,12 +48,26 @@ def test_service_disabled_becomes_api_disabled():
     assert "--project=123" in str(error)
 
 
-def test_other_denials_are_shortened():
-    error = live._denied(
-        api_exceptions.PermissionDenied("denied here\nstack noise")
-    )
+@pytest.mark.parametrize(
+    "raised",
+    [
+        api_exceptions.PermissionDenied("denied here\nstack noise"),
+        api_exceptions.Forbidden("denied here\nstack noise"),
+        api_exceptions.Unauthenticated("denied here\nstack noise"),
+        api_exceptions.Unauthorized("denied here\nstack noise"),
+    ],
+)
+def test_denials_are_shortened(raised):
+    error = live._denied(raised)
     assert type(error) is api.AccessDeniedError
     assert str(error) == "denied here"
+
+
+def test_http_denials_become_access_denied():
+    # A REST transport raises the HTTP classes, not the gRPC subclasses.
+    for status in (401, 403):
+        error = live._denied(api_exceptions.from_http_status(status, "no"))
+        assert type(error) is api.AccessDeniedError
 
 
 def test_rest_service_disabled():
@@ -159,6 +173,8 @@ def test_missing_credentials(monkeypatch):
     ("raised", "expected"),
     [
         (api_exceptions.PermissionDenied("no"), api.AccessDeniedError),
+        (api_exceptions.Forbidden("no"), api.AccessDeniedError),
+        (api_exceptions.Unauthorized("no"), api.AccessDeniedError),
         (api_exceptions.InvalidArgument("bad"), api.CloudError),
         (requests.ConnectionError("offline"), api.CloudError),
     ],
