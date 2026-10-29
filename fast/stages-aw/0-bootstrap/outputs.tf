@@ -106,7 +106,7 @@ locals {
       project_number = module.log-export-project.number
       writer_identities = (
         var.deploy_org_resources.logging_sinks
-        ? module.organization[0].sink_writer_identities
+        ? module.organization.sink_writer_identities
         : module.root-folder-config[0].sink_writer_identities
       )
     }
@@ -117,13 +117,12 @@ locals {
   }
 
   tfvars_globals = {
-    billing_account      = var.billing_account
-    deploy_org_resources = var.deploy_org_resources
-    fast_features        = var.fast_features
-    groups               = local.principals
-    organization         = var.organization
-    prefix               = var.prefix
-    regime_mapping       = var.regime_mapping
+    billing_account = var.billing_account
+    fast_features   = var.fast_features
+    groups          = local.principals
+    organization    = var.organization
+    prefix          = var.prefix
+    regime_mapping  = var.regime_mapping
   }
 }
 

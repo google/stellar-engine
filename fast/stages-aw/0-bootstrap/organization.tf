@@ -182,7 +182,7 @@ import {
     ]) : toset([])
   )
   id = "organizations/${var.organization.id}/policies/${each.key}"
-  to = module.organization[0].google_org_policy_policy.default[each.key]
+  to = module.organization.google_org_policy_policy.default[each.key]
 }
 
 module "organization-logging" {
@@ -244,14 +244,8 @@ locals {
   ) : try(module.no-compliance-folder[0].folder.id, null)
   custom_roles = (
     var.deploy_org_resources.custom_roles
-    ? module.organization[0].custom_role_id
+    ? module.organization.custom_role_id
     : {}
-  )
-  deploy_org_module = (
-    var.deploy_org_resources.custom_roles ||
-    var.deploy_org_resources.iam ||
-    var.deploy_org_resources.logging_sinks ||
-    var.deploy_org_resources.org_policies
   )
   deploy_root_folder_config = (
     !var.deploy_org_resources.iam ||
@@ -280,7 +274,6 @@ module "branch-common-services-folder" {
 
 
 module "organization" {
-  count           = local.deploy_org_module ? 1 : 0
   source          = "../../../modules/organization-se"
   organization_id = "organizations/${var.organization.id}"
   prefix          = var.prefix

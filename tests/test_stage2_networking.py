@@ -141,7 +141,8 @@ class TestStage2Networking(unittest.TestCase):
             _REPO_ROOT / "fast/stages-aw/0-bootstrap/organization.tf"
         ).read_text(encoding="utf-8")
         self.assertIn(
-            "contacts     = var.bootstrap_user != null"
+            "contacts     = !var.deploy_org_resources.iam"
+            " || var.bootstrap_user != null"
             " ? {} : local.essential_contacts",
             org_tf,
         )
