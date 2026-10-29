@@ -46,11 +46,13 @@ variable "organization_id" {
 variable "project_id" {
   description = "The project ID where the Access Context Manager resources will be created."
   type        = string
+  default     = null
 }
 
 variable "region" {
   description = "GCP Region to deploy into."
   type        = string
+  default     = null
 }
 
 variable "service_perimeters" {
