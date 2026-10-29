@@ -27,7 +27,11 @@ import helpers
 import stellar_engine
 from stellar_engine import cli
 from stellar_engine import paths
+from stellar_engine import tools as tools_lib
+from stellar_engine.commands import common
 from stellar_engine.config import answers as answers_lib
+from stellar_engine.gcp import live
+from stellar_engine.wizard import flow
 
 BASE_ARGS = [
     "preflight",
@@ -60,8 +64,8 @@ def isolated_home(tmp_path, monkeypatch):
 @pytest.fixture
 def fake_cloud(monkeypatch):
     cloud = conftest.FakeCloud()
-    monkeypatch.setattr(cli.live, "LiveCloudApi", lambda: cloud)
-    monkeypatch.setattr(cli.tools_lib, "SystemTools", conftest.FakeTools)
+    monkeypatch.setattr(live, "LiveCloudApi", lambda: cloud)
+    monkeypatch.setattr(tools_lib, "SystemTools", conftest.FakeTools)
     monkeypatch.delenv("GOOGLE_IMPERSONATE_SERVICE_ACCOUNT", raising=False)
     return cloud
 
@@ -231,7 +235,7 @@ def _workspace(home, stage, prefix="tst"):
 
 @pytest.fixture
 def fake_tools(monkeypatch):
-    monkeypatch.setattr(cli.tools_lib, "SystemTools", conftest.FakeTools)
+    monkeypatch.setattr(tools_lib, "SystemTools", conftest.FakeTools)
 
 
 def test_init_non_interactive_with_sets(runner, isolated_home):
@@ -407,9 +411,9 @@ def test_interactive_init_runs_the_wizard(runner, isolated_home, monkeypatch):
         calls["discovered"] = discovered
         return {**data, "alert_email": "wizard@example.com"}
 
-    monkeypatch.setattr(cli, "_stdin_is_tty", lambda: True)
-    monkeypatch.setattr(cli.flow, "run", fake_run)
-    monkeypatch.setattr(cli.tools_lib, "SystemTools", conftest.FakeTools)
+    monkeypatch.setattr(common, "stdin_is_tty", lambda: True)
+    monkeypatch.setattr(flow, "run", fake_run)
+    monkeypatch.setattr(tools_lib, "SystemTools", conftest.FakeTools)
     outcome = runner.invoke(
         cli.app,
         [
@@ -649,7 +653,7 @@ def test_render_interactive_confirm(
     assert _invoke(runner, "render").exit_code == 0
     tfvars = _workspace(isolated_home, "0-bootstrap") / "terraform.tfvars"
     tfvars.write_text(tfvars.read_text() + "# operator note\n")
-    monkeypatch.setattr(cli, "_stdin_is_tty", lambda: True)
+    monkeypatch.setattr(common, "stdin_is_tty", lambda: True)
     declined = runner.invoke(
         cli.app,
         ["render", "--stage", "0", "--repo", str(conftest.REPO_ROOT)],
@@ -1009,7 +1013,9 @@ def test_imports_scan_follows_the_regime(runner, fake_cloud, isolated_home):
 
 def test_imports_scan_reports_cloud_errors(runner, fake_cloud, isolated_home):
     assert _init(runner).exit_code == 0
-    fake_cloud.org_policies = cli.api.AccessDeniedError("no orgpolicy access")
+    fake_cloud.org_policies = conftest.api.AccessDeniedError(
+        "no orgpolicy access"
+    )
     outcome = _invoke(runner, "imports", "scan")
     assert outcome.exit_code == 1
     assert "no orgpolicy access" in outcome.output
