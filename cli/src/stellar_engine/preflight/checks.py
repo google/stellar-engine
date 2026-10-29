@@ -70,6 +70,12 @@ IMPERSONATION_ENV_VARS = (
 )
 _REGION_RE = re.compile(r"^us-[a-z]+[0-9]+$")
 _MAX_LISTED = 10
+# Project lifecycle states that `CloudApi.project_state` and
+# `CloudApi.visible_project_state` return.
+_PROJECT_ACTIVE = "ACTIVE"
+_PROJECT_DELETE_REQUESTED = "DELETE_REQUESTED"
+# What a naming check cannot do when a Google Cloud call fails.
+_EXISTING_RESOURCES = "check for existing resources"
 
 
 @dataclasses.dataclass
@@ -875,20 +881,60 @@ def _precreate_blockers(ctx, resources):
     return found
 
 
-def _stage0_precreated(ctx):
-    """Returns whether Stage 0 needs no billing access for these inputs.
+@dataclasses.dataclass(frozen=True)
+class PrecreateStatus:
+    """Stage 0 resources that need billing access, against the import blocks.
 
-    That holds when import blocks adopt every resource that needs billing
-    access at creation and nothing else in Stage 0 uses the account.
+    Attributes:
+        resources: The `repo.BillingResource` values that Stage 0 creates
+            for these inputs, in `Repo.billing_resources` order.
+        missing: The resources that no import block adopts.
+        blockers: One sentence per Stage 0 use of the billing account that
+            pre-creation cannot replace.
     """
+
+    resources: tuple[repo_lib.BillingResource, ...]
+    missing: tuple[repo_lib.BillingResource, ...]
+    blockers: tuple[str, ...]
+
+    @property
+    def covered(self):
+        """Returns whether Stage 0 needs no billing access.
+
+        That holds when import blocks adopt every resource that needs
+        billing access at creation and nothing else in Stage 0 uses the
+        account.
+        """
+        return not self.missing and not self.blockers
+
+
+def precreate_status(ctx):
+    """Compares the Stage 0 resources that need billing access to the imports.
+
+    Args:
+        ctx: The preflight context, whose inputs set the prefix and the
+            regime.
+
+    Returns:
+        A `PrecreateStatus`.
+    """
+    resources = tuple(_billing_resources(ctx))
+    imported = set(ctx.inputs.imported_addresses)
+    return PrecreateStatus(
+        resources=resources,
+        missing=tuple(
+            item for item in resources if item.address not in imported
+        ),
+        blockers=tuple(_precreate_blockers(ctx, resources)),
+    )
+
+
+def _stage0_precreated(ctx):
+    """Returns whether Stage 0 needs no billing access for these inputs."""
     inputs = ctx.inputs
     if inputs.prefix is None or inputs.regime is None:
         return False
-    resources = _billing_resources(ctx)
-    imported = set(inputs.imported_addresses)
-    return all(
-        item.address in imported for item in resources
-    ) and not _precreate_blockers(ctx, resources)
+    return precreate_status(ctx).covered
 
 
 def _precreate_result(ctx, account_id):
@@ -937,12 +983,9 @@ def _precreate_result(ctx, account_id):
             "Not checked, because preflight could not test the billing "
             f"permissions; see the {tested} check.",
         ), False
-    resources = _billing_resources(ctx)
-    imported = set(inputs.imported_addresses)
-    missing = [item for item in resources if item.address not in imported]
-    blockers = _precreate_blockers(ctx, resources)
+    precreate = precreate_status(ctx)
     lacks = f"The deploying identity lacks {requirement} on {account_id}"
-    if not missing and not blockers:
+    if precreate.covered:
         return CheckResult(
             check_id,
             category,
@@ -950,23 +993,23 @@ def _precreate_result(ctx, account_id):
             Status.PASS,
             f"{lacks}, and import blocks adopt every Stage 0 resource that "
             "needs it: "
-            + ", ".join(item.name for item in resources)
+            + ", ".join(item.name for item in precreate.resources)
             + "."
             + _later_stages_note(ctx),
             doc=DDG_STAGE0,
         ), True
     listed = "; ".join(
         f"{item.create}, imported as {item.address} with ID {item.import_id}"
-        for item in missing
+        for item in precreate.missing
     )
     detail = (
         lacks
         + (
             f", so Stage 0 cannot create these resources: {listed}."
-            if missing
+            if precreate.missing
             else ". Import blocks adopt every Stage 0 resource that needs it."
         )
-        + "".join(f" {sentence}" for sentence in blockers)
+        + "".join(f" {sentence}" for sentence in precreate.blockers)
         + _later_stages_note(ctx)
     )
     who = (
@@ -981,14 +1024,14 @@ def _precreate_result(ctx, account_id):
         "ID, and run `stellar render`."
     )
     workload = ctx.repo.assured_workload()
-    if any(item.address == workload.address for item in missing):
+    if any(item.address == workload.address for item in precreate.missing):
         remedy += (
             " Create the Assured Workloads workload with the billing account, "
             "because the API requires one, and with violation notifications "
             "enabled to match organization.tf."
         )
     if workload.replaced_on_import and any(
-        item.address == workload.address for item in resources
+        item.address == workload.address for item in precreate.resources
     ):
         remedy += (
             " A pre-created workload helps only once organization.tf lists "
@@ -1031,7 +1074,7 @@ def check_project(ctx):
         state = ctx.cloud.project_state(project)
     except api.CloudError:
         state = None
-    if state != "ACTIVE":
+    if state != _PROJECT_ACTIVE:
         return [
             CheckResult(
                 "project.state",
@@ -1183,18 +1226,30 @@ def _check_region(ctx):
     )
 
 
+def _cloud_warning(check_id, title, error, action=_EXISTING_RESOURCES):
+    """Reports a Google Cloud error that stopped a naming check as a warning.
+
+    Args:
+        check_id: Check id of the stopped check.
+        title: Title of the stopped check.
+        error: The `api.CloudError` raised.
+        action: What the check could not do, after `Cannot` in the detail.
+    """
+    return CheckResult(
+        check_id,
+        Category.NAMING,
+        title,
+        Status.WARN,
+        f"Cannot {action}: {error}",
+    )
+
+
 def _guarded(check_id, title, run):
     """Runs one sub-check and reports a Google Cloud error as a warning."""
     try:
         return run()
     except api.CloudError as error:
-        return CheckResult(
-            check_id,
-            Category.NAMING,
-            title,
-            Status.WARN,
-            f"Cannot check for existing resources: {error}",
-        )
+        return _cloud_warning(check_id, title, error)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1241,18 +1296,12 @@ def _project_results(ctx, project_ids, group=_STAGE0_PROJECTS):
     try:
         states = _project_states(ctx, project_ids)
     except api.CloudError as error:
-        return [
-            CheckResult(
-                group.check_id,
-                Category.NAMING,
-                group.title,
-                Status.WARN,
-                f"Cannot check for existing resources: {error}",
-            )
-        ]
-    active = [pid for pid, state in states.items() if state == "ACTIVE"]
+        return [_cloud_warning(group.check_id, group.title, error)]
+    active = [pid for pid, state in states.items() if state == _PROJECT_ACTIVE]
     deleted = [
-        pid for pid, state in states.items() if state == "DELETE_REQUESTED"
+        pid
+        for pid, state in states.items()
+        if state == _PROJECT_DELETE_REQUESTED
     ]
     results = [
         _collision(
@@ -1311,15 +1360,13 @@ def _imported_result(ctx, project_ids):
     try:
         states = _project_states(ctx, project_ids)
     except api.CloudError as error:
-        return CheckResult(
-            check_id,
-            Category.NAMING,
-            title,
-            Status.WARN,
-            f"Cannot check the pre-created projects: {error}",
+        return _cloud_warning(
+            check_id, title, error, action="check the pre-created projects"
         )
     deleted = [
-        pid for pid, state in states.items() if state == "DELETE_REQUESTED"
+        pid
+        for pid, state in states.items()
+        if state == _PROJECT_DELETE_REQUESTED
     ]
     missing = [pid for pid, state in states.items() if state is None]
     if not deleted and not missing:
@@ -1499,20 +1546,49 @@ def _folder_result(ctx, prefix):
     )
 
 
-def _holder_member(ctx, holder, groups):
-    """Resolves a Stage 0 role holder to the IAM member it grants."""
-    prefix = ctx.inputs.prefix
+def holder_member(
+    holder: repo_lib.Holder,
+    *,
+    prefix: str | None,
+    groups: dict[str, str],
+    bootstrap_user: str | None,
+    domain: str | None,
+) -> str | None:
+    """Resolves a Stage 0 role holder to the IAM member it grants.
+
+    Args:
+        holder: A holder from `Repo.authoritative_bindings`.
+        prefix: The deployment prefix, which names the automation service
+            accounts.
+        groups: The group members by group key.
+        bootstrap_user: The user of the first Stage 0 apply.
+        domain: The organization domain.
+
+    Returns:
+        The member, or None when the inputs cannot name it.
+    """
     match holder.kind:
-        case repo_lib.HolderKind.GROUP:
+        case repo_lib.HolderKind.GROUP if holder.key:
             return groups.get(holder.key)
-        case repo_lib.HolderKind.SERVICE_ACCOUNT if prefix:
+        case repo_lib.HolderKind.SERVICE_ACCOUNT if prefix and holder.key:
             email = naming.automation_sa_email(prefix, holder.key)
             return f"serviceAccount:{email}"
-        case repo_lib.HolderKind.BOOTSTRAP_USER if bootstrap_user(ctx):
-            return f"user:{bootstrap_user(ctx)}"
-        case repo_lib.HolderKind.DOMAIN if ctx.domain:
-            return f"domain:{ctx.domain}"
+        case repo_lib.HolderKind.BOOTSTRAP_USER if bootstrap_user:
+            return f"user:{bootstrap_user}"
+        case repo_lib.HolderKind.DOMAIN if domain:
+            return f"domain:{domain}"
     return None
+
+
+def _holder_member(ctx, holder, groups):
+    """Resolves a holder with the inputs of a check context."""
+    return holder_member(
+        holder,
+        prefix=ctx.inputs.prefix,
+        groups=groups,
+        bootstrap_user=bootstrap_user(ctx),
+        domain=ctx.domain,
+    )
 
 
 def _removed_grants(ctx, bindings):

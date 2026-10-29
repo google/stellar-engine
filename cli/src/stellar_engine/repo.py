@@ -357,14 +357,77 @@ def _load_hcl(path):
         return hcl2.load(handle)
 
 
-@functools.cache
-def _stage_variables(root, stage):
-    parsed = _load_hcl(paths.stage_dir(root, stage) / "variables.tf")
+def _locals(path):
+    """Returns the locals that an HCL file declares, merged across blocks.
+
+    Args:
+        path: Path of a Terraform file.
+
+    Returns:
+        Local name to its value, as python-hcl2 returns it.
+    """
+    values = {}
+    for block in _load_hcl(path).get("locals", []):
+        values.update(block)
+    return values
+
+
+def _resources(path, resource_type):
+    """Returns the resources of one type that an HCL file declares.
+
+    Args:
+        path: Path of a Terraform file.
+        resource_type: Resource type, such as `google_project`.
+
+    Returns:
+        A list of the unquoted resource name and its parsed body, in file
+        order.
+    """
+    return [
+        (hcl.unquote(name), body)
+        for block in _load_hcl(path).get("resource", [])
+        for kind, bodies in block.items()
+        if hcl.unquote(kind) == resource_type
+        for name, body in bodies.items()
+    ]
+
+
+def _modules(path):
+    """Returns the module calls that an HCL file declares.
+
+    Args:
+        path: Path of a Terraform file.
+
+    Returns:
+        A list of the unquoted module label and its parsed body, in file
+        order.
+    """
+    return [
+        (hcl.unquote(label), body)
+        for block in _load_hcl(path).get("module", [])
+        for label, body in block.items()
+    ]
+
+
+def _variables(path):
+    """Returns the variables that an HCL file declares.
+
+    Args:
+        path: Path of a Terraform file.
+
+    Returns:
+        The unquoted variable name to its parsed body.
+    """
     return {
         hcl.unquote(name): body
-        for block in parsed.get("variable", [])
+        for block in _load_hcl(path).get("variable", [])
         for name, body in block.items()
     }
+
+
+@functools.cache
+def _stage_variables(root, stage):
+    return _variables(paths.stage_dir(root, stage) / "variables.tf")
 
 
 def _literal_map(value, name):
@@ -618,12 +681,11 @@ class Repo:
 
     def _module_names(self, filename):
         """Maps each module in a Stage 0 file to its `name` argument."""
-        names = {}
-        for block in _load_hcl(self.bootstrap_dir / filename).get("module", []):
-            for label, body in block.items():
-                if "name" in body:
-                    names[hcl.unquote(label)] = hcl.unquote(body["name"])
-        return names
+        return {
+            label: hcl.unquote(body["name"])
+            for label, body in _modules(self.bootstrap_dir / filename)
+            if "name" in body
+        }
 
     def automation_service_accounts(self):
         """Maps Stage 0 automation service account modules to their names.
@@ -687,14 +749,9 @@ class Repo:
 
     @functools.cached_property
     def _assured_workload(self):
-        found = []
-        parsed = _load_hcl(self.bootstrap_dir / _WORKLOAD_FILE)
-        for block in parsed.get("resource", []):
-            for kind, bodies in block.items():
-                if hcl.unquote(kind) != WORKLOAD_RESOURCE:
-                    continue
-                for name, body in bodies.items():
-                    found.append((hcl.unquote(name), body))
+        found = _resources(
+            self.bootstrap_dir / _WORKLOAD_FILE, WORKLOAD_RESOURCE
+        )
         if len(found) != 1:
             raise RepoError(
                 f"Expected one {WORKLOAD_RESOURCE} in 0-bootstrap/"
@@ -879,13 +936,12 @@ class Repo:
 
     @functools.cached_property
     def _project_module_deletion_policy(self):
-        parsed = _load_hcl(self.root / "modules/project/variables.tf")
-        for block in parsed.get("variable", []):
-            for name, body in block.items():
-                if hcl.unquote(name) == "deletion_policy":
-                    default = hcl.unquote(body.get("default"))
-                    if isinstance(default, str):
-                        return default
+        variables = _variables(self.root / "modules/project/variables.tf")
+        default = hcl.unquote(
+            variables.get("deletion_policy", {}).get("default")
+        )
+        if isinstance(default, str):
+            return default
         raise RepoError("modules/project declares no deletion_policy default")
 
     @functools.cached_property
@@ -897,13 +953,7 @@ class Repo:
         """
         bodies = {}
         for filename, module in _STAGE0_PROJECT_MODULES:
-            body = None
-            for block in _load_hcl(self.bootstrap_dir / filename).get(
-                "module", []
-            ):
-                for label, candidate in block.items():
-                    if hcl.unquote(label) == module:
-                        body = candidate
+            body = dict(_modules(self.bootstrap_dir / filename)).get(module)
             source = hcl.unquote(body.get("source", "")) if body else ""
             if body is None or not str(source).endswith(_PROJECT_MODULE_SOURCE):
                 raise RepoError(f"No Stage 0 project module {module}")
@@ -913,14 +963,11 @@ class Repo:
     @functools.cached_property
     def _stage0_projects(self):
         resource_index = ""
-        project_main = _load_hcl(self.root / "modules/project/main.tf")
-        for block in project_main.get("resource", []):
-            for label, bodies in block.items():
-                if hcl.unquote(label) != "google_project":
-                    continue
-                for name, body in bodies.items():
-                    if hcl.unquote(name) == "project":
-                        resource_index = _counted(body)
+        for name, body in _resources(
+            self.root / "modules/project/main.tf", "google_project"
+        ):
+            if name == "project":
+                resource_index = _counted(body)
         projects = []
         for module, body in self._stage0_module_bodies.items():
             count = body.get("count")
@@ -951,10 +998,7 @@ class Repo:
             RepoError: If a binding refers to an unknown principal or service
                 account, or a binding local is not a map.
         """
-        local_values = {}
-        path = self.bootstrap_dir / "organization-iam.tf"
-        for block in _load_hcl(path).get("locals", []):
-            local_values.update(block)
+        local_values = _locals(self.bootstrap_dir / "organization-iam.tf")
         accounts = self.automation_service_accounts()
         bindings = {}
         for name, value in local_values.items():
@@ -1010,11 +1054,7 @@ class Repo:
         """
         if stage not in _AUTO_TFVARS_LOCALS:
             raise RepoError(f"Unknown stage {stage}")
-        local_values = {}
-        for block in _load_hcl(self.bootstrap_dir / "outputs.tf").get(
-            "locals", []
-        ):
-            local_values.update(block)
+        local_values = _locals(self.bootstrap_dir / "outputs.tf")
         keys = set()
         for name in _AUTO_TFVARS_LOCALS[stage]:
             value = local_values.get(name)
