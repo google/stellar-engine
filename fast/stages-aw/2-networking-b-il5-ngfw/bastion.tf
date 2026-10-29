@@ -97,13 +97,13 @@ module "ngfw-ssh-secrets" {
     ngfw-ssh-private-key = {
       latest = {
         enabled = true
-        data    = tls_private_key.ngfw-ssh.private_key_openssh
+        data    = tls_private_key.ngfw_ssh.private_key_openssh
       }
     }
     ngfw-ssh-public-key = {
       latest = {
         enabled = true
-        data    = tls_private_key.ngfw-ssh.public_key_openssh
+        data    = tls_private_key.ngfw_ssh.public_key_openssh
       }
     }
   }

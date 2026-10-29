@@ -229,7 +229,7 @@ variable "enable_features" {
       enable_resource_consumption_metering = optional(bool)
     }))
     service_external_ips = optional(bool, true)
-    shielded_nodes       = optional(bool, false)
+    shielded_nodes       = optional(bool, true)
     tpu                  = optional(bool, false)
     upgrade_notifications = optional(object({
       topic_id = optional(string)

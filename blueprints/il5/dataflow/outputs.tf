@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "dataflow-job" {
+output "dataflow_job" {
   description = "Dataflow job."
   value       = google_dataflow_job.job.name
 }
 
-output "gcs-bucket" {
+output "gcs_bucket" {
   description = "GCS Bucket."
   value       = module.gcs.bucket.name
 }

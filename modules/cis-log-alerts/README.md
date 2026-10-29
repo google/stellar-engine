@@ -21,7 +21,7 @@ This module provisions log-based alerts to satisfy the CIS Google Cloud Computin
 This module creates a set of required log-based alerts using Cloud Monitoring. It provisions an email notification channel and links it to alert policies based on specific log metrics.
 
 ```hcl
-module "cis_log_alerts" {
+module "cis-log-alerts" {
   source             = "./fabric/modules/cis-log-alerts"
   project            = var.project_id
   alert_email        = "security-alerts@example.com"

@@ -55,7 +55,12 @@ resource "google_kms_crypto_key_iam_member" "cloud_run_service_agent_kms_permiss
   member        = "serviceAccount:service-${data.google_project.project.number}@serverless-robot-prod.iam.gserviceaccount.com"
 }
 
-module "cloud_run" {
+moved {
+  from = module.cloud_run
+  to   = module.cloud-run
+}
+
+module "cloud-run" {
   source                      = "../../../modules/cloud-run-v2-se/"
   project_id                  = var.main_project_id
   name                        = var.name

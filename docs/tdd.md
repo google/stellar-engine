@@ -45,7 +45,7 @@ Specifically, Stellar Engine:
 This document is not intended to inform users on Security Best Practices. For
 information on post deployment recommendations, please see the [Security Best
 Practices Guide
-(SBPG)](https://docs.google.com/document/d/1uv62Fqg73r9oJNP-NPZebpzoBom8rOgLoHkiMZPutbo/edit?tab=t.0#heading=h.gjdgxs).
+(SBPG)](security-best-practices.md).
 
 # 2.0 Executive Summary
 
@@ -639,7 +639,6 @@ environment.) A subset of the file structure containing IaC is listed below.
   - **cloud-function-v1**
   - **cloud-function-v2**
   - **cloud-identity-group**
-  - **cloud-run**
   - **cloud-run-v2**
   - **cloud-run-v2-se**
   - **cloud-scheduler**
@@ -1193,7 +1192,7 @@ Google Cloud offers you the ability to control where your data is stored. When a
 Customer chooses to configure resources in any location, Google may store that
 Data at rest only in the selected Region. For that purpose we recommend using
 [Organization Policy
-constraints](https://docs.google.com/document/d/1AZijm5PTlfWeXUy1Jm6zjsC6ecyihberM5SVhbB_LgY/edit?resourcekey=0-4Mu_okWoVrjK9Du9hiZcgw#heading=h.de1wyjzdkh1h)
+constraints](https://cloud.google.com/resource-manager/docs/organization-policy/overview)
 which can be applied at the organization, folder, or project level. Customers
 can limit the physical location of a new resource with the Organization Policy
 Service [resource locations

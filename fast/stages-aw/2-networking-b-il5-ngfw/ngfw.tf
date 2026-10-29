@@ -42,7 +42,12 @@ data "google_compute_zones" "available" {
   depends_on = [module.vdss-host-project]
 }
 
-resource "tls_private_key" "ngfw-ssh" {
+moved {
+  from = tls_private_key.ngfw-ssh
+  to   = tls_private_key.ngfw_ssh
+}
+
+resource "tls_private_key" "ngfw_ssh" {
   algorithm = "RSA"
   rsa_bits  = "4096"
 }
@@ -60,7 +65,12 @@ resource "random_password" "salt" {
   special = false
 }
 
-resource "google_project_iam_custom_role" "ngfw-custom-role" {
+moved {
+  from = google_project_iam_custom_role.ngfw-custom-role
+  to   = google_project_iam_custom_role.ngfw_custom_role
+}
+
+resource "google_project_iam_custom_role" "ngfw_custom_role" {
   role_id = "ngfw.appliance"
   title   = "NGFW Appliance"
   project = module.vdss-host-project.project_id
@@ -90,7 +100,7 @@ module "ngfw-service-account" {
       "roles/compute.viewer"
     ]
   }
-  depends_on = [module.vdss-host-project, google_project_iam_custom_role.ngfw-custom-role]
+  depends_on = [module.vdss-host-project, google_project_iam_custom_role.ngfw_custom_role]
 }
 
 data "external" "openssl" {
@@ -163,24 +173,34 @@ resource "google_storage_bucket_object" "license_folders" {
   content  = " "
 }
 
-resource "google_storage_bucket_object" "bootstrap-xml" {
+moved {
+  from = google_storage_bucket_object.bootstrap-xml
+  to   = google_storage_bucket_object.bootstrap_xml
+}
+
+resource "google_storage_bucket_object" "bootstrap_xml" {
   name     = "config/bootstrap.xml"
   for_each = var.regions
   content = templatefile("./templates/bootstrap.xml.tpl", {
     password_hash     = data.external.openssl.result.hash
-    ssh_pubkey        = tls_private_key.ngfw-ssh.public_key_openssh
+    ssh_pubkey        = tls_private_key.ngfw_ssh.public_key_openssh
     healthcheck_cidrs = local.cidr_ranges["healthchecks"]
     iap_cidrs         = local.cidr_ranges["iap"]
     tenants_subnets = { for k, v in var.envs_folders : k => module.env-spoke-vpc[k].subnets[
       "${var.regions.primary}/${[for s in try(var.subnets[lower(k)], []) : s.name if s.tenant != null][0]}"
     ].ip_cidr_range }
-    lz_gateway_ip = module.vdss-vpc.subnets["us-east4/landing-default"].gateway_address # This doesn't support dual region yet
+    lz_gateway_ip = module.vdss-vpc.subnets["${each.value}/landing-default"].gateway_address
 
   })
   bucket = module.ngfw-bootstrap-bucket[each.key].name
 }
 
-resource "google_storage_bucket_object" "init-cfg" {
+moved {
+  from = google_storage_bucket_object.init-cfg
+  to   = google_storage_bucket_object.init_cfg
+}
+
+resource "google_storage_bucket_object" "init_cfg" {
   name     = "config/init-cfg.txt"
   for_each = var.regions
 
@@ -190,7 +210,12 @@ resource "google_storage_bucket_object" "init-cfg" {
   bucket = module.ngfw-bootstrap-bucket[each.key].name
 }
 
-resource "google_compute_region_instance_template" "ngfw-template" {
+moved {
+  from = google_compute_region_instance_template.ngfw-template
+  to   = google_compute_region_instance_template.ngfw_template
+}
+
+resource "google_compute_region_instance_template" "ngfw_template" {
   for_each = var.regions
   project  = module.vdss-host-project.project_id
 
@@ -239,11 +264,11 @@ resource "google_compute_region_instance_template" "ngfw-template" {
     op-command-modes                     = "mgmt-interface-swap"
     dhcp-accept-server-domain            = "yes"
     dhcp-accept-server-hostname          = "yes"
-    ssh-keys                             = "admin:${tls_private_key.ngfw-ssh.public_key_openssh}"
+    ssh-keys                             = "admin:${tls_private_key.ngfw_ssh.public_key_openssh}"
     serial-port-enable                   = true
     serial-port-logging-enable           = true
     vmseries-bootstrap-gce-storagebucket = module.ngfw-bootstrap-bucket[each.key].name
-    bootstrap-xml-md5                    = google_storage_bucket_object.bootstrap-xml[each.key].md5hash # Roll out a new template when our bootstrap.xml file changes
+    bootstrap-xml-md5                    = google_storage_bucket_object.bootstrap_xml[each.key].md5hash # Roll out a new template when our bootstrap.xml file changes
   }
 
   service_account {
@@ -277,7 +302,7 @@ module "ngfw-mig" {
     zones        = local.nva_zones[each.key]
   }
 
-  instance_template = google_compute_region_instance_template.ngfw-template[each.key].self_link
+  instance_template = google_compute_region_instance_template.ngfw_template[each.key].self_link
   target_size       = 2
   auto_healing_policies = {
     initial_delay_sec = 900

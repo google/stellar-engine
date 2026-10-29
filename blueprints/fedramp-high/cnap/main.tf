@@ -59,7 +59,12 @@ resource "google_project_service" "services" {
 
 }
 
-resource "google_project_service" "net-host-services" {
+moved {
+  from = google_project_service.net-host-services
+  to   = google_project_service.net_host_services
+}
+
+resource "google_project_service" "net_host_services" {
   project = var.network_project_id
   for_each = toset([
     "accesscontextmanager.googleapis.com",

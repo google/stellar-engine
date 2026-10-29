@@ -94,10 +94,10 @@ The apply will take about 1 minute to complete. The Shielded VM be deployed in t
 
 | name | description | sensitive |
 |---|---|:---:|
-| [shielded-vm-instance](outputs.tf#L17) | Instance resource. | ✓ |
-| [shielded-vm-instance-id](outputs.tf#L23) | Fully qualified instance id. |  |
-| [shielded-vm-internal_ip](outputs.tf#L28) | Instance main interface internal IP address. |  |
-| [shielded-vm-internal_ips](outputs.tf#L33) | Instance interfaces internal IP addresses. |  |
-| [shielded-vm-service_account](outputs.tf#L38) | Service account resource. |  |
-| [shielded-vm-service_account_email](outputs.tf#L43) | Service account email. |  |
+| [shielded_vm_instance](outputs.tf#L17) | Instance resource. | ✓ |
+| [shielded_vm_instance_id](outputs.tf#L23) | Fully qualified instance id. |  |
+| [shielded_vm_internal_ip](outputs.tf#L28) | Instance main interface internal IP address. |  |
+| [shielded_vm_internal_ips](outputs.tf#L33) | Instance interfaces internal IP addresses. |  |
+| [shielded_vm_service_account](outputs.tf#L38) | Service account resource. |  |
+| [shielded_vm_service_account_email](outputs.tf#L43) | Service account email. |  |
 <!-- END TFDOC -->

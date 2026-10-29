@@ -1,0 +1,748 @@
+# serializer version: 1
+# name: test_snapshot[fedramp_high-0-bootstrap]
+  '''
+  # stellar render writes this file from fast/stages-aw/0-bootstrap/terraform.tfvars.sample and envs/frh/answers.yaml.
+  # Edit answers.yaml and rerun stellar render; manual edits trigger an overwrite prompt.
+  
+  # use `gcloud billing accounts list`
+  billing_account = {
+    id = "000000-AAAAAA-BBBBBB"
+  }
+  
+  # region configuration - this will automatically populate locations for GCS, BigQuery, KMS, and logging buckets
+  # Default to us-east4 for IL5/FedRAMP High/Moderate compliance - adjust as needed
+  regions = {
+    primary = "us-east4"
+  }
+  
+  # use `gcloud organizations list`
+  organization = {
+    domain      = "example.com"
+    id          = 123456789012
+    customer_id = "C01234567"
+  }
+  
+  # Per-environment folder for the provider and tfvars files that later
+  # stages read. stellar derives it from the home on every render.
+  outputs_location = "/home/operator/.stellar/envs/frh/fast-config"
+  
+  # This variable is prepended to the names of all resources that are created.
+  # Use something unique and no longer than 7 characters
+  prefix = "frh"
+  
+  # Default log routing is set to "logging" (Cloud Logging buckets, retained for
+  # logging_bucket_retention days; the default is 365)
+  # To use long-term storage, change type to "storage" (GCS) or "bigquery"
+  # To route to a SIEM, use "pubsub" (note: requires active subscriber to avoid log loss after 7 days)
+  log_sinks = {
+    audit-logs = {
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Factivity\" OR logName:\"/logs/cloudaudit.googleapis.com%2Fsystem_event\" OR protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.TransparencyLog\""
+      type   = "logging"
+    }
+    vpc-sc = {
+      filter = "protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.VpcServiceControlAuditMetadata\""
+      type   = "logging"
+    }
+    workspace-audit-logs = {
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Fdata_access\" and protoPayload.serviceName:\"login.googleapis.com\""
+      type   = "logging"
+    }
+    empty-audit-logs = {
+      filter = ""
+      type   = "logging"
+    }
+  }
+  
+  org_policies_config = {
+    import_defaults = false
+    constraints = {
+      allowed_policy_member_domains = []
+    }
+  }
+  
+  fast_features = {
+    envs = true
+  }
+  
+  # Regime must be in all caps
+  assured_workloads = {
+    regime   = "FEDRAMP_HIGH"
+    location = "us-east4"
+  }
+  
+  bootstrap_project = "example-bootstrap"
+  
+  alert_email = "alerts@example.com"
+  
+  # KMS protection level for CMEK keys. stellar derives it from the
+  # regime: SOFTWARE for FEDRAMP_MODERATE, HSM for every other regime.
+  # The variable has no default, so stellar always writes it. Set
+  # kms_protection_level in answers.yaml to choose another level.
+  kms_protection_level = "HSM"
+  
+  '''
+# ---
+# name: test_snapshot[fedramp_high-1-resman]
+  '''
+  # stellar render writes this file from fast/stages-aw/1-resman/terraform.tfvars.sample and envs/frh/answers.yaml.
+  # Edit answers.yaml and rerun stellar render; manual edits trigger an overwrite prompt.
+  
+  tenants = {
+    ten1 = {
+      admin_principal  = "group:gcp-devops@example.com"
+      descriptive_name = "tenant-1"
+      locations = {
+        gcs = "us-east4"
+        kms = "us-east4"
+      }
+    }
+    ten2 = {
+      admin_principal  = "group:gcp-devops@example.com"
+      descriptive_name = "tenant-2"
+      locations = {
+        gcs = "us-east4"
+        kms = "us-east4"
+      }
+    }
+  }
+  
+  envs_folders = {
+    Prod = {
+      admin = "gcp-organization-admins@example.com"
+    }
+    Int = {
+      admin = "gcp-organization-admins@example.com"
+    }
+    Test = {
+      admin = "gcp-organization-admins@example.com"
+    }
+  }
+  
+  # Per-environment folder for the provider and tfvars files that later
+  # stages read. stellar derives it from the home on every render.
+  outputs_location = "/home/operator/.stellar/envs/frh/fast-config"
+  
+  '''
+# ---
+# name: test_snapshot[fedramp_moderate-0-bootstrap]
+  '''
+  # stellar render writes this file from fast/stages-aw/0-bootstrap/terraform.tfvars.sample and envs/frm/answers.yaml.
+  # Edit answers.yaml and rerun stellar render; manual edits trigger an overwrite prompt.
+  
+  # use `gcloud billing accounts list`
+  billing_account = {
+    id = "000000-AAAAAA-BBBBBB"
+  }
+  
+  # Optional Billing budget for the Assured Workload folder. If not set, no budget will be created.
+  billing_budget_amount = {
+    amount = 1000
+  }
+  
+  # region configuration - this will automatically populate locations for GCS, BigQuery, KMS, and logging buckets
+  # Default to us-east4 for IL5/FedRAMP High/Moderate compliance - adjust as needed
+  regions = {
+    primary = "us-central1"
+  }
+  
+  # use `gcloud organizations list`
+  organization = {
+    domain      = "example.com"
+    id          = 123456789012
+    customer_id = "C01234567"
+  }
+  
+  # Per-environment folder for the provider and tfvars files that later
+  # stages read. stellar derives it from the home on every render.
+  outputs_location = "/home/operator/.stellar/envs/frm/fast-config"
+  
+  # Retention period (in days) for organization logging buckets (defaults to 365 days for compliance)
+  logging_bucket_retention = 400
+  
+  # This variable is prepended to the names of all resources that are created.
+  # Use something unique and no longer than 7 characters
+  prefix = "frm"
+  
+  # Default log routing is set to "logging" (Cloud Logging buckets, retained for
+  # logging_bucket_retention days; the default is 365)
+  # To use long-term storage, change type to "storage" (GCS) or "bigquery"
+  # To route to a SIEM, use "pubsub" (note: requires active subscriber to avoid log loss after 7 days)
+  log_sinks = {
+    audit-logs = {
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Factivity\" OR logName:\"/logs/cloudaudit.googleapis.com%2Fsystem_event\" OR protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.TransparencyLog\""
+      type   = "storage"
+    }
+    vpc-sc = {
+      filter = "protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.VpcServiceControlAuditMetadata\""
+      type   = "storage"
+    }
+    workspace-audit-logs = {
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Fdata_access\" and protoPayload.serviceName:\"login.googleapis.com\""
+      type   = "storage"
+    }
+    empty-audit-logs = {
+      filter = ""
+      type   = "storage"
+    }
+  }
+  
+  org_policies_config = {
+    import_defaults = false
+    constraints = {
+      allowed_policy_member_domains = ["C0AAAAAAA"]
+    }
+  }
+  
+  fast_features = {
+    envs = true
+  }
+  
+  # Regime must be in all caps
+  assured_workloads = {
+    regime   = "FEDRAMP_MODERATE"
+    location = "us-central1"
+  }
+  
+  bootstrap_project = "example-bootstrap"
+  
+  alert_email = "alerts@example.com"
+  
+  # KMS protection level for CMEK keys. stellar derives it from the
+  # regime: SOFTWARE for FEDRAMP_MODERATE, HSM for every other regime.
+  # The variable has no default, so stellar always writes it. Set
+  # kms_protection_level in answers.yaml to choose another level.
+  kms_protection_level = "SOFTWARE"
+  
+  essential_contacts = "contacts@example.com"
+  
+  groups = {
+    gcp-devops = "platform-devops"
+  }
+  
+  '''
+# ---
+# name: test_snapshot[fedramp_moderate-1-resman]
+  '''
+  # stellar render writes this file from fast/stages-aw/1-resman/terraform.tfvars.sample and envs/frm/answers.yaml.
+  # Edit answers.yaml and rerun stellar render; manual edits trigger an overwrite prompt.
+  
+  tenants = {
+    apps = {
+      admin_principal  = "group:apps-admins@example.com"
+      descriptive_name = "Applications"
+      locations = {
+        gcs = "us"
+        kms = "us-central1"
+      }
+    }
+  }
+  
+  envs_folders = {
+    Prod = {
+      admin = "gcp-organization-admins@example.com"
+    }
+    Int = {
+      admin = "gcp-organization-admins@example.com"
+    }
+    Test = {
+      admin = "gcp-organization-admins@example.com"
+    }
+  }
+  
+  # Per-environment folder for the provider and tfvars files that later
+  # stages read. stellar derives it from the home on every render.
+  outputs_location = "/home/operator/.stellar/envs/frm/fast-config"
+  
+  '''
+# ---
+# name: test_snapshot[il4-0-bootstrap]
+  '''
+  # stellar render writes this file from fast/stages-aw/0-bootstrap/terraform.tfvars.sample and envs/il4/answers.yaml.
+  # Edit answers.yaml and rerun stellar render; manual edits trigger an overwrite prompt.
+  
+  # use `gcloud billing accounts list`
+  billing_account = {
+    id           = "000000-AAAAAA-BBBBBB"
+    is_org_level = false
+  }
+  
+  # region configuration - this will automatically populate locations for GCS, BigQuery, KMS, and logging buckets
+  # Default to us-east4 for IL5/FedRAMP High/Moderate compliance - adjust as needed
+  regions = {
+    primary = "us-east1"
+  }
+  
+  # use `gcloud organizations list`
+  organization = {
+    domain      = "example.com"
+    id          = 123456789012
+    customer_id = "C01234567"
+  }
+  
+  # Per-environment folder for the provider and tfvars files that later
+  # stages read. stellar derives it from the home on every render.
+  outputs_location = "/home/operator/.stellar/envs/il4/fast-config"
+  
+  # This variable is prepended to the names of all resources that are created.
+  # Use something unique and no longer than 7 characters
+  prefix = "il4"
+  
+  # Default log routing is set to "logging" (Cloud Logging buckets, retained for
+  # logging_bucket_retention days; the default is 365)
+  # To use long-term storage, change type to "storage" (GCS) or "bigquery"
+  # To route to a SIEM, use "pubsub" (note: requires active subscriber to avoid log loss after 7 days)
+  log_sinks = {
+    audit-logs = {
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Factivity\" OR logName:\"/logs/cloudaudit.googleapis.com%2Fsystem_event\" OR protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.TransparencyLog\""
+      type   = "bigquery"
+    }
+    vpc-sc = {
+      filter = "protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.VpcServiceControlAuditMetadata\""
+      type   = "bigquery"
+    }
+    workspace-audit-logs = {
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Fdata_access\" and protoPayload.serviceName:\"login.googleapis.com\""
+      type   = "bigquery"
+    }
+    empty-audit-logs = {
+      filter = ""
+      type   = "bigquery"
+    }
+  }
+  
+  org_policies_config = {
+    import_defaults = false
+    constraints = {
+      allowed_policy_member_domains = []
+    }
+  }
+  
+  fast_features = {
+    envs = true
+  }
+  
+  # Regime must be in all caps
+  assured_workloads = {
+    regime   = "IL4"
+    location = "us"
+  }
+  
+  bootstrap_project = "example-bootstrap"
+  
+  alert_email = "alerts@example.com"
+  
+  # KMS protection level for CMEK keys. stellar derives it from the
+  # regime: SOFTWARE for FEDRAMP_MODERATE, HSM for every other regime.
+  # The variable has no default, so stellar always writes it. Set
+  # kms_protection_level in answers.yaml to choose another level.
+  kms_protection_level = "HSM"
+  
+  essential_contacts = {
+    "security@example.com" = ["SECURITY", "TECHNICAL"]
+    "billing@example.com"  = ["BILLING"]
+  }
+  
+  '''
+# ---
+# name: test_snapshot[il4-1-resman]
+  '''
+  # stellar render writes this file from fast/stages-aw/1-resman/terraform.tfvars.sample and envs/il4/answers.yaml.
+  # Edit answers.yaml and rerun stellar render; manual edits trigger an overwrite prompt.
+  
+  tenants = {
+    data = {
+      admin_principal  = "group:gcp-devops@example.com"
+      descriptive_name = "Data platform"
+      locations = {
+        gcs = "us-east1"
+        kms = "us-east1"
+      }
+    }
+  }
+  
+  envs_folders = {
+    Prod = {
+      admin = "prod-admins@example.com"
+    }
+    Dev = {
+      admin = "gcp-organization-admins@example.com"
+    }
+  }
+  
+  # Per-environment folder for the provider and tfvars files that later
+  # stages read. stellar derives it from the home on every render.
+  outputs_location = "/home/operator/.stellar/envs/il4/fast-config"
+  
+  '''
+# ---
+# name: test_snapshot[il5-0-bootstrap]
+  '''
+  # stellar render writes this file from fast/stages-aw/0-bootstrap/terraform.tfvars.sample and envs/il5/answers.yaml.
+  # Edit answers.yaml and rerun stellar render; manual edits trigger an overwrite prompt.
+  
+  # use `gcloud billing accounts list`
+  billing_account = {
+    id = "000000-AAAAAA-BBBBBB"
+  }
+  
+  # region configuration - this will automatically populate locations for GCS, BigQuery, KMS, and logging buckets
+  # Default to us-east4 for IL5/FedRAMP High/Moderate compliance - adjust as needed
+  regions = {
+    primary = "us-west1"
+  }
+  
+  # use `gcloud organizations list`
+  organization = {
+    domain      = "example.com"
+    id          = 123456789012
+    customer_id = "C01234567"
+  }
+  
+  # Per-environment folder for the provider and tfvars files that later
+  # stages read. stellar derives it from the home on every render.
+  outputs_location = "/home/operator/.stellar/envs/il5/fast-config"
+  
+  # This variable is prepended to the names of all resources that are created.
+  # Use something unique and no longer than 7 characters
+  prefix = "il5"
+  
+  # Default log routing is set to "logging" (Cloud Logging buckets, retained for
+  # logging_bucket_retention days; the default is 365)
+  # To use long-term storage, change type to "storage" (GCS) or "bigquery"
+  # To route to a SIEM, use "pubsub" (note: requires active subscriber to avoid log loss after 7 days)
+  log_sinks = {
+    audit-logs = {
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Factivity\" OR logName:\"/logs/cloudaudit.googleapis.com%2Fsystem_event\" OR protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.TransparencyLog\""
+      type   = "pubsub"
+    }
+    vpc-sc = {
+      filter = "protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.VpcServiceControlAuditMetadata\""
+      type   = "pubsub"
+    }
+    workspace-audit-logs = {
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Fdata_access\" and protoPayload.serviceName:\"login.googleapis.com\""
+      type   = "pubsub"
+    }
+    empty-audit-logs = {
+      filter = ""
+      type   = "pubsub"
+    }
+  }
+  
+  org_policies_config = {
+    import_defaults = false
+    constraints = {
+      allowed_policy_member_domains = []
+    }
+  }
+  
+  fast_features = {
+    envs = true
+  }
+  
+  # Regime must be in all caps
+  assured_workloads = {
+    regime   = "IL5"
+    location = "us-west1"
+  }
+  
+  bootstrap_project = "example-bootstrap"
+  
+  alert_email = "alerts@example.com"
+  
+  # KMS protection level for CMEK keys, which answers.yaml sets.
+  kms_protection_level = "SOFTWARE"
+  
+  '''
+# ---
+# name: test_snapshot[il5-1-resman]
+  '''
+  # stellar render writes this file from fast/stages-aw/1-resman/terraform.tfvars.sample and envs/il5/answers.yaml.
+  # Edit answers.yaml and rerun stellar render; manual edits trigger an overwrite prompt.
+  
+  tenants = {
+    mis = {
+      admin_principal  = "group:gcp-devops@example.com"
+      descriptive_name = "Mission systems"
+      locations = {
+        gcs = "us-west1"
+        kms = "us-west1"
+      }
+    }
+  }
+  
+  envs_folders = {
+    Prod = {
+      admin = "gcp-organization-admins@example.com"
+    }
+    Int = {
+      admin = "gcp-organization-admins@example.com"
+    }
+    Test = {
+      admin = "gcp-organization-admins@example.com"
+    }
+  }
+  
+  # Per-environment folder for the provider and tfvars files that later
+  # stages read. stellar derives it from the home on every render.
+  outputs_location = "/home/operator/.stellar/envs/il5/fast-config"
+  
+  '''
+# ---
+# name: test_snapshot[lab-0-bootstrap]
+  '''
+  # stellar render writes this file from fast/stages-aw/0-bootstrap/terraform.tfvars.sample and envs/lab1/answers.yaml.
+  # Edit answers.yaml and rerun stellar render; manual edits trigger an overwrite prompt.
+  
+  # use `gcloud billing accounts list`
+  billing_account = {
+    id     = "000000-AAAAAA-BBBBBB"
+    no_iam = true
+  }
+  
+  # region configuration - this will automatically populate locations for GCS, BigQuery, KMS, and logging buckets
+  # Default to us-east4 for IL5/FedRAMP High/Moderate compliance - adjust as needed
+  regions = {
+    primary = "us-east4"
+  }
+  
+  # use `gcloud organizations list`
+  organization = {
+    domain      = "example.com"
+    id          = 123456789012
+    customer_id = "C01234567"
+  }
+  
+  # Per-environment folder for the provider and tfvars files that later
+  # stages read. stellar derives it from the home on every render.
+  outputs_location = "/home/operator/.stellar/envs/lab1/fast-config"
+  
+  # This variable is prepended to the names of all resources that are created.
+  # Use something unique and no longer than 7 characters
+  prefix = "lab1"
+  
+  # Default log routing is set to "logging" (Cloud Logging buckets, retained for
+  # logging_bucket_retention days; the default is 365)
+  # To use long-term storage, change type to "storage" (GCS) or "bigquery"
+  # To route to a SIEM, use "pubsub" (note: requires active subscriber to avoid log loss after 7 days)
+  log_sinks = {
+    audit-logs = {
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Factivity\" OR logName:\"/logs/cloudaudit.googleapis.com%2Fsystem_event\" OR protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.TransparencyLog\""
+      type   = "logging"
+    }
+    vpc-sc = {
+      filter = "protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.VpcServiceControlAuditMetadata\""
+      type   = "logging"
+    }
+    workspace-audit-logs = {
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Fdata_access\" and protoPayload.serviceName:\"login.googleapis.com\""
+      type   = "logging"
+    }
+    empty-audit-logs = {
+      filter = ""
+      type   = "logging"
+    }
+  }
+  
+  org_policies_config = {
+    import_defaults = false
+    constraints = {
+      allowed_policy_member_domains = [
+        "is:C0AAAAAAA",
+        "is:C0BBBBBBB",
+        "is:principalSet://iam.googleapis.com/organizations/123456789012",
+      ]
+    }
+  }
+  
+  fast_features = {
+    envs = true
+  }
+  
+  # Regime must be in all caps
+  assured_workloads = {
+    regime   = "IL5"
+    location = "us-east4"
+  }
+  
+  bootstrap_project = "example-bootstrap"
+  
+  alert_email = "alerts@example.com"
+  
+  # KMS protection level for CMEK keys. stellar derives it from the
+  # regime: SOFTWARE for FEDRAMP_MODERATE, HSM for every other regime.
+  # The variable has no default, so stellar always writes it. Set
+  # kms_protection_level in answers.yaml to choose another level.
+  kms_protection_level = "HSM"
+  
+  billing_override = {
+    project         = "example-bootstrap"
+    billing_project = "example-bootstrap"
+  }
+  
+  # Deletion policy of the Stage 0 projects that the imports adopt.
+  # stellar writes ABANDON while keep_imported_projects is true in
+  # answers.yaml, so terraform destroy keeps those projects.
+  project_deletion_policies = {
+    automation = "ABANDON"
+    logging    = "ABANDON"
+  }
+  
+  # overrides.0-bootstrap in answers.yaml sets this value.
+  iam = {
+    "roles/resourcemanager.projectCreator" = ["domain:example.com"]
+    "roles/owner" = [
+      "user:admin@example.com",
+      "serviceAccount:deployer@example-bootstrap.iam.gserviceaccount.com",
+    ]
+  }
+  
+  '''
+# ---
+# name: test_snapshot[lab-1-resman]
+  '''
+  # stellar render writes this file from fast/stages-aw/1-resman/terraform.tfvars.sample and envs/lab1/answers.yaml.
+  # Edit answers.yaml and rerun stellar render; manual edits trigger an overwrite prompt.
+  
+  tenants = {
+    ten1 = {
+      admin_principal  = "group:gcp-devops@example.com"
+      descriptive_name = "tenant-1"
+      locations = {
+        gcs = "us-east4"
+        kms = "us-east4"
+      }
+    }
+  }
+  
+  envs_folders = {
+    Prod = {
+      admin = "gcp-organization-admins@example.com"
+    }
+    Int = {
+      admin = "gcp-organization-admins@example.com"
+    }
+    Test = {
+      admin = "gcp-organization-admins@example.com"
+    }
+  }
+  
+  # Per-environment folder for the provider and tfvars files that later
+  # stages read. stellar derives it from the home on every render.
+  outputs_location = "/home/operator/.stellar/envs/lab1/fast-config"
+  
+  billing_override = {
+    project         = "example-bootstrap"
+    billing_project = "example-bootstrap"
+  }
+  
+  '''
+# ---
+# name: test_snapshot[unspecified-0-bootstrap]
+  '''
+  # stellar render writes this file from fast/stages-aw/0-bootstrap/terraform.tfvars.sample and envs/cru/answers.yaml.
+  # Edit answers.yaml and rerun stellar render; manual edits trigger an overwrite prompt.
+  
+  # use `gcloud billing accounts list`
+  billing_account = {
+    id = "000000-AAAAAA-BBBBBB"
+  }
+  
+  # region configuration - this will automatically populate locations for GCS, BigQuery, KMS, and logging buckets
+  # Default to us-east4 for IL5/FedRAMP High/Moderate compliance - adjust as needed
+  regions = {
+    primary = "europe-west1"
+  }
+  
+  # use `gcloud organizations list`
+  organization = {
+    domain      = "example.com"
+    id          = 123456789012
+    customer_id = "C01234567"
+  }
+  
+  # Per-environment folder for the provider and tfvars files that later
+  # stages read. stellar derives it from the home on every render.
+  outputs_location = "/home/operator/.stellar/envs/cru/fast-config"
+  
+  # This variable is prepended to the names of all resources that are created.
+  # Use something unique and no longer than 7 characters
+  prefix = "cru"
+  
+  # Default log routing is set to "logging" (Cloud Logging buckets, retained for
+  # logging_bucket_retention days; the default is 365)
+  # To use long-term storage, change type to "storage" (GCS) or "bigquery"
+  # To route to a SIEM, use "pubsub" (note: requires active subscriber to avoid log loss after 7 days)
+  log_sinks = {
+    audit-logs = {
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Factivity\" OR logName:\"/logs/cloudaudit.googleapis.com%2Fsystem_event\" OR protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.TransparencyLog\""
+      type   = "logging"
+    }
+    vpc-sc = {
+      filter = "protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.VpcServiceControlAuditMetadata\""
+      type   = "logging"
+    }
+    workspace-audit-logs = {
+      filter = "logName:\"/logs/cloudaudit.googleapis.com%2Fdata_access\" and protoPayload.serviceName:\"login.googleapis.com\""
+      type   = "logging"
+    }
+    empty-audit-logs = {
+      filter = ""
+      type   = "logging"
+    }
+  }
+  
+  org_policies_config = {
+    import_defaults = false
+    constraints = {
+      allowed_policy_member_domains = []
+    }
+  }
+  
+  fast_features = {
+    envs = true
+  }
+  
+  # Regime must be in all caps
+  assured_workloads = {
+    regime   = "COMPLIANCE_REGIME_UNSPECIFIED"
+    location = "europe-west1"
+  }
+  
+  bootstrap_project = "example-bootstrap"
+  
+  alert_email = "alerts@example.com"
+  
+  # KMS protection level for CMEK keys. stellar derives it from the
+  # regime: SOFTWARE for FEDRAMP_MODERATE, HSM for every other regime.
+  # The variable has no default, so stellar always writes it. Set
+  # kms_protection_level in answers.yaml to choose another level.
+  kms_protection_level = "HSM"
+  
+  '''
+# ---
+# name: test_snapshot[unspecified-1-resman]
+  '''
+  # stellar render writes this file from fast/stages-aw/1-resman/terraform.tfvars.sample and envs/cru/answers.yaml.
+  # Edit answers.yaml and rerun stellar render; manual edits trigger an overwrite prompt.
+  
+  tenants = {}
+  
+  envs_folders = {
+    Prod = {
+      admin = "gcp-organization-admins@example.com"
+    }
+    Int = {
+      admin = "gcp-organization-admins@example.com"
+    }
+    Test = {
+      admin = "gcp-organization-admins@example.com"
+    }
+  }
+  
+  # Per-environment folder for the provider and tfvars files that later
+  # stages read. stellar derives it from the home on every render.
+  outputs_location = "/home/operator/.stellar/envs/cru/fast-config"
+  
+  '''
+# ---

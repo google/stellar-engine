@@ -15,7 +15,7 @@ The resources created/managed by this module are:
 Basic usage of this module is as follows:
 
 ```hcl
-module "private_service_connect" {
+module "private-service-connect" {
   source                     = "terraform-google-modules/network/google//modules/private-service-connect"
 
   project_id                 = "<PROJECT_ID>"

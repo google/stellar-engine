@@ -14,33 +14,33 @@
  * limitations under the License.
  */
 
-output "compute-engine-vm-instance" {
+output "compute_engine_vm_instance" {
   description = "Instance resource."
   sensitive   = true
   value       = try(module.compute-engine-vm.instance)
 }
 
-output "compute-engine-vm-instance-id" {
+output "compute_engine_vm_instance_id" {
   description = "Fully qualified instance id."
   value       = module.compute-engine-vm.id
 }
 
-output "compute-engine-vm-internal_ip" {
+output "compute_engine_vm_internal_ip" {
   description = "Instance main interface internal IP address."
   value       = module.compute-engine-vm.internal_ip
 }
 
-output "compute-engine-vm-internal_ips" {
+output "compute_engine_vm_internal_ips" {
   description = "Instance interfaces internal IP addresses."
   value       = module.compute-engine-vm.internal_ips
 }
 
-output "compute-engine-vm-service_account" {
+output "compute_engine_vm_service_account" {
   description = "Service account resource."
   value       = module.compute-engine-vm.service_account
 }
 
-output "compute-engine-vm-service_account_email" {
+output "compute_engine_vm_service_account_email" {
   description = "Service account email."
   value       = module.compute-engine-vm.service_account_email
 }

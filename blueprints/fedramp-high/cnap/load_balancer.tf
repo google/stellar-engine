@@ -33,7 +33,7 @@ locals {
       backends = [{
         backend = module.cos-mig[key].group_manager.instance_group
       }]
-      health_checks = [google_compute_region_health_check.http-region-health-check[key].self_link, ]
+      health_checks = [google_compute_region_health_check.http_region_health_check[key].self_link, ]
       protocol      = "HTTP"
       iap_config = {
         oauth2_client_id     = google_iap_client.project_client.client_id
@@ -113,7 +113,12 @@ resource "google_compute_region_ssl_certificate" "default" {
   }
 }
 
-resource "google_compute_address" "cnap-ext-ip" {
+moved {
+  from = google_compute_address.cnap-ext-ip
+  to   = google_compute_address.cnap_ext_ip
+}
+
+resource "google_compute_address" "cnap_ext_ip" {
   name         = "cnap-ip"
   region       = var.region
   address_type = "EXTERNAL"
@@ -127,7 +132,7 @@ module "cnap-0-redirect" {
   vpc        = data.google_compute_network.network.self_link
   region     = var.region
   address = (
-    google_compute_address.cnap-ext-ip.id
+    google_compute_address.cnap_ext_ip.id
   )
   health_check_configs = {}
   urlmap_config = {
@@ -147,7 +152,7 @@ module "cnap-0" {
   vpc        = data.google_compute_network.network.self_link
   region     = var.region
   address = (
-    google_compute_address.cnap-ext-ip.id
+    google_compute_address.cnap_ext_ip.id
   )
   backend_service_configs = local.backends
   # with a single serverless NEG the implied default health check is not needed

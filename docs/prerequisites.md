@@ -5,18 +5,33 @@ Engine deployment guide. The detailed deployment flow remains in the
 [DDG](ddg.md); use this file as the prerequisite checklist before starting
 Stage 0.
 
+Run the `stellar preflight` command to verify most of this checklist
+automatically. The [CLI README](../cli/README.md) lists its flags and every
+check it performs.
+
 ## Local Workstation
 
 - Use a POSIX-compliant shell environment: Linux, macOS, Google Cloud Shell, or WSL2 (Windows Subsystem for Linux) on Windows workstations.
   - Native Windows terminals (PowerShell, `cmd.exe`, Git Bash/`MINGW64`, or Cygwin) are not supported because stage linking (`fast/stage-links.sh`) and automation scripts (`scripts/*.sh`) rely on POSIX path resolution, `ln -s` symbolic links, and standard Unix utilities. Clone the repository and run all commands inside a WSL2 Linux filesystem (for example, `~/stellar-engine`) rather than a mounted Windows drive (`/mnt/c/...`) to avoid CRLF line-ending and symlink permission issues.
 - Clone the Stellar Engine repository.
 - Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install).
-- Install Terraform version 1.8.1 or newer.
+- Install the Terraform version that the `required_version` constraints in
+  the `modules/*/versions.tf` files require.
+- Install [uv](https://docs.astral.sh/uv/getting-started/installation/) to
+  run the `stellar` command from the `cli/` project.
 - Install [jq](https://jqlang.github.io/jq/download/).
 - Authenticate with Google Cloud:
   - `gcloud auth login`
   - `gcloud config set project <bootstrap_project_id>`
   - `gcloud auth application-default login`
+- Verify the checklist with the following `stellar preflight` command, and
+  fix every failed check before Stage 0.
+
+  ```bash
+  uv run --project cli stellar preflight --org <organization_id> \
+    --billing-account <billing_account_id> --project <bootstrap_project_id> \
+    --prefix <prefix> --regime <compliance_regime> --region <region>
+  ```
 
 ## Google Cloud Organization
 
@@ -90,6 +105,15 @@ The current bootstrap checklist includes:
 
 `setIAM.yaml.sample` also grants `roles/resourcemanager.projectDeleter`; review
 the generated policy before applying it in production.
+
+A shared billing account whose IAM you cannot change still works with Stage 0.
+
+- Set `no_iam = true` in the Stage 0 `billing_account` variable, so Stage 0
+  skips every billing IAM binding.
+- Grant `roles/billing.user` on the billing account instead of
+  `roles/billing.admin`, because Stage 0 then only links new projects to it.
+- Pass the `--billing-no-iam` flag to `stellar preflight` to test that
+  permission.
 
 ## Administrative Groups
 

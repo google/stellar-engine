@@ -322,6 +322,27 @@ variable "subnets" {
   })))
   default  = {}
   nullable = false
+  validation {
+    condition = alltrue(flatten([
+      for net in ["landing", "dmz", "mgmt"] : [
+        for r in values(var.regions) :
+        contains([
+          for s in try(var.subnets[net], []) :
+          s.region if s.name == "${net}-default"
+        ], r)
+      ]
+    ]))
+    error_message = "subnets.landing, dmz and mgmt need a <net>-default subnet in every region."
+  }
+  validation {
+    condition = alltrue([
+      for k in keys(var.envs_folders) :
+      try([
+        for s in var.subnets[lower(k)] : s if s.tenant != null
+      ][0].region, null) == var.regions.primary
+    ])
+    error_message = "The first tenant subnet of each environment must be in regions.primary."
+  }
 }
 
 variable "tenant_accounts" {

@@ -38,7 +38,7 @@ locals {
     : merge(var.vpc_sc.perimeter_default, {
       ingress_policies = concat(
         var.vpc_sc.perimeter_default.ingress_policies,
-        ["fast-org-log-sinks"]
+        var.logging == null ? [] : ["fast-org-log-sinks"]
       )
       restricted_services = yamldecode(file(
         var.factories_config.vpc_sc.restricted_services

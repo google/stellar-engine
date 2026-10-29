@@ -82,3 +82,9 @@ experimental/last_operation.env
 experimental/logs/
 experimental/state/
 *.bak
+
+# uv project environment for the repository tooling
+**/.venv/
+
+# stellar CLI home with per-environment answers, workspaces and state
+/.stellar/

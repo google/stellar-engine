@@ -1,4 +1,18 @@
 #!/bin/bash
+
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 set -e
 
 # Ensure gem4gov can be found in the python path
@@ -1369,7 +1383,7 @@ prompt_gemini_apps() {
         done
 
         # Random App Key suffix
-        APP_SUFFIX=$(python3 -c "import random, string; print(''.join(random.choices(string.ascii_lowercase + string.digits, k=4)))")
+        APP_SUFFIX=$(python3 -c "import secrets, string; print(''.join(secrets.choice(string.ascii_lowercase + string.digits) for _ in range(4)))")
         ENG_ID="g4g-gem-ent-app-${APP_SUFFIX}"
         
         SELECTED_GCS_KEYS=()
@@ -2606,9 +2620,17 @@ EOF
          echo "access_end_hour = ${ACCESS_END_HOUR}" >> gemini-stage-0/terraform.tfvars
     fi
     if [[ -n "$ACCESS_TIME_ZONE" ]]; then
+         if [[ ! "$ACCESS_TIME_ZONE" =~ ^[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+)*$ ]]; then
+             echo -e "${RED}Error: Invalid ACCESS_TIME_ZONE '${ACCESS_TIME_ZONE}'.${NC}"
+             return 1
+         fi
          echo "access_time_zone = \"${ACCESS_TIME_ZONE}\"" >> gemini-stage-0/terraform.tfvars
     fi
     if [[ -n "$ACCESS_EXPIRATION_TIMESTAMP" ]]; then
+         if [[ ! "$ACCESS_EXPIRATION_TIMESTAMP" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$ ]]; then
+             echo -e "${RED}Error: Invalid ACCESS_EXPIRATION_TIMESTAMP '${ACCESS_EXPIRATION_TIMESTAMP}'.${NC}"
+             return 1
+         fi
          echo "access_expiration_timestamp = \"${ACCESS_EXPIRATION_TIMESTAMP}\"" >> gemini-stage-0/terraform.tfvars
     fi
     
@@ -3346,7 +3368,7 @@ EOF
         echo "Patching Data Store Default Schema..."
         SCHEMA_URL="https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/${SELECTED_ID}/schemas/default_schema"
         
-        PATCH_BODY="{\"structSchema\": $DE_SCHEMA_JSON}"
+        PATCH_BODY=$(jq -n --argjson schema "$DE_SCHEMA_JSON" '{structSchema: $schema}')
         
         SCHEMA_RESPONSE=$(curl -s -X PATCH \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
@@ -3369,11 +3391,12 @@ EOF
         echo "Starting BigQuery Document Import..."
         IMPORT_URL="https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/dataStores/${SELECTED_ID}/branches/default_branch/documents:import"
         
-        IMPORT_BODY="{\"reconciliationMode\": \"FULL\", \"bigquerySource\": {\"projectId\": \"${PROJECT_ID}\", \"datasetId\": \"${DATASET}\", \"tableId\": \"${TABLE}\", \"dataSchema\": \"custom\"}"
         if [[ -z "$ID_FIELD" ]]; then
-             IMPORT_BODY="${IMPORT_BODY}, \"autoGenerateIds\": true}"
+             IMPORT_BODY=$(jq -n --arg proj "$PROJECT_ID" --arg ds "$DATASET" --arg tbl "$TABLE" \
+                 '{reconciliationMode: "FULL", bigquerySource: {projectId: $proj, datasetId: $ds, tableId: $tbl, dataSchema: "custom"}, autoGenerateIds: true}')
         else
-             IMPORT_BODY="${IMPORT_BODY}, \"idField\": \"${ID_FIELD}\"}"
+             IMPORT_BODY=$(jq -n --arg proj "$PROJECT_ID" --arg ds "$DATASET" --arg tbl "$TABLE" --arg id "$ID_FIELD" \
+                 '{reconciliationMode: "FULL", bigquerySource: {projectId: $proj, datasetId: $ds, tableId: $tbl, dataSchema: "custom"}, idField: $id}')
         fi
         
         IMPORT_RESPONSE=$(curl -s -X POST \

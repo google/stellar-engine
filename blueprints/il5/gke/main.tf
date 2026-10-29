@@ -244,7 +244,12 @@ module "cluster" {
   ]
 }
 
-module "cluster_nodepool" {
+moved {
+  from = module.cluster_nodepool
+  to   = module.cluster-nodepool
+}
+
+module "cluster-nodepool" {
   source       = "../../../modules/gke-nodepool"
   project_id   = var.main_project_id
   cluster_name = module.cluster.name
@@ -271,7 +276,12 @@ module "cluster_nodepool" {
 }
 
 # --- Bastion Host ---
-module "bastion_vm" {
+moved {
+  from = module.bastion_vm
+  to   = module.bastion-vm
+}
+
+module "bastion-vm" {
   source        = "../../../modules/compute-vm"
   project_id    = var.main_project_id
   name          = var.bastion_vm_name

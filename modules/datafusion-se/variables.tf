@@ -23,7 +23,6 @@ variable "accelerators" {
     accelerator_type = optional(string)
     state            = optional(string)
   })
-
   default = null
 }
 

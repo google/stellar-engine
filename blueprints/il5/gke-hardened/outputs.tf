@@ -54,17 +54,17 @@ output "keyrings_keys" {
 
 output "nodepool_id" {
   description = "Fully qualified nodepool id."
-  value       = module.cluster_nodepool.id
+  value       = module.cluster-nodepool.id
 }
 
 output "nodepool_name" {
   description = "Nodepool name."
-  value       = module.cluster_nodepool.name
+  value       = module.cluster-nodepool.name
 }
 
 output "nodepool_service_account_email" {
   description = "Service account email."
-  value       = module.cluster_nodepool.service_account_email
+  value       = module.cluster-nodepool.service_account_email
 }
 
 output "subnet_regions" {
@@ -77,17 +77,17 @@ output "subnets" {
   value       = module.vpc.subnets
 }
 
-output "vpc-network" {
+output "vpc_network" {
   description = "Network resource."
   value       = module.vpc.network
 }
 
-output "vpc-subnet_ids" {
+output "vpc_subnet_ids" {
   description = "Map of subnet IDs keyed by name."
   value       = module.vpc.subnet_ids
 }
 
-output "vpc-subnet_ips" {
+output "vpc_subnet_ips" {
   description = "Map of subnet address ranges keyed by name."
   value       = module.vpc.subnet_ips
 }

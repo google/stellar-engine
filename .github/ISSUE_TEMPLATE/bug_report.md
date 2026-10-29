@@ -2,7 +2,7 @@
 name: Bug report
 about: Create a report to help us improve
 title: "[Bug]"
-labels: bug
+labels: Bug
 assignees: ''
 type: Bug
 
@@ -17,9 +17,8 @@ Please provide details about your deployment to help us reproduce the issue.
 *   **Stellar Engine Version/Commit:** e.g., `main` branch at commit `xxxxxx`, or a specific release tag
 *   **Deployment Type:**
     *   [ ] US Region Restricted (e.g., Access Policy constraint)
-    *   [ ] FedRAMP Medium
-    *   [ ] FedRAMP High
     *   [ ] FedRAMP Moderate
+    *   [ ] FedRAMP High
     *   [ ] DoD IL4
     *   [ ] DoD IL5
     *   [ ] Stand-alone / Custom

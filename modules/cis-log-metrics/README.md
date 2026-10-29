@@ -21,7 +21,7 @@ This module creates log-based metrics to satisfy the CIS Google Cloud Computing 
 This module creates the underlying log-based metrics required for CIS compliance alerts. It parses Cloud Logging data to track specific events like project ownership changes, IAM modifications, and network firewall changes.
 
 ```hcl
-module "cis_log_metrics" {
+module "cis-log-metrics" {
   source  = "./fabric/modules/cis-log-metrics"
   project = var.project_id
 }

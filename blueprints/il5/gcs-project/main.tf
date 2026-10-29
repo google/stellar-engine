@@ -46,7 +46,7 @@ module "gcs" {
   location       = var.region
   storage_class  = var.storage_class
   encryption_key = data.google_kms_crypto_key.default.id
-  name           = var.bucket-name
+  name           = var.bucket_name
 
   # CIS Compliance Benchmark 5.1
   public_access_prevention = var.public_access_prevention

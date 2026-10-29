@@ -1,5 +1,8 @@
 {
   "pull-request-header": "<!-- release-please -->",
+  "pull-request-footer": "Beep Boop. This PR was generated with [Release Please](https://github.com/googleapis/release-please). See [documentation](https://github.com/googleapis/release-please#release-please).",
+  "label": "Release - Pending",
+  "release-label": "Release - Tagged",
   "packages": {
     ".": {
       "release-type": "simple",

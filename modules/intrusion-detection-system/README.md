@@ -21,7 +21,7 @@ This module implements Cloud Intrusion Detection System (Cloud IDS) resources, i
 This module provisions a Cloud IDS endpoint and configures a packet mirroring policy to forward traffic from a specific subnet to the IDS endpoint for threat detection.
 
 ```hcl
-module "intrusion_detection_system" {
+module "intrusion-detection-system" {
   source                               = "./fabric/modules/intrusion-detection-system"
   project                              = var.project_id
   ids_name                             = "cloud-ids-endpoint"

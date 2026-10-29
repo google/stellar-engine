@@ -45,6 +45,7 @@ module "billing-export-project" {
   billing_account         = var.billing_account.id
   name                    = "billing-exp-0"
   default_service_account = "deprivilege"
+  deletion_policy         = var.project_deletion_policies.billing
   parent = coalesce(
     var.project_parent_ids.billing, module.branch-common-services-folder.folder.name
   )
@@ -67,7 +68,12 @@ module "billing-export-project" {
   depends_on = [module.organization-logging]
 }
 
-resource "google_compute_project_metadata" "metadata-billing" {
+moved {
+  from = google_compute_project_metadata.metadata-billing
+  to   = google_compute_project_metadata.metadata_billing
+}
+
+resource "google_compute_project_metadata" "metadata_billing" {
   count   = local.billing_mode == "org" ? 1 : 0
   project = module.billing-export-project[0].project_id
   metadata = {

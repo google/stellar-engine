@@ -19,6 +19,7 @@ _Throughout this documentation we use example naming and diagrams to show exampl
   - [IAM Custom Roles](#iam-custom-roles)
   - [GCS Buckets](#gcs-buckets)
   - [GCE](#gce)
+  - [Terraform labels](#terraform-labels)
 <!-- END TOC -->
 
 ## Google Cloud Org Domain
@@ -235,3 +236,25 @@ GCE naming is:
 - [ ] _is not_ globally unique
 - [ ] _is not_ burnable
 - [ ] _must be_ 1-64 characters
+
+## Terraform labels
+
+Terraform block labels follow the upstream Cloud Foundation Fabric convention. The `terraform_naming_convention` rule in the `.tflint.hcl` file enforces it, and CI runs it through the `tools/tflint.sh` script.
+
+- Resource, data source, variable and output labels use snake_case, such as `google_compute_firewall.allow_iap`.
+- Module labels use kebab-case, such as `module.core-log-metrics`.
+- Local value names use snake_case.
+- A leading underscore marks a block-private intermediate local, such as `_cl_groups` in the `fast/stages-aw/0-bootstrap/checklist.tf` file.
+
+The convention covers Terraform addresses only. The `name` argument that Google Cloud sees still follows the sections above, so a resource labeled `allow_iap` can create a firewall rule named `allow-iap`.
+
+Labels form state addresses, so renaming a resource or a module changes its address. Add a `moved` block before every renamed resource or module block, so existing deployments move the state instead of destroying and recreating the resource:
+
+```hcl
+moved {
+  from = google_compute_firewall.allow-iap
+  to   = google_compute_firewall.allow_iap
+}
+```
+
+Renaming a variable or an output changes the interface that callers and tfvars files use, so the pull request needs a Breaking Changes section with an `upgrade-note`.

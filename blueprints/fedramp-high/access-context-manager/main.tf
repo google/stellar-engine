@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-module "access_context_manager" {
+moved {
+  from = module.access_context_manager
+  to   = module.access-context-manager
+}
+
+module "access-context-manager" {
   source = "../../../modules/access-context-manager"
 
   project_id          = var.main_project_id

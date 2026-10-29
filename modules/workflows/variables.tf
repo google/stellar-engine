@@ -42,6 +42,11 @@ variable "iam" {
   nullable    = false
 }
 
+variable "kms_key_self_link" {
+  description = "The full self-link (projects/../locations/../keyRings/../cryptoKeys/..) of the existing KMS key to use for Workflow encryption (CMEK)."
+  type        = string
+}
+
 variable "logging_level" {
   description = "Logging level of workflow executions."
   type        = string
@@ -69,8 +74,3 @@ variable "service_account" {
 }
 
 # In ../../../modules/workflows/variables.tf
-
-variable "kms_key_self_link" {
-  description = "The full self-link (projects/../locations/../keyRings/../cryptoKeys/..) of the existing KMS key to use for Workflow encryption (CMEK)."
-  type        = string
-}

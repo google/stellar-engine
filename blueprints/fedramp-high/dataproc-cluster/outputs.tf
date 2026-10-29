@@ -19,5 +19,5 @@ output "dataproc_bucket" {
 
 output "dataproc_cluster" {
   description = "Dataproc cluster name."
-  value       = module.dataproc_cluster.name
+  value       = module.dataproc-cluster.name
 }

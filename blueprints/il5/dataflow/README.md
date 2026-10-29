@@ -118,6 +118,6 @@ The Apache Beam SDK for Java has a warning about a bug in the latest version as 
 
 | name | description | sensitive |
 |---|---|:---:|
-| [dataflow-job](outputs.tf#L1) | Dataflow job. |  |
-| [gcs-bucket](outputs.tf#L6) | GCS Bucket. |  |
+| [dataflow_job](outputs.tf#L15) | Dataflow job. |  |
+| [gcs_bucket](outputs.tf#L20) | GCS Bucket. |  |
 <!-- END TFDOC -->

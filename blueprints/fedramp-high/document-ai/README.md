@@ -56,26 +56,26 @@ This demo is meant to work with the default "OCR_PROCESSOR".
 - Click "execute" at the bottom of the screen to start the workflow.
 - After the workflow executes, view your buckets again.
 - Click on "(your-project)-docai-output-bucket" to view the json output.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [main_project_id](variables.tf#L13) | The Google Project ID. | <code>string</code> | ✓ |  |
-| [name](variables.tf#L18) | Name of the Document AI processor. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L23) | The Google Cloud region. | <code>string</code> | ✓ |  |
-| [deletion_protection](variables.tf#L1) | Deletion proteciton. | <code>bool</code> |  | <code>true</code> |
-| [file](variables.tf#L7) | File path of the yaml instructions for the workflow. | <code>string</code> |  | <code>&#34;code&#47;example.yaml&#34;</code> |
-| [type](variables.tf#L28) | Type of Document AI model. | <code>string</code> |  | <code>&#34;OCR_PROCESSOR&#34;</code> |
+| [kms_key_name](variables.tf#L27) | KMS customer managed encryption key (CMEK) name. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L32) | The Google Project ID. | <code>string</code> | ✓ |  |
+| [name](variables.tf#L37) | Name of the Document AI processor. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L42) | The Google Cloud region. | <code>string</code> | ✓ |  |
+| [deletion_protection](variables.tf#L15) | Deletion proteciton. | <code>bool</code> |  | <code>true</code> |
+| [file](variables.tf#L21) | File path of the yaml instructions for the workflow. | <code>string</code> |  | <code>&#34;code&#47;example.yaml&#34;</code> |
+| [type](variables.tf#L47) | Type of Document AI model. | <code>string</code> |  | <code>&#34;OCR_PROCESSOR&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [id](outputs.tf#L1) | Document AI processor id. |  |
-| [input_bucket](outputs.tf#L6) | Bucket that takes documents as input. |  |
-| [output_bucket](outputs.tf#L11) | Bucket that stores document processor output. |  |
-| [processor](outputs.tf#L16) | Document AI processor. |  |
-| [workflow](outputs.tf#L21) | Workflow that runs the batch processing. |  |
+| [id](outputs.tf#L15) | Document AI processor id. |  |
+| [input_bucket](outputs.tf#L20) | Bucket that takes documents as input. |  |
+| [output_bucket](outputs.tf#L25) | Bucket that stores document processor output. |  |
+| [processor](outputs.tf#L30) | Document AI processor. |  |
+| [workflow](outputs.tf#L35) | Workflow that runs the batch processing. |  |
 <!-- END TFDOC -->

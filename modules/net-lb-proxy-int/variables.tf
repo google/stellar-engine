@@ -36,7 +36,6 @@ variable "backend_service_config" {
       balancing_mode  = optional(string, "UTILIZATION")
       capacity_scaler = optional(number, 1)
       description     = optional(string, "Terraform managed.")
-      failover        = optional(bool, false)
       max_connections = optional(object({
         per_endpoint = optional(number)
         per_group    = optional(number)
@@ -44,16 +43,6 @@ variable "backend_service_config" {
       }))
       max_utilization = optional(number)
     })))
-    connection_tracking = optional(object({
-      idle_timeout_sec          = optional(number)
-      persist_conn_on_unhealthy = optional(string)
-      track_per_session         = optional(bool)
-    }))
-    failover_config = optional(object({
-      disable_conn_drain        = optional(bool)
-      drop_traffic_if_unhealthy = optional(bool)
-      ratio                     = optional(number)
-    }))
   })
   default  = {}
   nullable = false
@@ -65,7 +54,7 @@ variable "backend_service_config" {
   }
   validation {
     condition = alltrue([
-      for b in var.backend_service_config.backends : contains(
+      for b in coalesce(var.backend_service_config.backends, []) : contains(
         ["CONNECTION", "UTILIZATION"], coalesce(b.balancing_mode, "CONNECTION")
     )])
     error_message = "When specified, balancing mode needs to be 'CONNECTION' or 'UTILIZATION'."
@@ -180,7 +169,7 @@ variable "health_check_config" {
     error_message = "Only one health check type can be configured at a time."
   }
   validation {
-    condition = alltrue([
+    condition = var.health_check_config == null ? true : alltrue([
       for k, v in var.health_check_config : contains([
         "-", "USE_FIXED_PORT", "USE_NAMED_PORT", "USE_SERVING_PORT"
       ], coalesce(try(v.port_specification, null), "-"))

@@ -16,14 +16,19 @@ data "google_project" "project" {
   project_id = var.project_id
 }
 
-resource "google_service_account" "gitlab-sa" {
+moved {
+  from = google_service_account.gitlab-sa
+  to   = google_service_account.gitlab_sa
+}
+
+resource "google_service_account" "gitlab_sa" {
   account_id   = var.sa
   display_name = "gitlab-sa"
 }
 resource "google_project_iam_member" "gke_cluster_admin" {
   project = data.google_project.project.project_id
   role    = "roles/container.admin"
-  member  = "serviceAccount:${google_service_account.gitlab-sa.email}"
+  member  = "serviceAccount:${google_service_account.gitlab_sa.email}"
 }
 
 resource "google_project_service" "storagetransfer_api" {
@@ -43,7 +48,7 @@ resource "google_project_iam_member" "compute_agent_subnet_user" {
     compute_agent = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
     gke_agent     = "serviceAccount:service-${data.google_project.project.number}@container-engine-robot.iam.gserviceaccount.com"
     cloudservices = "serviceAccount:${data.google_project.project.number}@cloudservices.gserviceaccount.com"
-    gitlab_sa     = "serviceAccount:${google_service_account.gitlab-sa.email}"
+    gitlab_sa     = "serviceAccount:${google_service_account.gitlab_sa.email}"
   }
   project = var.net_project
   role    = "roles/compute.networkUser"
@@ -55,7 +60,7 @@ resource "google_kms_crypto_key_iam_member" "compute_service_agent_kms_permissio
     compute_agent = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
     gke_agent     = "serviceAccount:service-${data.google_project.project.number}@container-engine-robot.iam.gserviceaccount.com"
     cloudservices = "serviceAccount:${data.google_project.project.number}@cloudservices.gserviceaccount.com"
-    gitlab_sa     = "serviceAccount:${google_service_account.gitlab-sa.email}"
+    gitlab_sa     = "serviceAccount:${google_service_account.gitlab_sa.email}"
   }
   crypto_key_id = var.kms_key
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
@@ -137,7 +142,7 @@ module "compute-vm" {
     kms_key_self_link = var.kms_key
   }
   service_account = {
-    email = google_service_account.gitlab-sa.email
+    email = google_service_account.gitlab_sa.email
   }
   metadata = {
     startup-script = <<-EOT
@@ -229,26 +234,19 @@ module "cluster" {
       pods     = "gitlab-pod-range"
       services = "gitlab-service-range"
     }
-    master_authorized_ranges = {
-      internal-vms = "10.203.0.0/16"
-    }
-
   }
   default_nodepool = {
-    remove_pool              = true
-    remove_default_node_pool = true
+    remove_pool = true
   }
   node_config = {
     boot_disk_kms_key = var.kms_key
-
-    machine_type = "n2d-standard-2"
-    confidential_nodes = {
-      enabled = true
-    }
   }
   access_config = {
     private_nodes = true
     ip_access = {
+      authorized_ranges = {
+        internal-vms = "10.203.0.0/16"
+      }
       private_endpoint_config = {
         global_access = false
       }
@@ -258,20 +256,32 @@ module "cluster" {
   depends_on          = [google_kms_crypto_key_iam_member.compute_service_agent_kms_permissions, google_project_iam_member.compute_agent_subnet_user, google_project_iam_member.gke_host_agent_use, google_project_iam_member.gke_cluster_admin]
 }
 
-module "gke_node_pool" {
+moved {
+  from = module.gke_node_pool
+  to   = module.gke-node-pool
+}
+
+module "gke-node-pool" {
   source       = "../../../modules/gke-nodepool"
   project_id   = var.project_id
   location     = var.region
   cluster_name = var.gke_name
   service_account = {
-    email = google_service_account.gitlab-sa.email
+    email = google_service_account.gitlab_sa.email
   }
   name       = "nodes"
   node_count = var.nodepool_node_count
   node_config = {
     boot_disk_kms_key = var.kms_key
-    disk_size_gb      = 10
-    machine_type      = "n2d-standard-2"
+    # Confidential GKE Nodes need a boot disk larger than 15 GB.
+    disk_size_gb = 30
+    # Confidential GKE Nodes need a confidential machine type such as N2D.
+    confidential_nodes = true
+    machine_type       = "n2d-standard-2"
+    # CIS GKE Benchmark 4.3.
+    metadata = {
+      block-project-ssh-keys = "true"
+    }
     shielded_instance_config = {
       enable_secure_boot          = true
       enable_integrity_monitoring = true

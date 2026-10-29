@@ -71,21 +71,6 @@ compute.disableSerialPortAccess:
 #   - enforce: false
 
 
-# This boolean constraint, when set to true, enables OS Login on all newly
-# created Projects. All VM instances created in new projects will have OS Login
-# enabled. On new and existing projects, this constraint prevents metadata
-# updates that disable OS Login at the project or instance level. By default,
-# the OS Login feature is disabled on Compute Engine projects.GKE instances in
-# private clusters running node pool versions 1.20.5-gke.2000 and later support
-# OS Login. GKE instances in public clusters do not currently support OS Login.
-# If this constraint is applied to a Project running public clusters, GKE
-# instances running in that Project may not function properly.
-# COULD HAVE
-compute.requireOsLogin:
-  rules:
-  - enforce: true
-
-
 # This boolean constraint, when set to True, requires that all new Compute
 # Engine VM instances use Shielded disk images with Secure Boot, vTPM, and
 # Integrity Monitoring options enabled. Secure Boot can be disabled after

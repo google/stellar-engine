@@ -14,33 +14,33 @@
  * limitations under the License.
  */
 
-output "shielded-vm-instance" {
+output "shielded_vm_instance" {
   description = "Instance resource."
   sensitive   = true
   value       = try(module.shielded-vm.instance)
 }
 
-output "shielded-vm-instance-id" {
+output "shielded_vm_instance_id" {
   description = "Fully qualified instance id."
   value       = module.shielded-vm.id
 }
 
-output "shielded-vm-internal_ip" {
+output "shielded_vm_internal_ip" {
   description = "Instance main interface internal IP address."
   value       = module.shielded-vm.internal_ip
 }
 
-output "shielded-vm-internal_ips" {
+output "shielded_vm_internal_ips" {
   description = "Instance interfaces internal IP addresses."
   value       = module.shielded-vm.internal_ips
 }
 
-output "shielded-vm-service_account" {
+output "shielded_vm_service_account" {
   description = "Service account resource."
   value       = module.shielded-vm.service_account
 }
 
-output "shielded-vm-service_account_email" {
+output "shielded_vm_service_account_email" {
   description = "Service account email."
   value       = module.shielded-vm.service_account_email
 }

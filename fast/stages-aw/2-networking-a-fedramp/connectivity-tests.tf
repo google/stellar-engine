@@ -14,14 +14,19 @@
 
 locals {
 }
-resource "google_network_management_connectivity_test" "landing-test" {
+moved {
+  from = google_network_management_connectivity_test.landing-test
+  to   = google_network_management_connectivity_test.landing_test
+}
+
+resource "google_network_management_connectivity_test" "landing_test" {
   for_each = var.regions
 
   name    = "landing-subnet-test-${each.key}"
   project = module.vdss-host-project.project_id
 
   source {
-    ip_address   = google_compute_address.source-addr[each.key].address
+    ip_address   = google_compute_address.source_addr[each.key].address
     project_id   = module.vdss-host-project.project_id
     network      = module.vdss-vpc.id
     network_type = "GCP_NETWORK"
@@ -37,7 +42,12 @@ resource "google_network_management_connectivity_test" "landing-test" {
   }
 }
 
-resource "google_compute_address" "source-addr" {
+moved {
+  from = google_compute_address.source-addr
+  to   = google_compute_address.source_addr
+}
+
+resource "google_compute_address" "source_addr" {
   project = module.vdss-host-project.project_id
 
   for_each     = var.regions
@@ -48,14 +58,19 @@ resource "google_compute_address" "source-addr" {
 }
 
 
-resource "google_network_management_connectivity_test" "env-tests" {
+moved {
+  from = google_network_management_connectivity_test.env-tests
+  to   = google_network_management_connectivity_test.env_tests
+}
+
+resource "google_network_management_connectivity_test" "env_tests" {
   for_each = var.envs_folders
 
   name    = lower("${each.key}-host-project-test")
   project = module.env-spoke-projects[each.key].project_id
 
   source {
-    ip_address   = google_compute_address.env-source-addrs[each.key].address
+    ip_address   = google_compute_address.env_source_addrs[each.key].address
     project_id   = module.env-spoke-projects[each.key].project_id
     network      = module.env-spoke-vpc[each.key].id
     network_type = "GCP_NETWORK"
@@ -70,7 +85,12 @@ resource "google_network_management_connectivity_test" "env-tests" {
     env = lower(each.key)
   }
 }
-resource "google_compute_address" "env-source-addrs" {
+moved {
+  from = google_compute_address.env-source-addrs
+  to   = google_compute_address.env_source_addrs
+}
+
+resource "google_compute_address" "env_source_addrs" {
   for_each = var.envs_folders
 
   project = module.env-spoke-projects[each.key].project_id
@@ -93,13 +113,13 @@ resource "google_compute_address" "env-source-addrs" {
 #   project = module.env-spoke-projects[each.key].project_id
 
 #   source {
-#     ip_address   = google_compute_address.env-source-addrs[each.key].address
+#     ip_address   = google_compute_address.env_source_addrs[each.key].address
 #     project_id   = module.env-spoke-projects[each.key].project_id
 #     network      = module.env-spoke-vpc[each.key].id
 #     network_type = "GCP_NETWORK"
 #   }
 #   destination {
-#     ip_address = google_compute_address.env-source-addrs["Prod"].address
+#     ip_address = google_compute_address.env_source_addrs["Prod"].address
 #     project_id = module.env-spoke-projects["Prod"].project_id
 #     network    = module.env-spoke-vpc["Prod"].id
 #     port       = 443

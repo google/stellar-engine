@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 name: CI
 
 on:
@@ -13,78 +27,186 @@ jobs:
   security-scan:
     name: Security Scans
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
-      pull-requests: write
       security-events: write
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 
-      - name: Run tfsec
-        uses: aquasecurity/tfsec-pr-commenter-action@1015a3975c7f1400ee4d9f423a7786a3df9fcbec
-        with:
-          tfsec_args: --soft-fail
-          github_token: ${{ github.token }}
-
       - name: Run Trivy vulnerability scanner in repo mode
-        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
+        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87
         with:
           scan-type: 'fs'
+          scanners: 'vuln,secret,misconfig'
           ignore-unfixed: true
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+          limit-severities-for-sarif: true
+          exit-code: '1'
+          trivyignores: '.trivyignore.yaml'
+          skip-dirs: 'modules/net-lb-int/recipe-ilb-next-hop,modules/net-lb-app-int-cross-region/recipe-cross-reg-int-app-lb-vm-dns'
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@c4dd10e44af883a891fe31ced449bcb4a6728b9b
+        if: always()
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d
         with:
           sarif_file: 'trivy-results.sarif'
 
   shell-tests:
     name: Shell Script Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 
       - name: Run Shell Script Test Suites
         run: |
-          bash tests/scripts/run_shell_tests.sh
+          for test_file in tests/test_*.sh; do
+            echo "=== Running $(basename "${test_file}") ==="
+            bash "${test_file}"
+          done
 
-  python-tests:
-    name: Python Unit Tests & Code Quality
+  tflint:
+    name: Terraform Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38
+      - name: Set up TFLint
+        uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
         with:
-          python-version: "3.11"
+          tflint_version: v0.64.0
+          checksums: cca9d13e2e1d7a2c627af60ff899a3c9b74212899416aeb96ec764d2ef954537
+
+      - name: Test TFLint Runner
+        run: |
+          bash tests/test_tflint.sh
+
+      - name: Run TFLint
+        run: |
+          bash tools/tflint.sh -f compact
+
+  repo-lint:
+    name: Repository Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r tools/requirements.txt
-          pip install -r blueprints/gemini-enterprise/gem4gov-cli/requirements.txt
-          pip install pytest pyflakes
+        run: uv sync --locked
 
-      - name: CodeQL py/unused-local-variable Check (pyflakes)
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_wrapper: false
+
+      - name: Set up TFLint
+        uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
+        with:
+          tflint_version: v0.64.0
+          checksums: cca9d13e2e1d7a2c627af60ff899a3c9b74212899416aeb96ec764d2ef954537
+
+      - name: Run Repository Linter
         run: |
-          pyflakes tools/ blueprints/gemini-enterprise/gem4gov-cli/ tests/
+          bash tools/lint.sh
+
+  python-tests:
+    name: Python Unit Tests & Code Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Python Lint and CodeQL py/unused-local-variable Check (ruff)
+        run: |
+          uv run --locked ruff check .
+
+      - name: Python Formatting Check (ruff)
+        run: |
+          uv run --locked ruff format --check .
 
       - name: Run Python Unit Tests
         run: |
-          pytest
+          uv run --locked python tools/check_boilerplate.py tests tools
+          uv run --locked pytest
+
+  cli-tests:
+    name: Stellar CLI Tests & Code Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: cli
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Check license headers
+        run: uv run --locked python ../tools/check_boilerplate.py src tests
+
+      - name: Check formatting (ruff format)
+        run: uv run ruff format --check
+
+      - name: Lint (ruff check)
+        run: uv run ruff check
+
+      - name: Type check (pyright)
+        run: uv run pyright
+
+      # Tests marked terraform run the real binary for fmt, validate and
+      # variables-only plan checks. A pinned release keeps the fmt-canonical
+      # snapshots stable; it must satisfy the module required_version floor.
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.13.3
+          terraform_wrapper: false
+
+      - name: Run unit tests
+        run: uv run pytest

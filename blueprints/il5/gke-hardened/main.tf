@@ -147,31 +147,21 @@ module "cluster" {
     }
   }
   default_nodepool = {
-    initial_node_count       = var.gke_initial_node_per_zone
-    remove_pool              = false
-    remove_default_node_pool = true
+    initial_node_count = var.gke_initial_node_per_zone
+    remove_pool        = var.remove_default_node_pool
   }
   node_config = {
-    # CIS Compliance Benchmark 4.3
-    metadata = {
-      block-project-ssh-keys = true
-    }
     boot_disk_kms_key = module.kms.keys.default.id
 
     # CIS Compliance Benchmark 4.1/ 4.2
     service_account = google_service_account.gke.email
 
     tags = var.node_config_tags
-
-    machine_type = var.node_machine_type
-    confidential_nodes = {
-      enabled = true # CIS Compliance Benchmark 4.11 - Must also choose compatible instance type
-    }
   }
   enable_features = {
-    enable_shielded_nodes = true
-    dataplane_v2          = true
-    binary_authorization  = true
+    shielded_nodes       = true
+    dataplane_v2         = true
+    binary_authorization = true
     database_encryption = {
       state    = "ENCRYPTED"
       key_name = module.kms.keys.default.id
@@ -184,7 +174,12 @@ module "cluster" {
   depends_on = [module.vpc, module.kms]
 }
 
-module "cluster_nodepool" {
+moved {
+  from = module.cluster_nodepool
+  to   = module.cluster-nodepool
+}
+
+module "cluster-nodepool" {
   source       = "../../../modules/gke-nodepool"
   project_id   = var.main_project_id
   cluster_name = var.gke_cluster_name
@@ -200,6 +195,12 @@ module "cluster_nodepool" {
     boot_disk_kms_key = module.kms.keys.default.id
     disk_size_gb      = var.node_disk_size_gb
     machine_type      = var.node_machine_type
+    # CIS Compliance Benchmark 4.11, needs a confidential machine type
+    confidential_nodes = true
+    # CIS Compliance Benchmark 4.3
+    metadata = {
+      block-project-ssh-keys = "true"
+    }
     shielded_instance_config = {
       enable_secure_boot          = true
       enable_integrity_monitoring = true
@@ -250,7 +251,12 @@ module "compute-vm" {
   depends_on = [module.cluster]
 }
 
-resource "google_compute_firewall" "allow-iap" {
+moved {
+  from = google_compute_firewall.allow-iap
+  to   = google_compute_firewall.allow_iap
+}
+
+resource "google_compute_firewall" "allow_iap" {
   name          = "${var.network_name}-allow-iap"
   description   = "Allow IAP for connecting to GKE from bastion host."
   network       = var.network_name
@@ -267,7 +273,12 @@ resource "google_compute_firewall" "allow-iap" {
   depends_on  = [module.vpc]
 }
 
-resource "google_compute_firewall" "allow-local-connect" {
+moved {
+  from = google_compute_firewall.allow-local-connect
+  to   = google_compute_firewall.allow_local_connect
+}
+
+resource "google_compute_firewall" "allow_local_connect" {
   count         = 1
   name          = "${var.network_name}-allow-local-connect"
   description   = "Allow for connecting to bastion host from local system."

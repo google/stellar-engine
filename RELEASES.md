@@ -32,7 +32,7 @@ that entry is non-empty — so they are also the only two types that cut a relea
 Everything else is recorded in git history and ships with the next release.
 
 Breaking changes are the exception: `!` or a `BREAKING CHANGE:` footer always
-appears under **⚠ BREAKING CHANGES**, whatever the type. A refactor requiring
+appears under **Breaking Changes**, whatever the type. A refactor requiring
 state moves must therefore be titled `refactor(modules/kms)!: ...`.
 
 Dependency bumps use `build`, e.g. `build(deps): bump google provider to 6.12`.

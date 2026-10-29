@@ -359,6 +359,24 @@ variable "prefix" {
   }
 }
 
+variable "project_deletion_policies" {
+  description = "Deletion policy of each Stage 0 project. Use ABANDON for projects that you create outside Terraform and import, so terraform destroy leaves them in place."
+  type = object({
+    automation = optional(string, "DELETE")
+    billing    = optional(string, "DELETE")
+    logging    = optional(string, "DELETE")
+  })
+  nullable = false
+  default  = {}
+  validation {
+    condition = alltrue([
+      for v in values(var.project_deletion_policies) :
+      contains(["ABANDON", "DELETE", "PREVENT"], v)
+    ])
+    error_message = "Each project deletion policy must be one of 'ABANDON', 'DELETE', 'PREVENT'."
+  }
+}
+
 variable "project_parent_ids" {
   description = "Optional parents for projects created here in folders/nnnnnnn format. Null values will use the organization as parent."
   type = object({

@@ -14,6 +14,11 @@
  * limitations under the License.
  */
 
+output "publisher_service_account_email" {
+  value       = google_service_account.publisher.email
+  description = "The email of the publisher service account."
+}
+
 output "pubsub_topic_name" {
   description = "The name of the created Pub/Sub topic."
   value       = module.pubsub.name
@@ -24,13 +29,7 @@ output "pubsub_topic_self_link" {
   value       = module.pubsub.id
 }
 
-output "publisher_service_account_email" {
-  value       = google_service_account.publisher.email
-  description = "The email of the publisher service account."
-}
-
 output "subscriber_service_account_email" {
   value       = google_service_account.subscriber.email
   description = "The email of the subscriber service account."
 }
-

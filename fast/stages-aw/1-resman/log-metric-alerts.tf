@@ -21,14 +21,24 @@
 # CIS Compliance Benchmark 2.10
 # CIS Compliance Benchmark 2.11
 
-module "core_log_metrics" {
+moved {
+  from = module.core_log_metrics
+  to   = module.core-log-metrics
+}
+
+module "core-log-metrics" {
   source = "../../../modules/cis-log-metrics"
 
   for_each = module.tenant-self-iac-projects
   project  = module.tenant-self-iac-projects[each.key].id
 }
 
-module "main_log_metrics" {
+moved {
+  from = module.main_log_metrics
+  to   = module.main-log-metrics
+}
+
+module "main-log-metrics" {
   source = "../../../modules/cis-log-metrics"
 
   for_each = module.tenant-self-main-projects
@@ -37,11 +47,16 @@ module "main_log_metrics" {
 
 # Alerts require log-metrics to be configure
 resource "time_sleep" "resman_wait_10_seconds" {
-  depends_on      = [module.core_log_metrics, module.main_log_metrics]
+  depends_on      = [module.core-log-metrics, module.main-log-metrics]
   create_duration = "10s"
 }
 
-module "core_log_alerts" {
+moved {
+  from = module.core_log_alerts
+  to   = module.core-log-alerts
+}
+
+module "core-log-alerts" {
   source = "../../../modules/cis-log-alerts"
 
   for_each = module.tenant-self-iac-projects
@@ -57,7 +72,12 @@ module "core_log_alerts" {
   depends_on = [time_sleep.resman_wait_10_seconds]
 }
 
-module "main_log_alerts" {
+moved {
+  from = module.main_log_alerts
+  to   = module.main-log-alerts
+}
+
+module "main-log-alerts" {
   source = "../../../modules/cis-log-alerts"
 
   for_each = module.tenant-self-main-projects

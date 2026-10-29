@@ -37,12 +37,12 @@ Compute Engine is an Infrastructure-as-a-Service product offering flexible, self
 
 | name | description | sensitive |
 |---|---|:---:|
-| [compute-engine-vm-instance](outputs.tf#L17) | Instance resource. | ✓ |
-| [compute-engine-vm-instance-id](outputs.tf#L23) | Fully qualified instance id. |  |
-| [compute-engine-vm-internal_ip](outputs.tf#L28) | Instance main interface internal IP address. |  |
-| [compute-engine-vm-internal_ips](outputs.tf#L33) | Instance interfaces internal IP addresses. |  |
-| [compute-engine-vm-service_account](outputs.tf#L38) | Service account resource. |  |
-| [compute-engine-vm-service_account_email](outputs.tf#L43) | Service account email. |  |
+| [compute_engine_vm_instance](outputs.tf#L17) | Instance resource. | ✓ |
+| [compute_engine_vm_instance_id](outputs.tf#L23) | Fully qualified instance id. |  |
+| [compute_engine_vm_internal_ip](outputs.tf#L28) | Instance main interface internal IP address. |  |
+| [compute_engine_vm_internal_ips](outputs.tf#L33) | Instance interfaces internal IP addresses. |  |
+| [compute_engine_vm_service_account](outputs.tf#L38) | Service account resource. |  |
+| [compute_engine_vm_service_account_email](outputs.tf#L43) | Service account email. |  |
 <!-- END TFDOC -->
 ## Disclaimer
 - The present GCP Terraform Module in this project is set up and intended to be implemented in either a FedRAMP-High or IL5 (Impact Level 5) environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
@@ -68,13 +68,13 @@ Apply complete! Resources: 13 added, 0 changed, 0 destroyed.
 
 Outputs:
 
-compute-engine-vm-instance = <sensitive>
-compute-engine-vm-instance-id = "projects/project-name/zones/gcp-zone/instances/instance-name"
-compute-engine-vm-internal_ip = "some-ip-address"
-compute-engine-vm-internal_ips = [
+compute_engine_vm_instance = <sensitive>
+compute_engine_vm_instance_id = "projects/project-name/zones/gcp-zone/instances/instance-name"
+compute_engine_vm_internal_ip = "some-ip-address"
+compute_engine_vm_internal_ips = [
   "some-ip-address",
 ]
-compute-engine-vm-service_account_email = "compute@project-name.iam.gserviceaccount.com"
+compute_engine_vm_service_account_email = "compute@project-name.iam.gserviceaccount.com"
 keyring-id = "projects/project-name/locations/gcp-region/keyRings/keyring-name"
 keyring-location = "gcp-region"
 keyring-name = "keyring-name"

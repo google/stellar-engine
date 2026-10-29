@@ -25,7 +25,12 @@ resource "google_project_service" "translate" {
 
 data "google_project" "project" {}
 
-module "input_bucket" {
+moved {
+  from = module.input_bucket
+  to   = module.input-bucket
+}
+
+module "input-bucket" {
   source                      = "../../../modules/gcs"
   project_id                  = var.main_project_id
   prefix                      = var.main_project_id
@@ -35,7 +40,12 @@ module "input_bucket" {
   uniform_bucket_level_access = true
 }
 
-module "output_bucket" {
+moved {
+  from = module.output_bucket
+  to   = module.output-bucket
+}
+
+module "output-bucket" {
   source                      = "../../../modules/gcs"
   project_id                  = var.main_project_id
   prefix                      = var.main_project_id
@@ -61,8 +71,8 @@ module "workflows" {
   kms_key_self_link   = var.kms_key_self_link
   service_account     = google_service_account.workflow_sa.email
   env_vars = {
-    input_bucket  = "${module.input_bucket.url}/*.txt"
-    output_bucket = "${module.output_bucket.url}/${var.output_folder}/"
+    input_bucket  = "${module.input-bucket.url}/*.txt"
+    output_bucket = "${module.output-bucket.url}/${var.output_folder}/"
     src_lang      = var.src_lang
     target_lang   = var.target_lang
     parent        = "projects/${var.main_project_id}/locations/us-central1"

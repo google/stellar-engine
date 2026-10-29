@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource "google_access_context_manager_access_levels" "access-levels" {
+moved {
+  from = google_access_context_manager_access_levels.access-levels
+  to   = google_access_context_manager_access_levels.access_levels
+}
+
+resource "google_access_context_manager_access_levels" "access_levels" {
   parent = "accessPolicies/${var.access_policy_number}"
 
   # Access level for US Region

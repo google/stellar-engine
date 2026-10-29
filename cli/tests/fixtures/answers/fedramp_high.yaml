@@ -1,0 +1,33 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# FedRAMP High with the sample defaults and two tenants.
+prefix: frh
+organization:
+  id: "123456789012"
+  domain: example.com
+  customer_id: C01234567
+billing:
+  account_id: 000000-AAAAAA-BBBBBB
+bootstrap_project: example-bootstrap
+region: us-east4
+compliance:
+  regime: FEDRAMP_HIGH
+alert_email: alerts@example.com
+resman:
+  tenants:
+    ten1:
+      descriptive_name: tenant-1
+    ten2:
+      descriptive_name: tenant-2

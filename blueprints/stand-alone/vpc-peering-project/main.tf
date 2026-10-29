@@ -54,7 +54,12 @@ resource "google_project_service" "compute_api" {
 }
 
 # --- Create VPC Networks ---
-module "vpc_networks" {
+moved {
+  from = module.vpc_networks
+  to   = module.vpc-networks
+}
+
+module "vpc-networks" {
   source                          = "../../../modules/net-vpc"
   for_each                        = local.vpc_configs
   project_id                      = each.value.project_id
@@ -117,11 +122,11 @@ module "vpc_networks" {
 module "peering" {
   source        = "../../../modules/net-vpc-peering"
   prefix        = "peer"
-  local_network = module.vpc_networks["local"].id
-  peer_network  = module.vpc_networks["peer"].id
+  local_network = module.vpc-networks["local"].id
+  peer_network  = module.vpc-networks["peer"].id
   # The depends_on block here is necessary because peering resources depend on the Compute API being
   # enabled in *both* projects before creation. Terraform doesn't implicitly infer this
-  # dependency from module.vpc_networks.
+  # dependency from module.vpc-networks.
   depends_on = [
     google_project_service.compute_api
   ]

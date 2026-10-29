@@ -1,0 +1,353 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Tests for blueprint API enablement and module ID length preconditions."""
+
+import pathlib
+import re
+import unittest
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+class TestBlueprintAndModuleValidations(unittest.TestCase):
+    """Verify API enablement in blueprints and 30-char ID preconditions."""
+
+    def test_blueprints_enable_required_project_services(self):
+        """Ensure app-engine and postgresql blueprints enable APIs (#104)."""
+        ae_tf = (
+            REPO_ROOT / "blueprints/fedramp-high/app-engine/main.tf"
+        ).read_text(encoding="utf-8")
+        self.assertIn('resource "google_project_service" "appengine"', ae_tf)
+        self.assertIn('service            = "appengine.googleapis.com"', ae_tf)
+        self.assertIn("depends_on  = [google_project_service.appengine]", ae_tf)
+
+        pg_tf = (REPO_ROOT / "blueprints/il5/postgresql/main.tf").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('resource "google_project_service" "sqladmin"', pg_tf)
+        self.assertIn('service            = "sqladmin.googleapis.com"', pg_tf)
+        self.assertIn("google_project_service.sqladmin", pg_tf)
+
+    def test_modules_enforce_30_char_id_preconditions(self):
+        """Ensure project and iam-service-account enforce 30-char IDs (#228)."""
+        proj_tf = (REPO_ROOT / "modules/project/main.tf").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            'condition     = length("${local.prefix}${var.name}") <= 30',
+            proj_tf,
+        )
+        self.assertIn(
+            "exceeding the 30-character GCP project ID limit", proj_tf
+        )
+
+        sa_tf = (REPO_ROOT / "modules/iam-service-account/main.tf").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            'condition     = length("${local.prefix}${local.name}") <= 30',
+            sa_tf,
+        )
+        self.assertIn(
+            "exceeding the 30-character GCP service account ID limit", sa_tf
+        )
+
+    def _iter_terraform_dirs(self):
+        """Yield every directory under fast/ and blueprints/ with .tf files."""
+        seen = set()
+        for root_name in ("fast", "blueprints"):
+            base = REPO_ROOT / root_name
+            for tf_file in base.rglob("*.tf"):
+                if ".terraform" in tf_file.parts:
+                    continue
+                parent = tf_file.parent
+                if parent not in seen:
+                    seen.add(parent)
+                    yield parent
+
+    @staticmethod
+    def _strip_comments_and_moved(text: str) -> str:
+        lines = []
+        in_block = False
+        for line in text.splitlines():
+            stripped = line.strip()
+            if in_block:
+                if "*/" in stripped:
+                    in_block = False
+                continue
+            if stripped.startswith("/*"):
+                if "*/" not in stripped:
+                    in_block = True
+                continue
+            if stripped.startswith("#") or stripped.startswith("//"):
+                continue
+            line = re.sub(r"\s+#.*$", "", line)
+            lines.append(line)
+        cleaned = "\n".join(lines)
+        # Remove moved { ... } blocks and description = "..." strings
+        cleaned = re.sub(r"moved\s*\{[^}]*\}", "", cleaned, flags=re.DOTALL)
+        cleaned = re.sub(r'description\s*=\s*"[^"]*"', "", cleaned)
+        return cleaned
+
+    def test_all_terraform_dirs_have_valid_variable_and_resource_references(
+        self,
+    ):
+        """Ensure every Terraform directory declares referenced symbols."""
+        errors = []
+        for tf_dir in sorted(self._iter_terraform_dirs()):
+            rel_dir = tf_dir.relative_to(REPO_ROOT)
+            raw_combined = "\n".join(
+                p.read_text(encoding="utf-8")
+                for p in sorted(tf_dir.glob("*.tf"))
+            )
+            cleaned = self._strip_comments_and_moved(raw_combined)
+
+            # Catch common HCL prefix typos like vvar., lcoal., or moudle.
+            typo_re = r"\b(?:vvar|lcoal|moudle)\.[a-zA-Z0-9_-]+"
+            for typo in re.findall(typo_re, cleaned):
+                errors.append(f"{rel_dir}: suspicious typo reference '{typo}'")
+
+            decl_vars = set(re.findall(r'variable\s+"([^"]+)"', raw_combined))
+            ref_vars = set(re.findall(r"\bvar\.([a-zA-Z0-9_-]+)", cleaned))
+            missing_vars = sorted(ref_vars - decl_vars)
+            if missing_vars:
+                errors.append(
+                    f"{rel_dir}: undeclared var reference(s): {missing_vars}"
+                )
+
+            res_decl_re = r'resource\s+"([^"]+)"\s+"([^"]+)"'
+            decl_res = {
+                f"{m.group(1)}.{m.group(2)}"
+                for m in re.finditer(res_decl_re, raw_combined)
+            }
+            ref_res = set()
+            res_ref_re = (
+                r'(?<!\.)(?<!data\.)(?<!")\b'
+                r"(google_[a-zA-Z0-9_]+)\.([a-zA-Z0-9_-]+)\b"
+            )
+            for m in re.finditer(res_ref_re, cleaned):
+                prefix = cleaned[max(0, m.start() - 45) : m.start()]
+                if re.search(
+                    r"module\.[a-zA-Z0-9_-]+(?:\[[^\]]+\])?\.$", prefix
+                ):
+                    continue
+                ref_res.add(f"{m.group(1)}.{m.group(2)}")
+            missing_res = sorted(ref_res - decl_res)
+            if missing_res:
+                errors.append(
+                    f"{rel_dir}: undeclared resource reference(s): "
+                    f"{missing_res}"
+                )
+
+            decl_mods = set(re.findall(r'module\s+"([^"]+)"', raw_combined))
+            ref_mods = set(re.findall(r"\bmodule\.([a-zA-Z0-9_-]+)\b", cleaned))
+            missing_mods = sorted(ref_mods - decl_mods)
+            if missing_mods:
+                errors.append(
+                    f"{rel_dir}: undeclared module reference(s): {missing_mods}"
+                )
+
+            decl_locals = set()
+            pos = 0
+            while True:
+                m = re.search(r"\blocals\s*\{", cleaned[pos:])
+                if not m:
+                    break
+                start = pos + m.end()
+                depth = 1
+                i = start
+                while i < len(cleaned) and depth > 0:
+                    if cleaned[i] == "{":
+                        depth += 1
+                    elif cleaned[i] == "}":
+                        depth -= 1
+                    i += 1
+                block = cleaned[start : i - 1]
+                b_depth = 0
+                for bline in block.splitlines():
+                    if b_depth == 0:
+                        km = re.match(r"^\s*([a-zA-Z0-9_-]+)\s*=", bline)
+                        if km:
+                            decl_locals.add(km.group(1))
+                    b_depth += (
+                        bline.count("{") + bline.count("[") + bline.count("(")
+                    )
+                    b_depth -= (
+                        bline.count("}") + bline.count("]") + bline.count(")")
+                    )
+                pos = i
+            ref_locals = set(
+                re.findall(r"(?<!\.)\blocal\.([a-zA-Z0-9_-]+)", cleaned)
+            )
+            missing_locals = sorted(ref_locals - decl_locals)
+            if missing_locals:
+                errors.append(
+                    f"{rel_dir}: undeclared local reference(s): "
+                    f"{missing_locals}"
+                )
+
+        self.assertEqual(
+            errors,
+            [],
+            "Broken HCL references detected:\n" + "\n".join(errors),
+        )
+
+    def test_no_invalid_sensitive_type_constructors_in_variables(self):
+        """Ensure variable types do not use sensitive(...) constructor."""
+        offenders = []
+        for tf_dir in sorted(self._iter_terraform_dirs()):
+            for tf_file in sorted(tf_dir.glob("*.tf")):
+                content = self._strip_comments_and_moved(
+                    tf_file.read_text(encoding="utf-8")
+                )
+                if re.search(r"optional\(\s*sensitive\(", content):
+                    offenders.append(str(tf_file.relative_to(REPO_ROOT)))
+        self.assertEqual(
+            offenders,
+            [],
+            f"Invalid optional(sensitive(...)) type constructor in: "
+            f"{offenders}",
+        )
+
+    def test_all_blueprint_sample_tfvars_match_declared_variables(self):
+        """Ensure every blueprint terraform.tfvars.sample matches variables."""
+        errors = []
+        samples = sorted(
+            REPO_ROOT.glob("blueprints/**/terraform.tfvars.sample")
+        )
+        for sample in samples:
+            bp_dir = sample.parent
+            rel = bp_dir.relative_to(REPO_ROOT)
+            raw_vars = "\n".join(
+                p.read_text(encoding="utf-8")
+                for p in sorted(bp_dir.glob("*.tf"))
+            )
+            decl_vars = set()
+            req_vars = set()
+            pos = 0
+            while True:
+                m = re.search(r'variable\s+"([^"]+)"\s*\{', raw_vars[pos:])
+                if not m:
+                    break
+                vname = m.group(1)
+                decl_vars.add(vname)
+                start = pos + m.end()
+                depth = 1
+                i = start
+                while i < len(raw_vars) and depth > 0:
+                    if raw_vars[i] == "{":
+                        depth += 1
+                    elif raw_vars[i] == "}":
+                        depth -= 1
+                    i += 1
+                vbody = raw_vars[start : i - 1]
+                if not re.search(r"^\s*default\s*=", vbody, flags=re.M):
+                    req_vars.add(vname)
+                pos = i
+
+            stext = sample.read_text(encoding="utf-8")
+            slines = [
+                re.sub(r"(#|//).*$", "", line)
+                for line in stext.splitlines()
+                if not line.strip().startswith(("#", "//"))
+            ]
+            s_depth = 0
+            assigned = set()
+            for line in slines:
+                if re.search(r"=\s*base64encode\(", line):
+                    errors.append(
+                        f"{rel}: function call not allowed in tfvars: "
+                        f"{line.strip()}"
+                    )
+                if s_depth == 0:
+                    am = re.match(r"^\s*([a-zA-Z0-9_-]+)\s*=", line)
+                    if am:
+                        assigned.add(am.group(1))
+                s_depth += line.count("{") + line.count("[") + line.count("(")
+                s_depth -= line.count("}") + line.count("]") + line.count(")")
+            undecl = sorted(assigned - decl_vars)
+            missing_req = sorted(req_vars - assigned)
+            if undecl:
+                errors.append(
+                    f"{rel}: undeclared variable(s) in sample tfvars: {undecl}"
+                )
+            if missing_req:
+                errors.append(
+                    f"{rel}: missing required variable(s) in sample: "
+                    f"{missing_req}"
+                )
+
+        self.assertEqual(
+            errors,
+            [],
+            "Invalid blueprint terraform.tfvars.sample:\n" + "\n".join(errors),
+        )
+
+    def test_custom_stellar_engine_modules_validations(self):
+        """Verify hardening and logic fixes across Stellar Engine modules."""
+        alerts_main = (REPO_ROOT / "modules/cis-log-alerts/main.tf").read_text(
+            encoding="utf-8"
+        )
+        expected_concat = (
+            "concat([google_monitoring_notification_channel.email.name], "
+            "var.notification_channels)"
+        )
+        self.assertIn(expected_concat, alerts_main)
+        self.assertIn("display_name = each.key", alerts_main)
+        self.assertNotIn('display_name = "each.key"', alerts_main)
+
+        alerts_vars = (
+            REPO_ROOT / "modules/cis-log-alerts/variables.tf"
+        ).read_text(encoding="utf-8")
+        self.assertIn('variable "notification_channels"', alerts_vars)
+
+        metrics_main = (
+            REPO_ROOT / "modules/cis-log-metrics/main.tf"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "AND ((ProjectOwnership OR projectOwnerInvitee)", metrics_main
+        )
+
+        ids_main = (
+            REPO_ROOT / "modules/intrusion-detection-system/main.tf"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "count = var.create_service_networking_connection ? 1 : 0", ids_main
+        )
+
+        org_se_iam = (REPO_ROOT / "modules/organization-se/iam.tf").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"iam-bpa:${principal}//${role}"', org_se_iam)
+        org_se_vars = (
+            REPO_ROOT / "modules/organization-se/variables.tf"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            'can(regex("^organizations/[0-9]+$", var.organization_id))',
+            org_se_vars,
+        )
+
+        spanner_se_iam = (
+            REPO_ROOT / "modules/spanner-instance-se/iam.tf"
+        ).read_text(encoding="utf-8")
+        self.assertIn('dynamic "condition"', spanner_se_iam)
+        spanner_se_vars = (
+            REPO_ROOT / "modules/spanner-instance-se/variables.tf"
+        ).read_text(encoding="utf-8")
+        self.assertIn("condition = optional(object({", spanner_se_vars)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,62 @@
+# serializer version: 1
+# name: test_dumps_snapshot
+  '''
+  # stellar render writes this file from envs/lab1/answers.yaml imports.0-bootstrap.
+  # Edit answers.yaml and rerun stellar render; the next render replaces manual edits.
+  
+  import {
+    to = module.automation-project.google_project.project[0]
+    id = "lab1-prod-iac-core-0"
+  }
+  
+  import {
+    to = module.log-export-project.google_project.project[0]
+    id = "lab1-prod-audit-logs-0"
+  }
+  
+  '''
+# ---
+# name: test_text_with_org_policies_snapshot
+  '''
+  # stellar render writes this file from envs/lab1/answers.yaml imports.0-bootstrap and existing_org_policies.
+  # Edit answers.yaml and rerun stellar render; the next render replaces manual edits.
+  
+  import {
+    to = module.automation-project.google_project.project[0]
+    id = "lab1-prod-iac-core-0"
+  }
+  
+  import {
+    to = module.log-export-project.google_project.project[0]
+    id = "lab1-prod-audit-logs-0"
+  }
+  
+  # stellar imports scan found these organization policies, which Stage 0
+  # declares. The first apply passes bootstrap_user, so Stage 0 manages no
+  # organization policies yet and nothing is imported. The final apply
+  # adopts the policies that already exist instead of failing to create
+  # them. The filter drops constraints that the regime templates omit.
+  locals {
+    stellar_existing_org_policies = [
+      "compute.managed.restrictProtocolForwardingCreationForTypes",
+      "iam.allowedPolicyMemberDomains",
+      "storage.uniformBucketLevelAccess",
+    ]
+    stellar_org_policy_imports = toset([
+      for name in local.stellar_existing_org_policies :
+      name if contains(keys(local.org_policies), name)
+    ])
+  }
+  
+  import {
+    for_each = (
+      var.bootstrap_user == null
+      ? local.stellar_org_policy_imports
+      : toset([])
+    )
+    id = "organizations/${var.organization.id}/policies/${each.key}"
+    to = module.organization.google_org_policy_policy.default[each.key]
+  }
+  
+  '''
+# ---

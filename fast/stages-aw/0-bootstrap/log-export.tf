@@ -40,6 +40,7 @@ module "log-export-project" {
   source                  = "../../../modules/project"
   name                    = "audit-logs-0"
   default_service_account = "deprivilege"
+  deletion_policy         = var.project_deletion_policies.logging
   lien_reason             = "Protected by default as a core project."
   parent = coalesce(
     var.project_parent_ids.logging, module.branch-common-services-folder.folder.name
@@ -76,7 +77,12 @@ data "google_logging_project_settings" "log_export" {
   depends_on = [module.log-export-project]
 }
 
-resource "google_compute_project_metadata" "metadata-log-export" {
+moved {
+  from = google_compute_project_metadata.metadata-log-export
+  to   = google_compute_project_metadata.metadata_log_export
+}
+
+resource "google_compute_project_metadata" "metadata_log_export" {
   project = module.log-export-project.project_id
   metadata = {
     block-project-ssh-keys = "TRUE" # CIS Compliance Benchmark 4.3

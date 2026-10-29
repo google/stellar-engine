@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-output "gke-cluster" {
+output "gke_cluster" {
   description = "Deployed GKE cluster."
   value       = module.cluster
   sensitive   = true

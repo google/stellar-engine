@@ -18,7 +18,7 @@ locals {
     yamldecode(file("data/${f}"))
   ]...)
 
-  docker-registries = merge(google_artifact_registry_repository.docker-repos, { "docker-hub" = google_artifact_registry_repository.docker-hub })
+  docker_registries = merge(google_artifact_registry_repository.docker_repos, { "docker-hub" = google_artifact_registry_repository.docker_hub })
 }
 
 data "google_project" "project" {
@@ -53,7 +53,12 @@ resource "google_project_service" "api" {
   disable_on_destroy = false
 }
 
-resource "google_artifact_registry_repository" "yum-repos" {
+moved {
+  from = google_artifact_registry_repository.yum-repos
+  to   = google_artifact_registry_repository.yum_repos
+}
+
+resource "google_artifact_registry_repository" "yum_repos" {
   project       = data.google_project.project.project_id
   location      = var.region
   for_each      = local.repositories.yum
@@ -77,7 +82,12 @@ resource "google_artifact_registry_repository" "yum-repos" {
   ]
 }
 
-resource "google_artifact_registry_repository" "docker-hub" {
+moved {
+  from = google_artifact_registry_repository.docker-hub
+  to   = google_artifact_registry_repository.docker_hub
+}
+
+resource "google_artifact_registry_repository" "docker_hub" {
   project       = data.google_project.project.project_id
   location      = var.region
   repository_id = "docker-hub"
@@ -99,7 +109,12 @@ resource "google_artifact_registry_repository" "docker-hub" {
   ]
 }
 
-resource "google_artifact_registry_repository" "docker-repos" {
+moved {
+  from = google_artifact_registry_repository.docker-repos
+  to   = google_artifact_registry_repository.docker_repos
+}
+
+resource "google_artifact_registry_repository" "docker_repos" {
   project       = data.google_project.project.project_id
   location      = var.region
   for_each      = local.repositories.docker
@@ -122,7 +137,12 @@ resource "google_artifact_registry_repository" "docker-repos" {
   ]
 }
 
-resource "google_artifact_registry_repository" "docker-repos-developer" {
+moved {
+  from = google_artifact_registry_repository.docker-repos-developer
+  to   = google_artifact_registry_repository.docker_repos_developer
+}
+
+resource "google_artifact_registry_repository" "docker_repos_developer" {
   for_each = var.developer_registries
 
   project       = data.google_project.project.project_id
@@ -145,22 +165,33 @@ resource "google_kms_crypto_key_iam_member" "artifact_registry_crypto_key" {
     google_project_service_identity.artifact_registry_agent
   ]
 }
+
+moved {
+  from = google_artifact_registry_repository_iam_binding.writer-permissions
+  to   = google_artifact_registry_repository_iam_binding.writer_permissions
+}
+
 # Grant all the writers access to the developer based registries
-resource "google_artifact_registry_repository_iam_binding" "writer-permissions" {
+resource "google_artifact_registry_repository_iam_binding" "writer_permissions" {
   for_each   = var.developer_registries
-  project    = google_artifact_registry_repository.docker-repos-developer[each.key].project
-  location   = google_artifact_registry_repository.docker-repos-developer[each.key].location
-  repository = google_artifact_registry_repository.docker-repos-developer[each.key].name
+  project    = google_artifact_registry_repository.docker_repos_developer[each.key].project
+  location   = google_artifact_registry_repository.docker_repos_developer[each.key].location
+  repository = google_artifact_registry_repository.docker_repos_developer[each.key].name
   role       = "roles/artifactregistry.writer"
   members    = coalesce(each.value.writers, [])
 }
 
+moved {
+  from = google_artifact_registry_repository_iam_binding.reader-permissions
+  to   = google_artifact_registry_repository_iam_binding.reader_permissions
+}
+
 # Grant all the readers access to the developer based registries
-resource "google_artifact_registry_repository_iam_binding" "reader-permissions" {
+resource "google_artifact_registry_repository_iam_binding" "reader_permissions" {
   for_each   = var.developer_registries
-  project    = google_artifact_registry_repository.docker-repos-developer[each.key].project
-  location   = google_artifact_registry_repository.docker-repos-developer[each.key].location
-  repository = google_artifact_registry_repository.docker-repos-developer[each.key].name
+  project    = google_artifact_registry_repository.docker_repos_developer[each.key].project
+  location   = google_artifact_registry_repository.docker_repos_developer[each.key].location
+  repository = google_artifact_registry_repository.docker_repos_developer[each.key].name
   role       = "roles/artifactregistry.reader"
   members    = coalesce(each.value.readers, [])
 }

@@ -18,7 +18,12 @@ resource "google_project_service" "spanner_api" {
   disable_on_destroy = false
 }
 
-module "cloud_spanner" {
+moved {
+  from = module.cloud_spanner
+  to   = module.cloud-spanner
+}
+
+module "cloud-spanner" {
   source     = "../../../modules/spanner-instance-se"
   project_id = var.main_project_id
   edition    = var.edition

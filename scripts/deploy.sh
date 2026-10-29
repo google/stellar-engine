@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 #### Use this script at your own risk. The author assumes no responsibility for any damages or losses incurred through its use.
 
 # Enable error handling
@@ -22,26 +36,10 @@ else
     log_error() { echo -e "\033[0;31m[ERROR]\033[0m $1" >&2; }
 fi
 
-# Enhanced error handler
-error_handler() {
-    local line_no=$1
-    local exit_code=$?
-    log_error "Script failed at line $line_no with exit code $exit_code"
-
-    # Save deployment state for potential recovery
-    if [[ -n "${PREFIX:-}" ]]; then
-        local state_dir="${SCRIPT_DIR}/state"
-        mkdir -p "$state_dir"
-        echo "LAST_FAILED_OPERATION=deploy" >> "${state_dir}/last_operation_${PREFIX}.env" 2>/dev/null || true
-        echo "LAST_FAILED_LINE=$line_no" >> "${state_dir}/last_operation_${PREFIX}.env" 2>/dev/null || true
-    fi
-
-    cleanup
-    exit "$exit_code"
-}
-
-# Note: error_handler is already defined above, no need for setup_error_handling
-trap 'error_handler $LINENO' ERR
+# error_handler, handle_prompt, handle_prompt_if, and prompt_with_default live
+# in common-functions.sh so the shell unit tests can exercise them.
+# Pass $? explicitly so the handler exits with the failing command's status.
+trap 'error_handler $LINENO $?' ERR
 
 # Check prerequisites before starting
 if check_prerequisites; then
@@ -59,43 +57,13 @@ cleanup() {
 
 trap cleanup EXIT
 
-# Helper function to handle promptUser return codes properly
-handle_prompt() {
-    local prompt="$1"
-    shift
-    local commands=("$@")
-
-    if promptUser "$prompt" "${commands[@]}"; then
-        return 0  # Success - user chose "yes"
-    else
-        local exit_code=$?
-        if [[ $exit_code -eq 255 ]]; then
-            return 0  # Skip is treated as success for optional commands
-        else
-            return $exit_code  # Propagate other errors
-        fi
-    fi
-}
-
-# Handle prompts where skip should be treated as "no" (for if statements)
-handle_prompt_if() {
-    local prompt="$1"
-    shift
-    local commands=("$@")
-
-    if promptUser "$prompt" "${commands[@]}"; then
-        return 0  # Success - user chose "yes"
-    else
-        local exit_code=$?
-        # Both "no" and "skip" return failure for if statements
-        return 1
-    fi
-}
-
 setup_logging
 
-# Load configuration
-load_config "${SCRIPT_DIR}" "PREFIX" "ORGANIZATION_ID" "BILLING_ACCOUNT" "BOOTSTRAP_PROJECT_ID" "DEPLOYER_EMAIL_ADDRESS" "COMPLIANCE_REGIME" "DIRECTORY_CUSTOMER_ID" "FULLY_QUALIFIED_DOMAIN_NAME" "LOGGING_ALERTS_EMAIL_ADDRESS" "REGION"
+# Load configuration. On the first run config.env does not exist yet, so a
+# failure here must not fire the ERR trap before the prerequisites step builds it.
+if ! load_config "${SCRIPT_DIR}" "PREFIX" "ORGANIZATION_ID" "BILLING_ACCOUNT" "BOOTSTRAP_PROJECT_ID" "DEPLOYER_EMAIL_ADDRESS" "COMPLIANCE_REGIME" "DIRECTORY_CUSTOMER_ID" "FULLY_QUALIFIED_DOMAIN_NAME" "LOGGING_ALERTS_EMAIL_ADDRESS" "REGION"; then
+    log_warn "config.env is missing or incomplete. The prerequisites setup step creates it."
+fi
 
 # Function to validate required environment variables
 validate_env_vars() {
@@ -257,7 +225,7 @@ if promptUser "Continue with prerequisites setup?"; then
   if [[ "$old_files_found" == "true" ]]; then
     log_warn "Found old deployment files with prefixes: ${old_prefixes_found[*]} in stages: ${stages_with_old_files[*]}"
     log_info "These files will cause conflicts with the current '${current_prefix}' deployment"
-    if handle_prompt "Would you like to clean up ALL old deployment files (keeping only '${current_prefix}') across all stages?"; then
+    if handle_prompt_if "Would you like to clean up ALL old deployment files (keeping only '${current_prefix}') across all stages?"; then
       log_info "Cleaning up old deployment files (preserving '${current_prefix}' files)..."
 
       for stage_dir in "${SCRIPT_DIR}"/../fast/stages-aw/*/; do
@@ -337,7 +305,7 @@ if promptUser "Continue with prerequisites setup?"; then
   handle_prompt 'Would you like to (re)authenticate with Google Cloud?' "gcloud auth login" "gcloud auth application-default login" || true
 
   # Set variables
-  if [ ! -f "$SCRIPT_DIR"/config.env ] || handle_prompt "Would you like to overwrite your config.env file?"; then
+  if [ ! -f "$SCRIPT_DIR"/config.env ] || handle_prompt_if "Would you like to overwrite your config.env file?"; then
     log_info "Available organizations:"
     if ! gcloud organizations list; then
         log_error "Failed to list organizations. Please check your authentication."
@@ -345,75 +313,92 @@ if promptUser "Continue with prerequisites setup?"; then
     fi
     echo
 
-    # Input validation for each variable
-    while [[ -z "${BILLING_ACCOUNT:-}" ]]; do
-        read -r -p "Enter your billing account: " BILLING_ACCOUNT
-        [[ -z "$BILLING_ACCOUNT" ]] && log_error "Billing account cannot be empty"
+    # Prompt for every value, even when config.env already set it, so that
+    # overwriting re-prompts. Pressing Enter keeps the value shown in brackets.
+    while true; do
+        prompt_with_default BILLING_ACCOUNT "Enter your billing account" || exit 1
+        [[ -n "$BILLING_ACCOUNT" ]] && break
+        log_error "Billing account cannot be empty"
     done
 
-    while [[ -z "${BOOTSTRAP_PROJECT_ID:-}" ]]; do
-        read -r -p "Enter your bootstrap project ID: " BOOTSTRAP_PROJECT_ID
-        [[ -z "$BOOTSTRAP_PROJECT_ID" ]] && log_error "Bootstrap project ID cannot be empty"
+    while true; do
+        prompt_with_default BOOTSTRAP_PROJECT_ID "Enter your bootstrap project ID" || exit 1
+        [[ -n "$BOOTSTRAP_PROJECT_ID" ]] && break
+        log_error "Bootstrap project ID cannot be empty"
     done
 
-    while [[ -z "${COMPLIANCE_REGIME:-}" ]]; do
-        read -r -p "Enter the compliance regime: " COMPLIANCE_REGIME
-        [[ -z "$COMPLIANCE_REGIME" ]] && log_error "Compliance regime cannot be empty"
+    while true; do
+        prompt_with_default COMPLIANCE_REGIME "Enter the compliance regime" || exit 1
+        [[ -n "$COMPLIANCE_REGIME" ]] && break
+        log_error "Compliance regime cannot be empty"
     done
 
-    while [[ -z "${DIRECTORY_CUSTOMER_ID:-}" ]]; do
-        read -r -p "Enter your directory customer ID: " DIRECTORY_CUSTOMER_ID
-        [[ -z "$DIRECTORY_CUSTOMER_ID" ]] && log_error "Directory customer ID cannot be empty"
+    while true; do
+        prompt_with_default DIRECTORY_CUSTOMER_ID "Enter your directory customer ID" || exit 1
+        [[ -n "$DIRECTORY_CUSTOMER_ID" ]] && break
+        log_error "Directory customer ID cannot be empty"
     done
 
-    while [[ -z "${DEPLOYER_EMAIL_ADDRESS:-}" ]] || [[ ! "$DEPLOYER_EMAIL_ADDRESS" =~ ^[^@]+@[^@]+\.[^@]+$ ]]; do
-        read -r -p "Enter your deployer email address: " DEPLOYER_EMAIL_ADDRESS
+    while true; do
+        prompt_with_default DEPLOYER_EMAIL_ADDRESS "Enter your deployer email address" || exit 1
         if [[ -z "$DEPLOYER_EMAIL_ADDRESS" ]]; then
             log_error "Email address cannot be empty"
         elif [[ ! "$DEPLOYER_EMAIL_ADDRESS" =~ ^[^@]+@[^@]+\.[^@]+$ ]]; then
             log_error "Please enter a valid email address"
+        else
+            break
         fi
     done
 
-    while [[ -z "${FULLY_QUALIFIED_DOMAIN_NAME:-}" ]]; do
-        read -r -p "Enter your fully qualified domain name: " FULLY_QUALIFIED_DOMAIN_NAME
-        [[ -z "$FULLY_QUALIFIED_DOMAIN_NAME" ]] && log_error "Domain name cannot be empty"
+    while true; do
+        prompt_with_default FULLY_QUALIFIED_DOMAIN_NAME "Enter your fully qualified domain name" || exit 1
+        [[ -n "$FULLY_QUALIFIED_DOMAIN_NAME" ]] && break
+        log_error "Domain name cannot be empty"
     done
 
-    while [[ -z "${LOGGING_ALERTS_EMAIL_ADDRESS:-}" ]] || [[ ! "$LOGGING_ALERTS_EMAIL_ADDRESS" =~ ^[^@]+@[^@]+\.[^@]+$ ]]; do
-        read -r -p "Enter your logging alerts email address: " LOGGING_ALERTS_EMAIL_ADDRESS
+    while true; do
+        prompt_with_default LOGGING_ALERTS_EMAIL_ADDRESS "Enter your logging alerts email address" || exit 1
         if [[ -z "$LOGGING_ALERTS_EMAIL_ADDRESS" ]]; then
             log_error "Email address cannot be empty"
         elif [[ ! "$LOGGING_ALERTS_EMAIL_ADDRESS" =~ ^[^@]+@[^@]+\.[^@]+$ ]]; then
             log_error "Please enter a valid email address"
+        else
+            break
         fi
     done
 
-    while [[ -z "${ORGANIZATION_ID:-}" ]]; do
-        read -r -p "Enter your organization ID: " ORGANIZATION_ID
-        [[ -z "$ORGANIZATION_ID" ]] && log_error "Organization ID cannot be empty"
+    while true; do
+        prompt_with_default ORGANIZATION_ID "Enter your organization ID" || exit 1
+        [[ -n "$ORGANIZATION_ID" ]] && break
+        log_error "Organization ID cannot be empty"
     done
 
-    while [[ -z "${PREFIX:-}" ]] || [[ ${#PREFIX} -gt 6 ]]; do
-        read -r -p "Enter your prefix (6 chars or less): " PREFIX
+    # Matches the prefix validation in fast/stages-aw/0-bootstrap/variables.tf.
+    while true; do
+        prompt_with_default PREFIX "Enter your prefix (7 chars or less)" || exit 1
         if [[ -z "$PREFIX" ]]; then
             log_error "Prefix cannot be empty"
-        elif [[ ${#PREFIX} -gt 6 ]]; then
-            log_error "Prefix must be 6 characters or less (current: ${#PREFIX})"
+        elif [[ ${#PREFIX} -gt 7 ]]; then
+            log_error "Prefix must be 7 characters or less (current: ${#PREFIX})"
+        else
+            break
         fi
     done
 
-    while [[ -z "${REGION:-}" ]]; do
-        read -r -p "Enter your region: " REGION
-        [[ -z "$REGION" ]] && log_error "Region cannot be empty"
+    while true; do
+        prompt_with_default REGION "Enter your region" || exit 1
+        [[ -n "$REGION" ]] && break
+        log_error "Region cannot be empty"
     done
 
-    while [[ -z "${TENANT_NAME:-}" ]] || [[ ${#TENANT_NAME} -gt 6 ]]; do
-        read -r -p "Enter your tenant name (6 chars or less): " TENANT_NAME
+    while true; do
+        prompt_with_default TENANT_NAME "Enter your tenant name (6 chars or less)" || exit 1
         if [[ -z "$TENANT_NAME" ]]; then
             log_error "Tenant name cannot be empty"
         elif [[ ${#TENANT_NAME} -gt 6 ]]; then
             log_error "Tenant name must be 6 characters or less (current: ${#TENANT_NAME})"
+        else
+            break
         fi
     done
 
@@ -504,6 +489,10 @@ if promptUser "Continue with prerequisites setup?"; then
   echo -e "\nCongratulations, you have finished the prerequisites!"
 
 else
+    if [[ ! -f "$SCRIPT_DIR"/config.env ]]; then
+        log_error "config.env not found. Rerun the script and choose the prerequisites setup to create it."
+        exit 1
+    fi
     # shellcheck source=experimental/config.env.sample
     source "$SCRIPT_DIR"/config.env
     echo "------------------------------------------------------------------"
@@ -511,6 +500,10 @@ else
     cat config.env
     echo "------------------------------------------------------------------"
     echo -e "If the above does not look correct your config.env may be wrong!\n"
+    if ! validate_env_vars; then
+        log_error "config.env is missing required values. Rerun the script and choose the prerequisites setup."
+        exit 1
+    fi
 fi
 
 ########### Stage 0 - Bootstrap ############
@@ -647,7 +640,7 @@ organization = {
 
 outputs_location = "~/fast-config"
 
-# use something unique and no longer than 9 characters
+# use something unique and no longer than 7 characters
 prefix = "${PREFIX}"
 log_sinks = {
   audit-logs = {
@@ -738,7 +731,7 @@ EOF
 
   if [[ "$state_migrated" == "true" ]]; then
     log_info "Using existing remote backend configuration (state already migrated)"
-  elif [ ! -f "0-bootstrap-providers.tf" ] || handle_prompt "Would you like to generate your initial providers.tf?"; then
+  elif [ ! -f "0-bootstrap-providers.tf" ] || handle_prompt_if "Would you like to generate your initial providers.tf?"; then
     log_info "Creating initial providers.tf for local backend deployment..."
     cp providers.tf.tmp 0-bootstrap-providers.tf
   else
@@ -904,15 +897,15 @@ EOF
 
   # Terraform Apply #2
   cmd=("terraform apply -auto-approve -var bootstrap_user=$(gcloud config list --format 'value(core.account)')")
-  handle_prompt "Would you like to run the second terraform apply with the bootstrap user?" "${cmd[@]}"
+  handle_prompt "Would you like to run the second terraform apply with the bootstrap user?" "${cmd[@]}" || true
 
   # Set Default Project
   cmd=("gcloud config set project ${PREFIX}-prod-iac-core-0")
-  handle_prompt "Would you like to set the default project to ${PREFIX}-prod-iac-core-0" "${cmd[@]}"
+  handle_prompt "Would you like to set the default project to ${PREFIX}-prod-iac-core-0" "${cmd[@]}" || true
 
   # Update Providers
   cmd=("gcloud storage cp gs://${PREFIX}-prod-iac-core-outputs-0/providers/0-bootstrap-providers.tf ./")
-  handle_prompt "Would you like to update your providers file?" "${cmd[@]}" # Pass the array elements
+  handle_prompt "Would you like to update your providers file?" "${cmd[@]}" || true
 
   # Update Application Default Credentials quota project before state migration
   log_info "Updating Application Default Credentials quota project to ${PREFIX}-prod-iac-core-0..."
@@ -1162,5 +1155,5 @@ if promptUser "Stage 3 - Security -"; then
     # handle_prompt "Would you like to delete the bootstrap project?" "./delete_gcp_project.sh --project-id=${BOOTSTRAP_PROJECT_ID}"
 
     echo "Congratulations, you have finished Stage 3! Please see the SBPG linked below for further hardening."
-    echo 'https://docs.google.com/document/d/1uv62Fqg73r9oJNP-NPZebpzoBom8rOgLoHkiMZPutbo/edit?usp=drive_link'
+    echo 'https://github.com/google/stellar-engine/blob/main/docs/security-best-practices.md'
 fi

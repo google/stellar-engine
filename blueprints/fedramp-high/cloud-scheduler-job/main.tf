@@ -35,7 +35,12 @@ resource "google_kms_crypto_key_iam_member" "pubsub" {
   depends_on = [google_project_service.cloudscheduler_api] # Ensure API is enabled before IAM
 }
 
-module "pubsub_job" {
+moved {
+  from = module.pubsub_job
+  to   = module.pubsub-job
+}
+
+module "pubsub-job" {
   source      = "../../../modules/cloud-scheduler"
   name        = var.name
   description = var.description

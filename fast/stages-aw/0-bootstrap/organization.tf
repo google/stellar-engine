@@ -191,7 +191,9 @@ module "organization-logging" {
   # log buckets (_Default, _Required) are created in the location
   # specified by local.locations.logging. This separate
   # organization-block prevents circular dependencies with later
-  # project creation.
+  # project creation. The Stage 0 folders inherit these settings, so they
+  # set none of their own: under Assured Workloads regimes that enforce
+  # CMEK for Logging, folder settings without a KMS key fail.
   source          = "../../../modules/organization"
   organization_id = "organizations/${var.organization.id}"
   logging_settings = {
@@ -216,7 +218,9 @@ resource "google_assured_workloads_workload" "primary" {
   depends_on                      = [module.organization-logging]
   lifecycle {
     create_before_destroy = true
-    ignore_changes        = [billing_account]
+    # The API never returns these input-only fields, so an imported workload
+    # would otherwise plan a replacement.
+    ignore_changes = [billing_account, resource_settings]
   }
 }
 
@@ -226,9 +230,6 @@ module "no-compliance-folder" {
   parent     = "organizations/${var.organization.id}"
   name       = "StellarEngine-${var.prefix}"
   depends_on = [module.organization-logging]
-  logging_settings = {
-    storage_location = local.locations.logging
-  }
 }
 
 locals {
@@ -275,9 +276,6 @@ module "branch-common-services-folder" {
   parent     = local.assured_workload_folder
   name       = "${lookup(var.regime_mapping, var.assured_workloads.regime, var.assured_workloads.regime)} Common Services"
   depends_on = [module.organization-logging]
-  logging_settings = {
-    storage_location = local.locations.logging
-  }
 }
 
 
@@ -319,7 +317,7 @@ module "organization" {
         )
         condition = {
           expression = format(
-            "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
+            "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
             join(",", formatlist("'%s'", concat(
               [
                 "roles/accesscontextmanager.policyAdmin",
@@ -350,7 +348,7 @@ module "organization" {
         )
         condition = {
           expression = format(
-            "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
+            "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
             join(",", formatlist("'%s'", [
               "roles/billing.admin",
               "roles/billing.costsManager",
@@ -436,7 +434,7 @@ module "root-folder-config" {
       role    = "roles/resourcemanager.folderIamAdmin"
       condition = {
         expression = format(
-          "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
+          "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
           join(",", formatlist("'%s'", concat(
             [
               "roles/accesscontextmanager.policyAdmin",

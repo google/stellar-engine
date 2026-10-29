@@ -108,6 +108,6 @@ Once ran, re-running a ```terraform destroy``` will succesfully destroy the Goog
 
 | name | description | sensitive |
 |---|---|:---:|
-| [dataproc_bucket](outputs.tf#L1) | GCS Bucket for DataProc. |  |
-| [dataproc_cluster](outputs.tf#L6) | Dataproc cluster name. |  |
+| [dataproc_bucket](outputs.tf#L15) | GCS Bucket for DataProc. |  |
+| [dataproc_cluster](outputs.tf#L20) | Dataproc cluster name. |  |
 <!-- END TFDOC -->

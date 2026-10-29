@@ -14,7 +14,7 @@
 
 output "artifact_registry_iam_member" {
   description = "IAM member assigned to roles/artifactregistry.createOnPushWriter."
-  value       = google_project_iam_member.artifactregistry_createOnPushWriter.member
+  value       = google_project_iam_member.artifactregistry_create_on_push_writer.member
 }
 
 output "bucket" {
@@ -34,10 +34,10 @@ output "kms_crypto_key_iam_binding_members" {
 
 output "logging_iam_member" {
   description = "IAM member assigned to roles/logging.logWriter."
-  value       = google_project_iam_member.logging_logWriter.member
+  value       = google_project_iam_member.logging_log_writer.member
 }
 
 output "storage_object_admin_iam_member" {
   description = "IAM member assigned to roles/storage.objectAdmin."
-  value       = google_project_iam_member.storage_objectUser.member
+  value       = google_project_iam_member.storage_object_user.member
 }

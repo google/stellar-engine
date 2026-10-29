@@ -14,10 +14,10 @@
 
 output "cloud_run" {
   description = "Cloud Run Service that was created."
-  value       = module.cloud_run
+  value       = module.cloud-run
 }
 
-output "service-account" {
+output "service_account" {
   description = "Service account that was created to run the Cloud Run Service."
   value       = google_service_account.cloud_run_service_account.email
 }

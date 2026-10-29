@@ -36,21 +36,8 @@ The blueprint also creates a CentOS-9-Stream instance with a startup-script that
 - The present GCP Terraform Module in this project is set up and intended to be implemented in an FedRAMP-High or IL5 (Impact Level 5) environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
 - An Assured Workloads in both environments ensures that sensitive data and workloads in GCP adhere to the rigorous security standards mandated by the DoD, making it suitable for government agencies.
 
-<<<<<<< HEAD
 ## Prerequisite for Artifact Registry
 If you are deploying this to an Impact Level 5 (IL5) environment, you need to ensure that your [Restrict Resource Service Usage](https://console.cloud.google.com/iam-admin/orgpolicies/gcp-restrictServiceUsage) organization policy allows ```artifactregistry.googleapis.com``` for the project you are trying to deploy Artifact Registry to. If it does not, follow the steps below to allow it.
-=======
-| name | description | type | required | default |
-|---|---|:---:|:---:|:---:|
-| [developer_registries](variables.tf#L1) | A map of developer registries and readers/writers for those developer registries. | <code title="map&#40;object&#40;&#123;&#10;  readers &#61; optional&#40;list&#40;string&#41;&#41;&#10;  writers &#61; optional&#40;list&#40;string&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [kms_key_names](variables.tf#L9) | Key names and base attributes. Set attributes to null if not needed. | <code title="map&#40;object&#40;&#123;&#10;  destroy_scheduled_duration    &#61; optional&#40;string&#41;&#10;  rotation_period               &#61; optional&#40;string, &#34;7776000s&#34;&#41; &#35; CIS Compliance Benchmark 1.10&#10;  labels                        &#61; optional&#40;map&#40;string&#41;&#41;&#10;  location                      &#61; optional&#40;string, &#34;us-east4&#34;&#41;&#10;  purpose                       &#61; optional&#40;string, &#34;ENCRYPT_DECRYPT&#34;&#41;&#10;  skip_initial_version_creation &#61; optional&#40;bool, false&#41;&#10;  version_template &#61; optional&#40;object&#40;&#123;&#10;    algorithm        &#61; string&#10;    protection_level &#61; optional&#40;string, &#34;HSM&#34;&#41;&#10;  &#125;&#41;&#41;&#10;&#10;&#10;  iam &#61; optional&#40;map&#40;list&#40;string&#41;&#41;, &#123;&#125;&#41;&#10;  iam_bindings &#61; optional&#40;map&#40;object&#40;&#123;&#10;    members &#61; list&#40;string&#41;&#10;    role    &#61; string&#10;    condition &#61; optional&#40;object&#40;&#123;&#10;      expression  &#61; string&#10;      title       &#61; string&#10;      description &#61; optional&#40;string&#41;&#10;    &#125;&#41;&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;&#10;&#10;  iam_bindings_additive &#61; optional&#40;map&#40;object&#40;&#123;&#10;    member &#61; string&#10;    role   &#61; string&#10;    condition &#61; optional&#40;object&#40;&#123;&#10;      expression  &#61; string&#10;      title       &#61; string&#10;      description &#61; optional&#40;string&#41;&#10;    &#125;&#41;&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;&#41;&#10;&#10;&#10;default &#61; &#123;&#10;  &#34;artifact-registry-us&#34; &#61; &#123;&#10;    destroy_scheduled_duration    &#61; null&#10;    rotation_period               &#61; null&#10;    labels                        &#61; null&#10;    location                      &#61; &#34;us&#34;&#10;    purpose                       &#61; &#34;ENCRYPT_DECRYPT&#34;&#10;    skip_initial_version_creation &#61; false&#10;    version_template &#61; &#123;&#10;      algorithm        &#61; &#34;GOOGLE_SYMMETRIC_ENCRYPTION&#34;&#10;      protection_level &#61; &#34;HSM&#34;&#10;    &#125;&#10;&#10;&#10;    iam                   &#61; &#123;&#125;&#10;    iam_bindings          &#61; &#123;&#125;&#10;    iam_bindings_additive &#61; &#123;&#125;&#10;  &#125;&#10;&#125;&#10;&#10;&#10;nullable &#61; false">&#8230;</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L67) | Keyring attributes. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L72) | GCP Project to deploy Google Artifact Registries into. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L78) | Project that the Compute Engine VPC is located. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L83) | GCP Region to deploy Consumer VM into. | <code>string</code> | ✓ |  |
-| [subnetwork_name](variables.tf#L88) | VPC Subnet to deploy Consumer VM into. | <code>string</code> | ✓ |  |
-| [vpc_network_name](variables.tf#L93) | Name of the VPC where the subnet is deployed. | <code>string</code> |  | <code>&#34;&#34;</code> |
->>>>>>> e4d97963 (Artifact Registry blueprint changes)
 
 1. In Google Cloud Console, select your organization.
 2. Browse to [Assured Workloads](https://console.cloud.google.com/compliance/assuredworkloads).
@@ -124,20 +111,20 @@ To add more Docker registries, simply add new objects below `docker:`
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [core_project_id](variables.tf#L1) | Core project ID. | <code>string</code> | ✓ |  |
-| [developer_registries](variables.tf#L6) | A map of developer registries and readers/writers for those developer registries. | <code title="map&#40;object&#40;&#123;&#10;  readers &#61; optional&#40;list&#40;string&#41;&#41;&#10;  writers &#61; optional&#40;list&#40;string&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [kms_key_name](variables.tf#L14) | The full self-link (projects/../locations/../keyRings/../cryptoKeys/..) of the existing KMS key to use for disk encryption. | <code>string</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L19) | Keyring attributes. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L24) | GCP Project to deploy Google Artifact Registries into. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L29) | Project that the Consumer Compute Engine VPC is located. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L34) | GCP Region to deploy Consumer VM into. | <code>string</code> | ✓ |  |
-| [subnetwork_name](variables.tf#L39) | VPC Subnet to deploy Consumer VM into. | <code>string</code> | ✓ |  |
-| [vpc_network_name](variables.tf#L44) | Name of the VPC where the subnet is deployed. | <code>string</code> |  | <code>&#34;&#34;</code> |
+| [core_project_id](variables.tf#L15) | Core project ID. | <code>string</code> | ✓ |  |
+| [developer_registries](variables.tf#L20) | A map of developer registries and readers/writers for those developer registries. | <code title="map&#40;object&#40;&#123;&#10;  readers &#61; optional&#40;list&#40;string&#41;&#41;&#10;  writers &#61; optional&#40;list&#40;string&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [kms_key_name](variables.tf#L28) | The full self-link (projects/../locations/../keyRings/../cryptoKeys/..) of the existing KMS key to use for disk encryption. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L33) | Keyring attributes. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L38) | GCP Project to deploy Google Artifact Registries into. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L43) | Project that the Consumer Compute Engine VPC is located. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L48) | GCP Region to deploy Consumer VM into. | <code>string</code> | ✓ |  |
+| [subnetwork_name](variables.tf#L53) | VPC Subnet to deploy Consumer VM into. | <code>string</code> | ✓ |  |
+| [vpc_network_name](variables.tf#L58) | Name of the VPC where the subnet is deployed. | <code>string</code> |  | <code>&#34;&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [docker_registries](outputs.tf#L1) | Docker registries created from the docker-registries.yaml file, with Docker Hub appended. |  |
-| [yum_repositories](outputs.tf#L6) | Yum repositories created from the yum-repos.yaml file. |  |
+| [docker_registries](outputs.tf#L15) | Docker registries created from the docker-registries.yaml file, with Docker Hub appended. |  |
+| [yum_repositories](outputs.tf#L20) | Yum repositories created from the yum-repos.yaml file. |  |
 <!-- END TFDOC -->

@@ -223,7 +223,12 @@ module "env-dns-peer-landing-root" {
   }
 }
 
-resource "google_compute_subnetwork_iam_member" "allow-admin-principals" {
+moved {
+  from = google_compute_subnetwork_iam_member.allow-admin-principals
+  to   = google_compute_subnetwork_iam_member.allow_admin_principals
+}
+
+resource "google_compute_subnetwork_iam_member" "allow_admin_principals" {
   for_each = local.tenant_subnets_map_of_maps
   project  = module.env-spoke-projects[each.value.env].project_id
   region   = each.value.region

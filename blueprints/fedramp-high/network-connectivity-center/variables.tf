@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "gcp_region" {
+  description = "The Google Cloud region to be used as the default for regional resources and the provider. Note: NCC Hubs are global resources."
+  type        = string
+}
+
 variable "main_project_id" {
   description = "The Google Cloud Project ID where the NCC hub will be created."
   type        = string
@@ -27,11 +32,6 @@ variable "psc_prop" {
   description = "Whether or not Private Service Connect connections can be propagated to other spokes in the network."
   type        = bool
   default     = false
-}
-
-variable "gcp_region" {
-  description = "The Google Cloud region to be used as the default for regional resources and the provider. Note: NCC Hubs are global resources."
-  type        = string
 }
 
 variable "spokes" {
@@ -50,4 +50,3 @@ variable "topology" {
     error_message = "Invalid topology. Must be either 'MESH' or 'STAR'."
   }
 }
-

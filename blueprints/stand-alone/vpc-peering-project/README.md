@@ -2,7 +2,6 @@
 This blueprint provides a self-contained solution for creating two new Google Cloud VPC networks and establishing a peering connection between them. It is intended for customers who want to develop their own network infrastructure without the full Stellar Engine deployment.
 
 <!-- BEGIN TOC -->
-- [VPC Peering Project Blueprint](#vpc-peering-project-blueprint)
 - [Introduction](#introduction)
 - [Disclaimer](#disclaimer)
 - [Prerequisites](#prerequisites)

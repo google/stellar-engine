@@ -49,7 +49,12 @@ module "cos-demo-config" {
   run_commands    = ["systemctl daemon-reload", "systemctl start demo", ]
 }
 
-resource "google_compute_region_instance_template" "cos-template" {
+moved {
+  from = google_compute_region_instance_template.cos-template
+  to   = google_compute_region_instance_template.cos_template
+}
+
+resource "google_compute_region_instance_template" "cos_template" {
   for_each     = local.vms
   project      = data.google_project.project.project_id
   name_prefix  = "${var.prefix}-template-${each.key}"
@@ -94,7 +99,12 @@ resource "google_compute_region_instance_template" "cos-template" {
   }
 }
 
-resource "google_compute_region_health_check" "http-region-health-check" {
+moved {
+  from = google_compute_region_health_check.http-region-health-check
+  to   = google_compute_region_health_check.http_region_health_check
+}
+
+resource "google_compute_region_health_check" "http_region_health_check" {
   for_each = local.vms
   project  = data.google_project.project.project_id
 
@@ -114,10 +124,10 @@ module "cos-mig" {
   project_id        = data.google_project.project.project_id
   location          = var.region
   name              = "${var.prefix}-cos-${each.key}"
-  instance_template = google_compute_region_instance_template.cos-template[each.key].self_link
+  instance_template = google_compute_region_instance_template.cos_template[each.key].self_link
   target_size       = 1
   auto_healing_policies = {
-    health_check      = google_compute_region_health_check.http-region-health-check[each.key].self_link
+    health_check      = google_compute_region_health_check.http_region_health_check[each.key].self_link
     initial_delay_sec = 60
   }
 
@@ -165,7 +175,12 @@ module "kms" {
 
 }
 
-resource "google_compute_firewall" "allow-app" {
+moved {
+  from = google_compute_firewall.allow-app
+  to   = google_compute_firewall.allow_app
+}
+
+resource "google_compute_firewall" "allow_app" {
   name    = "cnap-app-firewall"
   network = data.google_compute_network.network.id
 

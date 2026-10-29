@@ -251,5 +251,4 @@ Continuously **monitor** control implementation and risks to the system
   and Privacy Controls for Federal Information Systems and Organizations_
   - Catalog of security and privacy controls for information systems and
     organizations to protect against a diverse set of threats and risks.
-- [Stellar Engine Technical Design
-  Document](https://docs.google.com/document/d/15WMwslyCrkmuI7EutGBd7YXH3K8P3KrwzLOGcv-W4t8/edit?resourcekey=0-mjoA_PGM2MkIMPpr75SQbQ&tab=t.0)
+- [Stellar Engine Technical Design Document](tdd.md)

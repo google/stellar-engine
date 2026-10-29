@@ -58,6 +58,6 @@ output "dns_zone_gcr_name" {
 }
 
 output "dns_zone_pkg_dev_name" {
-  value       = module.pkg_dev.name
+  value       = module.pkg-dev.name
   description = "Name for Managed DNS zone for PKG_DEV"
 }

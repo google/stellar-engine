@@ -25,8 +25,8 @@ locals {
     )
     is_win = length(regexall("WIN", local._image)) > 0
   }
-  node_metadata = var.node_config.metadata == null ? null : merge(
-    var.node_config.metadata,
+  node_metadata = merge(
+    coalesce(var.node_config.metadata, {}),
     { disable-legacy-endpoints = "true" }
   )
   # if no attributes passed for service account, use the GCE default
@@ -169,6 +169,12 @@ resource "google_container_node_pool" "nodepool" {
     )
     tags = var.tags
 
+    dynamic "confidential_nodes" {
+      for_each = var.node_config.confidential_nodes != null ? [""] : []
+      content {
+        enabled = var.node_config.confidential_nodes
+      }
+    }
     dynamic "ephemeral_storage_config" {
       for_each = var.node_config.ephemeral_ssd_count != null ? [""] : []
       content {

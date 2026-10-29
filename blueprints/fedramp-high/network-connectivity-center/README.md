@@ -2,7 +2,6 @@
 This blueprint demonstrates how to create a Google Cloud Network Connectivity Center (NCC) Hub and connect existing VPC networks as spokes, supporting various network topologies (MESH/STAR) within a multi-project GCP environment.
 
 <!-- BEGIN TOC -->
-- [Network Connectivity Center Blueprint](#network-connectivity-center-blueprint)
 - [Introduction](#introduction)
 - [Disclaimer](#disclaimer)
 - [Prerequisites](#prerequisites)
@@ -90,23 +89,22 @@ To verify a successful deployment:
 -   This blueprint currently supports **VPC spokes only**. For information on other types of NCC spokes (e.g., VPN, Cloud Interconnect, Router appliance), refer to the official [Network Connectivity Center documentation](https://cloud.google.com/network-connectivity/docs/network-connectivity-center/concepts/overview).
 -   **STAR Topology Behavior:** If you choose the `STAR` topology, VPCs located in the same project as the hub (`main_project_id`) will be automatically placed into the "center" connectivity group. All other VPCs from different projects will be placed into the "edge" connectivity group. For `MESH` topology, all spokes are in the "default" group.
 -   **Private Service Connect (PSC) Propagation:** You can enable Private Service Connect [connection propagation](https://cloud.google.com/network-connectivity/docs/network-connectivity-center/concepts/psc-propagated-connection-overview) via the `psc_prop` variable.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [main_project_id](variables.tf#L1) | The Google Cloud Project ID where the NCC hub will be created. | <code>string</code> | ✓ |  |
-| [ncc_hub_name](variables.tf#L6) | The name of the created Network Connectivity Center hub. | <code>string</code> |  | <code>&#34;example-ncc-hub&#34;</code> |
-| [psc_prop](variables.tf#L12) | Whether or not Private Service Connect connections can be propagated to other spokes in the network. | <code>bool</code> |  | <code>false</code> |
-| [gcp_region](variables.tf#L18) | The Google Cloud region to be used as the default for regional resources and the provider. Note: NCC Hubs are global resources. | <code>string</code> | ✓ |  |
-| [spokes](variables.tf#L23) | A map of spoke names to VPC Network self-links (e.g., &#39;projects/&lt;PROJECT_ID&gt;/global/networks/&lt;VPC_NAME&gt;&#39;) to be added to the NCC hub. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [topology](variables.tf#L30) | The topology of the network. Can be MESH or STAR. | <code>string</code> |  | <code>&#34;MESH&#34;</code> |
+| [gcp_region](variables.tf#L15) | The Google Cloud region to be used as the default for regional resources and the provider. Note: NCC Hubs are global resources. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L20) | The Google Cloud Project ID where the NCC hub will be created. | <code>string</code> | ✓ |  |
+| [ncc_hub_name](variables.tf#L25) | The name of the created Network Connectivity Center hub. | <code>string</code> |  | <code>&#34;example-ncc-hub&#34;</code> |
+| [psc_prop](variables.tf#L31) | Whether or not Private Service Connect connections can be propagated to other spokes in the network. | <code>bool</code> |  | <code>false</code> |
+| [spokes](variables.tf#L37) | A map of spoke names to VPC Network self-links (e.g., 'projects/<PROJECT_ID>/global/networks/<VPC_NAME>') to be added to the NCC hub. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [topology](variables.tf#L44) | The topology of the network. Can be MESH or STAR. | <code>string</code> |  | <code>&#34;MESH&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [hub](outputs.tf#L1) | The NCC hub ID. |  |
-| [spokes](outputs.tf#L6) | The NCC spokes. |  |
+| [hub](outputs.tf#L15) | The NCC hub ID. |  |
+| [spokes](outputs.tf#L20) | The NCC spokes. |  |
 <!-- END TFDOC -->

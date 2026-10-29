@@ -10,6 +10,7 @@ The purpose of this stage is to enable critical Google Cloud Organization level 
   - [Google Cloud Organization Policies and Tag-Based Conditions](#google-cloud-organization-policies-and-tag-based-conditions)
   - [Automation Google Cloud Project and Resources](#automation-google-cloud-project-and-resources)
   - [Billing Account](#billing-account)
+    - [Billing Budgets](#billing-budgets)
   - [Google Cloud Organization Level Logging](#google-cloud-organization-level-logging)
   - [Naming](#naming)
   - [Workforce Identity Federation](#workforce-identity-federation)
@@ -20,6 +21,7 @@ The purpose of this stage is to enable critical Google Cloud Organization level 
   - [IAM](#iam)
   - [Log Sinks and Log Destinations](#log-sinks-and-log-destinations)
   - [Names and Naming Convention](#names-and-naming-convention)
+  - [Pre-created resources](#pre-created-resources)
   - [Workload Identity Federation](#workload-identity-federation)
   - [CI/CD Repositories](#cicd-repositories)
   - [Toggling features](#toggling-features)
@@ -257,6 +259,33 @@ If a different convention is needed, identify names via search/grep (e.g. with `
 
 Names used in internal references (e.g. `module.foo-prod.id`) are only used by Terraform and do not influence resource naming, so they are best left untouched to avoid having to debug complex errors.
 
+### Pre-created resources
+
+Import the Stage 0 projects and the Assured Workloads workload when an administrator creates them in advance, for example when only a human user can use the billing account. Stage 0 then adopts them instead of creating them.
+
+- The workload ignores changes to its `billing_account` and `resource_settings` arguments, because the Assured Workloads API never returns them.
+- Create the workload in advance with the billing account, the regime, and the location of the `google_assured_workloads_workload.primary` resource.
+- Give the workload a `CONSUMER_FOLDER` resource setting named `StellarEngine-<prefix>`.
+- Enable violation notifications on the workload.
+- Import the workload as `google_assured_workloads_workload.primary[0]` with the ID `organizations/<organization_id>/locations/<location>/workloads/<workload_id>`.
+- Import the projects as `module.automation-project.google_project.project[0]` and `module.log-export-project.google_project.project[0]` with their project IDs.
+- Review the plan after each import, and stop when it plans to replace an imported resource.
+
+Set the `project_deletion_policies` variable to keep pre-created projects in place when you run `terraform destroy`.
+
+- The `automation`, `billing`, and `logging` keys match the keys of the `project_parent_ids` variable.
+- Each key defaults to `DELETE`, which matches the behavior of the project module.
+- The `ABANDON` value removes the project from the Terraform state on destroy and leaves the project in your organization.
+- Destroy still removes the resources and the lien that the stage manages inside an abandoned project.
+- The `PREVENT` value makes Terraform refuse any destroy action on the project.
+
+```hcl
+project_deletion_policies = {
+  automation = "ABANDON"
+  logging    = "ABANDON"
+}
+```
+
 ### Workload Identity Federation
 
 At any time during this stage's lifecycle you can configure a Workload Identity Federation pool, and one or more providers. These are part of this stage's interface, included in the automatically generated `.tfvars` files and accepted by the Resource Manager stage that follows.
@@ -403,10 +432,11 @@ The `fast_features` variable consists of 4 toggles
 | [logging_kms_key](variables.tf#L315) | value of the KMS key used for logging. | <code>string</code> |  | <code>null</code> |
 | [org_policies_config](variables.tf#L321) | Organization policies customization. | <code title="object&#40;&#123;&#10;  constraints &#61; optional&#40;object&#40;&#123;&#10;    allowed_policy_member_domains &#61; optional&#40;list&#40;string&#41;, &#91;&#93;&#41;&#10;  &#125;&#41;, &#123;&#125;&#41;&#10;  import_defaults &#61; optional&#40;bool, false&#41;&#10;  tag_name        &#61; optional&#40;string, &#34;org-policies&#34;&#41;&#10;  tag_values &#61; optional&#40;map&#40;object&#40;&#123;&#10;    description &#61; optional&#40;string, &#34;Managed by the Terraform organization module.&#34;&#41;&#10;    iam         &#61; optional&#40;map&#40;list&#40;string&#41;&#41;, &#123;&#125;&#41;&#10;    id          &#61; optional&#40;string&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [outputs_location](variables.tf#L347) | Enable writing provider, tfvars and CI/CD workflow files to local filesystem. Leave null to disable. | <code>string</code> |  | <code>null</code> |
-| [project_parent_ids](variables.tf#L362) | Optional parents for projects created here in folders/nnnnnnn format. Null values will use the organization as parent. | <code title="object&#40;&#123;&#10;  automation &#61; optional&#40;string&#41;&#10;  billing    &#61; optional&#40;string&#41;&#10;  logging    &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [regime_mapping](variables.tf#L373) | Mapping of compliance regime names to short codes. | <code>map&#40;string&#41;</code> |  | <code title="&#123;&#10;  &#34;COMPLIANCE_REGIME_UNSPECIFIED&#34; &#61; &#34;CRU&#34;&#10;  &#34;IL2&#34;                           &#61; &#34;IL2&#34;&#10;  &#34;IL4&#34;                           &#61; &#34;IL4&#34;&#10;  &#34;IL5&#34;                           &#61; &#34;IL5&#34;&#10;  &#34;FEDRAMP_HIGH&#34;                  &#61; &#34;FRH&#34;&#10;  &#34;FEDRAMP_MODERATE&#34;              &#61; &#34;FRM&#34;&#10;  &#34;CJIS&#34;                                              &#61; &#34;CJIS&#34;&#10;  &#34;US_REGIONAL_ACCESS&#34;                                &#61; &#34;USRE&#34;&#10;  &#34;HIPAA&#34;                                             &#61; &#34;HIPAA&#34;&#10;  &#34;HITRUST&#34;                                           &#61; &#34;HITRUST&#34;&#10;  &#34;EU_REGIONS_AND_SUPPORT&#34;                            &#61; &#34;EURS&#34;&#10;  &#34;CA_REGIONS_AND_SUPPORT&#34;                            &#61; &#34;CARS&#34;&#10;  &#34;ITAR&#34;                                              &#61; &#34;ITAR&#34;&#10;  &#34;AU_REGIONS_AND_US_SUPPORT&#34;                         &#61; &#34;AUUSRS&#34;&#10;  &#34;ASSURED_WORKLOADS_FOR_PARTNERS&#34;                    &#61; &#34;PART&#34;&#10;  &#34;ISR_REGIONS&#34;                                       &#61; &#34;ISR&#34;&#10;  &#34;ISR_REGIONS_AND_SUPPORT&#34;                           &#61; &#34;ISRSUPP&#34;&#10;  &#34;CA_PROTECTED_B&#34;                                    &#61; &#34;CA_PROT_B&#34;&#10;  &#34;JP_REGIONS_AND_SUPPORT&#34;                            &#61; &#34;JP_REGIONS&#34;&#10;  &#34;KSA_REGIONS_AND_SUPPORT_WITH_SOVEREIGNTY_CONTROLS&#34; &#61; &#34;KSA_SOV&#34;&#10;  &#34;REGIONAL_CONTROLS&#34;                                 &#61; &#34;REGIONAL&#34;&#10;  &#34;HEALTHCARE_AND_LIFE_SCIENCES_CONTROLS&#34;             &#61; &#34;HCLS&#34;&#10;  &#34;HEALTHCARE_AND_LIFE_SCIENCES_CONTROLS_US_SUPPORT&#34;  &#61; &#34;HCLS_US&#34;&#10;  &#34;IRS_1075&#34;                                          &#61; &#34;IRS_1075&#34;&#10;  &#34;CANADA_CONTROLLED_GOODS&#34;                           &#61; &#34;CAGOODS&#34;&#10;&#125;">&#123;&#8230;&#125;</code> |
-| [regions](variables.tf#L406) | Region definitions. Must be specified in terraform.tfvars. Example: us-east4 for FedRAMP High compliance. | <code title="object&#40;&#123;&#10;  primary &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code title="&#123;&#10;  primary &#61; &#34;us-east4&#34;&#10;&#125;">&#123;&#8230;&#125;</code> |
-| [workforce_identity_pool](variables.tf#L417) | Workforce Identity Federation pool configuration. | <code title="object&#40;&#123;&#10;  display_name     &#61; optional&#40;string&#41;&#10;  description      &#61; optional&#40;string&#41;&#10;  disabled         &#61; optional&#40;bool, false&#41;&#10;  session_duration &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [project_deletion_policies](variables.tf#L362) | Deletion policy of each Stage 0 project. Use ABANDON for projects that you create outside Terraform and import, so terraform destroy leaves them in place. | <code title="object&#40;&#123;&#10;  automation &#61; optional&#40;string, &#34;DELETE&#34;&#41;&#10;  billing    &#61; optional&#40;string, &#34;DELETE&#34;&#41;&#10;  logging    &#61; optional&#40;string, &#34;DELETE&#34;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [project_parent_ids](variables.tf#L380) | Optional parents for projects created here in folders/nnnnnnn format. Null values will use the organization as parent. | <code title="object&#40;&#123;&#10;  automation &#61; optional&#40;string&#41;&#10;  billing    &#61; optional&#40;string&#41;&#10;  logging    &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [regime_mapping](variables.tf#L391) | Mapping of compliance regime names to short codes. | <code>map&#40;string&#41;</code> |  | <code title="&#123;&#10;  &#34;COMPLIANCE_REGIME_UNSPECIFIED&#34; &#61; &#34;CRU&#34;&#10;  &#34;IL2&#34;                           &#61; &#34;IL2&#34;&#10;  &#34;IL4&#34;                           &#61; &#34;IL4&#34;&#10;  &#34;IL5&#34;                           &#61; &#34;IL5&#34;&#10;  &#34;FEDRAMP_HIGH&#34;                  &#61; &#34;FRH&#34;&#10;  &#34;FEDRAMP_MODERATE&#34;              &#61; &#34;FRM&#34;&#10;  &#34;CJIS&#34;                                              &#61; &#34;CJIS&#34;&#10;  &#34;US_REGIONAL_ACCESS&#34;                                &#61; &#34;USRE&#34;&#10;  &#34;HIPAA&#34;                                             &#61; &#34;HIPAA&#34;&#10;  &#34;HITRUST&#34;                                           &#61; &#34;HITRUST&#34;&#10;  &#34;EU_REGIONS_AND_SUPPORT&#34;                            &#61; &#34;EURS&#34;&#10;  &#34;CA_REGIONS_AND_SUPPORT&#34;                            &#61; &#34;CARS&#34;&#10;  &#34;ITAR&#34;                                              &#61; &#34;ITAR&#34;&#10;  &#34;AU_REGIONS_AND_US_SUPPORT&#34;                         &#61; &#34;AUUSRS&#34;&#10;  &#34;ASSURED_WORKLOADS_FOR_PARTNERS&#34;                    &#61; &#34;PART&#34;&#10;  &#34;ISR_REGIONS&#34;                                       &#61; &#34;ISR&#34;&#10;  &#34;ISR_REGIONS_AND_SUPPORT&#34;                           &#61; &#34;ISRSUPP&#34;&#10;  &#34;CA_PROTECTED_B&#34;                                    &#61; &#34;CA_PROT_B&#34;&#10;  &#34;JP_REGIONS_AND_SUPPORT&#34;                            &#61; &#34;JP_REGIONS&#34;&#10;  &#34;KSA_REGIONS_AND_SUPPORT_WITH_SOVEREIGNTY_CONTROLS&#34; &#61; &#34;KSA_SOV&#34;&#10;  &#34;REGIONAL_CONTROLS&#34;                                 &#61; &#34;REGIONAL&#34;&#10;  &#34;HEALTHCARE_AND_LIFE_SCIENCES_CONTROLS&#34;             &#61; &#34;HCLS&#34;&#10;  &#34;HEALTHCARE_AND_LIFE_SCIENCES_CONTROLS_US_SUPPORT&#34;  &#61; &#34;HCLS_US&#34;&#10;  &#34;IRS_1075&#34;                                          &#61; &#34;IRS_1075&#34;&#10;  &#34;CANADA_CONTROLLED_GOODS&#34;                           &#61; &#34;CAGOODS&#34;&#10;&#125;">&#123;&#8230;&#125;</code> |
+| [regions](variables.tf#L424) | Region definitions. Must be specified in terraform.tfvars. Example: us-east4 for FedRAMP High compliance. | <code title="object&#40;&#123;&#10;  primary &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code title="&#123;&#10;  primary &#61; &#34;us-east4&#34;&#10;&#125;">&#123;&#8230;&#125;</code> |
+| [workforce_identity_pool](variables.tf#L435) | Workforce Identity Federation pool configuration. | <code title="object&#40;&#123;&#10;  display_name     &#61; optional&#40;string&#41;&#10;  description      &#61; optional&#40;string&#41;&#10;  disabled         &#61; optional&#40;bool, false&#41;&#10;  session_duration &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 
 ## Outputs
 

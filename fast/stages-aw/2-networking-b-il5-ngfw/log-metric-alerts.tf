@@ -21,12 +21,22 @@
 # CIS Compliance Benchmark 2.10
 # CIS Compliance Benchmark 2.11
 
-module "vdss_log_metrics" {
+moved {
+  from = module.vdss_log_metrics
+  to   = module.vdss-log-metrics
+}
+
+module "vdss-log-metrics" {
   source  = "../../../modules/cis-log-metrics"
   project = module.vdss-host-project.id
 }
 
-module "spoke_log_metrics" {
+moved {
+  from = module.spoke_log_metrics
+  to   = module.spoke-log-metrics
+}
+
+module "spoke-log-metrics" {
   source = "../../../modules/cis-log-metrics"
 
   for_each = module.env-spoke-projects
@@ -35,11 +45,16 @@ module "spoke_log_metrics" {
 
 # Alerts require log-metrics to be configure
 resource "time_sleep" "networking_wait_10_seconds" {
-  depends_on      = [module.vdss_log_metrics, module.spoke_log_metrics]
+  depends_on      = [module.vdss-log-metrics, module.spoke-log-metrics]
   create_duration = "10s"
 }
 
-module "vdss_log_alerts" {
+moved {
+  from = module.vdss_log_alerts
+  to   = module.vdss-log-alerts
+}
+
+module "vdss-log-alerts" {
   source = "../../../modules/cis-log-alerts"
 
   project            = module.vdss-host-project.id
@@ -53,7 +68,12 @@ module "vdss_log_alerts" {
   depends_on = [time_sleep.networking_wait_10_seconds]
 }
 
-module "spoke_log_alerts" {
+moved {
+  from = module.spoke_log_alerts
+  to   = module.spoke-log-alerts
+}
+
+module "spoke-log-alerts" {
   source = "../../../modules/cis-log-alerts"
 
   for_each = module.env-spoke-projects

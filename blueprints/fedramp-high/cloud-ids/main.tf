@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource "google_project_service" "net-host-services" {
+moved {
+  from = google_project_service.net-host-services
+  to   = google_project_service.net_host_services
+}
+
+resource "google_project_service" "net_host_services" {
   project = var.network_project_id
   for_each = toset([
     "accesscontextmanager.googleapis.com",
@@ -45,7 +50,12 @@ data "google_compute_zones" "available" {
   status  = "UP"
 }
 
-module "cloud_ids" {
+moved {
+  from = module.cloud_ids
+  to   = module.cloud-ids
+}
+
+module "cloud-ids" {
   source                       = "../../../modules/intrusion-detection-system"
   project                      = var.network_project_id
   landing_vpc_network          = var.network_name
@@ -60,5 +70,5 @@ module "cloud_ids" {
   severity                     = var.severity
   packet_mirroring_policy_name = "${var.prefix}-${var.packet_mirroring_policy_name}"
 
-  depends_on = [google_project_service.net-host-services]
+  depends_on = [google_project_service.net_host_services]
 }

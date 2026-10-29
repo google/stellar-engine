@@ -2,7 +2,7 @@ main_project_id = "xxxx-xxxx-xxxx-main-0"
 core_project_id = "xxxx-xxxx-xxxx-iac-core-0"
 
 prefix        = "xxxx"
-bucket-name   = "bucket-name-00"
+bucket_name   = "bucket-name-00"
 region        = "us-east4"
 autoclass     = true
 storage_class = "STANDARD"

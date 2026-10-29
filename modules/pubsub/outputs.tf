@@ -14,19 +14,14 @@
  * limitations under the License.
  */
 
-output "name" {
-  description = "The name of the created Pub/Sub topic."
-  value       = google_pubsub_topic.default.name
-}
-
 output "id" {
   description = "The full ID (self-link) of the created Pub/Sub topic."
   value       = google_pubsub_topic.default.id # This typically provides the full resource path/self-link
 }
 
-output "topic_id_static" {
-  description = "The statically constructed topic ID/self-link based on project_id and name."
-  value       = local.topic_id_static
+output "name" {
+  description = "The name of the created Pub/Sub topic."
+  value       = google_pubsub_topic.default.name
 }
 
 output "schema" {
@@ -56,3 +51,7 @@ output "topic" {
   value       = google_pubsub_topic.default
 }
 
+output "topic_id_static" {
+  description = "The statically constructed topic ID/self-link based on project_id and name."
+  value       = local.topic_id_static
+}

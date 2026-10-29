@@ -110,7 +110,12 @@ module "gcs" {
   ]
 }
 
-module "dataproc_cluster" {
+moved {
+  from = module.dataproc_cluster
+  to   = module.dataproc-cluster
+}
+
+module "dataproc-cluster" {
   source     = "../../../modules/dataproc"
   project_id = var.main_project_id
   name       = var.dataproc_cluster_name

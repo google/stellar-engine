@@ -1,10 +1,13 @@
 # GKE Cluster with Shared VPC and KMS Blueprint
+
 <!-- BEGIN TOC -->
 - [Purpose](#purpose)
 - [Prerequisites](#prerequisites)
 - [Disclaimer](#disclaimer)
 - [Usage](#usage)
-- [Inputs](#inputs)
+  - [Node Pool Strategy](#node-pool-strategy)
+  - [Testing the Cluster](#testing-the-cluster)
+- [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
@@ -62,7 +65,7 @@ The present GCP Terraform Module in this project is set up and intended to be im
 This blueprint creates two node pools by default: `default-pool` and a separate custom node pool (e.g., `gke-nodepool-name-00`). This is an intentional design choice and a GKE best practice.
 
 * **`default-pool`**: This pool is created automatically by GKE and is suitable for running system components. By default, this blueprint keeps it.
-* **Custom Node Pool**: This pool is created by the `cluster_nodepool` module and is intended for your specific applications.
+* **Custom Node Pool**: This pool is created by the `cluster-nodepool` module and is intended for your specific applications.
 
 Using separate node pools allows you to optimize performance, security, and cost by running different types of applications on different kinds of machines. Key benefits include:
 
@@ -90,54 +93,52 @@ A bastion host VM is deployed in the Main Project to provide a secure way to acc
     ```bash
     kubectl get nodes
     ```
-
 <!-- BEGIN TFDOC -->
-## Inputs
+## Variables
 
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| **bastion_vm_zone** | The zone for the bastion host VM. | `string` | n/a | yes |
-| **core_project_id** | The Google Cloud Project ID where the existing Cloud KMS key is located. | `string` | n/a | yes |
-| **existing_kms_key_name** | The name of the existing Cloud KMS CryptoKey for boot disk encryption. | `string` | n/a | yes |
-| **existing_kms_keyring_name** | The name of the existing Cloud KMS Key Ring. | `string` | n/a | yes |
-| **existing_network_name** | The name of the existing Shared VPC network to use for the GKE cluster. | `string` | n/a | yes |
-| **existing_subnetwork_name** | The name of the existing subnetwork to use for the GKE cluster. | `string` | n/a | yes |
-| **existing_subnetwork_secondary_range_pods_name** | The name of the existing secondary IP range for GKE Pods. | `string` | n/a | yes |
-| **existing_subnetwork_secondary_range_services_name** | The name of the existing secondary IP range for GKE Services. | `string` | n/a | yes |
-| **gcp_region** | The Google Cloud region where all resources will be deployed. | `string` | n/a | yes |
-| **landing_project_id** | The Google Cloud Project ID where the existing Shared VPC network is located. | `string` | n/a | yes |
-| **main_project_id** | The Google Cloud Project ID where the GKE cluster will be created. | `string` | n/a | yes |
-| **bastion_vm_image** | The boot disk image for the bastion host VM. | `string` | `"projects/cos-cloud/global/images/family/cos-stable"` | no |
-| **bastion_vm_machine_type** | The machine type for the bastion host VM. | `string` | `"e2-medium"` | no |
-| **bastion_vm_name** | The name for the bastion host VM. | `string` | `"gke-bastion-vm"` | no |
-| **enable_deletion_protection** | Whether or not to allow Terraform to destroy the cluster. Recommended to be true for production. | `bool` | `true` | no |
-| **gke_cluster_enable_private_endpoint** | Enable a private endpoint for the GKE cluster master, disabling public access. | `bool` | `true` | no |
-| **gke_cluster_master_global_access** | WARNING: Expands the internal attack surface. Enable global access for the private master endpoint. If false, access is limited to the cluster's region. | `bool` | `false` | no |
-| **gke_cluster_name** | The name of the GKE cluster. | `string` | `"gke-cluster"` | no |
-| **gke_initial_node_per_zone** | The initial number of nodes for the default node pool. | `number` | `1` | no |
-| **gke_nodepool_name** | The name of the additional GKE node pool. | `string` | `"default-nodepool"` | no |
-| **master_authorized_ranges** | A map of authorized networks that can access the GKE master endpoint. The key is a display name and the value is the CIDR range. Should be scoped as tightly as possible. | `map(string)` | `{}` | no |
-| **node_config_tags** | A list of network tags to apply to the GKE nodes. | `list(string)` | `[]` | no |
-| **node_disk_size_gb** | The boot disk size in GB for each GKE node. | `number` | `20` | no |
-| **node_machine_type** | The machine type for the GKE nodes. | `string` | `"n2d-standard-2"` | no |
-| **nodepool_node_count** | The initial number of nodes per zone for the additional node pool. | `object({ initial = number })` | `{ initial = 1 }` | no |
-| **remove_default_node_pool** | Set to true to remove the default node pool created with the cluster. Requires at least one other node pool to be created. | `bool` | `false` | no |
+| name | description | type | required | default |
+|---|---|:---:|:---:|:---:|
+| [bastion_vm_zone](variables.tf#L36) | The zone for the bastion host VM. | <code>string</code> | ✓ |  |
+| [core_project_id](variables.tf#L41) | The Google Cloud Project ID where the existing Cloud KMS key is located. | <code>string</code> | ✓ |  |
+| [existing_kms_key_name](variables.tf#L52) | The name of the existing Cloud KMS CryptoKey for boot disk encryption. | <code>string</code> | ✓ |  |
+| [existing_kms_keyring_name](variables.tf#L57) | The name of the existing Cloud KMS Key Ring. | <code>string</code> | ✓ |  |
+| [existing_network_name](variables.tf#L63) | The name of the existing Shared VPC network to use for the GKE cluster. | <code>string</code> | ✓ |  |
+| [existing_subnetwork_name](variables.tf#L68) | The name of the existing subnetwork to use for the GKE cluster. | <code>string</code> | ✓ |  |
+| [existing_subnetwork_secondary_range_pods_name](variables.tf#L73) | The name of the existing secondary IP range for GKE Pods. | <code>string</code> | ✓ |  |
+| [existing_subnetwork_secondary_range_services_name](variables.tf#L78) | The name of the existing secondary IP range for GKE Services. | <code>string</code> | ✓ |  |
+| [gcp_region](variables.tf#L84) | The Google Cloud region where all resources will be deployed. | <code>string</code> | ✓ |  |
+| [landing_project_id](variables.tf#L121) | The Google Cloud Project ID where the existing Shared VPC network is located. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L126) | The Google Cloud Project ID where the GKE cluster will be created. | <code>string</code> | ✓ |  |
+| [bastion_vm_image](variables.tf#L17) | The boot disk image for the bastion host VM. | <code>string</code> |  | <code>&#34;projects&#47;cos-cloud&#47;global&#47;images&#47;family&#47;cos-stable&#34;</code> |
+| [bastion_vm_machine_type](variables.tf#L23) | The machine type for the bastion host VM. | <code>string</code> |  | <code>&#34;e2-medium&#34;</code> |
+| [bastion_vm_name](variables.tf#L30) | The name for the bastion host VM. | <code>string</code> |  | <code>&#34;gke-bastion-vm&#34;</code> |
+| [enable_deletion_protection](variables.tf#L46) | Whether or not to allow Terraform to destroy the cluster. Recommended to be true for production. | <code>bool</code> |  | <code>true</code> |
+| [gke_cluster_enable_private_endpoint](variables.tf#L89) | Enable a private endpoint for the GKE cluster master, disabling public access. | <code>bool</code> |  | <code>true</code> |
+| [gke_cluster_master_global_access](variables.tf#L95) | WARNING: Expands the internal attack surface. Enable global access for the private master endpoint. If false, access is limited to the cluster's region. | <code>bool</code> |  | <code>false</code> |
+| [gke_cluster_name](variables.tf#L102) | The name of the GKE cluster. | <code>string</code> |  | <code>&#34;gke-cluster&#34;</code> |
+| [gke_initial_node_per_zone](variables.tf#L109) | The initial number of nodes for the default node pool. | <code>number</code> |  | <code>1</code> |
+| [gke_nodepool_name](variables.tf#L115) | The name of the additional GKE node pool. | <code>string</code> |  | <code>&#34;default-nodepool&#34;</code> |
+| [master_authorized_ranges](variables.tf#L131) | A map of authorized networks that can access the GKE master endpoint. The key is a display name and the value is the CIDR range. Should be scoped as tightly as possible. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [node_config_tags](variables.tf#L137) | A list of network tags to apply to the GKE nodes. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
+| [node_disk_size_gb](variables.tf#L143) | The boot disk size in GB for each GKE node. | <code>number</code> |  | <code>20</code> |
+| [node_machine_type](variables.tf#L149) | The machine type for the GKE nodes. | <code>string</code> |  | <code>&#34;n2d-standard-2&#34;</code> |
+| [nodepool_node_count](variables.tf#L155) | The initial number of nodes per zone for the additional node pool. | <code>object&#40;&#123; initial &#61; number &#125;&#41;</code> |  | <code>&#123; initial &#61; 1 &#125;</code> |
+| [remove_default_node_pool](variables.tf#L161) | Set to true to remove the default node pool created with the cluster. Requires at least one other node pool to be created. | <code>bool</code> |  | <code>true</code> |
 
 ## Outputs
 
-| Name | Description |
-|------|-------------|
-| **bastion_vm_name** | The name of the created bastion Compute Engine VM. |
-| **bastion_vm_public_ip** | The public IP address of the bastion Compute Engine VM (if ephemeral public IP is enabled). |
-| **cluster_master_version** | The master version of the GKE cluster. |
-| **consumed_kms_key_id** | The ID of the existing KMS CryptoKey used by the GKE cluster for boot disk encryption. |
-| **consumed_network_self_link** | The self-link of the existing VPC network used by the GKE cluster. |
-| **consumed_subnetwork_self_link** | The self-link of the existing subnetwork used by the GKE cluster. |
-| **gke_cluster_endpoint** | The endpoint of the GKE cluster. |
-| **gke_cluster_name** | The name of the GKE cluster. |
-| **gke_cluster_sa_email** | The email address of the custom service account created for the GKE cluster. |
-| **nodepool_id** | The fully qualified ID of the additional GKE nodepool. |
-| **nodepool_name** | The name of the additional GKE nodepool. |
-| **nodepool_service_account_email** | The service account email used by the additional GKE nodepool. |
+| name | description | sensitive |
+|---|---|:---:|
+| [bastion_vm_name](outputs.tf#L17) | The name of the created bastion Compute Engine VM. |  |
+| [bastion_vm_public_ip](outputs.tf#L22) | The external IP address of the bastion Compute Engine VM, or null when the VM has no external IP. |  |
+| [cluster_master_version](outputs.tf#L27) | The master version of the GKE cluster. |  |
+| [consumed_kms_key_id](outputs.tf#L32) | The ID of the existing KMS CryptoKey used by the GKE cluster for boot disk encryption. |  |
+| [consumed_network_self_link](outputs.tf#L37) | The self-link of the existing VPC network used by the GKE cluster. |  |
+| [consumed_subnetwork_self_link](outputs.tf#L42) | The self-link of the existing subnetwork used by the GKE cluster. |  |
+| [gke_cluster_endpoint](outputs.tf#L47) | The endpoint of the GKE cluster. |  |
+| [gke_cluster_name](outputs.tf#L52) | The name of the GKE cluster. |  |
+| [gke_cluster_sa_email](outputs.tf#L57) | The email address of the custom service account created for the GKE cluster. |  |
+| [nodepool_id](outputs.tf#L62) | The fully qualified ID of the additional GKE nodepool. |  |
+| [nodepool_name](outputs.tf#L67) | The name of the additional GKE nodepool. |  |
+| [nodepool_service_account_email](outputs.tf#L72) | The service account email used by the additional GKE nodepool. |  |
 <!-- END TFDOC -->
-

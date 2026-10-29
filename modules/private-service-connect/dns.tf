@@ -84,7 +84,12 @@ module "gcr" {
   Artifact Registry DNS Zone & records.
  ***********************************************/
 
-module "pkg_dev" {
+moved {
+  from = module.pkg_dev
+  to   = module.pkg-dev
+}
+
+module "pkg-dev" {
   source      = "terraform-google-modules/cloud-dns/google"
   version     = "~> 5.0"
   project_id  = var.project_id

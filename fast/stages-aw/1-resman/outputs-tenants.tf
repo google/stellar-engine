@@ -61,7 +61,12 @@ locals {
 
 # core tfvars and providers
 
-resource "local_file" "tenant-core-tfvars" {
+moved {
+  from = local_file.tenant-core-tfvars
+  to   = local_file.tenant_core_tfvars
+}
+
+resource "local_file" "tenant_core_tfvars" {
   for_each        = var.outputs_location == null ? {} : local.tenant_tfvars
   file_permission = "0600"
   filename = (
@@ -70,7 +75,12 @@ resource "local_file" "tenant-core-tfvars" {
   content = jsonencode(each.value)
 }
 
-resource "local_file" "tenant-core-providers" {
+moved {
+  from = local_file.tenant-core-providers
+  to   = local_file.tenant_core_providers
+}
+
+resource "local_file" "tenant_core_providers" {
   for_each = (
     var.outputs_location == null ? {} : local.tenant_core_providers
   )
@@ -81,14 +91,24 @@ resource "local_file" "tenant-core-providers" {
   content = each.value
 }
 
-resource "google_storage_bucket_object" "tenant-core-tfvars" {
+moved {
+  from = google_storage_bucket_object.tenant-core-tfvars
+  to   = google_storage_bucket_object.tenant_core_tfvars
+}
+
+resource "google_storage_bucket_object" "tenant_core_tfvars" {
   for_each = local.tenant_tfvars
   bucket   = var.automation.outputs_bucket
   name     = "tfvars/tenant/${basename(each.key)}.auto.tfvars.json"
   content  = jsonencode(each.value)
 }
 
-resource "google_storage_bucket_object" "tenant-core-providers" {
+moved {
+  from = google_storage_bucket_object.tenant-core-providers
+  to   = google_storage_bucket_object.tenant_core_providers
+}
+
+resource "google_storage_bucket_object" "tenant_core_providers" {
   for_each = local.tenant_core_providers
   bucket   = var.automation.outputs_bucket
   name     = "providers/tenant/${basename(each.key)}-providers.tf"
@@ -97,7 +117,12 @@ resource "google_storage_bucket_object" "tenant-core-providers" {
 
 # tenant tfvars and providers
 
-resource "local_file" "tenant-self-providers" {
+moved {
+  from = local_file.tenant-self-providers
+  to   = local_file.tenant_self_providers
+}
+
+resource "local_file" "tenant_self_providers" {
   for_each = (
     var.outputs_location == null ? {} : local.tenant_self_providers
   )
@@ -108,14 +133,24 @@ resource "local_file" "tenant-self-providers" {
   content = each.value
 }
 
-resource "google_storage_bucket_object" "tenant-self-tfvars" {
+moved {
+  from = google_storage_bucket_object.tenant-self-tfvars
+  to   = google_storage_bucket_object.tenant_self_tfvars
+}
+
+resource "google_storage_bucket_object" "tenant_self_tfvars" {
   for_each = local.tenant_tfvars
   bucket   = module.tenant-self-iac-gcs-outputs[each.key].name
   name     = "tfvars/${basename(each.key)}.auto.tfvars.json"
   content  = jsonencode(each.value)
 }
 
-resource "google_storage_bucket_object" "tenant-self-providers" {
+moved {
+  from = google_storage_bucket_object.tenant-self-providers
+  to   = google_storage_bucket_object.tenant_self_providers
+}
+
+resource "google_storage_bucket_object" "tenant_self_providers" {
   for_each = local.tenant_self_providers
   bucket   = module.tenant-self-iac-gcs-outputs[each.key].name
   name     = "providers/${basename(each.key)}-providers.tf"

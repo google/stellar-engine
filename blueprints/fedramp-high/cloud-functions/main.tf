@@ -64,19 +64,34 @@ resource "google_kms_crypto_key_iam_member" "cloud_storage" {
   member        = each.value
 }
 
-resource "google_project_iam_member" "artifactregistry_createOnPushWriter" {
+moved {
+  from = google_project_iam_member.artifactregistry_createOnPushWriter
+  to   = google_project_iam_member.artifactregistry_create_on_push_writer
+}
+
+resource "google_project_iam_member" "artifactregistry_create_on_push_writer" {
   project = var.main_project_id
   role    = "roles/artifactregistry.createOnPushWriter"
   member  = module.service-account-runner.iam_email
 }
 
-resource "google_project_iam_member" "logging_logWriter" {
+moved {
+  from = google_project_iam_member.logging_logWriter
+  to   = google_project_iam_member.logging_log_writer
+}
+
+resource "google_project_iam_member" "logging_log_writer" {
   project = var.main_project_id
   role    = "roles/logging.logWriter"
   member  = module.service-account-runner.iam_email
 }
 
-resource "google_project_iam_member" "storage_objectUser" {
+moved {
+  from = google_project_iam_member.storage_objectUser
+  to   = google_project_iam_member.storage_object_user
+}
+
+resource "google_project_iam_member" "storage_object_user" {
   project = var.main_project_id
   role    = "roles/storage.objectUser"
   member  = module.service-account-runner.iam_email

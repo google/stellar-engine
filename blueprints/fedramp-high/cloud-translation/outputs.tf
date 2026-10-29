@@ -14,12 +14,12 @@
 
 output "input_bucket" {
   description = "Bucket that takes documents as input."
-  value       = module.input_bucket
+  value       = module.input-bucket
 }
 
 output "output_bucket" {
   description = "Bucket that stores translated output."
-  value       = module.output_bucket
+  value       = module.output-bucket
 }
 
 output "workflow" {

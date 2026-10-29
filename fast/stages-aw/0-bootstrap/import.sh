@@ -44,6 +44,7 @@ fi
 
 echo "Fetching current Terraform state list..."
 state_list=$(terraform state list 2>/dev/null)
+declared_policies=$(echo 'keys(local.org_policies)' | terraform console 2>/dev/null)
 
 rm -f imports.tf
 import_count=0
@@ -55,7 +56,7 @@ while IFS= read -r constraint_path; do
   target_resource="module.organization.google_org_policy_policy.default[\"${constraint_name}\"]"
 
   # Check if constraint is declared in local configuration files
-  if ! grep -rq "^${constraint_name}:" ./data/org-policies/ ./data/custom-org-policies/ 2>/dev/null; then
+  if ! echo "${declared_policies}" | grep -qF "\"${constraint_name}\""; then
     continue
   fi
 

@@ -50,7 +50,12 @@ resource "google_document_ai_processor_default_version" "processor" {
   }
 }
 
-module "input_bucket" {
+moved {
+  from = module.input_bucket
+  to   = module.input-bucket
+}
+
+module "input-bucket" {
   source                      = "../../../modules/gcs"
   project_id                  = var.main_project_id
   prefix                      = var.main_project_id
@@ -61,7 +66,12 @@ module "input_bucket" {
   encryption_key              = var.kms_key_name
 }
 
-module "output_bucket" {
+moved {
+  from = module.output_bucket
+  to   = module.output-bucket
+}
+
+module "output-bucket" {
   source                      = "../../../modules/gcs"
   project_id                  = var.main_project_id
   prefix                      = var.main_project_id
@@ -84,8 +94,8 @@ module "workflows" {
   kms_key_self_link   = var.kms_key_name
   env_vars = {
     project_id    = var.main_project_id
-    input_bucket  = module.input_bucket.url
-    output_bucket = module.output_bucket.url
+    input_bucket  = module.input-bucket.url
+    output_bucket = module.output-bucket.url
     processor_id  = google_document_ai_processor.processor.id
     location      = var.region
   }

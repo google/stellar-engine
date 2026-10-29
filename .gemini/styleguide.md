@@ -39,6 +39,7 @@ Evaluate diffs and static analysis findings from a skeptical maintainer perspect
 * Declare `provider = google-beta` explicitly on resources and attributes that require the beta provider under the active `versions.tf` constraints, including `google_cloud_run_v2_worker_pool`, `google_kms_autokey_config`, `google_folder_service_identity`, and `google_spanner_instance`.
 * Prefer compact `object({...})` variables with `optional()` attributes over proliferating scalar variables, omitting explicit defaults on `optional()` when the underlying provider default should apply.
 * Use `map(...)` collections rather than `list(...)` for multi-instance resources so `for_each` state keys remain stable across insertions and removals, and use deterministic `prefix` tokens rather than random string suffixes for resource naming.
+* Name resource, data source, variable, and output labels in snake_case and module labels in kebab-case, as the `terraform_naming_convention` rule in the `.tflint.hcl` file enforces through the `tools/tflint.sh` script, and require a `moved` block for every renamed resource or module so Terraform moves existing state instead of replacing the resource.
 * Include plan-time `validation` blocks on variables that mirror underlying provider ENUM values.
 * Never hardcode project IDs, folder IDs, or regions in module or stage code, never set `project`, `region`, or `zone` on `provider "google"` or `provider "google-beta"` blocks, and never use `local-exec` or `remote-exec` provisioners when native Terraform resources or data sources exist.
 * Preserve safe upstream defaults such as `deletion_protection = coalesce(each.value.deletion_protection, true)` on stateful resources.
@@ -61,7 +62,7 @@ Evaluate diffs and static analysis findings from a skeptical maintainer perspect
 * Store generated SSH private keys, TLS keys, and passwords in CMEK-encrypted Secret Manager secrets via `modules/secret-manager` with least-privilege `roles/secretmanager.secretAccessor` bindings rather than writing sensitive material to `local_file` resources, plaintext outputs, or Cloud Storage buckets.
 * Provision dedicated service accounts via `modules/iam-service-account` with least-privilege roles instead of using default Compute Engine `-compute@developer.gserviceaccount.com` service accounts, static `google_service_account_key` resources, or broad Editor and Owner bindings.
 * Enforce Customer-Managed Encryption Keys across supported storage, database, logging, and messaging resources, minimum TLS 1.2 via `constraints/gcp.restrictTLSVersion`, and regional data boundary constraints via `constraints/gcp.resourceLocations`.
-* Scope `custom.kmsRotation` custom constraints to `method_types: ["CREATE"]` so `terraform destroy` can clear `rotationPeriod` via `UPDATE` prior to key destruction, and gate `compute.requireOsLogin` in `custom-org-policies/compute_policy.yaml` so enforcement is skipped on `IL4` and `IL5`.
+* Configure `custom.kmsRotation` custom constraints with `action_type: DENY` and `has(resource.rotationPeriod) && resource.rotationPeriod > duration('7776000s')` across `CREATE` and `UPDATE` so key creation and updates enforce the 90-day rotation limit while `terraform destroy` can clear `rotationPeriod` via `UPDATE` prior to key destruction, and gate `compute.requireOsLogin` in `custom-org-policies/compute_policy.yaml` so enforcement is skipped on `IL4` and `IL5`.
 * When evaluating or testing IAM conditional bindings against `resource.name`, use numeric GCP Project Numbers rather than project ID strings to match GCP IAM runtime evaluation.
 
 ## 4 Documentation style
@@ -86,8 +87,9 @@ Evaluate diffs and static analysis findings from a skeptical maintainer perspect
 
 ## 5 Scripting and testing
 
-* Verify that Python files pass `pyflakes` and CodeQL `py/unused-local-variable` checks with no unused imports, unused local variables, or undefined names, format Python code with `yapf` using `.style.yapf`, and stay within the 79-character line limit.
-* Execute modified code paths and unit tests via `bash tools/run_tests.sh`, `pytest`, `pyflakes`, and `shellcheck` rather than relying on syntax-only checks such as `py_compile` or `bash -n`.
+* Verify that Python files pass `ruff check`, which covers the `pyflakes` rules, and CodeQL `py/unused-local-variable` checks with no unused imports, unused local variables, or undefined names.
+* Format Python code with `ruff format` using the repository `ruff.toml` file, which applies the Google Python Style Guide 4-space indentation and 80-character line limit that `ruff check` enforces.
+* Execute modified code paths and unit tests via `bash tools/run_tests.sh`, `pytest`, `ruff check`, and `shellcheck` rather than relying on syntax-only checks such as `py_compile` or `bash -n`.
 * When resource attributes change in modules or stages covered by `tftest.yaml` or `README.md` `# tftest` directives, require updated YAML plan inventories and verify that every changed inventory line maps directly to the intended change.
 * Guard empty collections before constructing `click.IntRange(1, len(items))` in interactive CLI prompts, and guard nullable dictionary fields such as `item.get("name")` before calling string methods such as `.split("/")`.
 * On Container-Optimized OS `cloud-config.yaml` and startup scripts, guard file moves and `base64` decodes from `/tmp` with `[ ! -f /tmp/... ] ||` because `/tmp` is a `tmpfs` cleared across reboots while `/run` or persistent disks retain state, enforce `0770` or `0700` directory permissions and `0600` for private keys rather than `0777`, and bound network retry loops with exponential backoff.

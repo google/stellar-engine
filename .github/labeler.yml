@@ -1,16 +1,39 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Type and Framework are independent: a blueprints/fedramp-high/ change gets both.
 
-"Scope - Modules":
+"Scope - Module":
   - changed-files:
       - any-glob-to-any-file: 'modules/**'
 
 "Scope - Fast":
   - changed-files:
-      - any-glob-to-any-file: 'fast/**'
+      - any-glob-to-any-file:
+          - 'fast/**'
+          - 'scripts/**'
+          - 'cli/**'
 
 "Scope - Blueprint":
   - changed-files:
       - any-glob-to-any-file: 'blueprints/**'
+
+"Documentation":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'docs/**'
+          - '*.md'
 
 "Framework - FedRAMP Moderate":
   - changed-files:
@@ -30,8 +53,24 @@
 
 "Gemini - Enterprise":
   - changed-files:
-      - any-glob-to-any-file: 'blueprints/gemini-enterprise/**'
+      - any-glob-to-any-file:
+          - '**/*gemini-enterprise*/**'
+          - '**/*gemini-enterprise*'
+          - '**/*gemini_enterprise*/**'
+          - '**/*gemini_enterprise*'
+  - head-branch:
+      - '^.*gemini[-_]?enterprise.*$'
 
 "Gemini - Government":
   - changed-files:
-      - any-glob-to-any-file: 'blueprints/gemini-enterprise/**'
+      - any-glob-to-any-file:
+          - '**/*gem4gov*/**'
+          - '**/*gem4gov*'
+          - '**/*g4g*/**'
+          - '**/*g4g*'
+          - '**/*gemini-for-government*/**'
+          - '**/*gemini-for-government*'
+          - '**/*gemini_for_government*/**'
+          - '**/*gemini_for_government*'
+  - head-branch:
+      - '^.*(gem4gov|g4g|gemini[-_]?for[-_]?government).*$'

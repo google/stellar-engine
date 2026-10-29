@@ -47,6 +47,7 @@ PROVIDER_CMD=$CMD
 STAGE_NAME=$(basename "$(pwd)")
 
 STAGE_SA_PATTERN=""
+STAGE_SA_RO_PATTERN=""
 
 case $STAGE_NAME in
 
@@ -55,6 +56,7 @@ case $STAGE_NAME in
   PROVIDER="providers/0-bootstrap-providers.tf"
   TFVARS=""
   STAGE_SA_PATTERN="bootstrap-0"
+  STAGE_SA_RO_PATTERN="bootstrap-0r"
   ;;
 "0-bootstrap-tenant")
   MESSAGE="remember to set the prefix in the provider file"
@@ -63,11 +65,13 @@ case $STAGE_NAME in
   TFVARS="tfvars/0-bootstrap.auto.tfvars.json
   tfvars/1-resman.auto.tfvars.json"
   STAGE_SA_PATTERN="bootstrap-0"
+  STAGE_SA_RO_PATTERN="bootstrap-0r"
   ;;
 "1-resman")
   PROVIDER="providers/${STAGE_NAME}-providers.tf"
   TFVARS="tfvars/0-bootstrap.auto.tfvars.json"
   STAGE_SA_PATTERN="resman-0"
+  STAGE_SA_RO_PATTERN="resman-0r"
   ;;
 "1-resman-tenant")
   if [[ -z "$TENANT" ]]; then
@@ -78,6 +82,7 @@ case $STAGE_NAME in
   PROVIDER="tenants/$TENANT/providers/1-resman-tenant-providers.tf"
   TFVARS="tenants/$TENANT/tfvars/0-bootstrap-tenant.auto.tfvars.json"
   STAGE_SA_PATTERN="resman-0"
+  STAGE_SA_RO_PATTERN="resman-0r"
   ;;
 "2-networking"*)
   if [[ -z "$TENANT" ]]; then
@@ -91,7 +96,8 @@ case $STAGE_NAME in
     TFVARS="tenants/$TENANT/tfvars/0-bootstrap-tenant.auto.tfvars.json
     tenants/$TENANT/tfvars/1-resman.auto.tfvars.json"
   fi
-  STAGE_SA_PATTERN="networking-0"
+  STAGE_SA_PATTERN="prod-resman-net-0"
+  STAGE_SA_RO_PATTERN="prod-resman-net-0r"
   ;;
 "3-security"*)
   if [[ -z "$TENANT" ]]; then
@@ -106,6 +112,7 @@ case $STAGE_NAME in
     tenants/$TENANT/tfvars/1-resman.auto.tfvars.json"
   fi
   STAGE_SA_PATTERN="security-0"
+  STAGE_SA_RO_PATTERN="prod-resman-sec-0r"
   ;;
 *)
   # check for a "dev" stage 3
@@ -145,9 +152,25 @@ done
 
 if [[ -n "$STAGE_SA_PATTERN" ]]; then
   echo -e "\n# Stage IAM impersonation context: expects *-${STAGE_SA_PATTERN}@*.iam.gserviceaccount.com"
+  if [[ -n "$STAGE_SA_RO_PATTERN" ]]; then
+    echo "# or the read-only *-${STAGE_SA_RO_PATTERN}@*.iam.gserviceaccount.com"
+  fi
   ACTIVE_IMPERSONATE_SA="${GOOGLE_IMPERSONATE_SERVICE_ACCOUNT:-${CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT:-}}"
-  if [[ -n "$ACTIVE_IMPERSONATE_SA" && "$ACTIVE_IMPERSONATE_SA" != *"${STAGE_SA_PATTERN}"* ]]; then
-    echo "# WARNING: Active shell impersonation ($ACTIVE_IMPERSONATE_SA) does not match stage '$STAGE_NAME' ($STAGE_SA_PATTERN)."
+  # anchor each pattern to the "@" so that a longer account ID such as
+  # "<prefix>-prod-bootstrap-0-old" does not match the "bootstrap-0" pattern
+  ACTIVE_SA_MATCHES=false
+  for SA_PATTERN in "$STAGE_SA_PATTERN" "$STAGE_SA_RO_PATTERN"; do
+    if [[ -n "$SA_PATTERN" && "$ACTIVE_IMPERSONATE_SA" == *"-${SA_PATTERN}@"* ]]; then
+      ACTIVE_SA_MATCHES=true
+      break
+    fi
+  done
+  EXPECTED_SA_PATTERNS="$STAGE_SA_PATTERN"
+  if [[ -n "$STAGE_SA_RO_PATTERN" ]]; then
+    EXPECTED_SA_PATTERNS="$STAGE_SA_PATTERN or $STAGE_SA_RO_PATTERN"
+  fi
+  if [[ -n "$ACTIVE_IMPERSONATE_SA" && "$ACTIVE_SA_MATCHES" == false ]]; then
+    echo "# WARNING: Active shell impersonation ($ACTIVE_IMPERSONATE_SA) does not match stage '$STAGE_NAME' ($EXPECTED_SA_PATTERNS)."
     echo "# Clear stale cross-stage impersonation variables to prevent 403 Forbidden errors:"
     echo "unset GOOGLE_IMPERSONATE_SERVICE_ACCOUNT CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT"
   fi

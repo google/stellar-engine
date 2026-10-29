@@ -581,7 +581,6 @@ module "cloud_run" {
 
 ## Fixtures
 
-- cloudsql-instance.tf
 - iam-service-account.tf
 - pubsub.tf
 - secret-credentials.tf

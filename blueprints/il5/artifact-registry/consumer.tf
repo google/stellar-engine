@@ -17,7 +17,12 @@ resource "google_service_account" "consumer" {
   display_name = "Customized service account for consumer"
 }
 
-resource "google_project_iam_member" "consumer-readonly" {
+moved {
+  from = google_project_iam_member.consumer-readonly
+  to   = google_project_iam_member.consumer_readonly
+}
+
+resource "google_project_iam_member" "consumer_readonly" {
   project = var.main_project_id
   role    = "roles/artifactregistry.reader"
   member  = google_service_account.consumer.member
@@ -66,7 +71,7 @@ module "compute-engine-vm" {
       {
         project          = var.main_project_id
         region           = var.region
-        yum_repositories = google_artifact_registry_repository.yum-repos
+        yum_repositories = google_artifact_registry_repository.yum_repos
       },
     )
     block-project-ssh-keys = true # CIS Compliance Benchmark 4.3

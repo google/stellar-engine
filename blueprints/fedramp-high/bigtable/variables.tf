@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-variable "deletion_protection" {
-  description = "Prevent Terraform from destroying the Bigtable instance."
-  type        = bool
-  default     = true
-}
-
 variable "bigtable_service_account_id" {
   description = "The Service Account for Bigtable."
   type        = string
@@ -31,6 +25,12 @@ variable "cluster_id" {
 variable "core_project_id" {
   description = "Core project ID."
   type        = string
+}
+
+variable "deletion_protection" {
+  description = "Prevent Terraform from destroying the Bigtable instance."
+  type        = bool
+  default     = true
 }
 
 variable "instance_name" {

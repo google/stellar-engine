@@ -1,0 +1,34 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# IL5 with an explicit KMS protection level that differs from the default.
+prefix: il5
+organization:
+  id: "123456789012"
+  domain: example.com
+  customer_id: C01234567
+billing:
+  account_id: 000000-AAAAAA-BBBBBB
+bootstrap_project: example-bootstrap
+region: us-west1
+compliance:
+  regime: IL5
+kms_protection_level: SOFTWARE
+alert_email: alerts@example.com
+logging:
+  sink_type: pubsub
+resman:
+  tenants:
+    mis:
+      descriptive_name: Mission systems

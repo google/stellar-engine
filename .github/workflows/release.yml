@@ -1,3 +1,17 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 name: "Auto Release"
 
 on:
@@ -15,14 +29,254 @@ jobs:
     if: github.repository == 'google/stellar-engine'
     runs-on: ubuntu-latest
     steps:
+      - name: Configure Breaking Changes Heading
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - << 'PY'
+          import base64
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.request
+
+          repo = os.environ.get("GITHUB_REPOSITORY", "google/stellar-engine")
+          token = os.environ.get("GH_TOKEN", "")
+          gemini_key = os.environ.get("GEMINI_API_KEY", "")
+
+          def gh_get(path):
+              if not token:
+                  return None
+              req = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/{path}",
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                  },
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as resp:
+                      return json.loads(resp.read().decode("utf-8"))
+              except Exception:
+                  return None
+
+          def extract_existing(markdown_text):
+              found = {}
+              lines = (markdown_text or "").replace("\r\n", "\n").split("\n")
+              for i, line in enumerate(lines[:-1]):
+                  m = re.search(
+                      r"^\* .*?\(\[([0-9a-f]{7,40})\]\([^)]+\)\)\s*$", line
+                  )
+                  if m and lines[i + 1].startswith("  * "):
+                      sub = lines[i + 1][4:].strip()
+                      if sub:
+                          found[m.group(1)[:7]] = sub
+              return found
+
+          def gemini_sub_bullet(title, pr_body, files):
+              if not gemini_key:
+                  return ""
+              prompt = (
+                  "Write a single-line plain-English release note sub-bullet "
+                  "sentence in active present tense starting with a verb (for "
+                  "example: 'Wires...', 'Removes...', 'Adds...', 'Updates...') "
+                  "that explains what changed and how it affects deployments. "
+                  "Do not include leading bullet markers, em-dashes, "
+                  "ampersands, or line breaks.\n\n"
+                  f"Commit Title: {title}\n"
+                  f"Files: {', '.join(files[:15])}\n"
+                  f"PR Description:\n{(pr_body or '')[:3000]}"
+              )
+              url = (
+                  "https://generativelanguage.googleapis.com/v1beta/models/"
+                  f"gemini-2.5-flash:generateContent?key={gemini_key}"
+              )
+              payload = json.dumps(
+                  {"contents": [{"parts": [{"text": prompt}]}]}
+              ).encode("utf-8")
+              req = urllib.request.Request(
+                  url,
+                  data=payload,
+                  headers={"Content-Type": "application/json"},
+                  method="POST",
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=25) as resp:
+                      data = json.loads(resp.read().decode("utf-8"))
+                  text = (
+                      data["candidates"][0]["content"]["parts"][0]["text"]
+                      .replace("\r", " ")
+                      .replace("\n", " ")
+                      .strip()
+                  )
+                  text = re.sub(r"^[-*•]\s*", "", text).strip()
+                  if text and not text.endswith("."):
+                      text += "."
+                  return text
+              except Exception:
+                  return ""
+
+          sub_bullets = {}
+          branch_cl = gh_get(
+              "contents/CHANGELOG.md?ref=release-please--branches--main"
+          )
+          if isinstance(branch_cl, dict) and branch_cl.get("content"):
+              raw_cl = base64.b64decode(branch_cl["content"]).decode(
+                  "utf-8", errors="replace"
+              )
+              sub_bullets.update(extract_existing(raw_cl))
+
+          open_prs = gh_get(
+              "pulls?head=google:release-please--branches--main&state=open"
+          )
+          if isinstance(open_prs, list):
+              for pr in open_prs:
+                  sub_bullets.update(extract_existing(pr.get("body", "")))
+
+          if gemini_key:
+              manifest = gh_get(
+                  "contents/.github/.release-please-manifest.json?ref=main"
+              )
+              last_ver = None
+              if isinstance(manifest, dict) and manifest.get("content"):
+                  raw_m = base64.b64decode(manifest["content"]).decode("utf-8")
+                  last_ver = json.loads(raw_m).get(".")
+              if last_ver:
+                  comp = gh_get(f"compare/v{last_ver}...main") or {}
+                  for c in comp.get("commits", []):
+                      sha7 = c.get("sha", "")[:7]
+                      if not sha7 or sha7 in sub_bullets:
+                          continue
+                      prs = gh_get(f"commits/{c['sha']}/pulls") or []
+                      pr_body = prs[0].get("body", "") if prs else ""
+                      detail = gh_get(f"commits/{c['sha']}") or {}
+                      files = [
+                          f.get("filename", "")
+                          for f in detail.get("files", [])
+                      ]
+                      gen = gemini_sub_bullet(
+                          c.get("commit", {}).get("message", "").splitlines()[0],
+                          pr_body,
+                          files,
+                      )
+                      if gen:
+                          sub_bullets[sha7] = gen
+
+          with open("/tmp/release_sub_bullets.json", "w", encoding="utf-8") as f:
+              json.dump(sub_bullets, f)
+          PY
+          for dir in "${RUNNER_TEMP}/../_actions/googleapis/release-please-action/"*/dist; do
+            sed -i 's/### ⚠ {{title}}/### {{title}}/g' "${dir}/template1.hbs"
+            sed -i "s/note.title = 'BREAKING CHANGES'/note.title = 'Breaking Changes'/g" "${dir}/index.js"
+            sed -i "s/const NOTES_DELIMITER = '---'/const NOTES_DELIMITER = '<!-- release-please-notes -->'/g" "${dir}/index.js"
+            sed -i "s/await this.github.commentOnIssue(comment, pullRequest.number);/void 0;/g" "${dir}/index.js"
+            node - "${dir}/index.js" << 'NODE'
+          const fs = require('fs');
+          const file = process.argv[2];
+          let src = fs.readFileSync(file, 'utf8');
+          const target = ".parseArray(changelogCommits, context, preset.writerOpts)\n            .trim();";
+          const replacement = `.parseArray(changelogCommits, context, preset.writerOpts)
+            .trim()
+            .replace(/^\\* .*?\\(\\[([0-9a-f]{7,40})\\]\\([^)]+\\)\\)$/gm, (line, sha) => {
+              let saved = {};
+              try { saved = JSON.parse(fs.readFileSync('/tmp/release_sub_bullets.json', 'utf8')); } catch (_) {}
+              let sb = saved[sha.slice(0, 7)] || '';
+              if (!sb) {
+                const c = commits.find(x => x.sha && x.sha.startsWith(sha.slice(0, 7)));
+                const prBody = (c && c.pullRequest && c.pullRequest.body) || '';
+                const rawCommit = (options.commits || []).find(x => x.sha && x.sha.startsWith(sha.slice(0, 7)));
+                const commitMsg = (rawCommit && rawCommit.message) || '';
+                for (const text of [prBody, commitMsg]) {
+                  const m = text.match(/(?:<!--\\s*release-note:\\s*(.*?)\\s*-->|^Release-Note:\\s*(.+)$)/im);
+                  if (m && (m[1] || m[2])) {
+                    sb = (m[1] || m[2]).trim();
+                    break;
+                  }
+                }
+                if (!sb) {
+                  let desc = prBody.includes('## Description') ? prBody.split('## Description')[1] : prBody;
+                  for (const cut of ['\\n## ', '\\nFixes #', '\\nCloses #', '\\nResolves #', '\\nNo GitHub issue', '\\nNo issue exists']) {
+                    if (desc.includes(cut)) desc = desc.split(cut)[0];
+                  }
+                  const paras = [];
+                  const bullets = [];
+                  for (const raw of desc.replace(/\\r\\n/g, '\\n').split('\\n')) {
+                    const l = raw.trim();
+                    if (!l || l.startsWith('<!--')) continue;
+                    if (l.startsWith('- ') || l.startsWith('* ')) bullets.push(l.slice(2).trim().replace(/\\.$/, ''));
+                    else if (!l.endsWith(':') && !l.endsWith('fixes.')) paras.push(l);
+                  }
+                  if (paras.length > 0) {
+                    sb = paras[0].replace(/\\s+/g, ' ').trim().split(/(?<=[a-z0-9\`)\\]])\\.\\s+/)[0].trim();
+                  } else if (bullets.length > 0) {
+                    sb = bullets[0];
+                  } else {
+                    const msgLines = commitMsg.replace(/\\r\\n/g, '\\n').split('\\n').slice(1).map(l => l.trim()).filter(Boolean);
+                    if (msgLines.length > 0) sb = msgLines[0].replace(/^[-*]\\s*/, '').trim();
+                  }
+                }
+                if (sb && !sb.endsWith('.')) sb += '.';
+              }
+              return sb ? \`\${line}\\n  * \${sb}\` : line;
+            });`;
+          if (!src.includes(target)) {
+            throw new Error('Failed to locate parseArray target in ' + file);
+          }
+          fs.writeFileSync(file, src.replace(target, replacement));
+          NODE
+          done
+
       - name: Generate Release
         id: release
-        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           token: ${{ secrets.RELEASE_PAT }}
           config-file: .github/release-please-config.json
           manifest-file: .github/.release-please-manifest.json
           target-branch: main
+
+      - name: Ensure Curated Release PR Labels
+        if: ${{ steps.release.outputs.pr }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+          RELEASE_PR: ${{ steps.release.outputs.pr }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 - << 'PY'
+          import json
+          import os
+          import urllib.request
+
+          pr = json.loads(os.environ["RELEASE_PR"])
+          pr_number = pr.get("number")
+          repo = os.environ.get("GITHUB_REPOSITORY", "google/stellar-engine")
+          token = os.environ["GH_TOKEN"]
+          if pr_number and token:
+              payload = json.dumps(
+                  {
+                      "labels": [
+                          "Documentation",
+                          "Priority - Low",
+                          "Level of Effort - Low",
+                      ]
+                  }
+              ).encode("utf-8")
+              req = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/issues/{pr_number}/labels",
+                  data=payload,
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Accept": "application/vnd.github+json",
+                      "Content-Type": "application/json",
+                  },
+                  method="POST",
+              )
+              with urllib.request.urlopen(req, timeout=20) as resp:
+                  resp.read()
+          PY
 
       - name: On Release Created
         if: ${{ steps.release.outputs.release_created }}

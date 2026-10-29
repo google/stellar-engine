@@ -29,7 +29,12 @@ locals {
   ])
 }
 
-module "bootstrap_log_metrics" {
+moved {
+  from = module.bootstrap_log_metrics
+  to   = module.bootstrap-log-metrics
+}
+
+module "bootstrap-log-metrics" {
   source = "../../../modules/cis-log-metrics"
 
   for_each = toset(local.bootstrap_projects)
@@ -38,11 +43,16 @@ module "bootstrap_log_metrics" {
 
 # Alerts require log-metrics to be configure
 resource "time_sleep" "bootstrap_wait_10_seconds" {
-  depends_on      = [module.bootstrap_log_metrics]
+  depends_on      = [module.bootstrap-log-metrics]
   create_duration = "10s"
 }
 
-module "bootstrap_log_alerts" {
+moved {
+  from = module.bootstrap_log_alerts
+  to   = module.bootstrap-log-alerts
+}
+
+module "bootstrap-log-alerts" {
   source = "../../../modules/cis-log-alerts"
 
   for_each = toset(local.bootstrap_projects)

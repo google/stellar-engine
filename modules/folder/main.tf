@@ -31,6 +31,10 @@ locals {
       ""
     )
   )
+  # Some APIs, such as the folder logging settings, take the bare number.
+  folder_number = (
+    local.folder_id == null ? null : trimprefix(local.folder_id, "folders/")
+  )
   aw_parent = (
     # Assured Workload only accepls folder as a parent and uses organization as a parent when no value provided.
     var.parent == null

@@ -11,7 +11,7 @@ A shared library providing consistent logging, error handling, and utility funct
 ### deploy.sh
 The main entry point for deploying the Stellar Engine environment.
 - Guides you interactively through setting up your `config.env`.
-- Executes Terraform stages in the correct order (`0-bootstrap` -> `1-resman` -> `2-networking` -> `3-project-factory`).
+- Runs the `0-bootstrap`, `1-resman`, `2-networking`, and `3-security` Terraform stages in order.
 - Captures all output automatically to timestamped files in `logs/deploy/`.
 - Checks for common configuration issues and cloud resource states.
 

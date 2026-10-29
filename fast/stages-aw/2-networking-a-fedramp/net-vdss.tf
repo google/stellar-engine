@@ -50,7 +50,12 @@ module "vdss-host-project" {
   }
 }
 
-resource "google_compute_project_metadata" "metadata-vdss-host-project" {
+moved {
+  from = google_compute_project_metadata.metadata-vdss-host-project
+  to   = google_compute_project_metadata.metadata_vdss_host_project
+}
+
+resource "google_compute_project_metadata" "metadata_vdss_host_project" {
   project = module.vdss-host-project.project_id
   metadata = {
     block-project-ssh-keys = true # CIS Compliance Benchmark 4.3

@@ -55,23 +55,23 @@ Use GCP console to verify if the resources have been created.
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [ids_name](variables.tf#L1) | Name for IDS. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L12) | Main project ID. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L17) | The name of the existing VPC network to use. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L22) | The Landing Project ID. | <code>string</code> | ✓ |  |
-| [ids_private_ip_prefix_length](variables.tf#L6) | The length of the IDS Private IP Prefix. | <code>number</code> |  | <code>24</code> |
-| [packet_mirroring_policy_name](variables.tf#L27) | Name of packet mirror policy. | <code>string</code> |  | <code>&#34;cnap-packet-mirror&#34;</code> |
-| [prefix](variables.tf#L33) | Prefix for naming resources in this blueprint. | <code>string</code> |  | <code>&#34;cnap&#34;</code> |
-| [region](variables.tf#L39) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [severity](variables.tf#L45) | Impact of an incident on a system. | <code>string</code> |  | <code>&#34;MEDIUM&#34;</code> |
-| [subnetwork_list](variables.tf#L51) | Subnet list to monitor with Cloud IDS. | <code>list&#40;any&#41;</code> |  | <code>null</code> |
-| [subnetwork_name](variables.tf#L57) | The name of the existing subnetwork to use within the specified VPC network and region. | <code>string</code> |  | <code>&#34;default-us-east4&#34;</code> |
+| [ids_name](variables.tf#L15) | Name for IDS. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L26) | Main project ID. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L31) | The name of the existing VPC network to use. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L36) | The Landing Project ID. | <code>string</code> | ✓ |  |
+| [ids_private_ip_prefix_length](variables.tf#L20) | The length of the IDS Private IP Prefix. | <code>number</code> |  | <code>24</code> |
+| [packet_mirroring_policy_name](variables.tf#L41) | Name of packet mirror policy. | <code>string</code> |  | <code>&#34;cnap-packet-mirror&#34;</code> |
+| [prefix](variables.tf#L47) | Prefix for naming resources in this blueprint. | <code>string</code> |  | <code>&#34;cnap&#34;</code> |
+| [region](variables.tf#L53) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [severity](variables.tf#L59) | Impact of an incident on a system. | <code>string</code> |  | <code>&#34;INFORMATIONAL&#34;</code> |
+| [subnetwork_list](variables.tf#L65) | Subnet list to monitor with Cloud IDS. | <code>list&#40;any&#41;</code> |  | <code>null</code> |
+| [subnetwork_name](variables.tf#L71) | The name of the existing subnetwork to use within the specified VPC network and region. | <code>string</code> |  | <code>&#34;default-us-east4&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [ids_name](outputs.tf#L1) | The name of the Cloud IDS instance. |  |
-| [ids_private_ip_range_name](outputs.tf#L6) | The private IP range name for the IDS. |  |
-| [packet_mirroring_policy_name](outputs.tf#L11) | The name of the packet mirroring policy. |  |
+| [ids_name](outputs.tf#L15) | The name of the Cloud IDS instance. |  |
+| [ids_private_ip_range_name](outputs.tf#L20) | The private IP range name for the IDS. |  |
+| [packet_mirroring_policy_name](outputs.tf#L25) | The name of the packet mirroring policy. |  |
 <!-- END TFDOC -->

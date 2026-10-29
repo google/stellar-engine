@@ -21,7 +21,7 @@ variable "autoclass" {
   default     = true
 }
 
-variable "bucket-name" {
+variable "bucket_name" {
   description = "Bucket name suffix."
   type        = string
 }

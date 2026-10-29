@@ -38,27 +38,26 @@ You should see this README and some terraform files.
 
 ## Verification of a successful deployment
 Use GCP console to verify if the resources have been created.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [composer_env_name](variables.tf#L2) | Name of the Composer environment. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L13) | Main project ID. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L18) | Full path to VPC. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L23) | The ID of the landing zone project where the VPC is. | <code>string</code> | ✓ |  |
-| [subnetwork_name](variables.tf#L52) | The name of the existing subnetwork to use within the specified VPC network and region. | <code>string</code> | ✓ |  |
-| [composer_version](variables.tf#L7) | Cloud composer version. | <code>string</code> |  | <code>&#34;composer-3-airflow-2&#34;</code> |
-| [region](variables.tf#L28) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [sa_account_id](variables.tf#L34) | Service account id. | <code>string</code> |  | <code>&#34;composer-env-account&#34;</code> |
-| [sa_display_name](variables.tf#L40) | Service account display name. | <code>string</code> |  | <code>&#34;Service Account for Composer Environment&#34;</code> |
-| [service_agent_version](variables.tf#L46) | Composer Service Agent version. This must correspond to Composer version. | <code>string</code> |  | <code>&#34;roles&#47;composer.ServiceAgentV2Ext&#34;</code> |
+| [composer_env_name](variables.tf#L16) | Name of the Composer environment. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L27) | Main project ID. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L32) | Full path to VPC. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L37) | The ID of the landing zone project where the VPC is. | <code>string</code> | ✓ |  |
+| [subnetwork_name](variables.tf#L66) | The name of the existing subnetwork to use within the specified VPC network and region. | <code>string</code> | ✓ |  |
+| [composer_version](variables.tf#L21) | Cloud composer version. | <code>string</code> |  | <code>&#34;composer-3-airflow-2&#34;</code> |
+| [region](variables.tf#L42) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [sa_account_id](variables.tf#L48) | Service account id. | <code>string</code> |  | <code>&#34;composer-env-account&#34;</code> |
+| [sa_display_name](variables.tf#L54) | Service account display name. | <code>string</code> |  | <code>&#34;Service Account for Composer Environment&#34;</code> |
+| [service_agent_version](variables.tf#L60) | Composer Service Agent version. This must correspond to Composer version. | <code>string</code> |  | <code>&#34;roles&#47;composer.ServiceAgentV3Ext&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [airflow_uri](outputs.tf#L1) | URI for Airflow. |  |
-| [composer_id](outputs.tf#L6) | Cloud composer id. |  |
+| [airflow_uri](outputs.tf#L15) | URI for Airflow. |  |
+| [composer_id](outputs.tf#L20) | Cloud composer id. |  |
 <!-- END TFDOC -->

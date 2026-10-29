@@ -28,7 +28,12 @@ locals {
   ]
 }
 
-module "security_log_metrics" {
+moved {
+  from = module.security_log_metrics
+  to   = module.security-log-metrics
+}
+
+module "security-log-metrics" {
   source = "../../../modules/cis-log-metrics"
 
   for_each = toset(local.security_projects)
@@ -37,11 +42,16 @@ module "security_log_metrics" {
 
 # Alerts require log-metrics to be configure
 resource "time_sleep" "security_wait_10_seconds" {
-  depends_on      = [module.security_log_metrics]
+  depends_on      = [module.security-log-metrics]
   create_duration = "10s"
 }
 
-module "security_log_alerts" {
+moved {
+  from = module.security_log_alerts
+  to   = module.security-log-alerts
+}
+
+module "security-log-alerts" {
   source = "../../../modules/cis-log-alerts"
 
   for_each = toset(local.security_projects)

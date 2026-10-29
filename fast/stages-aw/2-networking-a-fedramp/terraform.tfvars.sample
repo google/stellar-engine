@@ -1,5 +1,8 @@
 # Sample terraform.tfvars file for Stage 2 (Networking - FedRAMP High)
 # Replace values with your desired network topologies.
+# Replace every <region> with the regions.primary value from the Stage 0
+# terraform.tfvars file. The stage validates that the first tenant subnet of
+# each environment uses that region.
 
 # VPC Subnetwork Configurations
 subnets = {
@@ -7,7 +10,7 @@ subnets = {
     {
       name          = "landing-default"
       ip_cidr_range = "10.64.0.0/24"
-      region        = "us-central1"
+      region        = "<region>"
       description   = "Default subnet for vdss in primary region"
       flow_logs_config = {
         aggregation_interval = "INTERVAL_5_SEC"
@@ -20,7 +23,7 @@ subnets = {
     {
       name          = "dmz-default"
       ip_cidr_range = "10.64.128.0/24"
-      region        = "us-central1"
+      region        = "<region>"
       description   = "Default subnet for landing dmz in primary region"
       flow_logs_config = {
         aggregation_interval = "INTERVAL_5_SEC"
@@ -33,7 +36,7 @@ subnets = {
     {
       name          = "prod-tenant-1-subnet"
       ip_cidr_range = "10.202.0.0/16"
-      region        = "us-central1"
+      region        = "<region>"
       description   = "Default subnet for prod environment in primary region"
       flow_logs_config = {
         aggregation_interval = "INTERVAL_5_SEC"
@@ -45,7 +48,7 @@ subnets = {
     {
       name          = "prod-tenant-2-subnet"
       ip_cidr_range = "10.102.0.0/16"
-      region        = "us-central1"
+      region        = "<region>"
       description   = "Dedicated subnet for tenant-2 in prod spoke"
       flow_logs_config = {
         aggregation_interval = "INTERVAL_5_SEC"
@@ -59,7 +62,7 @@ subnets = {
     {
       name          = "int-tenant-1-subnet"
       ip_cidr_range = "10.30.0.0/16"
-      region        = "us-central1"
+      region        = "<region>"
       description   = "Default subnet for int environment in primary region"
       flow_logs_config = {
         aggregation_interval = "INTERVAL_5_SEC"
@@ -71,7 +74,7 @@ subnets = {
     {
       name          = "int-tenant-2-subnet"
       ip_cidr_range = "10.31.0.0/16"
-      region        = "us-central1"
+      region        = "<region>"
       description   = "Dedicated subnet for tenant-2 in int spoke"
       flow_logs_config = {
         aggregation_interval = "INTERVAL_5_SEC"
@@ -85,7 +88,7 @@ subnets = {
     {
       name          = "test-tenant-1-subnet"
       ip_cidr_range = "10.203.0.0/16"
-      region        = "us-central1"
+      region        = "<region>"
       description   = "Default subnet for test environment in primary region"
       flow_logs_config = {
         aggregation_interval = "INTERVAL_5_SEC"
@@ -97,7 +100,7 @@ subnets = {
     {
       name          = "test-tenant-2-subnet"
       ip_cidr_range = "10.103.0.0/16"
-      region        = "us-central1"
+      region        = "<region>"
       description   = "Dedicated subnet for tenant-2 in test spoke"
       flow_logs_config = {
         aggregation_interval = "INTERVAL_5_SEC"

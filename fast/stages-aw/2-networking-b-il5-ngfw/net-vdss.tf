@@ -48,7 +48,12 @@ module "vdss-host-project" {
   }
 }
 
-resource "google_compute_project_metadata" "metadata-vdss-host-project" {
+moved {
+  from = google_compute_project_metadata.metadata-vdss-host-project
+  to   = google_compute_project_metadata.metadata_vdss_host_project
+}
+
+resource "google_compute_project_metadata" "metadata_vdss_host_project" {
   project = module.vdss-host-project.project_id
   metadata = {
     block-project-ssh-keys = true # CIS Compliance Benchmark 4.3
@@ -160,7 +165,12 @@ module "dmz-nat-primary" {
   router_network = module.dmz-vpc.name
 }
 
-resource "google_compute_route" "mgmt-default" {
+moved {
+  from = google_compute_route.mgmt-default
+  to   = google_compute_route.mgmt_default
+}
+
+resource "google_compute_route" "mgmt_default" {
   name             = "default-route-mgmt"
   project          = module.vdss-host-project.project_id
   dest_range       = "0.0.0.0/0"

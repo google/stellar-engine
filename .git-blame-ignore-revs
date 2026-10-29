@@ -1,0 +1,22 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Commits that git blame skips. GitHub reads this file automatically, and
+# local clones opt in with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# PR #302 replaced yapf with ruff and reformatted the Python files. The SHA is
+# its squash merge commit on main, so blame also skips the few tooling changes
+# that the same commit holds, such as the ruff steps in tools/lint.sh.
+7595e07901e790f0843dba97f73f05d77033d89e

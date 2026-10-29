@@ -26,6 +26,7 @@ module "automation-project" {
   billing_account         = var.billing_account.id
   name                    = "iac-core-0"
   default_service_account = "deprivilege"
+  deletion_policy         = var.project_deletion_policies.automation
   lien_reason             = "Protected by default as a core project."
   parent = coalesce(
     var.project_parent_ids.automation, module.branch-common-services-folder.folder.name
@@ -97,7 +98,7 @@ module "automation-project" {
         title       = "resman_delegated_grant"
         description = "Resource manager service account delegated grant."
         expression = format(
-          "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).size() > 0 && api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly(['%s'])",
+          "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly(['%s'])",
           "roles/serviceusage.serviceUsageConsumer"
         )
       }
@@ -187,7 +188,12 @@ module "automation-project" {
   depends_on = [module.organization-logging]
 }
 
-resource "google_compute_project_metadata" "metadata-automation" {
+moved {
+  from = google_compute_project_metadata.metadata-automation
+  to   = google_compute_project_metadata.metadata_automation
+}
+
+resource "google_compute_project_metadata" "metadata_automation" {
   project = module.automation-project.project_id
   metadata = {
     block-project-ssh-keys = "TRUE" # CIS Compliance Benchmark 4.3

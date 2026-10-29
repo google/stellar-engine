@@ -24,6 +24,11 @@ variable "description" {
   type        = string
 }
 
+variable "gcp_region" {
+  description = "The Google Cloud region where the Cloud Scheduler job will be deployed."
+  type        = string
+}
+
 variable "kms_key_name" {
   description = "The full resource path of the existing Cloud KMS CryptoKey used for CMEK on the Pub/Sub topic. This key is assumed to be in the `core_project_id`."
   type        = string
@@ -64,11 +69,6 @@ variable "name" {
   type        = string
 }
 
-variable "gcp_region" {
-  description = "The Google Cloud region where the Cloud Scheduler job will be deployed."
-  type        = string
-}
-
 variable "retry_count" {
   description = "The number of attempts that the system will make to run the job if the first attempt fails. Retries are attempted over a longer period of time than the schedule."
   type        = number
@@ -84,4 +84,3 @@ variable "topic_id" {
   description = "The full resource path of the existing Pub/Sub topic (e.g., `projects/<PROJECT_ID>/topics/<TOPIC_NAME>`) to which messages will be published."
   type        = string
 }
-
