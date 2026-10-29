@@ -20,10 +20,15 @@ import hashlib
 import pytest
 
 import conftest
+from stellar_engine import paths as paths_lib
+from stellar_engine.render import imports
+from stellar_engine.render import phase
+from stellar_engine.render import stages
 from stellar_engine.render import writer
 
 NOW = datetime.datetime(2026, 10, 23, 12, 30, 5, tzinfo=datetime.UTC)
 STAMP = "20261023T123005Z"
+_GENERATED = f"{writer.MARKER}tst/answers.yaml\nvalue = 1\n"
 
 
 @pytest.fixture
@@ -207,3 +212,52 @@ def test_outcome_values():
         "skipped",
         "removed",
     ]
+
+
+def test_marker_starts_the_owned_headers_only(repo):
+    assert phase.header("tst")[0].startswith(writer.MARKER)
+    assert imports.header("0", "tst")[0].startswith(writer.MARKER)
+    # The tfvars keep a hash instead, so their header must not match.
+    for stage in paths_lib.STAGES:
+        assert not stages.header(repo, stage, "tst")[0].startswith(
+            writer.MARKER
+        )
+
+
+def test_is_generated(tmp_path):
+    generated = tmp_path / "generated.tf"
+    generated.write_text(_GENERATED)
+    assert writer.is_generated(generated)
+    assert phase.is_generated is writer.is_generated
+    later = tmp_path / "later.tf"
+    later.write_text(f"# operator file\n{writer.MARKER}\n")
+    assert not writer.is_generated(later)
+    link = tmp_path / "link.tf"
+    link.symlink_to(generated)
+    assert not writer.is_generated(link)
+    assert not writer.is_generated(tmp_path / "missing.tf")
+    assert not writer.is_generated(tmp_path)
+
+
+def test_write_owned_creates_updates_and_keeps(tmp_path):
+    target = tmp_path / "owned.tf"
+    created = writer.write_owned(target, _GENERATED, 0o644)
+    assert created is writer.Outcome.CREATED
+    assert target.read_text() == _GENERATED
+    assert conftest.mode(target) == 0o644
+    kept = writer.write_owned(target, _GENERATED, 0o644)
+    assert kept is writer.Outcome.UNCHANGED
+    changed = _GENERATED.replace("1", "2")
+    updated = writer.write_owned(target, changed, 0o600)
+    assert updated is writer.Outcome.UPDATED
+    assert target.read_text() == changed
+    assert conftest.mode(target) == 0o600
+
+
+def test_write_owned_removes_on_empty_content(tmp_path):
+    target = tmp_path / "owned.tf"
+    assert writer.write_owned(target, "", 0o644) is None
+    assert not target.exists()
+    target.write_text(_GENERATED)
+    assert writer.write_owned(target, "", 0o644) is writer.Outcome.REMOVED
+    assert not target.exists()

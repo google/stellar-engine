@@ -663,3 +663,81 @@ def test_assured_workload_requires_one_resource(tmp_path):
     (stage / "organization.tf").write_text("", encoding="utf-8")
     with pytest.raises(repo_lib.RepoError, match="Expected one"):
         repo_lib.Repo(tmp_path).assured_workload()
+
+
+_LAYOUT_TF = """\
+locals {
+  a = 1
+}
+locals {
+  b = "c"
+}
+variable "first" {
+  default = "x"
+}
+variable "second" {}
+module "one" {
+  source = "./one"
+}
+module "two" {
+  source = "./two"
+}
+resource "google_project" "main" {}
+resource "google_folder" "skipped" {}
+resource "google_project" "other" {
+  count = 1
+}
+"""
+
+
+def test_hcl_helpers_merge_filter_and_unquote(tmp_path):
+    path = tmp_path / "main.tf"
+    path.write_text(_LAYOUT_TF, encoding="utf-8")
+    found_locals = repo_lib._locals(path)
+    assert (found_locals["a"], found_locals["b"]) == (1, '"c"')
+    assert list(repo_lib._variables(path)) == ["first", "second"]
+    assert [label for label, _ in repo_lib._modules(path)] == ["one", "two"]
+    assert [
+        (name, body.get("count"))
+        for name, body in repo_lib._resources(path, "google_project")
+    ] == [("main", None), ("other", 1)]
+
+
+def test_hcl_helpers_read_stage0(repo):
+    bootstrap = repo.bootstrap_dir
+    assert {"tfvars", "tfvars_globals"} <= set(
+        repo_lib._locals(bootstrap / "outputs.tf")
+    )
+    iam_locals = repo_lib._locals(bootstrap / "organization-iam.tf")
+    assert {"iam_delete_roles", "iam_sa_bindings"} <= set(iam_locals)
+    variables = repo_lib._variables(bootstrap / "variables.tf")
+    assert {"prefix", repo_lib.PROJECT_DELETION_POLICIES} <= set(variables)
+    ((workload, _),) = repo_lib._resources(
+        bootstrap / "organization.tf", repo_lib.WORKLOAD_RESOURCE
+    )
+    assert workload == "primary"
+
+
+def test_hcl_helpers_cover_every_stage0_block(repo):
+    files = sorted(repo.bootstrap_dir.glob("*.tf"))
+    modules = [
+        (path.name, label)
+        for path in files
+        for label, _ in repo_lib._modules(path)
+    ]
+    assert modules == [
+        (filename, hcl.unquote(label))
+        for filename, label, _ in _bootstrap_blocks(repo, "module")
+    ]
+    expected = sorted(
+        (filename, hcl.unquote(kind), hcl.unquote(name))
+        for filename, (kind, name), _ in _bootstrap_blocks(repo, "resource")
+    )
+    kinds = {kind for _, kind, _ in expected}
+    resources = sorted(
+        (path.name, kind, name)
+        for path in files
+        for kind in kinds
+        for name, _ in repo_lib._resources(path, kind)
+    )
+    assert resources == expected

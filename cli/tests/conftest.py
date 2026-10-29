@@ -20,9 +20,12 @@ import shutil
 import stat
 
 import pytest
+from typer import testing
 
 from stellar_engine import repo as repo_lib
+from stellar_engine import tools as tools_lib
 from stellar_engine.gcp import api
+from stellar_engine.gcp import live
 from stellar_engine.preflight import checks
 from stellar_engine.preflight import inputs as inputs_lib
 
@@ -234,6 +237,44 @@ def cloud():
 def local_tools():
     """Returns healthy FakeTools."""
     return FakeTools()
+
+
+@pytest.fixture
+def isolated_home(tmp_path, monkeypatch):
+    """Points every command at a temp home outside the repository.
+
+    The command tests apply it to every test with
+    `pytestmark = pytest.mark.usefixtures("isolated_home")`.
+    """
+    home = tmp_path / "home"
+    monkeypatch.setenv("STELLAR_HOME", str(home))
+    monkeypatch.delenv("STELLAR_PREFIX", raising=False)
+    return home
+
+
+@pytest.fixture
+def cli_runner():
+    """Returns a CliRunner for the `stellar` app."""
+    return testing.CliRunner()
+
+
+@pytest.fixture
+def fake_tools(monkeypatch):
+    """Makes the commands use FakeTools instead of the local binaries."""
+    monkeypatch.setattr(tools_lib, "SystemTools", FakeTools)
+
+
+@pytest.fixture
+def fake_cloud(cloud, fake_tools, monkeypatch):
+    """Makes the commands use the `cloud` fixture and FakeTools.
+
+    Returns:
+        The FakeCloud that the commands use.
+    """
+    del fake_tools  # Only its patch matters.
+    monkeypatch.setattr(live, "LiveCloudApi", lambda: cloud)
+    monkeypatch.delenv("GOOGLE_IMPERSONATE_SERVICE_ACCOUNT", raising=False)
+    return cloud
 
 
 @pytest.fixture

@@ -171,8 +171,7 @@ def _harness(tmp_path, repo, answers):
     shutil.copy(stage_dir / "variables.tf", harness / "variables.tf")
     (harness / "terraform.tfvars").write_text(rendered.text, encoding="utf-8")
     phase.write(harness, answers, repo)
-    init = helpers.terraform(harness, "init", "-backend=false", "-input=false")
-    assert init.returncode == 0, init.stderr
+    helpers.terraform_init(harness)
     return harness
 
 

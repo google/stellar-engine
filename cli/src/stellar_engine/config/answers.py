@@ -20,7 +20,9 @@ atomically with mode 0600 because it names principals and billing
 accounts.
 """
 
+from collections.abc import Callable
 import copy
+import dataclasses
 import io
 import json
 import pathlib
@@ -34,6 +36,7 @@ from ruamel.yaml import tokens as yaml_tokens
 from stellar_engine import fsutil
 from stellar_engine import naming
 from stellar_engine import paths
+from stellar_engine import repo as repo_lib
 from stellar_engine.config import derive
 from stellar_engine.config import models
 from stellar_engine.config import validate
@@ -298,6 +301,11 @@ def _atomic_write(path, text, mode):
     fsutil.atomic_write(path, text, mode)
 
 
+def _dump(answers):
+    # The data that `save` writes, so equal dumps leave nothing to save.
+    return answers.model_dump(mode="json", exclude_none=True)
+
+
 def save(
     path: pathlib.Path,
     answers: models.Answers,
@@ -324,7 +332,7 @@ def save(
         found = validate.home_references(answers, home)
         if found:
             raise AnswersError("\n".join(found))
-    data = answers.model_dump(mode="json", exclude_none=True)
+    data = _dump(answers)
     merged = _merge(
         copy.deepcopy(previous) if previous is not None else {}, data
     )
@@ -343,6 +351,75 @@ def save(
             json.dumps(schema, indent=2) + "\n",
             0o644,
         )
+
+
+@dataclasses.dataclass(frozen=True)
+class Update:
+    """The outcome of `update`.
+
+    Attributes:
+        previous: The answers the file held before the change.
+        updated: The answers after the change.
+        changed: Whether `update` saved the file. It skips the save when
+            the change leaves the answers as they were.
+    """
+
+    previous: models.Answers
+    updated: models.Answers
+    changed: bool
+
+
+def update(
+    path: pathlib.Path,
+    change: Callable[[dict[str, Any]], object],
+    *,
+    repo: repo_lib.Repo,
+    home: pathlib.Path | None,
+    source: str | None = None,
+) -> Update:
+    """Changes an answers file, keeping its comments and key order.
+
+    The change edits plain data, so it never sees ruamel nodes; `save`
+    then merges the result into the loaded map. A list that the change
+    alters is written anew, so it loses the comments inside it and the
+    comment lines below its last item, which ruamel keeps with that item.
+
+    Args:
+        path: The `answers.yaml` path.
+        change: Mutates the answer data in place; its return value is
+            ignored.
+        repo: The engine checkout whose rules the changed answers must
+            pass, as in `validate.problems`.
+        home: The home that holds the environment of the file, as in
+            `save`. None skips the home checks.
+        source: What made the change, for model error messages. None
+            leaves the source out.
+
+    Returns:
+        The answers before and after the change, and whether the file
+        changed. Answers that the change leaves equal are not saved, so
+        the file keeps its bytes.
+
+    Raises:
+        AnswersError: If the file cannot be read or is invalid, or the
+            changed answers fail the model, have problems, or point into
+            the home.
+    """
+    previous_data = load_data(path)
+    previous = parse(previous_data, str(path))
+    # `plain` builds new containers, so the change cannot touch the
+    # loaded map that `save` merges into.
+    data = plain(previous_data)
+    change(data)
+    updated = parse(data, source)
+    found = validate.problems(updated, repo)
+    if found:
+        lines = [f"- {line}" for line in found]
+        raise AnswersError("\n".join(["The answers have problems:", *lines]))
+    if _dump(updated) == _dump(previous):
+        return Update(previous, updated, changed=False)
+    save(path, updated, home=home, previous=previous_data)
+    return Update(previous, updated, changed=True)
 
 
 def _split_assignment(assignment):

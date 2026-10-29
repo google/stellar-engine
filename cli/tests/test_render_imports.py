@@ -343,8 +343,7 @@ def test_imports_validate_in_bootstrap_workspace(tmp_path):
     workspace.sync(env, conftest.REPO_ROOT, "0-bootstrap")
     ws = env.workspace("0-bootstrap")
     imports.write(ws, "0", answers)
-    init = helpers.terraform(ws, "init", "-backend=false", "-input=false")
-    assert init.returncode == 0, init.stderr
+    helpers.terraform_init(ws)
     validate = helpers.terraform(ws, "validate")
     assert validate.returncode == 0, validate.stderr
     # The same check rejects an address the configuration does not define,
@@ -363,8 +362,7 @@ def test_org_policy_imports_validate_in_bootstrap_workspace(tmp_path):
     workspace.sync(env, conftest.REPO_ROOT, "0-bootstrap")
     ws = env.workspace("0-bootstrap")
     imports.write(ws, "0", answers)
-    init = helpers.terraform(ws, "init", "-backend=false", "-input=false")
-    assert init.returncode == 0, init.stderr
+    helpers.terraform_init(ws)
     validate = helpers.terraform(ws, "validate")
     assert validate.returncode == 0, validate.stderr + validate.stdout
     fmt = helpers.terraform(ws, "fmt", "-check", imports.filename("0"))
