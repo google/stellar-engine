@@ -61,8 +61,11 @@ def _denied(error):
             metadata.get("consumer", "unknown").removeprefix("projects/"),
         )
     message = (getattr(error, "message", None) or str(error)).splitlines()[0]
+    # api_core maps HTTP 403 and 401 to Forbidden and Unauthorized, the
+    # parents of the gRPC PermissionDenied and Unauthenticated classes, so
+    # a REST transport denial only matches the parent classes.
     if isinstance(
-        error, api_exceptions.PermissionDenied | api_exceptions.Unauthenticated
+        error, api_exceptions.Forbidden | api_exceptions.Unauthorized
     ):
         return api.AccessDeniedError(message)
     return api.CloudError(message)
