@@ -149,6 +149,21 @@ _REMOTE_PROVIDERS = """terraform {
 """
 
 
+@pytest.mark.parametrize(
+    ("text", "remote"),
+    [
+        (_REMOTE_PROVIDERS, True),
+        ('  backend "gcs" {}\n', True),
+        ('provider "google" {}\n', False),
+        ('# backend "gcs" is set after the migration\n', False),
+        ('backend "local" {}\n', False),
+        ("", False),
+    ],
+)
+def test_declares_remote_backend(text, remote):
+    assert phase.declares_remote_backend(text) is remote
+
+
 def test_warnings_flag_a_migrated_bootstrap_workspace(workspace):
     providers = workspace / workspace_lib.BOOTSTRAP_PROVIDERS
     assert phase.warnings(workspace, _answers()) == []

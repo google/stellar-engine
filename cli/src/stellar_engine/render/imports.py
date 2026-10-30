@@ -36,6 +36,9 @@ from stellar_engine.render import hcl
 from stellar_engine.render import writer
 
 FILENAME_TEMPLATE = "{stage}-imports.tf"
+# The resource that holds the organization policies Stage 0 manages, which
+# the import block and the deploy checks address by constraint name.
+ORG_POLICY_ADDRESS = "module.organization.google_org_policy_policy.default"
 _FILE_MODE = 0o644
 # The stage locals that the import file adds; the prefix keeps them apart
 # from the locals of the stage code.
@@ -160,7 +163,9 @@ def _org_policy_blocks(names: Sequence[str]) -> list[str]:
     """Returns the locals and the `import` block of the organization policies.
 
     The import block mirrors the `import_defaults` block in
-    `0-bootstrap/organization.tf`, which targets the same resources.
+    `0-bootstrap/organization.tf`, which targets the same resources. Both
+    skip the import when `deploy_org_resources.org_policies` is false,
+    because the organization module then creates no policies.
     """
     listed = [f"    {hcl.quote(name)}," for name in sorted(set(names))]
     locals_block = "\n".join(
@@ -181,14 +186,14 @@ def _org_policy_blocks(names: Sequence[str]) -> list[str]:
         [
             "import {",
             "  for_each = (",
-            "    var.bootstrap_user == null",
+            "    var.deploy_org_resources.org_policies",
+            "    && var.bootstrap_user == null",
             f"    ? local.{_IMPORTS_LOCAL}",
             "    : toset([])",
             "  )",
             '  id = "organizations/${var.organization.id}/policies/'
             '${each.key}"',
-            "  to = module.organization.google_org_policy_policy.default"
-            "[each.key]",
+            f"  to = {ORG_POLICY_ADDRESS}[each.key]",
             "}",
         ]
     )

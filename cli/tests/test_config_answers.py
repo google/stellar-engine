@@ -15,6 +15,7 @@
 """Tests for loading, editing and saving answers.yaml."""
 
 import json
+import shlex
 
 import pytest
 
@@ -367,6 +368,87 @@ def test_update_rejects_values_inside_the_home(answers_path, repo):
     assert answers_path.read_bytes() == before
 
 
+def _final_phase(answers_path):
+    answers_lib.save(
+        answers_path, helpers.minimal_answers(stage0_phase="final")
+    )
+
+
+def _to_bootstrap(data):
+    data["stage0_phase"] = "bootstrap"
+
+
+def test_update_refuses_bootstrap_after_a_final_apply(answers_path, repo):
+    _final_phase(answers_path)
+    before = answers_path.read_bytes()
+    with pytest.raises(answers_lib.AnswersError) as error:
+        answers_lib.update(
+            answers_path,
+            _to_bootstrap,
+            repo=repo,
+            home=None,
+            final_applied=True,
+        )
+    assert str(error.value).startswith(
+        "The answers have problems:\n"
+        "- stage0_phase cannot return from final to bootstrap"
+    )
+    assert answers_path.read_bytes() == before
+
+
+def test_update_allows_bootstrap_without_a_recorded_final_apply(
+    answers_path, repo
+):
+    # Before any final apply, such as after a Stage 0 destroy, the operator
+    # may start over in the bootstrap phase.
+    _final_phase(answers_path)
+    outcome = answers_lib.update(
+        answers_path, _to_bootstrap, repo=repo, home=None
+    )
+    assert outcome.changed
+    assert outcome.updated.stage0_phase == "bootstrap"
+
+
+def test_update_allows_other_changes_after_a_final_apply(answers_path, repo):
+    _final_phase(answers_path)
+
+    def change(data):
+        data["alert_email"] = "ops@example.com"
+
+    outcome = answers_lib.update(
+        answers_path, change, repo=repo, home=None, final_applied=True
+    )
+    assert outcome.updated.alert_email == "ops@example.com"
+    assert outcome.updated.stage0_phase == "final"
+
+
+def test_update_keeps_comments_when_adding_nested_maps(answers_path, repo):
+    workload = "google_assured_workloads_workload.primary[0]"
+    answers_lib.save(answers_path, helpers.minimal_answers())
+    text = answers_path.read_text(encoding="utf-8")
+    text = text.replace("imports: {}", "# Adopted resources.\nimports: {}")
+    answers_path.write_text(text, encoding="utf-8")
+
+    def change(data):
+        data["imports"]["0-bootstrap"] = {
+            workload: (
+                f"organizations/{conftest.ORG_ID}/locations/us-east4/"
+                "workloads/my-workload"
+            )
+        }
+        data["overrides"]["0-bootstrap"] = {
+            "iam": {"roles/browser": ["user:kept@example.com"]}
+        }
+
+    answers_lib.update(answers_path, change, repo=repo, home=None)
+    saved = answers_path.read_text(encoding="utf-8")
+    assert "# Adopted resources.\nimports:\n  0-bootstrap:\n" in saved
+    assert (
+        "overrides:\n  0-bootstrap:\n    iam:\n      roles/browser:\n"
+        "        - user:kept@example.com\n"
+    ) in saved
+
+
 def test_load_empty_file_is_an_empty_map(tmp_path):
     path = tmp_path / "answers.yaml"
     path.write_text("# nothing yet\n", encoding="utf-8")
@@ -491,6 +573,35 @@ def test_apply_sets_rejects_unparsable_value():
         answers_lib.apply_sets({}, ["a=[1, 2"])
 
 
+@pytest.mark.parametrize(
+    ("segments", "value"),
+    [
+        (["stage0_phase"], "bootstrap"),
+        (
+            ["imports", "0-bootstrap", "google_x.primary[0]"],
+            "organizations/123456789012/locations/us/workloads/w-1",
+        ),
+        (
+            [
+                "imports",
+                "1-resman",
+                'module.tenant-self-iac-projects["Prod-t1"]'
+                ".google_project.project[0]",
+            ],
+            "abc-prod-t1-iac-0",
+        ),
+    ],
+)
+def test_set_command_round_trips(segments, value):
+    line = answers_lib.set_command("abc", segments, value)
+    words = shlex.split(line)
+    assert words[:5] == ["stellar", "init", "--prefix", "abc", "--set"]
+    data = answers_lib.apply_sets({}, [words[5]])
+    for segment in segments[:-1]:
+        data = data[segment]
+    assert data == {segments[-1]: value}
+
+
 def test_from_config_env(tmp_path):
     path = tmp_path / "config.env"
     path.write_text(
@@ -602,7 +713,42 @@ def test_to_preflight():
         ),
         "billing_budget": False,
         "existing_org_policies": ("iam.allowedPolicyMemberDomains",),
+        "stage0_iam_overrides": {},
     }
+
+
+def test_to_preflight_passes_the_stage0_iam_overrides():
+    answers = helpers.minimal_answers(
+        overrides={
+            "0-bootstrap": {
+                "iam": {"roles/browser": ["user:kept@example.com"]},
+                "iam_by_principals": {"user:a@example.com": ["roles/viewer"]},
+                "essential_contacts": "ops@example.com",
+            },
+            "1-resman": {"iam": {"roles/viewer": ["user:b@example.com"]}},
+        }
+    )
+    values = answers_lib.to_preflight(answers)
+    assert values["stage0_iam_overrides"] == {
+        "iam": {"roles/browser": ("user:kept@example.com",)},
+        "iam_by_principals": {"user:a@example.com": ("roles/viewer",)},
+    }
+    inputs = inputs_lib.PreflightInputs.model_validate(values)
+    assert inputs.stage0_iam_overrides == values["stage0_iam_overrides"]
+
+
+def test_to_preflight_skips_malformed_iam_overrides():
+    # Terraform rejects these at plan time; preflight must not fail first.
+    answers = helpers.minimal_answers(
+        overrides={
+            "0-bootstrap": {
+                "iam": {"roles/browser": "user:kept@example.com"},
+                "iam_by_principals": ["user:a@example.com"],
+            }
+        }
+    )
+    values = answers_lib.to_preflight(answers)
+    assert values["stage0_iam_overrides"] == {"iam": {}}
 
 
 def test_to_preflight_reports_a_budget():

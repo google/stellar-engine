@@ -44,6 +44,19 @@ def test_resolve_stage_unknown(name):
         paths.resolve_stage(name)
 
 
+@pytest.mark.parametrize(
+    ("name", "alias"),
+    [("0-bootstrap", "0"), ("1-resman", "1"), ("0", "0"), ("1", "1")],
+)
+def test_stage_alias(name, alias):
+    assert paths.stage_alias(name) == alias
+
+
+def test_stage_alias_unknown():
+    with pytest.raises(ValueError, match="Unknown stage"):
+        paths.stage_alias("2-networking")
+
+
 def test_resolve_home_flag_wins(tmp_path):
     flag = tmp_path / "flag-home"
     environ = {paths.HOME_ENV_VAR: str(tmp_path / "env-home")}
@@ -180,6 +193,7 @@ def test_env_paths_layout(tmp_path):
     assert env.prefix == "abc"
     assert env.answers == root / "answers.yaml"
     assert env.run_state == root / "run-state.json"
+    assert env.deploy_lock == root / "deploy.lock"
     assert env.logs == root / "logs"
     assert env.plans == root / "plans"
     assert env.iam_snapshots == root / "iam-snapshots"
