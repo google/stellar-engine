@@ -14,6 +14,7 @@
 
 """Tests for the stage workspace symlink farms."""
 
+import datetime
 import os
 import pathlib
 import shutil
@@ -25,6 +26,10 @@ import conftest
 import helpers
 from stellar_engine import paths
 from stellar_engine import workspace
+from stellar_engine.render import writer
+
+_NOW = datetime.datetime(2026, 10, 30, 9, 0, tzinfo=datetime.UTC)
+_MANIFEST = str(workspace.MODULE_MANIFEST)
 
 _ENGINE_FILES = {
     "0-bootstrap": [
@@ -266,6 +271,133 @@ def test_sync_resman_keeps_hand_placed_outputs(engine, env):
     assert "1-resman-providers.tf" not in report.linked
 
 
+def _write_outputs(env):
+    for relative in workspace.OUTPUT_LINKS["1-resman"]:
+        path = env.fast_config / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}")
+
+
+def test_stale_links_lists_what_sync_changes(engine, env):
+    assert workspace.stale_links(env, engine, "1") == [
+        workspace.MODULES,
+        "main.tf",
+        "templates",
+        "variables.tf",
+        *workspace.OUTPUT_LINKS["1-resman"],
+    ]
+    _write_outputs(env)
+    workspace.sync(env, engine, "1")
+    assert workspace.stale_links(env, engine, "1") == []
+    ws = env.workspace("1-resman")
+    (ws / "main.tf").unlink()
+    (ws / "old.tf").symlink_to(paths.stage_dir(engine, "1-resman") / "old.tf")
+    assert workspace.stale_links(env, engine, "1-resman") == [
+        "main.tf",
+        "old.tf",
+    ]
+    workspace.sync(env, engine, "1-resman")
+    assert workspace.stale_links(env, engine, "1-resman") == []
+
+
+def test_stale_links_follow_a_moved_engine(engine, env, tmp_path):
+    workspace.sync(env, engine, "0")
+    moved = tmp_path / "moved"
+    shutil.copytree(engine, moved)
+    assert workspace.stale_links(env, moved, "0") == [
+        workspace.MODULES,
+        "data",
+        "main.tf",
+        "setIAM.sh",
+        "setIAM.yaml.sample",
+        "templates",
+        "variables.tf",
+    ]
+
+
+def test_stale_links_skip_real_files(engine, env):
+    _write_outputs(env)
+    workspace.sync(env, engine, "1")
+    ws = env.workspace("1-resman")
+    for name in ("variables.tf", "1-resman-providers.tf"):
+        (ws / name).unlink()
+        (ws / name).write_text("# placed by hand\n")
+    assert workspace.stale_links(env, engine, "1") == []
+
+
+def test_stale_links_change_nothing(engine, env):
+    found = workspace.stale_links(env, engine, "0")
+    assert workspace.BOOTSTRAP_PROVIDERS in found
+    assert not env.workspace("0-bootstrap").exists()
+    assert not env.modules_link.is_symlink()
+
+
+def test_stale_links_list_the_bootstrap_providers_copy(engine, env):
+    workspace.sync(env, engine, "0")
+    assert workspace.stale_links(env, engine, "0") == []
+    (env.workspace("0-bootstrap") / workspace.BOOTSTRAP_PROVIDERS).unlink()
+    assert workspace.stale_links(env, engine, "0") == [
+        workspace.BOOTSTRAP_PROVIDERS
+    ]
+
+
+def test_sync_moves_the_module_manifest_of_another_engine(engine, env):
+    # The previous engine is a worktree nested inside this checkout, so
+    # its module directories lie under this engine's root too.
+    nested = engine / ".claude" / "worktrees" / "a"
+    shutil.copytree(engine, nested, ignore=shutil.ignore_patterns(".claude"))
+    workspace.sync(env, nested, "0")
+    ws = env.workspace("0-bootstrap")
+    manifest = helpers.module_manifest(ws, (nested / "modules").resolve())
+    recorded = manifest.read_bytes()
+    assert workspace.stale_modules(ws) == []
+    # While the links are stale, the list names them, and sync moves the
+    # manifest once it relinked.
+    assert workspace.MODULES in workspace.stale_links(env, engine, "0")
+    report = workspace.sync(env, engine, "0", now=_NOW)
+    assert report.reset == [_MANIFEST]
+    stamp = writer.stamp(_NOW)
+    assert report.backups == [env.plans / f"modules.json.0-bootstrap.{stamp}"]
+    assert report.backups[0].read_bytes() == recorded
+    assert conftest.mode(report.backups[0]) == 0o600
+    assert not manifest.exists()
+    assert (ws / ".terraform" / "modules").is_dir()
+    assert workspace.stale_links(env, engine, "0") == []
+
+
+def test_stale_links_list_a_module_manifest_the_links_moved(
+    engine, env, tmp_path
+):
+    # A relink that kept the manifest, such as one by an earlier stellar.
+    workspace.sync(env, engine, "0")
+    ws = env.workspace("0-bootstrap")
+    manifest = helpers.module_manifest(ws, tmp_path / "old" / "modules")
+    assert workspace.stale_modules(ws) == ["automation-project"]
+    assert workspace.stale_links(env, engine, "0") == [_MANIFEST]
+    assert manifest.exists()
+    report = workspace.sync(env, engine, "0", now=_NOW)
+    assert report.reset == [_MANIFEST]
+    assert not manifest.exists()
+    assert workspace.stale_links(env, engine, "0") == []
+
+
+def test_sync_keeps_a_module_manifest_that_matches(engine, env):
+    workspace.sync(env, engine, "0")
+    ws = env.workspace("0-bootstrap")
+    manifest = helpers.module_manifest(ws, (engine / "modules").resolve())
+    assert workspace.stale_links(env, engine, "0") == []
+    assert workspace.sync(env, engine, "0").reset == []
+    assert manifest.exists()
+    # Terraform reports a manifest that it cannot parse on its own.
+    manifest.write_text("not json")
+    assert workspace.stale_modules(ws) == []
+
+
+def test_stale_links_missing_engine_stage(tmp_path, env):
+    with pytest.raises(workspace.WorkspaceError, match="no stage directory"):
+        workspace.stale_links(env, tmp_path / "empty", "0")
+
+
 def test_two_homes_share_one_engine(engine, tmp_path):
     first = paths.Home(tmp_path / "one").env("abc")
     second = paths.Home(tmp_path / "two").env("abc")
@@ -342,6 +474,17 @@ def test_bootstrap_links_only_the_remote_providers(tmp_path):
     assert workspace.OUTPUT_LINKS["0-bootstrap"] == ()
 
 
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash is missing")
+def test_resman_outputs_match_stage_links_script(tmp_path):
+    # Stages 2 and 3 link the Stage 1 outputs beside the Stage 0 tfvars.
+    found = set()
+    for stage in ("2-networking-a-fedramp", "3-security"):
+        (tmp_path / stage).mkdir()
+        found.update(_stage_links_files(tmp_path / stage, stage))
+    stage0_outputs = {name for name in found if name.startswith("tfvars/0-")}
+    assert sorted(found - stage0_outputs) == sorted(workspace.RESMAN_OUTPUTS)
+
+
 def test_sync_real_engine_layout(env):
     report = workspace.sync(env, conftest.REPO_ROOT, "0-bootstrap")
     assert "main.tf" in report.linked
@@ -350,11 +493,44 @@ def test_sync_real_engine_layout(env):
     assert report.conflicts == []
 
 
+def _module_engine(root, value):
+    """Returns an engine whose Stage 0 outputs a value from a local module."""
+    stage = paths.stage_dir(root, paths.BOOTSTRAP)
+    stage.mkdir(parents=True)
+    (stage / "main.tf").write_text(
+        'module "m" {\n  source = "../../../modules/m"\n}\n'
+        'output "v" {\n  value = module.m.v\n}\n'
+    )
+    (stage / workspace.BOOTSTRAP_PROVIDERS_TEMPLATE).write_text("# local\n")
+    module = root / "modules" / "m"
+    module.mkdir(parents=True)
+    (module / "main.tf").write_text(f'output "v" {{\n  value = "{value}"\n}}\n')
+    return root
+
+
+@pytest.mark.terraform
+def test_a_relinked_workspace_plans_with_the_new_modules(env, tmp_path):
+    # A plain init keeps the manifest record of an unchanged source, so
+    # without the move the plan would still use the old engine's module.
+    old = _module_engine(tmp_path / "old", "engine-A")
+    new = _module_engine(tmp_path / "new", "engine-B")
+    workspace.sync(env, old, "0")
+    ws = env.workspace("0-bootstrap")
+    for args in (("init", "-input=false"), ("apply", "-auto-approve")):
+        completed = helpers.terraform(ws, *args)
+        assert completed.returncode == 0, completed.stderr
+    assert workspace.sync(env, new, "0", now=_NOW).reset == [_MANIFEST]
+    completed = helpers.terraform(ws, "init", "-input=false")
+    assert completed.returncode == 0, completed.stderr
+    plan = helpers.terraform(ws, "plan", "-input=false")
+    assert plan.returncode == 0, plan.stderr
+    assert '"engine-A" -> "engine-B"' in plan.stdout
+
+
 @pytest.mark.terraform
 def test_bootstrap_workspace_validates(env):
     workspace.sync(env, conftest.REPO_ROOT, "0-bootstrap")
     ws = env.workspace("0-bootstrap")
-    init = helpers.terraform(ws, "init", "-backend=false", "-input=false")
-    assert init.returncode == 0, init.stderr
+    helpers.terraform_init(ws)
     validate = helpers.terraform(ws, "validate")
     assert validate.returncode == 0, validate.stderr

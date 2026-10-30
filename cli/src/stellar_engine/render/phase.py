@@ -41,9 +41,6 @@ from stellar_engine.render import writer
 
 FILENAME = f"{paths.BOOTSTRAP}-phase.auto.tfvars"
 VARIABLE = "bootstrap_user"
-# Marks files this module wrote, so it never replaces or removes an
-# operator's own file of the same name.
-_MARKER = "# stellar render writes this file from envs/"
 # The bootstrap user is personal data, so only the owner reads the file.
 _FILE_MODE = 0o600
 # The remote providers file that the state migration copies into the
@@ -62,11 +59,11 @@ def header(prefix: str) -> list[str]:
         prefix: Environment prefix.
     """
     return [
-        f"{_MARKER}{prefix}/answers.yaml stage0_phase and {VARIABLE}.",
+        f"{writer.MARKER}{prefix}/answers.yaml stage0_phase and {VARIABLE}.",
         "# The file exists only in the bootstrap phase, so every Stage 0",
-        f"# run sets {VARIABLE} without a -var option. After the state",
-        "# migration, run stellar init --set "
-        f"stage0_phase={models.STAGE0_FINAL} and then",
+        f"# run sets {VARIABLE} without a -var option. stellar deploy",
+        "# removes it after the state migration. By hand, run",
+        f"# stellar init --set stage0_phase={models.STAGE0_FINAL} and then",
         "# stellar render, which removes this file for the final apply.",
     ]
 
@@ -103,6 +100,20 @@ def text(answers: models.Answers, repo: repo_lib.Repo) -> str:
     )
 
 
+def declares_remote_backend(text: str) -> bool:
+    """Returns whether a providers file declares the remote state backend.
+
+    The remote providers file that Stage 0 writes declares `backend "gcs"`,
+    and `providers.tf.tmp` declares none. The file turns remote when the
+    operator or `stellar deploy` copies it into the workspace, which is
+    before the state migration, so this alone never shows a migration.
+
+    Args:
+        text: The providers file text.
+    """
+    return _REMOTE_BACKEND_RE.search(text) is not None
+
+
 def warnings(workspace: pathlib.Path, answers: models.Answers) -> list[str]:
     """Returns non-fatal findings about the phase of a Stage 0 workspace.
 
@@ -118,28 +129,20 @@ def warnings(workspace: pathlib.Path, answers: models.Answers) -> list[str]:
     if answers.stage0_phase != models.STAGE0_BOOTSTRAP:
         return []
     providers = workspace / workspace_lib.BOOTSTRAP_PROVIDERS
-    text = fsutil.read_text_or_none(providers) or ""
-    if not _REMOTE_BACKEND_RE.search(text):
+    if not declares_remote_backend(fsutil.read_text_or_none(providers) or ""):
         return []
     return [
         f"{providers} uses the remote state backend, so the first Stage 0 "
         "apply already ran, but stage0_phase is still "
-        f"{models.STAGE0_BOOTSTRAP}; run stellar init --set "
+        f"{models.STAGE0_BOOTSTRAP}; run stellar deploy --stage 0, whose "
+        "s0.phase_final step switches it, or run stellar init --set "
         f"stage0_phase={models.STAGE0_FINAL} and stellar render before the "
         "next apply."
     ]
 
 
-def is_generated(path: pathlib.Path) -> bool:
-    """Returns whether stellar wrote the file at a path.
-
-    Args:
-        path: File to check. A symlink or a missing file is not generated.
-    """
-    if path.is_symlink() or not path.is_file():
-        return False
-    with path.open(encoding="utf-8") as handle:
-        return handle.readline().startswith(_MARKER)
+# Kept for the callers that check the phase file; see `writer.is_generated`.
+is_generated = writer.is_generated
 
 
 def planned(
@@ -193,17 +196,5 @@ def write(
         PhaseFileError: If the answers cannot be rendered, or a file of
             the same name exists that stellar did not generate.
     """
-    target = workspace / FILENAME
     content = planned(workspace, answers, repo)
-    previous = fsutil.read_text_or_none(target)
-    if not content:
-        if previous is None:
-            return None
-        target.unlink()
-        return writer.Outcome.REMOVED
-    fsutil.atomic_write(target, content, _FILE_MODE)
-    if previous is None:
-        return writer.Outcome.CREATED
-    if previous == content:
-        return writer.Outcome.UNCHANGED
-    return writer.Outcome.UPDATED
+    return writer.write_owned(workspace / FILENAME, content, _FILE_MODE)

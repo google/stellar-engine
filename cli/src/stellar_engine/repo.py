@@ -26,6 +26,7 @@ import functools
 import json
 import pathlib
 import re
+import subprocess
 
 import hcl2
 from packaging import version
@@ -105,6 +106,9 @@ WORKLOAD_RESOURCE = "google_assured_workloads_workload"
 _WORKLOAD_COUNT_RE = re.compile(
     r'var\.assured_workloads\.regime\s*!=\s*\\?"(?P<regime>[A-Z0-9_]+)\\?"'
 )
+# The Stage 0 folder that stands in for the workload when the regime is the
+# one the workload `count` skips.
+_NO_COMPLIANCE_FOLDER_MODULE = "no-compliance-folder"
 # Workload arguments that the Assured Workloads API never returns, so an
 # imported workload reads them as unset. The provider marks them ForceNew and
 # its import tests ignore them, so an import plans a replacement unless the
@@ -125,8 +129,24 @@ _DELETION_POLICY_REF_RE = re.compile(
 )
 
 
+_GIT_TIMEOUT_SECONDS = 30
+
+
 class RepoError(Exception):
     """Raised when the repository layout does not match expectations."""
+
+
+@dataclasses.dataclass(frozen=True)
+class Provenance:
+    """The git commit of an engine checkout.
+
+    Attributes:
+        commit: The full commit hash of `HEAD`.
+        dirty: Whether the checkout has uncommitted or untracked changes.
+    """
+
+    commit: str
+    dirty: bool
 
 
 @dataclasses.dataclass(frozen=True)
@@ -357,14 +377,77 @@ def _load_hcl(path):
         return hcl2.load(handle)
 
 
-@functools.cache
-def _stage_variables(root, stage):
-    parsed = _load_hcl(paths.stage_dir(root, stage) / "variables.tf")
+def _locals(path):
+    """Returns the locals that an HCL file declares, merged across blocks.
+
+    Args:
+        path: Path of a Terraform file.
+
+    Returns:
+        Local name to its value, as python-hcl2 returns it.
+    """
+    values = {}
+    for block in _load_hcl(path).get("locals", []):
+        values.update(block)
+    return values
+
+
+def _resources(path, resource_type):
+    """Returns the resources of one type that an HCL file declares.
+
+    Args:
+        path: Path of a Terraform file.
+        resource_type: Resource type, such as `google_project`.
+
+    Returns:
+        A list of the unquoted resource name and its parsed body, in file
+        order.
+    """
+    return [
+        (hcl.unquote(name), body)
+        for block in _load_hcl(path).get("resource", [])
+        for kind, bodies in block.items()
+        if hcl.unquote(kind) == resource_type
+        for name, body in bodies.items()
+    ]
+
+
+def _modules(path):
+    """Returns the module calls that an HCL file declares.
+
+    Args:
+        path: Path of a Terraform file.
+
+    Returns:
+        A list of the unquoted module label and its parsed body, in file
+        order.
+    """
+    return [
+        (hcl.unquote(label), body)
+        for block in _load_hcl(path).get("module", [])
+        for label, body in block.items()
+    ]
+
+
+def _variables(path):
+    """Returns the variables that an HCL file declares.
+
+    Args:
+        path: Path of a Terraform file.
+
+    Returns:
+        The unquoted variable name to its parsed body.
+    """
     return {
         hcl.unquote(name): body
-        for block in parsed.get("variable", [])
+        for block in _load_hcl(path).get("variable", [])
         for name, body in block.items()
     }
+
+
+@functools.cache
+def _stage_variables(root, stage):
+    return _variables(paths.stage_dir(root, stage) / "variables.tf")
 
 
 def _literal_map(value, name):
@@ -618,12 +701,11 @@ class Repo:
 
     def _module_names(self, filename):
         """Maps each module in a Stage 0 file to its `name` argument."""
-        names = {}
-        for block in _load_hcl(self.bootstrap_dir / filename).get("module", []):
-            for label, body in block.items():
-                if "name" in body:
-                    names[hcl.unquote(label)] = hcl.unquote(body["name"])
-        return names
+        return {
+            label: hcl.unquote(body["name"])
+            for label, body in _modules(self.bootstrap_dir / filename)
+            if "name" in body
+        }
 
     def automation_service_accounts(self):
         """Maps Stage 0 automation service account modules to their names.
@@ -687,14 +769,9 @@ class Repo:
 
     @functools.cached_property
     def _assured_workload(self):
-        found = []
-        parsed = _load_hcl(self.bootstrap_dir / _WORKLOAD_FILE)
-        for block in parsed.get("resource", []):
-            for kind, bodies in block.items():
-                if hcl.unquote(kind) != WORKLOAD_RESOURCE:
-                    continue
-                for name, body in bodies.items():
-                    found.append((hcl.unquote(name), body))
+        found = _resources(
+            self.bootstrap_dir / _WORKLOAD_FILE, WORKLOAD_RESOURCE
+        )
         if len(found) != 1:
             raise RepoError(
                 f"Expected one {WORKLOAD_RESOURCE} in 0-bootstrap/"
@@ -737,6 +814,27 @@ class Repo:
                 one, or its `count` does not compare the regime.
         """
         return self._assured_workload
+
+    def no_compliance_folder_address(self):
+        """Returns the address of the folder Stage 0 creates without a regime.
+
+        Stage 0 creates `module.no-compliance-folder` instead of the
+        workload when the regime is the one the workload `count` skips.
+
+        Returns:
+            The module address, such as `module.no-compliance-folder[0]`.
+
+        Raises:
+            RepoError: If `0-bootstrap/organization.tf` declares no such
+                module.
+        """
+        for label, body in _modules(self.bootstrap_dir / _WORKLOAD_FILE):
+            if label == _NO_COMPLIANCE_FOLDER_MODULE:
+                return f"module.{label}{_counted(body)}"
+        raise RepoError(
+            f"Expected module {_NO_COMPLIANCE_FOLDER_MODULE} in 0-bootstrap/"
+            f"{_WORKLOAD_FILE}"
+        )
 
     def billing_resources(
         self,
@@ -879,13 +977,12 @@ class Repo:
 
     @functools.cached_property
     def _project_module_deletion_policy(self):
-        parsed = _load_hcl(self.root / "modules/project/variables.tf")
-        for block in parsed.get("variable", []):
-            for name, body in block.items():
-                if hcl.unquote(name) == "deletion_policy":
-                    default = hcl.unquote(body.get("default"))
-                    if isinstance(default, str):
-                        return default
+        variables = _variables(self.root / "modules/project/variables.tf")
+        default = hcl.unquote(
+            variables.get("deletion_policy", {}).get("default")
+        )
+        if isinstance(default, str):
+            return default
         raise RepoError("modules/project declares no deletion_policy default")
 
     @functools.cached_property
@@ -897,13 +994,7 @@ class Repo:
         """
         bodies = {}
         for filename, module in _STAGE0_PROJECT_MODULES:
-            body = None
-            for block in _load_hcl(self.bootstrap_dir / filename).get(
-                "module", []
-            ):
-                for label, candidate in block.items():
-                    if hcl.unquote(label) == module:
-                        body = candidate
+            body = dict(_modules(self.bootstrap_dir / filename)).get(module)
             source = hcl.unquote(body.get("source", "")) if body else ""
             if body is None or not str(source).endswith(_PROJECT_MODULE_SOURCE):
                 raise RepoError(f"No Stage 0 project module {module}")
@@ -913,14 +1004,11 @@ class Repo:
     @functools.cached_property
     def _stage0_projects(self):
         resource_index = ""
-        project_main = _load_hcl(self.root / "modules/project/main.tf")
-        for block in project_main.get("resource", []):
-            for label, bodies in block.items():
-                if hcl.unquote(label) != "google_project":
-                    continue
-                for name, body in bodies.items():
-                    if hcl.unquote(name) == "project":
-                        resource_index = _counted(body)
+        for name, body in _resources(
+            self.root / "modules/project/main.tf", "google_project"
+        ):
+            if name == "project":
+                resource_index = _counted(body)
         projects = []
         for module, body in self._stage0_module_bodies.items():
             count = body.get("count")
@@ -951,10 +1039,7 @@ class Repo:
             RepoError: If a binding refers to an unknown principal or service
                 account, or a binding local is not a map.
         """
-        local_values = {}
-        path = self.bootstrap_dir / "organization-iam.tf"
-        for block in _load_hcl(path).get("locals", []):
-            local_values.update(block)
+        local_values = _locals(self.bootstrap_dir / "organization-iam.tf")
         accounts = self.automation_service_accounts()
         bindings = {}
         for name, value in local_values.items():
@@ -970,6 +1055,33 @@ class Repo:
         for role in local_values.get("iam_delete_roles", []):
             bindings[hcl.unquote(role)] = set()
         return bindings
+
+    def audit_log_configs(self):
+        """Returns the audit log configs Stage 0 sets on the organization.
+
+        Each `google_organization_iam_audit_config` in `audit-logging.tf`
+        replaces the live config of its service.
+
+        Returns:
+            A dict of service to a list of `(log_type, exempted_members)`
+            tuples, in file order.
+        """
+        path = self.bootstrap_dir / "audit-logging.tf"
+        return {
+            hcl.unquote(body["service"]): [
+                (
+                    hcl.unquote(config["log_type"]),
+                    tuple(
+                        hcl.unquote(member)
+                        for member in config.get("exempted_members") or []
+                    ),
+                )
+                for config in body.get("audit_log_config") or []
+            ]
+            for _, body in _resources(
+                path, "google_organization_iam_audit_config"
+            )
+        }
 
     @staticmethod
     def _holder(key, accounts):
@@ -1010,11 +1122,7 @@ class Repo:
         """
         if stage not in _AUTO_TFVARS_LOCALS:
             raise RepoError(f"Unknown stage {stage}")
-        local_values = {}
-        for block in _load_hcl(self.bootstrap_dir / "outputs.tf").get(
-            "locals", []
-        ):
-            local_values.update(block)
+        local_values = _locals(self.bootstrap_dir / "outputs.tf")
         keys = set()
         for name in _AUTO_TFVARS_LOCALS[stage]:
             value = local_values.get(name)
@@ -1043,3 +1151,31 @@ class Repo:
         if not floors:
             raise RepoError("No module declares a required_version floor")
         return str(max(floors))
+
+    def provenance(self):
+        """Returns the commit of the checkout, or None outside a git checkout.
+
+        Runs `git rev-parse HEAD` and `git status --porcelain` in the root,
+        so a deploy can record which engine version planned and applied.
+
+        Returns:
+            A `Provenance`, or None when git is missing or the root is not
+            in a git checkout.
+        """
+        try:
+            head = self._git("rev-parse", "HEAD")
+            # A status refresh may rewrite `.git/index`; `stellar status`
+            # must not change the checkout it reads.
+            status = self._git("--no-optional-locks", "status", "--porcelain")
+        except OSError, subprocess.SubprocessError:
+            return None
+        return Provenance(head.strip(), bool(status.strip()))
+
+    def _git(self, *args):
+        return subprocess.run(
+            ["git", "-C", str(self.root), *args],
+            capture_output=True,
+            check=True,
+            text=True,
+            timeout=_GIT_TIMEOUT_SECONDS,
+        ).stdout

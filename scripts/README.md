@@ -2,6 +2,15 @@
 
 This directory contains a suite of powerful automation scripts designed to streamline the deployment, management, and destruction of Stellar Engine environments. These tools are built to be robust, resumable, and transparent.
 
+The `stellar deploy` command of the `cli/` project deprecates the deployment parts of these scripts, so prefer it for new deployments.
+
+- The `stellar deploy` command replaces the `deploy.sh` script for the prerequisites, Stage 0, and Stage 1.
+- The `stellar deploy` command adds saved plans, an organization IAM review, and resume.
+- The `s0.allow_bq` deploy step replaces the `allow_bq.sh` script and allows the BigQuery services through the Assured Workloads API.
+- The `pre.apis`, `pre.iam_roles`, and `pre.org_policies` deploy steps replace the `enableServices.sh`, `setIAM.sh`, and `import.sh` scripts in the `fast/stages-aw/0-bootstrap/` folder.
+- Each replaced script stays for one release as the manual fallback that the deploy steps name.
+- The `destroy.sh`, `clean.sh`, and `restore.sh` scripts stay supported until the CLI covers teardown.
+
 ## Core Scripts
 
 ### common-functions.sh
@@ -9,7 +18,7 @@ A shared library providing consistent logging, error handling, and utility funct
 
 
 ### deploy.sh
-The main entry point for deploying the Stellar Engine environment.
+The main entry point for deploying the Stellar Engine environment. The `stellar deploy` command deprecates it for the prerequisites, Stage 0, and Stage 1.
 - Guides you interactively through setting up your `config.env`.
 - Runs the `0-bootstrap`, `1-resman`, `2-networking`, and `3-security` Terraform stages in order.
 - Captures all output automatically to timestamped files in `logs/deploy/`.
@@ -37,7 +46,7 @@ WARNING: DESTRUCTIVE. A utility for cleaning up organization-level resources suc
 A helper script to assist in restoring an environment where the prefix has not changed. It can undelete projects, re-enable billing, and import Terraform state. Use with caution.
 
 ### allow_bq.sh
-A targeted fix for BigQuery permission issues (`gcp.restrictServiceUsage`) that can occur during deployment.
+A targeted fix for the BigQuery permission errors that the `gcp.restrictServiceUsage` constraint causes during deployment. The `s0.allow_bq` step of the `stellar deploy` command deprecates it.
 
 ## Configuration
 

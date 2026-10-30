@@ -1,0 +1,638 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.13.3",
+  "variables": {
+    "bootstrap_project": {
+      "value": "my-project"
+    },
+    "bootstrap_user": {
+      "value": null
+    },
+    "prefix": {
+      "value": "abc"
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "module.automation-project.google_project.project[0]",
+      "module_address": "module.automation-project",
+      "mode": "managed",
+      "type": "google_project",
+      "name": "project",
+      "index": 0,
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "before": {
+          "auto_create_network": false,
+          "billing_account": "000000-AAAAAA-BBBBBB",
+          "deletion_policy": "PREVENT",
+          "folder_id": null,
+          "labels": {},
+          "name": "abc-prod-iac-core-0",
+          "org_id": "123456789012",
+          "project_id": "abc-prod-iac-core-0"
+        },
+        "after": {
+          "auto_create_network": false,
+          "billing_account": "000000-AAAAAA-BBBBBB",
+          "deletion_policy": "PREVENT",
+          "folder_id": null,
+          "labels": {},
+          "name": "abc-prod-iac-core-0",
+          "org_id": "123456789012",
+          "project_id": "abc-prod-iac-core-0"
+        },
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {},
+        "importing": {
+          "id": "abc-prod-iac-core-0"
+        }
+      }
+    },
+    {
+      "address": "module.log-export-project.google_project.project[0]",
+      "module_address": "module.log-export-project",
+      "mode": "managed",
+      "type": "google_project",
+      "name": "project",
+      "index": 0,
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "before": {
+          "auto_create_network": false,
+          "billing_account": "000000-AAAAAA-BBBBBB",
+          "deletion_policy": "PREVENT",
+          "folder_id": null,
+          "labels": {},
+          "name": "abc-prod-audit-logs-0",
+          "org_id": "123456789012",
+          "project_id": "abc-prod-audit-logs-0"
+        },
+        "after": {
+          "auto_create_network": false,
+          "billing_account": "000000-AAAAAA-BBBBBB",
+          "deletion_policy": "PREVENT",
+          "folder_id": null,
+          "labels": {},
+          "name": "abc-prod-audit-logs-0",
+          "org_id": "123456789012",
+          "project_id": "abc-prod-audit-logs-0"
+        },
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {},
+        "importing": {
+          "id": "abc-prod-audit-logs-0"
+        }
+      }
+    },
+    {
+      "address": "module.organization.google_org_policy_policy.default[\"compute.disableSerialPortAccess\"]",
+      "module_address": "module.organization",
+      "mode": "managed",
+      "type": "google_org_policy_policy",
+      "name": "default",
+      "index": "compute.disableSerialPortAccess",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/compute.disableSerialPortAccess",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "FALSE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/compute.disableSerialPortAccess",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "TRUE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {},
+        "importing": {
+          "id": "organizations/123456789012/policies/compute.disableSerialPortAccess"
+        }
+      }
+    },
+    {
+      "address": "module.organization.google_org_policy_policy.default[\"compute.requireOsLogin\"]",
+      "module_address": "module.organization",
+      "mode": "managed",
+      "type": "google_org_policy_policy",
+      "name": "default",
+      "index": "compute.requireOsLogin",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/compute.requireOsLogin",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "FALSE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/compute.requireOsLogin",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "TRUE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {},
+        "importing": {
+          "id": "organizations/123456789012/policies/compute.requireOsLogin"
+        }
+      }
+    },
+    {
+      "address": "module.organization.google_org_policy_policy.default[\"compute.restrictVpcPeering\"]",
+      "module_address": "module.organization",
+      "mode": "managed",
+      "type": "google_org_policy_policy",
+      "name": "default",
+      "index": "compute.restrictVpcPeering",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/compute.restrictVpcPeering",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "FALSE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/compute.restrictVpcPeering",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "TRUE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {},
+        "importing": {
+          "id": "organizations/123456789012/policies/compute.restrictVpcPeering"
+        }
+      }
+    },
+    {
+      "address": "module.organization.google_org_policy_policy.default[\"compute.skipDefaultNetworkCreation\"]",
+      "module_address": "module.organization",
+      "mode": "managed",
+      "type": "google_org_policy_policy",
+      "name": "default",
+      "index": "compute.skipDefaultNetworkCreation",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "before": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/compute.skipDefaultNetworkCreation",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "TRUE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/compute.skipDefaultNetworkCreation",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "TRUE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {},
+        "importing": {
+          "id": "organizations/123456789012/policies/compute.skipDefaultNetworkCreation"
+        }
+      }
+    },
+    {
+      "address": "module.organization.google_org_policy_policy.default[\"compute.trustedImageProjects\"]",
+      "module_address": "module.organization",
+      "mode": "managed",
+      "type": "google_org_policy_policy",
+      "name": "default",
+      "index": "compute.trustedImageProjects",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "before": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/compute.trustedImageProjects",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "TRUE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/compute.trustedImageProjects",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "TRUE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {},
+        "importing": {
+          "id": "organizations/123456789012/policies/compute.trustedImageProjects"
+        }
+      }
+    },
+    {
+      "address": "module.organization.google_org_policy_policy.default[\"compute.vmExternalIpAccess\"]",
+      "module_address": "module.organization",
+      "mode": "managed",
+      "type": "google_org_policy_policy",
+      "name": "default",
+      "index": "compute.vmExternalIpAccess",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "no-op"
+        ],
+        "before": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/compute.vmExternalIpAccess",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "TRUE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/compute.vmExternalIpAccess",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "TRUE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {},
+        "importing": {
+          "id": "organizations/123456789012/policies/compute.vmExternalIpAccess"
+        }
+      }
+    },
+    {
+      "address": "module.organization.google_org_policy_policy.default[\"essentialcontacts.allowedContactDomains\"]",
+      "module_address": "module.organization",
+      "mode": "managed",
+      "type": "google_org_policy_policy",
+      "name": "default",
+      "index": "essentialcontacts.allowedContactDomains",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/essentialcontacts.allowedContactDomains",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "TRUE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after_unknown": {
+          "etag": true,
+          "id": true,
+          "spec": [
+            {
+              "etag": true,
+              "update_time": true
+            }
+          ]
+        },
+        "before_sensitive": false,
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "module.organization.google_org_policy_policy.default[\"gcp.resourceLocations\"]",
+      "module_address": "module.organization",
+      "mode": "managed",
+      "type": "google_org_policy_policy",
+      "name": "default",
+      "index": "gcp.resourceLocations",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "dry_run_spec": [],
+          "etag": "a1",
+          "name": "organizations/123456789012/policies/gcp.resourceLocations",
+          "parent": "organizations/123456789012",
+          "spec": [
+            {
+              "etag": "a1",
+              "inherit_from_parent": false,
+              "reset": false,
+              "rules": [
+                {
+                  "allow_all": "",
+                  "condition": [],
+                  "deny_all": "",
+                  "enforce": "TRUE",
+                  "parameters": "",
+                  "values": []
+                }
+              ],
+              "update_time": "2026-01-01T00:00:00.000000Z"
+            }
+          ]
+        },
+        "after_unknown": {
+          "etag": true,
+          "id": true,
+          "spec": [
+            {
+              "etag": true,
+              "update_time": true
+            }
+          ]
+        },
+        "before_sensitive": false,
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "module.automation-project.google_project_service.project_services[\"orgpolicy.googleapis.com\"]",
+      "module_address": "module.automation-project",
+      "mode": "managed",
+      "type": "google_project_service",
+      "name": "project_services",
+      "index": "orgpolicy.googleapis.com",
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "disable_dependent_services": false,
+          "disable_on_destroy": false,
+          "project": "abc-prod-iac-core-0",
+          "service": "orgpolicy.googleapis.com"
+        },
+        "after_unknown": {
+          "id": true
+        },
+        "before_sensitive": false,
+        "after_sensitive": {}
+      }
+    }
+  ],
+  "output_changes": {},
+  "timestamp": "2026-01-01T00:00:00Z",
+  "applyable": true,
+  "complete": true,
+  "errored": false
+}

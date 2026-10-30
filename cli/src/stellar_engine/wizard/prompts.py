@@ -183,3 +183,22 @@ class ScriptedPrompter:
     def note(self, message: str) -> None:
         """See `Prompter.note`."""
         self.notes.append(message)
+
+
+def typed_confirm(prompter: Prompter, message: str, expected: str) -> bool:
+    """Asks the operator to type a phrase before a change that is hard to undo.
+
+    A yes or no question takes one keystroke; typing a phrase such as the
+    organization ID makes the operator read what the change affects. The
+    question has no default, so Enter never confirms.
+
+    Args:
+        prompter: Asks the operator.
+        message: What the operator confirms.
+        expected: The phrase to type.
+
+    Returns:
+        Whether the typed text, without surrounding spaces, is the phrase.
+    """
+    answer = prompter.text(f"{message} Type {expected} to confirm:")
+    return answer.strip() == expected

@@ -24,6 +24,7 @@ import re
 
 from packaging import version
 
+from stellar_engine import iam_diff
 from stellar_engine import naming
 from stellar_engine import paths
 from stellar_engine import repo as repo_lib
@@ -32,6 +33,7 @@ from stellar_engine.gcp import api
 from stellar_engine.preflight import inputs as inputs_lib
 from stellar_engine.preflight import regions
 from stellar_engine.preflight import result
+from stellar_engine.terraform import env as env_lib
 
 Category = result.Category
 CheckResult = result.CheckResult
@@ -51,25 +53,36 @@ DDG_STAGE0 = "docs/ddg.md#stage-0---bootstrap"
 # DDG prerequisite that enableServices.sh does not cover yet.
 EXTRA_APIS = ("monitoring.googleapis.com",)
 BILLING_ADMIN_ROLE = "roles/billing.admin"
+# Linking projects needs only Billing Account User.
+BILLING_USER_ROLE = "roles/billing.user"
 # Lets Stage 0 create projects on a billing account whose IAM it does not
 # manage, which is what Billing Account User grants.
 BILLING_LINK_PERMISSION = "billing.resourceAssociations.create"
-BILLING_ADMIN = "Billing Account Administrator (roles/billing.admin)"
-BILLING_USER = "Billing Account User (roles/billing.user)"
+# Lets an identity grant roles on the billing account, as Billing Account
+# Administrator does.
+BILLING_ADMIN_PERMISSION = "billing.accounts.setIamPolicy"
+BILLING_ADMIN = f"Billing Account Administrator ({BILLING_ADMIN_ROLE})"
+BILLING_USER = f"Billing Account User ({BILLING_USER_ROLE})"
 BILLING_COSTS_MANAGER = (
     "Billing Account Costs Manager (roles/billing.costsManager)"
 )
+# The IAM row that reports an organization role test that could not run;
+# every other IAM row is `iam.<role>`.
+IAM_ROLES_CHECK = "iam.roles"
 PRECREATE_CHECK = "billing.precreate"
 # Points a billing FAIL at the check that lists what to pre-create instead.
 _PRECREATE_HINT = (
     f"or pre-create the resources that the {PRECREATE_CHECK} check lists"
 )
-IMPERSONATION_ENV_VARS = (
-    "GOOGLE_IMPERSONATE_SERVICE_ACCOUNT",
-    "CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT",
-)
+IMPERSONATION_ENV_VARS = env_lib.IMPERSONATION_ENV_VARS
 _REGION_RE = re.compile(r"^us-[a-z]+[0-9]+$")
 _MAX_LISTED = 10
+# Project lifecycle states that `CloudApi.project_state` and
+# `CloudApi.visible_project_state` return.
+_PROJECT_ACTIVE = "ACTIVE"
+_PROJECT_DELETE_REQUESTED = "DELETE_REQUESTED"
+# What a naming check cannot do when a Google Cloud call fails.
+_EXISTING_RESOURCES = "check for existing resources"
 
 
 @dataclasses.dataclass
@@ -517,13 +530,15 @@ def check_iam_roles(ctx):
     project linking instead.
     """
     if ctx.org is None:
-        return [_skip("iam.roles", Category.IAM, "Organization roles", "--org")]
+        return [
+            _skip(IAM_ROLES_CHECK, Category.IAM, "Organization roles", "--org")
+        ]
     try:
         return _role_results(ctx)
     except api.CloudError as error:
         return [
             CheckResult(
-                "iam.roles",
+                IAM_ROLES_CHECK,
                 Category.IAM,
                 "Organization roles",
                 Status.FAIL,
@@ -875,20 +890,60 @@ def _precreate_blockers(ctx, resources):
     return found
 
 
-def _stage0_precreated(ctx):
-    """Returns whether Stage 0 needs no billing access for these inputs.
+@dataclasses.dataclass(frozen=True)
+class PrecreateStatus:
+    """Stage 0 resources that need billing access, against the import blocks.
 
-    That holds when import blocks adopt every resource that needs billing
-    access at creation and nothing else in Stage 0 uses the account.
+    Attributes:
+        resources: The `repo.BillingResource` values that Stage 0 creates
+            for these inputs, in `Repo.billing_resources` order.
+        missing: The resources that no import block adopts.
+        blockers: One sentence per Stage 0 use of the billing account that
+            pre-creation cannot replace.
     """
+
+    resources: tuple[repo_lib.BillingResource, ...]
+    missing: tuple[repo_lib.BillingResource, ...]
+    blockers: tuple[str, ...]
+
+    @property
+    def covered(self):
+        """Returns whether Stage 0 needs no billing access.
+
+        That holds when import blocks adopt every resource that needs
+        billing access at creation and nothing else in Stage 0 uses the
+        account.
+        """
+        return not self.missing and not self.blockers
+
+
+def precreate_status(ctx):
+    """Compares the Stage 0 resources that need billing access to the imports.
+
+    Args:
+        ctx: The preflight context, whose inputs set the prefix and the
+            regime.
+
+    Returns:
+        A `PrecreateStatus`.
+    """
+    resources = tuple(_billing_resources(ctx))
+    imported = set(ctx.inputs.imported_addresses)
+    return PrecreateStatus(
+        resources=resources,
+        missing=tuple(
+            item for item in resources if item.address not in imported
+        ),
+        blockers=tuple(_precreate_blockers(ctx, resources)),
+    )
+
+
+def _stage0_precreated(ctx):
+    """Returns whether Stage 0 needs no billing access for these inputs."""
     inputs = ctx.inputs
     if inputs.prefix is None or inputs.regime is None:
         return False
-    resources = _billing_resources(ctx)
-    imported = set(inputs.imported_addresses)
-    return all(
-        item.address in imported for item in resources
-    ) and not _precreate_blockers(ctx, resources)
+    return precreate_status(ctx).covered
 
 
 def _precreate_result(ctx, account_id):
@@ -937,12 +992,9 @@ def _precreate_result(ctx, account_id):
             "Not checked, because preflight could not test the billing "
             f"permissions; see the {tested} check.",
         ), False
-    resources = _billing_resources(ctx)
-    imported = set(inputs.imported_addresses)
-    missing = [item for item in resources if item.address not in imported]
-    blockers = _precreate_blockers(ctx, resources)
+    precreate = precreate_status(ctx)
     lacks = f"The deploying identity lacks {requirement} on {account_id}"
-    if not missing and not blockers:
+    if precreate.covered:
         return CheckResult(
             check_id,
             category,
@@ -950,23 +1002,23 @@ def _precreate_result(ctx, account_id):
             Status.PASS,
             f"{lacks}, and import blocks adopt every Stage 0 resource that "
             "needs it: "
-            + ", ".join(item.name for item in resources)
+            + ", ".join(item.name for item in precreate.resources)
             + "."
             + _later_stages_note(ctx),
             doc=DDG_STAGE0,
         ), True
     listed = "; ".join(
         f"{item.create}, imported as {item.address} with ID {item.import_id}"
-        for item in missing
+        for item in precreate.missing
     )
     detail = (
         lacks
         + (
             f", so Stage 0 cannot create these resources: {listed}."
-            if missing
+            if precreate.missing
             else ". Import blocks adopt every Stage 0 resource that needs it."
         )
-        + "".join(f" {sentence}" for sentence in blockers)
+        + "".join(f" {sentence}" for sentence in precreate.blockers)
         + _later_stages_note(ctx)
     )
     who = (
@@ -981,14 +1033,14 @@ def _precreate_result(ctx, account_id):
         "ID, and run `stellar render`."
     )
     workload = ctx.repo.assured_workload()
-    if any(item.address == workload.address for item in missing):
+    if any(item.address == workload.address for item in precreate.missing):
         remedy += (
             " Create the Assured Workloads workload with the billing account, "
             "because the API requires one, and with violation notifications "
             "enabled to match organization.tf."
         )
     if workload.replaced_on_import and any(
-        item.address == workload.address for item in resources
+        item.address == workload.address for item in precreate.resources
     ):
         remedy += (
             " A pre-created workload helps only once organization.tf lists "
@@ -1019,6 +1071,28 @@ def _precreate_result(ctx, account_id):
     ), False
 
 
+def required_services(repository: repo_lib.Repo) -> list[str]:
+    """Returns the bootstrap project services that Stage 0 needs.
+
+    The services of `0-bootstrap/enableServices.sh` plus the DDG
+    prerequisites that the script lacks.
+
+    Args:
+        repository: The engine checkout.
+    """
+    return [*repository.required_apis(), *EXTRA_APIS]
+
+
+def enable_command(project: str, services: list[str]) -> str:
+    """Returns the gcloud command that enables services by hand.
+
+    Args:
+        project: The project ID.
+        services: The services, such as `iam.googleapis.com`.
+    """
+    return f"gcloud services enable {' '.join(services)} --project={project}"
+
+
 def check_project(ctx):
     """Checks that the bootstrap project exists and has the required APIs."""
     category = Category.PROJECT
@@ -1031,7 +1105,7 @@ def check_project(ctx):
         state = ctx.cloud.project_state(project)
     except api.CloudError:
         state = None
-    if state != "ACTIVE":
+    if state != _PROJECT_ACTIVE:
         return [
             CheckResult(
                 "project.state",
@@ -1054,7 +1128,7 @@ def check_project(ctx):
             doc=DOC_BOOTSTRAP,
         )
     ]
-    required = [*ctx.repo.required_apis(), *EXTRA_APIS]
+    required = required_services(ctx.repo)
     try:
         enabled = ctx.cloud.enabled_services(project)
     except api.CloudError as error:
@@ -1079,10 +1153,7 @@ def check_project(ctx):
             f"Not enabled: {_listed(missing)}."
             if missing
             else f"All {len(required)} required APIs are enabled.",
-            remedy=(
-                f"Run `gcloud services enable {' '.join(missing)} "
-                f"--project={project}`."
-            ),
+            remedy=f"Run `{enable_command(project, missing)}`.",
             doc=DOC_APIS,
         )
     )
@@ -1183,18 +1254,30 @@ def _check_region(ctx):
     )
 
 
+def _cloud_warning(check_id, title, error, action=_EXISTING_RESOURCES):
+    """Reports a Google Cloud error that stopped a naming check as a warning.
+
+    Args:
+        check_id: Check id of the stopped check.
+        title: Title of the stopped check.
+        error: The `api.CloudError` raised.
+        action: What the check could not do, after `Cannot` in the detail.
+    """
+    return CheckResult(
+        check_id,
+        Category.NAMING,
+        title,
+        Status.WARN,
+        f"Cannot {action}: {error}",
+    )
+
+
 def _guarded(check_id, title, run):
     """Runs one sub-check and reports a Google Cloud error as a warning."""
     try:
         return run()
     except api.CloudError as error:
-        return CheckResult(
-            check_id,
-            Category.NAMING,
-            title,
-            Status.WARN,
-            f"Cannot check for existing resources: {error}",
-        )
+        return _cloud_warning(check_id, title, error)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -1241,18 +1324,12 @@ def _project_results(ctx, project_ids, group=_STAGE0_PROJECTS):
     try:
         states = _project_states(ctx, project_ids)
     except api.CloudError as error:
-        return [
-            CheckResult(
-                group.check_id,
-                Category.NAMING,
-                group.title,
-                Status.WARN,
-                f"Cannot check for existing resources: {error}",
-            )
-        ]
-    active = [pid for pid, state in states.items() if state == "ACTIVE"]
+        return [_cloud_warning(group.check_id, group.title, error)]
+    active = [pid for pid, state in states.items() if state == _PROJECT_ACTIVE]
     deleted = [
-        pid for pid, state in states.items() if state == "DELETE_REQUESTED"
+        pid
+        for pid, state in states.items()
+        if state == _PROJECT_DELETE_REQUESTED
     ]
     results = [
         _collision(
@@ -1311,15 +1388,13 @@ def _imported_result(ctx, project_ids):
     try:
         states = _project_states(ctx, project_ids)
     except api.CloudError as error:
-        return CheckResult(
-            check_id,
-            Category.NAMING,
-            title,
-            Status.WARN,
-            f"Cannot check the pre-created projects: {error}",
+        return _cloud_warning(
+            check_id, title, error, action="check the pre-created projects"
         )
     deleted = [
-        pid for pid, state in states.items() if state == "DELETE_REQUESTED"
+        pid
+        for pid, state in states.items()
+        if state == _PROJECT_DELETE_REQUESTED
     ]
     missing = [pid for pid, state in states.items() if state is None]
     if not deleted and not missing:
@@ -1499,40 +1574,87 @@ def _folder_result(ctx, prefix):
     )
 
 
-def _holder_member(ctx, holder, groups):
-    """Resolves a Stage 0 role holder to the IAM member it grants."""
-    prefix = ctx.inputs.prefix
-    match holder.kind:
-        case repo_lib.HolderKind.GROUP:
-            return groups.get(holder.key)
-        case repo_lib.HolderKind.SERVICE_ACCOUNT if prefix:
-            email = naming.automation_sa_email(prefix, holder.key)
-            return f"serviceAccount:{email}"
-        case repo_lib.HolderKind.BOOTSTRAP_USER if bootstrap_user(ctx):
-            return f"user:{bootstrap_user(ctx)}"
-        case repo_lib.HolderKind.DOMAIN if ctx.domain:
-            return f"domain:{ctx.domain}"
-    return None
+def _iam_target(ctx):
+    """Returns what the first Stage 0 apply sets on organization IAM.
 
-
-def _removed_grants(ctx, bindings):
-    """Lists existing grants that the first Stage 0 apply removes."""
-    authoritative = ctx.repo.authoritative_bindings()
+    Preflight cannot plan, so the target comes from the repository, the
+    inputs that name each holder, and the Stage 0 IAM overrides.
+    """
     groups = _group_members(ctx)
-    removed = []
-    for binding in bindings:
-        if binding.role not in authoritative:
-            continue
-        kept = {
-            _holder_member(ctx, holder, groups)
-            for holder in authoritative[binding.role]
-        }
-        removed.extend(
-            f"{binding.role} {member}"
-            for member in binding.members
-            if member not in kept and not member.startswith("deleted:")
+    user = bootstrap_user(ctx)
+
+    def resolve(holder):
+        return iam_diff.resolve_holder(
+            holder,
+            prefix=ctx.inputs.prefix,
+            groups=groups,
+            bootstrap_user=user,
+            domain=ctx.domain,
         )
-    return sorted(removed)
+
+    return iam_diff.target_from_repo(
+        ctx.repo,
+        resolve,
+        ctx.inputs.stage0_iam_overrides,
+        audit_configs=iam_diff.stage0_audit_configs(ctx.repo),
+    )
+
+
+def _iam_detail(found):
+    """Describes the removed grants, kept grants and audit overwrites."""
+    removed = [str(grant) for grant in found.removed]
+    if removed:
+        detail = (
+            f"The first Stage 0 apply removes {len(removed)} existing "
+            f"grants from roles it manages authoritatively: "
+            f"{_listed(removed)}."
+        )
+    else:
+        detail = "No existing grants would be removed by Stage 0."
+    if found.kept_foreign:
+        detail += (
+            f" It keeps {len(found.kept_foreign)} existing grants on those "
+            "roles."
+        )
+    for overwrite in found.audit_overwrites:
+        detail += (
+            f" It replaces the existing {overwrite.service} audit log "
+            "configuration."
+        )
+    return detail
+
+
+def _iam_result(ctx, org_id):
+    """Checks which existing grants and audit configs Stage 0 replaces.
+
+    The grants that `overrides.0-bootstrap.iam` and `iam_by_principals`
+    list stay, so they count as kept, not removed.
+    """
+    check_id, title = "shared.iam", "Authoritative IAM roles"
+    try:
+        live = ctx.cloud.get_org_iam_policy(org_id)
+    except api.CloudError as error:
+        return CheckResult(
+            check_id,
+            Category.SHARED_ORG,
+            title,
+            Status.WARN,
+            f"Cannot read the organization IAM policy: {error}",
+        )
+    found = iam_diff.diff(live, _iam_target(ctx))
+    return CheckResult(
+        check_id,
+        Category.SHARED_ORG,
+        title,
+        Status.WARN if found.removed or found.audit_overwrites else Status.PASS,
+        _iam_detail(found),
+        remedy=(
+            "Review these grants with the organization administrators "
+            "before Stage 0, because Terraform removes them. List the "
+            f"grants to keep under overrides.{paths.BOOTSTRAP}.iam."
+        ),
+        doc=DOC_IAM,
+    )
 
 
 def check_shared_org(ctx):
@@ -1590,40 +1712,7 @@ def check_shared_org(ctx):
             )
         )
     results.append(_org_policy_result(ctx, org_id))
-    try:
-        bindings = ctx.cloud.org_iam_bindings(org_id)
-    except api.CloudError as error:
-        results.append(
-            CheckResult(
-                "shared.iam",
-                category,
-                "Authoritative IAM roles",
-                Status.WARN,
-                f"Cannot read the organization IAM policy: {error}",
-            )
-        )
-        return results
-    removed = _removed_grants(ctx, bindings)
-    results.append(
-        CheckResult(
-            "shared.iam",
-            category,
-            "Authoritative IAM roles",
-            Status.WARN if removed else Status.PASS,
-            (
-                f"The first Stage 0 apply removes {len(removed)} existing "
-                f"grants from roles it manages authoritatively: "
-                f"{_listed(removed)}."
-            )
-            if removed
-            else "No existing grants would be removed by Stage 0.",
-            remedy=(
-                "Review these grants with the organization administrators "
-                "before Stage 0, because Terraform removes them."
-            ),
-            doc=DOC_IAM,
-        )
-    )
+    results.append(_iam_result(ctx, org_id))
     return results
 
 

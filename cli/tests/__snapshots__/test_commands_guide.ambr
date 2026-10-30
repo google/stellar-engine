@@ -1,0 +1,76 @@
+# serializer version: 1
+# name: test_guide_snapshot
+  '''
+  Prerequisites
+   1. pre.apis  auto  Enable the bootstrap project APIs
+      Enables the APIs that Stage 0 needs in the bootstrap project example-bootstrap, as the DDG Google Cloud Setup section does with fast/stages-aw/0-bootstrap/enableServices.sh, plus the Cloud Monitoring API that the DDG adds. Fallback: gcloud services enable iam.googleapis.com cloudkms.googleapis.com pubsub.googleapis.com serviceusage.googleapis.com cloudresourcemanager.googleapis.com bigquery.googleapis.com assuredworkloads.googleapis.com cloudbilling.googleapis.com logging.googleapis.com iamcredentials.googleapis.com orgpolicy.googleapis.com monitoring.googleapis.com --project=example-bootstrap.
+   2. pre.iam_roles  auto  Grant the deployer the organization roles
+      Grants the deploying identity the organization roles of fast/stages-aw/0-bootstrap/setIAM.yaml.sample on organization 123456789012, as the DDG Google Cloud Setup section does with setIAM.sh. The step grants only the roles that preflight finds missing and that the identity lacks directly, leaves Billing Account Administrator to the billing account, saves an IAM snapshot before it writes, and asks first. Fallback: fast/stages-aw/0-bootstrap/setIAM.sh <email> 123456789012, or one gcloud organizations add-iam-policy-binding command per role.
+      Applies here: no Stage 0 apply has created resources yet.
+   3. pre.org_policies  auto  Record the existing organization policies
+      Records the existing organization policies that Stage 0 declares in the existing_org_policies answer, so the final Stage 0 apply imports them instead of failing to create them. It replaces fast/stages-aw/0-bootstrap/import.sh and only reads Google Cloud. Fallback: stellar imports scan.
+   4. pre.preflight  check  Preflight checks
+      Runs every stellar preflight check against the answers and stops at a failed check. Warnings and manual confirmations pass, so review them in the preflight report. Fallback: stellar preflight prints the same checks as a table.
+      Applies here: no Stage 0 apply has created resources yet.
+   5. pre.super_admin  manual  Confirm Super Admin
+      Confirm that the deploying user is a Google Workspace or Cloud Identity Super Admin at https://admin.google.com/ac/roles. No API shows this to the deployer, so the deploy records your confirmation.
+      Applies here: no Stage 0 apply has created resources yet.
+   6. pre.access_transparency  manual  Confirm Access Transparency
+      Confirm that Access Transparency is enabled at https://console.cloud.google.com/iam-admin/settings. No API shows this to the deployer, so the deploy records your confirmation.
+      Applies here: no Stage 0 apply has created resources yet.
+   7. pre.project_quota  manual  Confirm the project quota
+      Confirm that the project quota allows at least 13 new projects. No API shows this to the deployer, so the deploy records your confirmation.
+      Applies here: no Stage 0 apply has created resources yet.
+  
+  Stage 0 - Bootstrap
+   1. s0.render  auto  Render the Stage 0 workspace
+      Renders the Stage 0 workspace from the answers: terraform.tfvars, the import blocks and the phase file. It replaces the DDG steps that copy terraform.tfvars.sample and providers.tf.tmp. Fallback: stellar render --stage 0.
+   2. s0.ready  auto  Check that Stage 0 can apply
+      Checks that Stage 0 can apply: the render reports no warnings, the Terraform environment has no problems, and Stage 0 can create or import the Assured Workloads workload. A deployer without billing access needs an administrator to pre-create the workload, and the step records the workload name in the imports.0-bootstrap answer. Fallback: stellar render --stage 0 prints the same warnings, and the CLI README describes the pre-creation.
+   3. s0.apply_workload  auto  Targeted Assured Workloads apply
+      Applies only google_assured_workloads_workload.primary[0] first, so the Assured Workloads folder exists before the rest of Stage 0 needs it. The plan uses -target, and the apply applies the saved plan. It needs s0.ready, which checks that the deployer can create the workload with billing. Fallback: terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/0-bootstrap init -input=false, then terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/0-bootstrap plan -input=false '-target=google_assured_workloads_workload.primary[0]' -out=$STELLAR_HOME/envs/tst/plans/workload.tfplan, then terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/0-bootstrap apply -input=false $STELLAR_HOME/envs/tst/plans/workload.tfplan.
+   4. s0.allow_bq  auto  Allow BigQuery on the workload folder
+      Allows the BigQuery services on the workload folder, whose gcp.restrictServiceUsage policy blocks them, as the DDG Stage 0 note on the 403 error describes. The step calls the Assured Workloads restrictAllowedResources method, which allows every service the regime supports that the folder blocks, so the step lists them before it asks. By hand:
+      Open https://console.cloud.google.com/compliance/assuredworkloads
+      Click the StellarEngine-tst workload, then Review Available Updates.
+      Under Allowed Services, allow the BigQuery family of services.
+      Wait about 2 minutes, then rerun stellar deploy.
+      Fallback: scripts/allow_bq.sh
+      Applies here: the regime creates an Assured Workloads workload.
+   5. s0.apply_bootstrap  auto  First Stage 0 apply in the bootstrap phase
+      Runs the first Stage 0 apply in the bootstrap phase, which grants the bootstrap user and skips the organization policies. The phase file sets bootstrap_user, so no command passes the -var option of the DDG terraform apply step. The deploy reviews the organization IAM changes against a live snapshot before it applies the saved plan. Fallback: terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/0-bootstrap init -input=false, then terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/0-bootstrap plan -input=false -out=$STELLAR_HOME/envs/tst/plans/s0.tfplan, then terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/0-bootstrap apply -input=false $STELLAR_HOME/envs/tst/plans/s0.tfplan.
+      Applies here: stage0_phase is bootstrap and the state has not moved to the bootstrap bucket.
+   6. s0.remote_providers  auto  Use the remote providers file
+      Copies the remote providers file that the first apply wrote over the workspace providers file, after a backup under plans/, as the DDG gcloud storage cp step does. The remote file declares the bootstrap bucket as the backend. Fallback: copy fast-config/providers/0-bootstrap-providers.tf of the environment over 0-bootstrap-providers.tf in the Stage 0 workspace.
+   7. s0.quota_project  check  Quota project of the user credentials
+      Checks that your user credentials bill API quota to tst-prod-iac-core-0, as the DDG Additional Notes advise, because the remote backend and the providers need a quota project. Fallback: gcloud auth application-default set-quota-project tst-prod-iac-core-0.
+      Applies when Application Default Credentials belong to a user.
+   8. s0.migrate_state  auto  Move the Stage 0 state to the bootstrap bucket
+      Moves the Stage 0 state into gs://tst-prod-iac-core-bootstrap-0/default.tfstate, as the DDG terraform init --migrate-state step does. The deploy backs up the local state under plans/ first, copies it only when the bucket holds no newer state of the same lineage, and refuses otherwise. Fallback: terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/0-bootstrap init -migrate-state.
+   9. s0.phase_final  auto  Switch Stage 0 to the final phase
+      Sets the stage0_phase answer to final and renders again, which removes the phase file, so the next apply manages the organization policies. Fallback: stellar init --set stage0_phase=final, then stellar render --stage 0.
+  10. s0.apply_final  auto  Final Stage 0 apply
+      Runs the final Stage 0 apply without bootstrap_user, which manages the organization policies and imports the existing ones, replacing the DDG import.sh and terraform apply steps. The deploy reviews the organization IAM changes against a live snapshot before it applies the saved plan, and the bootstrap bucket keeps the earlier state versions. Fallback: terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/0-bootstrap init -input=false, then terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/0-bootstrap plan -input=false -out=$STELLAR_HOME/envs/tst/plans/s0.tfplan, then terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/0-bootstrap apply -input=false $STELLAR_HOME/envs/tst/plans/s0.tfplan.
+  11. s0.verify  check  Stage 0 outputs and remote state
+      Checks that Stage 0 wrote the Stage 1 inputs under fast-config/ and that gs://tst-prod-iac-core-bootstrap-0/default.tfstate is readable.
+  
+  Stage 1 - Resource Management
+   1. s1.outputs  auto  Copy the Stage 0 outputs
+      Copies the Stage 0 outputs that Stage 1 reads from gs://tst-prod-iac-core-outputs-0 into $STELLAR_HOME/envs/tst/fast-config, as the DDG Stage 1 gcloud storage cp step does. A deploy on the machine that applied Stage 0 finds them there already. Fallback: gcloud storage cp gs://tst-prod-iac-core-outputs-0/<file> into the same path under fast-config/ for providers/1-resman-providers.tf, tfvars/0-globals.auto.tfvars.json, tfvars/0-bootstrap.auto.tfvars.json.
+   2. s1.render  auto  Render the Stage 1 workspace
+      Renders the Stage 1 workspace from the answers and links the Stage 0 outputs into it, replacing the DDG steps that copy terraform.tfvars.sample and the outputs. Fallback: stellar render --stage 1.
+   3. s1.billing_grant  manual  Grant the Stage 1 account billing access
+      Grants roles/billing.user on billing account 000000-AAAAAA-BBBBBB to serviceAccount:tst-prod-resman-0@tst-prod-iac-core-0.iam.gserviceaccount.com, so Stage 1 can link its projects, as the DDG Stage 1 note on external billing accounts asks. The DDG names Billing Account Administrator, but linking projects needs only Billing Account User. In this deployment Stage 0 grants the billing roles on the organization. Fallback: gcloud billing accounts add-iam-policy-binding 000000-AAAAAA-BBBBBB --member=serviceAccount:tst-prod-resman-0@tst-prod-iac-core-0.iam.gserviceaccount.com --role=roles/billing.user.
+      Not applicable here: it applies only when billing.no_iam and billing.external_grant are both true.
+   4. s1.precreate_tenants  manual  Pre-create the tenant projects
+      Stage 1 cannot link the tenant projects to the billing account when Stage 0 manages no billing IAM, so an administrator with billing access creates and links them, and Stage 1 imports them through the imports.1-resman answer. Stage 1 itself creates the tenant folders that parent these projects, so agree on the parent folder with the administrator before the first Stage 1 apply. Fallback: set billing_override, or billing.external_grant, and grant the billing role instead.
+      Not applicable here: it applies only when billing.no_iam is true, Stage 1 has tenants, and neither billing_override nor billing.external_grant links their projects.
+   5. s1.apply  auto  Stage 1 apply
+      Applies Stage 1, which creates the environment and tenant folders, the tenant projects and the stage service accounts of Stages 2 and 3. With billing_override, Terraform links the tenant projects with your own credentials, so they need billing access on the account. The deploy reviews the plan before it applies the saved plan. Fallback: terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/1-resman init -input=false, then terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/1-resman plan -input=false -out=$STELLAR_HOME/envs/tst/plans/s1.tfplan, then terraform -chdir=$STELLAR_HOME/envs/tst/fast/stages-aw/1-resman apply -input=false $STELLAR_HOME/envs/tst/plans/s1.tfplan.
+   6. s1.verify  check  Inputs of Stages 2 and 3
+      Checks that Stage 1 wrote the inputs of Stages 2 and 3 under fast-config/ and keeps its state in gs://tst-prod-iac-core-resman-0/default.tfstate. Stages 2 and 3 follow the DDG until stellar covers them.
+  
+  Next: stellar deploy
+  
+  '''
+# ---

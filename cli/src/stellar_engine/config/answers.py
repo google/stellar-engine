@@ -20,10 +20,13 @@ atomically with mode 0600 because it names principals and billing
 accounts.
 """
 
+from collections.abc import Callable
 import copy
+import dataclasses
 import io
 import json
 import pathlib
+import shlex
 from typing import Any
 
 import pydantic
@@ -34,6 +37,7 @@ from ruamel.yaml import tokens as yaml_tokens
 from stellar_engine import fsutil
 from stellar_engine import naming
 from stellar_engine import paths
+from stellar_engine import repo as repo_lib
 from stellar_engine.config import derive
 from stellar_engine.config import models
 from stellar_engine.config import validate
@@ -49,9 +53,8 @@ _DEPLOYER_KEY = "DEPLOYER_EMAIL_ADDRESS"
 _AW_REGION_KEY = "AW_REGION"
 _TENANT_KEY = "TENANT_NAME"
 
-# Import addresses ending in this create projects, which preflight then
-# expects to exist instead of reporting a collision.
-_PROJECT_ADDRESS_SUFFIX = "google_project.project[0]"
+# Stage 0 overrides that keep or add grants on authoritative roles.
+_STAGE0_IAM_OVERRIDES = ("iam", "iam_by_principals")
 
 
 # Slots of a ruamel map entry comment: the comment lines before the key,
@@ -298,6 +301,11 @@ def _atomic_write(path, text, mode):
     fsutil.atomic_write(path, text, mode)
 
 
+def _dump(answers):
+    # The data that `save` writes, so equal dumps leave nothing to save.
+    return answers.model_dump(mode="json", exclude_none=True)
+
+
 def save(
     path: pathlib.Path,
     answers: models.Answers,
@@ -324,7 +332,7 @@ def save(
         found = validate.home_references(answers, home)
         if found:
             raise AnswersError("\n".join(found))
-    data = answers.model_dump(mode="json", exclude_none=True)
+    data = _dump(answers)
     merged = _merge(
         copy.deepcopy(previous) if previous is not None else {}, data
     )
@@ -343,6 +351,83 @@ def save(
             json.dumps(schema, indent=2) + "\n",
             0o644,
         )
+
+
+@dataclasses.dataclass(frozen=True)
+class Update:
+    """The outcome of `update`.
+
+    Attributes:
+        previous: The answers the file held before the change.
+        updated: The answers after the change.
+        changed: Whether `update` saved the file. It skips the save when
+            the change leaves the answers as they were.
+    """
+
+    previous: models.Answers
+    updated: models.Answers
+    changed: bool
+
+
+def update(
+    path: pathlib.Path,
+    change: Callable[[dict[str, Any]], object],
+    *,
+    repo: repo_lib.Repo,
+    home: pathlib.Path | None,
+    source: str | None = None,
+    final_applied: bool = False,
+) -> Update:
+    """Changes an answers file, keeping its comments and key order.
+
+    The change edits plain data, so it never sees ruamel nodes; `save`
+    then merges the result into the loaded map. A list that the change
+    alters is written anew, so it loses the comments inside it and the
+    comment lines below its last item, which ruamel keeps with that item.
+
+    Args:
+        path: The `answers.yaml` path.
+        change: Mutates the answer data in place; its return value is
+            ignored.
+        repo: The engine checkout whose rules the changed answers must
+            pass, as in `validate.problems`.
+        home: The home that holds the environment of the file, as in
+            `save`. None skips the home checks.
+        source: What made the change, for model error messages. None
+            leaves the source out.
+        final_applied: Whether a final Stage 0 apply already ran, which
+            forbids returning `stage0_phase` to bootstrap, as in
+            `validate.phase_change_problems`.
+
+    Returns:
+        The answers before and after the change, and whether the file
+        changed. Answers that the change leaves equal are not saved, so
+        the file keeps its bytes.
+
+    Raises:
+        AnswersError: If the file cannot be read or is invalid, or the
+            changed answers fail the model, have problems, change the phase
+            back after a final apply, or point into the home.
+    """
+    previous_data = load_data(path)
+    previous = parse(previous_data, str(path))
+    # `plain` builds new containers, so the change cannot touch the
+    # loaded map that `save` merges into.
+    data = plain(previous_data)
+    change(data)
+    updated = parse(data, source)
+    found = validate.problems(updated, repo)
+    if final_applied:
+        found += validate.phase_change_problems(
+            previous.stage0_phase, updated.stage0_phase
+        )
+    if found:
+        lines = [f"- {line}" for line in found]
+        raise AnswersError("\n".join(["The answers have problems:", *lines]))
+    if _dump(updated) == _dump(previous):
+        return Update(previous, updated, changed=False)
+    save(path, updated, home=home, previous=previous_data)
+    return Update(previous, updated, changed=True)
 
 
 def _split_assignment(assignment):
@@ -439,6 +524,29 @@ def apply_sets(data: dict, assignments: list[str]) -> dict:
     return result
 
 
+def set_command(prefix: str, segments: list[str], value: str) -> str:
+    """Returns the `stellar init --set` command line that sets one answer.
+
+    It quotes the key the way `apply_sets` parses it: a segment with a dot,
+    `=` or a double quote becomes a JSON string, such as a Terraform address
+    under `imports`. The whole assignment is quoted for the shell.
+
+    Args:
+        prefix: Deployment prefix.
+        segments: The key path, such as `["imports", "1-resman", address]`.
+        value: The value text, such as a project ID.
+    """
+    key = ".".join(
+        json.dumps(segment)
+        if any(char in segment for char in '.="')
+        else segment
+        for segment in segments
+    )
+    return (
+        f"stellar init --prefix {prefix} --set {shlex.quote(f'{key}={value}')}"
+    )
+
+
 def from_config_env(path: pathlib.Path) -> dict:
     """Maps a `scripts/config.env` file onto the answers shape.
 
@@ -494,6 +602,34 @@ def from_config_env(path: pathlib.Path) -> dict:
     return data
 
 
+def stage0_iam_overrides(
+    answers: models.Answers,
+) -> dict[str, dict[str, tuple[str, ...]]]:
+    """Returns the Stage 0 overrides that keep grants, as plain tuples.
+
+    Terraform rejects any other shape at plan time, so entries that are not
+    a map of lists stay out rather than failing preflight.
+
+    Args:
+        answers: The environment answers.
+
+    Returns:
+        The `iam` and `iam_by_principals` overrides of `0-bootstrap`, as
+        `iam_diff.target_from_repo` takes them.
+    """
+    overrides = answers.overrides.get(paths.BOOTSTRAP, {})
+    found = {}
+    for key in _STAGE0_IAM_OVERRIDES:
+        value = overrides.get(key)
+        if isinstance(value, dict):
+            found[key] = {
+                str(name): tuple(str(item) for item in items)
+                for name, items in value.items()
+                if isinstance(items, list)
+            }
+    return found
+
+
 def to_preflight(answers: models.Answers) -> dict:
     """Returns the PreflightInputs field values the answers define.
 
@@ -502,8 +638,9 @@ def to_preflight(answers: models.Answers) -> dict:
 
     Returns:
         Field values without unset ones, including the tenant project IDs,
-        the project IDs and Stage 0 addresses that import blocks adopt, and
-        the organization policies that Stage 0 imports.
+        the project IDs and Stage 0 addresses that import blocks adopt, the
+        organization policies that Stage 0 imports, and the Stage 0 IAM
+        overrides that keep grants on authoritative roles.
     """
     tenant_ids = [
         project_id
@@ -515,7 +652,9 @@ def to_preflight(answers: models.Answers) -> dict:
             import_id
             for imports in answers.imports.values()
             for address, import_id in imports.items()
-            if address.endswith(_PROJECT_ADDRESS_SUFFIX)
+            # These addresses create projects, which preflight then
+            # expects to exist instead of reporting a collision.
+            if address.endswith(naming.PROJECT_ADDRESS_SUFFIX)
         }
     )
     values = {
@@ -541,5 +680,6 @@ def to_preflight(answers: models.Answers) -> dict:
         "compliance_location": answers.compliance.location,
         "billing_budget": answers.budget.amount is not None,
         "existing_org_policies": tuple(answers.existing_org_policies),
+        "stage0_iam_overrides": stage0_iam_overrides(answers),
     }
     return {key: value for key, value in values.items() if value is not None}

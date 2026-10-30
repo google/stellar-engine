@@ -367,8 +367,7 @@ def test_terraform_accepts_variables(name, stage, repo, tmp_path):
     if stage == "1-resman":
         for path in helpers.STAGE_OUTPUTS_DIR.glob("*.auto.tfvars.json"):
             shutil.copy(path, harness / path.name)
-    init = helpers.terraform(harness, "init", "-backend=false", "-input=false")
-    assert init.returncode == 0, init.stderr
+    helpers.terraform_init(harness)
     plan = helpers.terraform(harness, "plan", "-input=false")
     assert plan.returncode == 0, plan.stderr
     # Stage 0 outputs keys such as `logging` that Stage 1 does not declare,

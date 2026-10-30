@@ -28,7 +28,6 @@ records in `existing_org_policies`, replacing `0-bootstrap/import.sh`.
 from collections.abc import Mapping, Sequence
 import pathlib
 
-from stellar_engine import fsutil
 from stellar_engine import paths
 from stellar_engine import repo as repo_lib
 from stellar_engine.config import models
@@ -37,9 +36,9 @@ from stellar_engine.render import hcl
 from stellar_engine.render import writer
 
 FILENAME_TEMPLATE = "{stage}-imports.tf"
-# Marks files this module wrote, so it never replaces or removes an
-# operator's own file of the same name.
-_MARKER = "# stellar render writes this file from envs/"
+# The resource that holds the organization policies Stage 0 manages, which
+# the import block and the deploy checks address by constraint name.
+ORG_POLICY_ADDRESS = "module.organization.google_org_policy_policy.default"
 _FILE_MODE = 0o644
 # The stage locals that the import file adds; the prefix keeps them apart
 # from the locals of the stage code.
@@ -154,7 +153,7 @@ def header(
         if wanted
     ]
     return [
-        f"{_MARKER}{prefix}/answers.yaml {' and '.join(sources)}.",
+        f"{writer.MARKER}{prefix}/answers.yaml {' and '.join(sources)}.",
         "# Edit answers.yaml and rerun stellar render; the next render "
         "replaces manual edits.",
     ]
@@ -191,8 +190,7 @@ def _org_policy_blocks(names: Sequence[str]) -> list[str]:
             "  )",
             '  id = "organizations/${var.organization.id}/policies/'
             '${each.key}"',
-            "  to = module.organization.google_org_policy_policy.default"
-            "[each.key]",
+            f"  to = {ORG_POLICY_ADDRESS}[each.key]",
             "}",
         ]
     )
@@ -274,13 +272,6 @@ def text(answers: models.Answers, stage: str) -> str:
     )
 
 
-def _is_generated(path: pathlib.Path) -> bool:
-    if path.is_symlink() or not path.is_file():
-        return False
-    with path.open(encoding="utf-8") as handle:
-        return handle.readline().startswith(_MARKER)
-
-
 def write(
     workspace: pathlib.Path, stage: str, answers: models.Answers
 ) -> writer.Outcome | None:
@@ -309,20 +300,12 @@ def write(
     target = workspace / filename(stage)
     content = text(answers, stage)
     exists = target.exists() or target.is_symlink()
-    if not content:
-        if exists and _is_generated(target):
-            target.unlink()
-            return writer.Outcome.REMOVED
-        return None
-    if exists and not _is_generated(target):
+    if exists and not writer.is_generated(target):
+        # With nothing to write, an operator's own file stays in place.
+        if not content:
+            return None
         raise ImportBlockError(
             f"stellar did not write {target}; move it away or delete it, "
             "then rerun stellar render."
         )
-    previous = fsutil.read_text_or_none(target) if exists else None
-    fsutil.atomic_write(target, content, _FILE_MODE)
-    if previous is None:
-        return writer.Outcome.CREATED
-    if previous == content:
-        return writer.Outcome.UNCHANGED
-    return writer.Outcome.UPDATED
+    return writer.write_owned(target, content, _FILE_MODE)

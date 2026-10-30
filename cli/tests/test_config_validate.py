@@ -355,6 +355,19 @@ def test_workload_import_id_must_match(repo, import_id):
     assert "would replace the imported workload" in problems[0]
 
 
+def test_workload_name_problem_names_the_pattern():
+    answers = helpers.minimal_answers()
+    assert validate.workload_name_problem(WORKLOAD_ID, answers) is None
+    pattern = validate.workload_name_pattern(answers)
+    assert pattern == (
+        f"organizations/{conftest.ORG_ID}/locations/us-east4/workloads/"
+        "<workload_id>"
+    )
+    problem = validate.workload_name_problem("abc123", answers)
+    assert problem is not None
+    assert pattern in problem
+
+
 def test_bootstrap_phase_requires_bootstrap_user(repo):
     answers = helpers.minimal_answers(bootstrap_user=None)
     found = validate.problems(answers, repo)
@@ -367,4 +380,85 @@ def test_bootstrap_phase_requires_bootstrap_user(repo):
 
 def test_final_phase_needs_no_bootstrap_user(repo):
     answers = helpers.minimal_answers(bootstrap_user=None, stage0_phase="final")
+    assert validate.problems(answers, repo) == []
+
+
+@pytest.mark.parametrize(
+    ("previous", "updated", "refused"),
+    [
+        ("final", "bootstrap", True),
+        ("final", "final", False),
+        ("bootstrap", "final", False),
+        ("bootstrap", "bootstrap", False),
+    ],
+)
+def test_phase_change_problems(previous, updated, refused):
+    found = validate.phase_change_problems(previous, updated)
+    assert bool(found) is refused
+    if refused:
+        assert found == [
+            "stage0_phase cannot return from final to bootstrap: the final "
+            "Stage 0 apply already ran, and a bootstrap apply would delete "
+            "the organization policies and essential contacts it manages; "
+            "keep stage0_phase final."
+        ]
+
+
+def test_no_warnings_without_external_grant():
+    answers = helpers.minimal_answers(
+        billing={"account_id": conftest.BILLING, "no_iam": True},
+        billing_override={
+            "project": "my-project",
+            "billing_project": "my-project",
+        },
+    )
+    assert validate.warnings(answers) == []
+
+
+def test_external_grant_with_no_iam_alone_is_fine():
+    answers = helpers.minimal_answers(
+        billing={
+            "account_id": conftest.BILLING,
+            "no_iam": True,
+            "external_grant": True,
+        }
+    )
+    assert validate.warnings(answers) == []
+
+
+def test_external_grant_is_redundant_when_stage0_manages_billing_iam():
+    answers = helpers.minimal_answers(
+        billing={"account_id": conftest.BILLING, "external_grant": True}
+    )
+    found = validate.warnings(answers)
+    assert len(found) == 1
+    assert found[0].startswith(
+        "billing.external_grant is set while billing.no_iam is false"
+    )
+
+
+def test_external_grant_is_unused_with_billing_override():
+    answers = helpers.minimal_answers(
+        billing={
+            "account_id": conftest.BILLING,
+            "no_iam": True,
+            "external_grant": True,
+        },
+        billing_override={
+            "project": "my-project",
+            "billing_project": "my-project",
+        },
+    )
+    found = validate.warnings(answers)
+    assert len(found) == 1
+    assert found[0].startswith(
+        "billing.external_grant and billing_override are both set"
+    )
+
+
+def test_warnings_are_not_problems(repo):
+    answers = helpers.minimal_answers(
+        billing={"account_id": conftest.BILLING, "external_grant": True}
+    )
+    assert validate.warnings(answers)
     assert validate.problems(answers, repo) == []

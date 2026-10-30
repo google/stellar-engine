@@ -47,6 +47,8 @@ class Category(enum.StrEnum):
     SHARED_ORG = "Shared organization risks"
     MANUAL = "Manual confirmations"
     INTERNAL = "Preflight errors"
+    # The steps of `stellar status`, whose titles name their stage.
+    DEPLOY = "Deploy steps"
 
 
 @dataclasses.dataclass(frozen=True)

@@ -35,6 +35,19 @@ PRINCIPAL_TYPE_RE = re.compile(r"^[a-zA-Z]+:")
 AUTOMATION_PROJECT_NAME = "iac-core-0"
 # The state buckets of `0-bootstrap/automation.tf`.
 STATE_BUCKET_NAMES = ("bootstrap", "outputs", "resman")
+# The IAM principal types that `principal` prefixes, as in `user:<email>`.
+USER = "user"
+SERVICE_ACCOUNT = "serviceAccount"
+DOMAIN = "domain"
+# The `google_project` instance of `modules/project`, which ends the address
+# of every project a module call creates.
+PROJECT_ADDRESS_SUFFIX = "google_project.project[0]"
+# The Stage 1 modules in `1-resman/branch-tenants.tf` that create each
+# tenant's projects, in the order of `tenant_project_ids`.
+TENANT_PROJECT_MODULES = (
+    "tenant-self-iac-projects",
+    "tenant-self-main-projects",
+)
 
 
 def kms_protection_level(regime: str, explicit: str | None = None) -> str:
@@ -68,6 +81,17 @@ def stage0_project_id(prefix: str, name: str) -> str:
     return f"{prefix}-prod-{name}"
 
 
+def automation_project_id(prefix: str) -> str:
+    """Returns the ID of the automation project, `<prefix>-prod-iac-core-0`.
+
+    It holds the automation service accounts and the state buckets.
+
+    Args:
+        prefix: Deployment prefix.
+    """
+    return stage0_project_id(prefix, AUTOMATION_PROJECT_NAME)
+
+
 def automation_sa_email(prefix: str, name: str) -> str:
     """Returns the email of a Stage 0 automation service account.
 
@@ -79,7 +103,7 @@ def automation_sa_email(prefix: str, name: str) -> str:
         name: Service account name, such as `bootstrap-0`.
     """
     account = stage0_project_id(prefix, name)
-    project = stage0_project_id(prefix, AUTOMATION_PROJECT_NAME)
+    project = automation_project_id(prefix)
     return f"{account}@{project}.iam{SERVICE_ACCOUNT_SUFFIX}"
 
 
@@ -127,6 +151,19 @@ def group_principal(name: str, domain: str) -> str:
     if PRINCIPAL_TYPE_RE.match(name):
         return name
     return f"group:{name}@{domain}"
+
+
+def principal(kind: str, name: str) -> str:
+    """Returns the IAM member of a principal type and name.
+
+    Args:
+        kind: Principal type, such as `USER` or `SERVICE_ACCOUNT`.
+        name: Email, or the domain of a `DOMAIN` principal.
+
+    Returns:
+        The member, such as `serviceAccount:x@example.com`.
+    """
+    return f"{kind}:{name}"
 
 
 def principal_email(principal: str) -> str:
@@ -179,6 +216,32 @@ def tenant_project_ids(
         for env in envs
         for suffix in ("iac-core-0", "main-0")
     ]
+
+
+def tenant_project_imports(
+    prefix: str, envs: Iterable[str], tenant: str
+) -> list[tuple[str, str]]:
+    """Returns the import address and ID of each project of a tenant.
+
+    Mirrors the same module calls as `tenant_project_ids`. The address key
+    `<env>-<tenant>` keeps the case of the env key, as `local.tenant_envs`
+    in `1-resman/branch-tenants.tf` does, while the ID lowercases it.
+
+    Args:
+        prefix: Deployment prefix.
+        envs: Stage 1 env keys, such as `Prod`.
+        tenant: Tenant key.
+
+    Returns:
+        `(address, project ID)` pairs in `tenant_project_ids` order.
+    """
+    found = []
+    for env in envs:
+        ids = tenant_project_ids(prefix, [env], tenant)
+        for module, project_id in zip(TENANT_PROJECT_MODULES, ids, strict=True):
+            address = f'module.{module}["{env}-{tenant}"]'
+            found.append((f"{address}.{PROJECT_ADDRESS_SUFFIX}", project_id))
+    return found
 
 
 def tenant_service_account_ids(

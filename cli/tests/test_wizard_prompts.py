@@ -127,3 +127,20 @@ def test_questionary_note_is_not_markup():
     console = rich_console.Console(file=output, width=200)
     prompts.QuestionaryPrompter(console).note("module.x[0].y [bold]")
     assert output.getvalue() == "module.x[0].y [bold]\n"
+
+
+@pytest.mark.parametrize(
+    ("typed", "confirmed"),
+    [("123456789012", True), ("  123456789012 ", True), ("12345", False)],
+)
+def test_typed_confirm(typed, confirmed):
+    prompter = prompts.ScriptedPrompter([typed])
+    found = prompts.typed_confirm(prompter, "Change the org.", "123456789012")
+    assert found is confirmed
+    assert prompter.asked == ["Change the org. Type 123456789012 to confirm:"]
+
+
+def test_typed_confirm_has_no_default():
+    # Enter accepts the default, which is empty, so it never confirms.
+    prompter = prompts.ScriptedPrompter([None])
+    assert not prompts.typed_confirm(prompter, "Change it.", "abc")

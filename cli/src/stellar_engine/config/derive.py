@@ -202,6 +202,26 @@ def tenant_project_ids(answers: models.Answers) -> dict[str, list[str]]:
     }
 
 
+def tenant_project_imports(answers: models.Answers) -> list[tuple[str, str]]:
+    """Returns the import address and ID of every tenant project.
+
+    See `naming.tenant_project_imports`.
+
+    Args:
+        answers: The environment answers.
+
+    Returns:
+        `(address, project ID)` pairs, tenant by tenant, in env order.
+    """
+    return [
+        pair
+        for tenant in answers.resman.tenants
+        for pair in naming.tenant_project_imports(
+            answers.prefix, answers.resman.envs, tenant
+        )
+    ]
+
+
 def tenant_service_account_ids(
     answers: models.Answers,
 ) -> dict[str, list[str]]:

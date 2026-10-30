@@ -15,6 +15,7 @@
 """Tests for loading, editing and saving answers.yaml."""
 
 import json
+import shlex
 
 import pytest
 
@@ -213,6 +214,241 @@ def test_save_without_a_home_skips_the_home_check(tmp_path):
     assert answers_lib.load(path) == answers
 
 
+_POLICY = "iam.allowedPolicyMemberDomains"
+_OTHER_POLICY = "storage.uniformBucketLevelAccess"
+
+
+def test_update_keeps_comments_and_key_order(answers_path, repo):
+    home = answers_path.parents[2]
+    answers_lib.save(answers_path, helpers.minimal_answers())
+    text = answers_path.read_text(encoding="utf-8")
+    text = text.replace(
+        "region: us-east4",
+        "# Pinned by the network team.\nregion: us-east4  # keep",
+    ).replace("  regime: IL5", "  # Lab runs IL5.\n  regime: IL5")
+    answers_path.write_text(text, encoding="utf-8")
+    before = answers_lib.load_data(answers_path)
+
+    def change(data):
+        data["alert_email"] = "ops@example.com"
+        data["compliance"]["location"] = "us-east4"
+        data["kms_protection_level"] = "HSM"
+
+    outcome = answers_lib.update(answers_path, change, repo=repo, home=home)
+
+    assert outcome.changed
+    assert outcome.previous.alert_email == f"alerts@{conftest.DOMAIN}"
+    assert outcome.updated.alert_email == "ops@example.com"
+    assert answers_lib.load(answers_path) == outcome.updated
+    saved = answers_path.read_text(encoding="utf-8")
+    assert "# Pinned by the network team.\nregion: us-east4  # keep" in saved
+    assert "  # Lab runs IL5.\n  regime: IL5" in saved
+    after = answers_lib.load_data(answers_path)
+    # Kept keys stay in place and new keys go to the end of their map.
+    assert list(after) == [*before, "kms_protection_level"]
+    assert list(after["compliance"]) == [*before["compliance"], "location"]
+    assert (home / "answers.schema.json").is_file()
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        pytest.param(lambda data: None, id="nothing"),
+        pytest.param(lambda data: data.update(region="us-east4"), id="same"),
+        # The model sorts the list, so the answers stay equal.
+        pytest.param(
+            lambda data: data.update(
+                existing_org_policies=[_OTHER_POLICY, _POLICY]
+            ),
+            id="equal-answers",
+        ),
+    ],
+)
+def test_update_without_a_change_keeps_the_file(answers_path, repo, change):
+    home = answers_path.parents[2]
+    answers_lib.save(
+        answers_path,
+        helpers.minimal_answers(existing_org_policies=[_POLICY, _OTHER_POLICY]),
+    )
+    before = answers_path.read_bytes()
+    stat = answers_path.stat()
+
+    outcome = answers_lib.update(answers_path, change, repo=repo, home=home)
+
+    assert not outcome.changed
+    assert outcome.updated == outcome.previous
+    assert answers_path.read_bytes() == before
+    assert answers_path.stat().st_ino == stat.st_ino
+    assert answers_path.stat().st_mtime_ns == stat.st_mtime_ns
+    assert not (home / "answers.schema.json").exists()
+
+
+def test_update_rewrites_a_changed_list_without_its_comments(
+    answers_path, repo
+):
+    answers_lib.save(
+        answers_path,
+        helpers.minimal_answers(
+            org_policies={"allowed_policy_member_domains": ["C01", "C02"]},
+            existing_org_policies=[_POLICY, _OTHER_POLICY],
+        ),
+    )
+    text = answers_path.read_text(encoding="utf-8")
+    text = text.replace(
+        "    - C02\n", "    # Second customer.\n    - C02\n"
+    ).replace(
+        f"  - {_OTHER_POLICY}\n", f"  # Bucket policy.\n  - {_OTHER_POLICY}\n"
+    )
+    answers_path.write_text(text, encoding="utf-8")
+
+    def change(data):
+        data["existing_org_policies"] = [_POLICY]
+
+    answers_lib.update(answers_path, change, repo=repo, home=None)
+
+    saved = answers_path.read_text(encoding="utf-8")
+    # An unchanged list keeps its comments; a changed one is written anew.
+    assert "    - C01\n    # Second customer.\n    - C02\n" in saved
+    assert "# Bucket policy." not in saved
+    assert saved.endswith(f"existing_org_policies:\n  - {_POLICY}\n")
+
+
+def test_update_rejects_answers_with_problems(answers_path, repo):
+    answers_lib.save(answers_path, helpers.minimal_answers())
+    before = answers_path.read_bytes()
+
+    def change(data):
+        data["existing_org_policies"] = ["unmanaged.constraint"]
+
+    with pytest.raises(answers_lib.AnswersError) as error:
+        answers_lib.update(answers_path, change, repo=repo, home=None)
+    assert str(error.value).startswith(
+        "The answers have problems:\n"
+        "- existing_org_policies lists unmanaged.constraint, "
+    )
+    assert answers_path.read_bytes() == before
+
+
+def test_update_rejects_invalid_data(answers_path, repo):
+    answers_lib.save(answers_path, helpers.minimal_answers())
+    before = answers_path.read_bytes()
+
+    def change(data):
+        data["prefix"] = "Bad"
+
+    with pytest.raises(answers_lib.AnswersError) as error:
+        answers_lib.update(
+            answers_path, change, repo=repo, home=None, source="the change"
+        )
+    assert str(error.value).startswith(
+        "Invalid answers from the change:\n"
+        "- prefix: String should match pattern"
+    )
+    assert answers_path.read_bytes() == before
+
+
+def test_update_rejects_an_invalid_file(tmp_path, repo):
+    path = tmp_path / "answers.yaml"
+    path.write_text("prefix: Bad\n", encoding="utf-8")
+    with pytest.raises(answers_lib.AnswersError, match="Invalid answers from"):
+        answers_lib.update(path, lambda data: None, repo=repo, home=None)
+
+
+def test_update_rejects_values_inside_the_home(answers_path, repo):
+    home = answers_path.parents[2]
+    answers_lib.save(answers_path, helpers.minimal_answers())
+    before = answers_path.read_bytes()
+
+    def change(data):
+        factories = {"org_policies": str(home / "org-policies")}
+        data["overrides"] = {"0-bootstrap": {"factories_config": factories}}
+
+    with pytest.raises(answers_lib.AnswersError, match="points into the home"):
+        answers_lib.update(answers_path, change, repo=repo, home=home)
+    assert answers_path.read_bytes() == before
+
+
+def _final_phase(answers_path):
+    answers_lib.save(
+        answers_path, helpers.minimal_answers(stage0_phase="final")
+    )
+
+
+def _to_bootstrap(data):
+    data["stage0_phase"] = "bootstrap"
+
+
+def test_update_refuses_bootstrap_after_a_final_apply(answers_path, repo):
+    _final_phase(answers_path)
+    before = answers_path.read_bytes()
+    with pytest.raises(answers_lib.AnswersError) as error:
+        answers_lib.update(
+            answers_path,
+            _to_bootstrap,
+            repo=repo,
+            home=None,
+            final_applied=True,
+        )
+    assert str(error.value).startswith(
+        "The answers have problems:\n"
+        "- stage0_phase cannot return from final to bootstrap"
+    )
+    assert answers_path.read_bytes() == before
+
+
+def test_update_allows_bootstrap_without_a_recorded_final_apply(
+    answers_path, repo
+):
+    # Before any final apply, such as after a Stage 0 destroy, the operator
+    # may start over in the bootstrap phase.
+    _final_phase(answers_path)
+    outcome = answers_lib.update(
+        answers_path, _to_bootstrap, repo=repo, home=None
+    )
+    assert outcome.changed
+    assert outcome.updated.stage0_phase == "bootstrap"
+
+
+def test_update_allows_other_changes_after_a_final_apply(answers_path, repo):
+    _final_phase(answers_path)
+
+    def change(data):
+        data["alert_email"] = "ops@example.com"
+
+    outcome = answers_lib.update(
+        answers_path, change, repo=repo, home=None, final_applied=True
+    )
+    assert outcome.updated.alert_email == "ops@example.com"
+    assert outcome.updated.stage0_phase == "final"
+
+
+def test_update_keeps_comments_when_adding_nested_maps(answers_path, repo):
+    workload = "google_assured_workloads_workload.primary[0]"
+    answers_lib.save(answers_path, helpers.minimal_answers())
+    text = answers_path.read_text(encoding="utf-8")
+    text = text.replace("imports: {}", "# Adopted resources.\nimports: {}")
+    answers_path.write_text(text, encoding="utf-8")
+
+    def change(data):
+        data["imports"]["0-bootstrap"] = {
+            workload: (
+                f"organizations/{conftest.ORG_ID}/locations/us-east4/"
+                "workloads/my-workload"
+            )
+        }
+        data["overrides"]["0-bootstrap"] = {
+            "iam": {"roles/browser": ["user:kept@example.com"]}
+        }
+
+    answers_lib.update(answers_path, change, repo=repo, home=None)
+    saved = answers_path.read_text(encoding="utf-8")
+    assert "# Adopted resources.\nimports:\n  0-bootstrap:\n" in saved
+    assert (
+        "overrides:\n  0-bootstrap:\n    iam:\n      roles/browser:\n"
+        "        - user:kept@example.com\n"
+    ) in saved
+
+
 def test_load_empty_file_is_an_empty_map(tmp_path):
     path = tmp_path / "answers.yaml"
     path.write_text("# nothing yet\n", encoding="utf-8")
@@ -337,6 +573,35 @@ def test_apply_sets_rejects_unparsable_value():
         answers_lib.apply_sets({}, ["a=[1, 2"])
 
 
+@pytest.mark.parametrize(
+    ("segments", "value"),
+    [
+        (["stage0_phase"], "bootstrap"),
+        (
+            ["imports", "0-bootstrap", "google_x.primary[0]"],
+            "organizations/123456789012/locations/us/workloads/w-1",
+        ),
+        (
+            [
+                "imports",
+                "1-resman",
+                'module.tenant-self-iac-projects["Prod-t1"]'
+                ".google_project.project[0]",
+            ],
+            "abc-prod-t1-iac-0",
+        ),
+    ],
+)
+def test_set_command_round_trips(segments, value):
+    line = answers_lib.set_command("abc", segments, value)
+    words = shlex.split(line)
+    assert words[:5] == ["stellar", "init", "--prefix", "abc", "--set"]
+    data = answers_lib.apply_sets({}, [words[5]])
+    for segment in segments[:-1]:
+        data = data[segment]
+    assert data == {segments[-1]: value}
+
+
 def test_from_config_env(tmp_path):
     path = tmp_path / "config.env"
     path.write_text(
@@ -448,7 +713,42 @@ def test_to_preflight():
         ),
         "billing_budget": False,
         "existing_org_policies": ("iam.allowedPolicyMemberDomains",),
+        "stage0_iam_overrides": {},
     }
+
+
+def test_to_preflight_passes_the_stage0_iam_overrides():
+    answers = helpers.minimal_answers(
+        overrides={
+            "0-bootstrap": {
+                "iam": {"roles/browser": ["user:kept@example.com"]},
+                "iam_by_principals": {"user:a@example.com": ["roles/viewer"]},
+                "essential_contacts": "ops@example.com",
+            },
+            "1-resman": {"iam": {"roles/viewer": ["user:b@example.com"]}},
+        }
+    )
+    values = answers_lib.to_preflight(answers)
+    assert values["stage0_iam_overrides"] == {
+        "iam": {"roles/browser": ("user:kept@example.com",)},
+        "iam_by_principals": {"user:a@example.com": ("roles/viewer",)},
+    }
+    inputs = inputs_lib.PreflightInputs.model_validate(values)
+    assert inputs.stage0_iam_overrides == values["stage0_iam_overrides"]
+
+
+def test_to_preflight_skips_malformed_iam_overrides():
+    # Terraform rejects these at plan time; preflight must not fail first.
+    answers = helpers.minimal_answers(
+        overrides={
+            "0-bootstrap": {
+                "iam": {"roles/browser": "user:kept@example.com"},
+                "iam_by_principals": ["user:a@example.com"],
+            }
+        }
+    )
+    values = answers_lib.to_preflight(answers)
+    assert values["stage0_iam_overrides"] == {"iam": {}}
 
 
 def test_to_preflight_reports_a_budget():

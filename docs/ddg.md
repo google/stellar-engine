@@ -172,6 +172,7 @@ permissions.**
 - We need to enable these Google Cloud Services by running the following
   script:
     - fast/stages-aw/0-bootstrap/enableServices.sh
+      - The `pre.apis` step of the `stellar deploy` command enables the same services, and this script stays the manual fallback.
       - If you run into issues with the above command, you can simply run the following deprecated command (on MacOS, works on other *nix variants)
         - `echo "iam cloudkms pubsub serviceusage cloudresourcemanager bigquery assuredworkloads cloudbilling logging iamcredentials orgpolicy" | tr ' ' '\n' | xargs -I {} gcloud services enable "{}.googleapis.com"`
 - [Enable Access
@@ -606,6 +607,7 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.au
 - Run `./sa_lockdown.sh` to disable the Service Accounts used during the
   deployment
   - **Note:** You may be unable to deploy certain blueprints until the Service Accounts are re-enabled. If you are deploying additional services/blueprints into the Stellar Engine environment, do not run this script until deployments are complete.
+  - The `stellar deploy` command checks that these service accounts are enabled before an untargeted Stage 0 or Stage 1 apply and prints the `gcloud iam service-accounts enable` commands, with `./sa_lockdown.sh --enable` as the manual fallback.
 
 **Congratulations, you have successfully deployed Stellar Engine\! For further
 securing of the environment, please see the** [**Stellar Engine Security Best
