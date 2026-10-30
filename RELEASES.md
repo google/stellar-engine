@@ -65,3 +65,16 @@ compiled changelog. The `release` type is reserved for that bot PR.
 The Pull Request Labeler applies `Type - *` and `Framework - *` labels from the
 paths you touch. They are informational only, and have no effect on versioning or
 the CHANGELOG.
+
+## Security advisories
+
+Pull requests carrying the `Security` label for posture hardening, scanner
+remediations, CI dependency updates, or unreleased `main` fixes ship through
+`CHANGELOG.md` and the next tagged release without a separate advisory.
+Maintainers publish a [GitHub Security Advisory][advisories] only when a
+confirmed vulnerability affects an already-tagged release, and only after
+Release Please tags the patched `vX.Y.Z` release so version-pinned users have a
+fixed tag to adopt. Follow [SECURITY.md](SECURITY.md) for intake, private
+patching, and disclosure steps.
+
+[advisories]: https://github.com/google/stellar-engine/security/advisories
