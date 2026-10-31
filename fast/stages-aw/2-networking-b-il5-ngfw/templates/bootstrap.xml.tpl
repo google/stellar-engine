@@ -166,14 +166,14 @@
             <ike-crypto-profiles>
               <entry name="default">
                 <encryption>
-                  <member>aes-128-cbc</member>
-                  <member>3des</member>
+                  <member>aes-256-gcm</member>
                 </encryption>
                 <hash>
-                  <member>sha1</member>
+                  <member>sha384</member>
+                  <member>sha512</member>
                 </hash>
                 <dh-group>
-                  <member>group2</member>
+                  <member>group20</member>
                 </dh-group>
                 <lifetime>
                   <hours>8</hours>
@@ -212,14 +212,13 @@
               <entry name="default">
                 <esp>
                   <encryption>
-                    <member>aes-128-cbc</member>
-                    <member>3des</member>
+                    <member>aes-256-gcm</member>
                   </encryption>
                   <authentication>
-                    <member>sha1</member>
+                    <member>none</member>
                   </authentication>
                 </esp>
-                <dh-group>group2</dh-group>
+                <dh-group>group20</dh-group>
                 <lifetime>
                   <hours>1</hours>
                 </lifetime>
@@ -487,6 +486,8 @@
                     <member>any</member>
                   </destination-hip>
                   <action>allow</action>
+                  <log-start>yes</log-start>
+                  <log-end>yes</log-end>
                 </entry>
               </rules>
             </security>
