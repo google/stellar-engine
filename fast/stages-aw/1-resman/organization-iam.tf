@@ -99,13 +99,21 @@ locals {
     {
       for k, v in var.tenants : "org-viewer-tenant_${k}_domain" => {
         member = "domain:${v.organization.domain}"
-        role   = "roles/resourcemanager.organizationViewer"
+        role = (
+          var.deploy_org_resources.iam
+          ? "roles/resourcemanager.organizationViewer"
+          : "roles/resourcemanager.folderViewer"
+        )
       } if v.organization != null
     },
     {
       for k, v in var.tenants : "org-viewer-tenant_${k}_admin" => {
         member = v.admin_principal
-        role   = "roles/resourcemanager.organizationViewer"
+        role = (
+          var.deploy_org_resources.iam
+          ? "roles/resourcemanager.organizationViewer"
+          : "roles/resourcemanager.folderViewer"
+        )
       }
     },
     local.billing_mode != "org" ? {} : {

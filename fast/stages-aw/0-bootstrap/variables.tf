@@ -124,6 +124,21 @@ variable "custom_roles" {
   default     = {}
 }
 
+variable "deploy_org_resources" {
+  description = "Selective control for deploying organization-level resources."
+  type = object({
+    audit_config            = optional(bool, true)
+    custom_roles            = optional(bool, true)
+    iam                     = optional(bool, true)
+    logging_settings        = optional(bool, true)
+    logging_sinks           = optional(bool, true)
+    org_policies            = optional(bool, true)
+    workforce_identity_pool = optional(bool, true)
+  })
+  nullable = false
+  default  = {}
+}
+
 variable "essential_contacts" {
   description = "Email or map of emails to notification category lists used for essential contacts, unset if null or empty."
   type        = any

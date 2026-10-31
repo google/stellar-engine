@@ -25,7 +25,12 @@ locals {
       tostring(var.essential_contacts) == "" ? {} : { (tostring(var.essential_contacts)) = ["ALL"] }
     )
   )
-  custom_roles = coalesce(var.custom_roles, {})
+  custom_roles = {
+    service_project_network_admin = try(
+      var.custom_roles.service_project_network_admin,
+      "roles/compute.networkAdmin"
+    )
+  }
   service_accounts = {
     for k, v in coalesce(var.service_accounts, {}) :
     k => "serviceAccount:${v}" if v != null

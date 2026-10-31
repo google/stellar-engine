@@ -59,7 +59,7 @@ resource "google_iam_workload_identity_pool_provider" "default" {
 }
 
 resource "google_iam_workforce_pool" "default" {
-  count             = var.workforce_identity_pool != null ? 1 : 0
+  count             = var.deploy_org_resources.workforce_identity_pool && var.workforce_identity_pool != null ? 1 : 0
   provider          = google-beta
   parent            = "organizations/${var.organization.id}"
   workforce_pool_id = "${local.prefix}-bootstrap"

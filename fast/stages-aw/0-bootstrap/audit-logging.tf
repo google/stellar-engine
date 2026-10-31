@@ -13,8 +13,29 @@
 # limitations under the License.
 
 # CIS Compliance Benchmark 2.1
+moved {
+  from = google_organization_iam_audit_config.organization
+  to   = google_organization_iam_audit_config.organization[0]
+}
+
 resource "google_organization_iam_audit_config" "organization" {
+  count   = var.deploy_org_resources.audit_config ? 1 : 0
   org_id  = var.organization.id
+  service = "allServices"
+  audit_log_config {
+    log_type = "ADMIN_READ"
+  }
+  audit_log_config {
+    log_type = "DATA_WRITE"
+  }
+  audit_log_config {
+    log_type = "DATA_READ"
+  }
+}
+
+resource "google_folder_iam_audit_config" "folder" {
+  count   = var.deploy_org_resources.audit_config ? 0 : 1
+  folder  = local.assured_workload_folder
   service = "allServices"
   audit_log_config {
     log_type = "ADMIN_READ"

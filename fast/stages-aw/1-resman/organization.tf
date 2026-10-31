@@ -20,5 +20,16 @@ module "organization" {
   source          = "../../../modules/organization-se"
   organization_id = "organizations/${var.organization.id}"
   # additive bindings via delegated IAM grant set in stage 0
-  iam_bindings_additive = local.iam_bindings_additive
+  iam_bindings_additive = var.deploy_org_resources.iam ? local.iam_bindings_additive : {}
+}
+
+module "root-folder-iam" {
+  count         = var.deploy_org_resources.iam ? 0 : 1
+  source        = "../../../modules/folder"
+  folder_create = false
+  id            = var.assured_workloads.folder
+  iam_bindings_additive = {
+    for k, v in local.iam_bindings_additive : k => v
+    if !contains(["roles/billing.costsManager", "roles/billing.user"], v.role)
+  }
 }

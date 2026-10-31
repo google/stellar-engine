@@ -43,49 +43,57 @@ module "automation-project" {
     ]
   }
   # machine (service accounts) IAM bindings
-  iam = {
-    "roles/browser" = [
-      module.automation-tf-resman-r-sa.iam_email
-    ]
-    "roles/owner" = compact([
-      module.automation-tf-bootstrap-sa.iam_email,
-      var.bootstrap_user != null ? "user:${var.bootstrap_user}" : null
-    ])
-    "roles/cloudbuild.builds.editor" = [
-      module.automation-tf-resman-sa.iam_email
-    ]
-    "roles/cloudbuild.builds.viewer" = [
-      module.automation-tf-resman-r-sa.iam_email
-    ]
-    # roles/iam.serviceAccountAdmin is granted conditionally in iam_bindings
-    # to prevent modifying the privileged bootstrap-0 service account
-    "roles/iam.serviceAccountViewer" = [
-      module.automation-tf-resman-r-sa.iam_email
-    ]
-    "roles/iam.workloadIdentityPoolAdmin" = [
-      module.automation-tf-resman-sa.iam_email
-    ]
-    "roles/iam.workloadIdentityPoolViewer" = [
-      module.automation-tf-resman-r-sa.iam_email
-    ]
-    "roles/source.admin" = [
-      module.automation-tf-resman-sa.iam_email
-    ]
-    "roles/source.reader" = [
-      module.automation-tf-resman-r-sa.iam_email
-    ]
-    "roles/storage.admin" = [
-      module.automation-tf-resman-sa.iam_email
-    ]
-    (module.organization.custom_role_id["storage_viewer"]) = [
-      module.automation-tf-bootstrap-r-sa.iam_email,
-      module.automation-tf-resman-r-sa.iam_email
-    ]
-    "roles/viewer" = [
-      module.automation-tf-bootstrap-r-sa.iam_email,
-      module.automation-tf-resman-r-sa.iam_email
-    ]
-  }
+  iam = merge(
+    {
+      "roles/browser" = [
+        module.automation-tf-resman-r-sa.iam_email
+      ]
+      "roles/owner" = compact([
+        module.automation-tf-bootstrap-sa.iam_email,
+        var.bootstrap_user != null ? "user:${var.bootstrap_user}" : null
+      ])
+      "roles/cloudbuild.builds.editor" = [
+        module.automation-tf-resman-sa.iam_email
+      ]
+      "roles/cloudbuild.builds.viewer" = [
+        module.automation-tf-resman-r-sa.iam_email
+      ]
+      # roles/iam.serviceAccountAdmin is granted conditionally in iam_bindings
+      # to prevent modifying the privileged bootstrap-0 service account
+      "roles/iam.serviceAccountViewer" = [
+        module.automation-tf-resman-r-sa.iam_email
+      ]
+      "roles/iam.workloadIdentityPoolAdmin" = [
+        module.automation-tf-resman-sa.iam_email
+      ]
+      "roles/iam.workloadIdentityPoolViewer" = [
+        module.automation-tf-resman-r-sa.iam_email
+      ]
+      "roles/source.admin" = [
+        module.automation-tf-resman-sa.iam_email
+      ]
+      "roles/source.reader" = [
+        module.automation-tf-resman-r-sa.iam_email
+      ]
+      "roles/storage.admin" = [
+        module.automation-tf-resman-sa.iam_email
+      ]
+      "roles/viewer" = [
+        module.automation-tf-bootstrap-r-sa.iam_email,
+        module.automation-tf-resman-r-sa.iam_email
+      ]
+    },
+    {
+      (
+        var.deploy_org_resources.custom_roles
+        ? local.custom_roles["storage_viewer"]
+        : "roles/storage.objectViewer"
+        ) = [
+        module.automation-tf-bootstrap-r-sa.iam_email,
+        module.automation-tf-resman-r-sa.iam_email
+      ]
+    }
+  )
   iam_bindings = {
     delegated_grants_resman = {
       members = [module.automation-tf-resman-sa.iam_email]
@@ -258,14 +266,18 @@ module "automation-tf-bootstrap-r-sa" {
   }
   # we grant organization roles here as IAM bindings have precedence over
   # custom roles in the organization module, so these need to depend on it
-  iam_organization_roles = {
+  iam_organization_roles = var.deploy_org_resources.iam && var.deploy_org_resources.custom_roles ? {
     (var.organization.id) = [
-      module.organization.custom_role_id["organization_admin_viewer"],
-      module.organization.custom_role_id["tag_viewer"]
+      local.custom_roles["organization_admin_viewer"],
+      local.custom_roles["tag_viewer"]
     ]
-  }
+  } : {}
   iam_storage_roles = {
-    (module.automation-tf-output-gcs.name) = [module.organization.custom_role_id["storage_viewer"]]
+    (module.automation-tf-output-gcs.name) = [
+      var.deploy_org_resources.custom_roles
+      ? local.custom_roles["storage_viewer"]
+      : "roles/storage.objectViewer"
+    ]
   }
 }
 
@@ -328,13 +340,17 @@ module "automation-tf-resman-r-sa" {
   )
   # we grant organization roles here as IAM bindings have precedence over
   # custom roles in the organization module, so these need to depend on it
-  iam_organization_roles = {
+  iam_organization_roles = var.deploy_org_resources.iam && var.deploy_org_resources.custom_roles ? {
     (var.organization.id) = [
-      module.organization.custom_role_id["organization_admin_viewer"],
-      module.organization.custom_role_id["tag_viewer"]
+      local.custom_roles["organization_admin_viewer"],
+      local.custom_roles["tag_viewer"]
     ]
-  }
+  } : {}
   iam_storage_roles = {
-    (module.automation-tf-output-gcs.name) = [module.organization.custom_role_id["storage_viewer"]]
+    (module.automation-tf-output-gcs.name) = [
+      var.deploy_org_resources.custom_roles
+      ? local.custom_roles["storage_viewer"]
+      : "roles/storage.objectViewer"
+    ]
   }
 }
