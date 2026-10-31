@@ -186,6 +186,11 @@ import {
   to = module.organization.google_org_policy_policy.default[each.key]
 }
 
+moved {
+  from = module.organization-logging
+  to   = module.organization-logging[0]
+}
+
 module "organization-logging" {
   count = var.deploy_org_resources.logging_settings ? 1 : 0
   # Preconfigure organization-wide logging settings to ensure project
@@ -250,18 +255,21 @@ locals {
   )
   deploy_root_folder_config = (
     !var.deploy_org_resources.iam ||
-    !var.deploy_org_resources.logging_settings ||
     !var.deploy_org_resources.logging_sinks
   )
   org_only_roles = [
+    "roles/assuredworkloads.admin",
     "roles/axt.admin",
     "roles/billing.admin",
     "roles/billing.costsManager",
+    "roles/billing.creator",
     "roles/billing.user",
     "roles/billing.viewer",
+    "roles/cloudsupport.admin",
     "roles/iam.organizationRoleAdmin",
     "roles/iam.organizationRoleViewer",
     "roles/iam.workforcePoolAdmin",
+    "roles/orgpolicy.policyAdmin",
     "roles/resourcemanager.organizationAdmin",
   ]
 }
@@ -385,7 +393,7 @@ module "organization" {
   }
   org_policies = (
     !var.deploy_org_resources.org_policies || var.bootstrap_user != null
-    ? {}
+    ? null
     : local.org_policies
   )
 
@@ -416,12 +424,32 @@ module "root-folder-config" {
       }
     ) : k => v if !contains(local.org_only_roles, k)
   }
-  iam_bindings_additive = var.deploy_org_resources.iam ? {} : {
-    for k, v in merge(
-      local.iam_bindings_additive,
-      var.iam_bindings_additive
-    ) : k => v if !contains(local.org_only_roles, v.role)
-  }
+  iam_bindings_additive = var.deploy_org_resources.iam ? {} : merge(
+    {
+      for k, v in merge(
+        local.iam_bindings_additive,
+        var.iam_bindings_additive
+      ) : k => v if !contains(local.org_only_roles, v.role)
+    },
+    !var.deploy_org_resources.custom_roles ? {} : {
+      sa_bootstrap_r_org_admin_viewer = {
+        member = module.automation-tf-bootstrap-r-sa.iam_email
+        role   = local.custom_roles["organization_admin_viewer"]
+      }
+      sa_bootstrap_r_tag_viewer = {
+        member = module.automation-tf-bootstrap-r-sa.iam_email
+        role   = local.custom_roles["tag_viewer"]
+      }
+      sa_resman_r_org_admin_viewer = {
+        member = module.automation-tf-resman-r-sa.iam_email
+        role   = local.custom_roles["organization_admin_viewer"]
+      }
+      sa_resman_r_tag_viewer = {
+        member = module.automation-tf-resman-r-sa.iam_email
+        role   = local.custom_roles["tag_viewer"]
+      }
+    }
+  )
   iam_bindings = var.deploy_org_resources.iam ? {} : {
     folder_iam_admin_conditional = {
       members = [module.automation-tf-resman-sa.iam_email]
@@ -435,7 +463,6 @@ module "root-folder-config" {
               "roles/cloudasset.viewer",
               "roles/compute.orgFirewallPolicyAdmin",
               "roles/compute.xpnAdmin",
-              "roles/orgpolicy.policyAdmin",
               "roles/orgpolicy.policyViewer",
               "roles/resourcemanager.folderViewer",
             ],
@@ -448,9 +475,6 @@ module "root-folder-config" {
         description = "Automation service account delegated grants."
       }
     }
-  }
-  logging_settings = var.deploy_org_resources.logging_settings ? null : {
-    storage_location = local.locations.logging
   }
   logging_sinks = var.deploy_org_resources.logging_sinks ? {} : {
     for name, attrs in var.log_sinks : name => {

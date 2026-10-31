@@ -100,7 +100,8 @@ locals {
         resman-r    = module.automation-tf-resman-r-sa.email
       }
     }
-    custom_roles = local.custom_roles
+    custom_roles         = var.deploy_org_resources.custom_roles ? local.custom_roles : null
+    deploy_org_resources = var.deploy_org_resources
     logging = {
       project_id     = module.log-export-project.project_id
       project_number = module.log-export-project.number

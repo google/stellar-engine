@@ -176,7 +176,7 @@ module "tenant-self-iac-projects" {
     "roles/owner" = [
       "serviceAccount:${var.automation.service_accounts.resman}"
     ]
-    (var.custom_roles.storage_viewer) = [
+    (local.custom_roles.storage_viewer) = [
       "serviceAccount:${var.automation.service_accounts.resman-r}"
     ]
     "roles/viewer" = [
@@ -300,7 +300,7 @@ module "tenant-self-main-projects" {
     "roles/owner" = [
       "serviceAccount:${var.automation.service_accounts.resman}"
     ]
-    (var.custom_roles.storage_viewer) = [
+    (local.custom_roles.storage_viewer) = [
       "serviceAccount:${var.automation.service_accounts.resman-r}"
     ]
     "roles/viewer" = [

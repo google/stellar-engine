@@ -100,6 +100,7 @@ locals {
       authoritative = [
         "roles/essentialcontacts.admin",
         "roles/logging.admin",
+        "roles/resourcemanager.folderAdmin",
         "roles/resourcemanager.organizationAdmin",
         "roles/resourcemanager.projectCreator",
         "roles/resourcemanager.projectMover",

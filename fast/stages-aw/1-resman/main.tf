@@ -89,7 +89,22 @@ locals {
       "3-security.auto.tfvars.json"
     ]
   }
-  custom_roles = coalesce(var.custom_roles, {})
+  custom_roles = {
+    gcve_network_admin = try(
+      var.custom_roles.gcve_network_admin, "roles/compute.networkAdmin"
+    )
+    organization_admin_viewer = try(
+      var.custom_roles.organization_admin_viewer,
+      "roles/resourcemanager.folderViewer"
+    )
+    service_project_network_admin = try(
+      var.custom_roles.service_project_network_admin,
+      "roles/compute.networkAdmin"
+    )
+    storage_viewer = try(
+      var.custom_roles.storage_viewer, "roles/storage.objectViewer"
+    )
+  }
   gcs_storage_class = (
     length(split("-", var.regions.primary)) < 2
     ? "MULTI_REGIONAL"

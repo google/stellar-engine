@@ -186,6 +186,22 @@ variable "custom_roles" {
   default = null
 }
 
+variable "deploy_org_resources" {
+  # tfdoc:variable:source 0-bootstrap
+  description = "Granular control over the deployment of organization-level resources."
+  type = object({
+    audit_config            = optional(bool, true)
+    custom_roles            = optional(bool, true)
+    iam                     = optional(bool, true)
+    logging_settings        = optional(bool, true)
+    logging_sinks           = optional(bool, true)
+    org_policies            = optional(bool, true)
+    workforce_identity_pool = optional(bool, true)
+  })
+  nullable = false
+  default  = {}
+}
+
 variable "envs_folders" {
   description = "List of environments to be created for projects to go into."
   type = map(object({

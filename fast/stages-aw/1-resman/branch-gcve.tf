@@ -126,7 +126,7 @@ module "branch-gcve-dev-r-sa" {
     (var.automation.project_id) = ["roles/serviceusage.serviceUsageConsumer"]
   }
   iam_storage_roles = {
-    (var.automation.outputs_bucket) = [var.custom_roles["storage_viewer"]]
+    (var.automation.outputs_bucket) = [local.custom_roles["storage_viewer"]]
   }
 }
 
@@ -146,7 +146,7 @@ module "branch-gcve-prod-r-sa" {
     (var.automation.project_id) = ["roles/serviceusage.serviceUsageConsumer"]
   }
   iam_storage_roles = {
-    (var.automation.outputs_bucket) = [var.custom_roles["storage_viewer"]]
+    (var.automation.outputs_bucket) = [local.custom_roles["storage_viewer"]]
   }
 }
 

@@ -13,6 +13,11 @@
 # limitations under the License.
 
 # CIS Compliance Benchmark 2.1
+moved {
+  from = google_organization_iam_audit_config.organization
+  to   = google_organization_iam_audit_config.organization[0]
+}
+
 resource "google_organization_iam_audit_config" "organization" {
   count   = var.deploy_org_resources.audit_config ? 1 : 0
   org_id  = var.organization.id

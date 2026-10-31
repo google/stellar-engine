@@ -83,12 +83,16 @@ module "automation-project" {
         module.automation-tf-resman-r-sa.iam_email
       ]
     },
-    var.deploy_org_resources.custom_roles ? {
-      (local.custom_roles["storage_viewer"]) = [
+    {
+      (
+        var.deploy_org_resources.custom_roles
+        ? local.custom_roles["storage_viewer"]
+        : "roles/storage.objectViewer"
+        ) = [
         module.automation-tf-bootstrap-r-sa.iam_email,
         module.automation-tf-resman-r-sa.iam_email
       ]
-    } : {}
+    }
   )
   iam_bindings = {
     delegated_grants_resman = {
@@ -268,15 +272,13 @@ module "automation-tf-bootstrap-r-sa" {
       local.custom_roles["tag_viewer"]
     ]
   } : {}
-  iam_folder_roles = !var.deploy_org_resources.iam && var.deploy_org_resources.custom_roles ? {
-    (local.assured_workload_folder) = [
-      local.custom_roles["organization_admin_viewer"],
-      local.custom_roles["tag_viewer"]
+  iam_storage_roles = {
+    (module.automation-tf-output-gcs.name) = [
+      var.deploy_org_resources.custom_roles
+      ? local.custom_roles["storage_viewer"]
+      : "roles/storage.objectViewer"
     ]
-  } : {}
-  iam_storage_roles = var.deploy_org_resources.custom_roles ? {
-    (module.automation-tf-output-gcs.name) = [local.custom_roles["storage_viewer"]]
-  } : {}
+  }
 }
 
 # resource hierarchy stage's bucket and service account
@@ -344,13 +346,11 @@ module "automation-tf-resman-r-sa" {
       local.custom_roles["tag_viewer"]
     ]
   } : {}
-  iam_folder_roles = !var.deploy_org_resources.iam && var.deploy_org_resources.custom_roles ? {
-    (local.assured_workload_folder) = [
-      local.custom_roles["organization_admin_viewer"],
-      local.custom_roles["tag_viewer"]
+  iam_storage_roles = {
+    (module.automation-tf-output-gcs.name) = [
+      var.deploy_org_resources.custom_roles
+      ? local.custom_roles["storage_viewer"]
+      : "roles/storage.objectViewer"
     ]
-  } : {}
-  iam_storage_roles = var.deploy_org_resources.custom_roles ? {
-    (module.automation-tf-output-gcs.name) = [local.custom_roles["storage_viewer"]]
-  } : {}
+  }
 }
