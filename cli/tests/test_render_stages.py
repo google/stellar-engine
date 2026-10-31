@@ -170,7 +170,10 @@ def test_stage0_drs_list(repo):
                 "is:C0BBBBBBB",
                 "is:principalSet://iam.googleapis.com/organizations/"
                 "123456789012",
-            ]
+            ],
+            "allowed_vpc_peering_producers": [
+                "under:folders/832634261155",
+            ],
         },
     }
 
@@ -194,7 +197,12 @@ def test_overrides_merge_last(repo):
     )
     assert rendered.values["org_policies_config"] == {
         "import_defaults": True,
-        "constraints": {"allowed_policy_member_domains": []},
+        "constraints": {
+            "allowed_policy_member_domains": [],
+            "allowed_vpc_peering_producers": [
+                "under:folders/832634261155",
+            ],
+        },
     }
     assert rendered.values["regions"] == {"primary": "us-west1"}
     assert list(rendered.values)[-1] == "iam"
