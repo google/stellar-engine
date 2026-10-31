@@ -59,6 +59,7 @@ org_policies_config = {
   import_defaults = false # No policies to import as of 27 SEP 2024
   constraints = {
     allowed_policy_member_domains = [] #Update with additional customer IDs if needed
+    allowed_vpc_peering_producers = ["under:folders/832634261155"] # Google's Service Networking producer folder. Add other Google producers if needed
   }
 }
 

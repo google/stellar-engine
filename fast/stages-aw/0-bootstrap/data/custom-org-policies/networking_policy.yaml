@@ -67,12 +67,27 @@ compute.restrictPartnerInterconnectUsage:
 #   under:projects/PROJECT_ID,
 # or projects/PROJECT_ID/global/networks/NETWORK_NAME.
 # SHOULD HAVE
+#
+# Private services access (Cloud SQL, AlloyDB, Memorystore, Filestore and other
+# services) connects your VPC networks to Google producer networks with VPC
+# Network Peering. This policy also allows the values in
+# org_policies_config.constraints.allowed_vpc_peering_producers. The default,
+# under:folders/832634261155, is Google's Service Networking producer folder,
+# which private services access peers with. Set the list to [] if you use only
+# Private Service Connect.
+#   https://docs.cloud.google.com/organization-policy/reference/org-policy-constraints#constraints/compute.restrictVpcPeering
+#   https://docs.cloud.google.com/vpc/docs/private-services-access
+#   https://docs.cloud.google.com/vpc/docs/private-service-connect-security#org-policy-organization
+# Producer IDs for other Google services, and Google's producer organization:
+#   https://github.com/google/stellar-engine/pull/352#pullrequestreview-5646224651
 compute.restrictVpcPeering:
   rules:
   - allow:
       values:
         - under:organizations/${organization_id}
-        - under:folders/832634261155 # https://autonomousthingz-life.medium.com/google-cloud-organisation-policies-get-the-restrict-vpc-peering-usage-organisation-policy-d87dce84a5e7
+%{ for producer in allowed_vpc_peering_producers ~}
+        - ${producer}
+%{ endfor ~}
 
 %{ if !contains(["FEDRAMP_MODERATE"], regime) ~}
 # This list constraint defines the type of protocol forwarding rule objects

@@ -323,6 +323,7 @@ variable "org_policies_config" {
   type = object({
     constraints = optional(object({
       allowed_policy_member_domains = optional(list(string), [])
+      allowed_vpc_peering_producers = optional(list(string), ["under:folders/832634261155"])
     }), {})
     import_defaults = optional(bool, false)
     tag_name        = optional(string, "org-policies")
