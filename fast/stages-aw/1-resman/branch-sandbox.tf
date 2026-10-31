@@ -46,14 +46,16 @@ module "branch-sandbox-folder" {
 }
 
 module "branch-sandbox-gcs" {
-  source        = "../../../modules/gcs"
-  count         = var.fast_features.sandbox ? 1 : 0
-  project_id    = var.automation.project_id
-  name          = "dev-resman-sbox-0"
-  prefix        = var.prefix
-  location      = var.regions.primary
-  storage_class = local.gcs_storage_class
-  versioning    = true
+  source         = "../../../modules/gcs"
+  count          = var.fast_features.sandbox ? 1 : 0
+  project_id     = var.automation.project_id
+  name           = "dev-resman-sbox-0"
+  prefix         = var.prefix
+  location       = var.regions.primary
+  storage_class  = local.gcs_storage_class
+  versioning     = true
+  force_destroy  = var.force_destroy
+  encryption_key = "projects/${var.automation.project_id}/locations/${var.regions.primary}/keyRings/gcs/cryptoKeys/gcs"
   iam = {
     "roles/storage.objectAdmin" = [module.branch-sandbox-sa[0].iam_email]
   }
