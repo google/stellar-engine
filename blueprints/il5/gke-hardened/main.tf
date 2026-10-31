@@ -27,7 +27,7 @@ data "google_project" "current" {
 # }
 
 resource "google_service_account" "gke" {
-  account_id = "gke-${var.main_project_id}"
+  account_id = substr("gke-${var.main_project_id}", 0, 30)
   project    = var.main_project_id
 }
 
@@ -82,7 +82,7 @@ resource "google_gke_hub_feature_membership" "configmanagement_feature_member" {
       enabled       = true
       git {
         sync_repo   = var.source_repo
-        secret_type = "none"
+        secret_type = "gcenode"
         sync_branch = var.source_branch
         policy_dir  = var.source_dir
       }
