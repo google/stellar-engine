@@ -13,8 +13,12 @@
 # limitations under the License.
 
 import json
+import os
 import pathlib
 import re
+import shutil
+import subprocess
+import tempfile
 import unittest
 
 import yaml
@@ -133,6 +137,91 @@ class TestLabelTaxonomy(unittest.TestCase):
         )
         self.assertIn("/tmp/release_sub_bullets.json", workflow)
         self.assertIn("Ensure Curated Release PR Labels", workflow)
+        self.assertIn("def normalize_gh_refs(text):", workflow)
+        self.assertIn(
+            "Format any GitHub issue or pull request reference strictly",
+            workflow,
+        )
+
+    def test_release_workflow_normalizes_issue_and_pr_links_to_numbers(self):
+        workflow = (_REPO_ROOT / ".github/workflows/release.yml").read_text(
+            encoding="utf-8"
+        )
+        py_block = workflow.split("python3 - << 'PY'\n", 1)[1].split(
+            "\n          PY", 1
+        )[0]
+        py_lines = [line[10:] for line in py_block.splitlines()]
+        ns = {"re": re, "repo": "google/stellar-engine"}
+        fn_src = "\n".join(py_lines).split("def extract_existing", 1)[0]
+        fn_src = (
+            "def normalize_gh_refs"
+            + fn_src.split("def normalize_gh_refs", 1)[1]
+        )
+        exec(fn_src, ns)  # noqa: S102
+        sample = (
+            "Moves OS Login, fixing #197 and "
+            "https://github.com/google/stellar-engine/pull/352#r1 and "
+            "[Full Title (#14)]"
+            "(https://github.com/google/stellar-engine/issues/14) "
+            "plus aquasecurity/tfsec#99 while keeping `#42`."
+        )
+        expected_sub = (
+            "Moves OS Login, fixing "
+            "[#197](https://github.com/google/stellar-engine/issues/197) and "
+            "[#352](https://github.com/google/stellar-engine/pull/352) and "
+            "[#14](https://github.com/google/stellar-engine/issues/14) plus "
+            "[aquasecurity/tfsec#99]"
+            "(https://github.com/aquasecurity/tfsec/issues/99) "
+            "while keeping `#42`."
+        )
+        self.assertEqual(ns["normalize_gh_refs"](sample), expected_sub)
+
+        if not shutil.which("node"):
+            return
+        node_block = workflow.split(
+            "node - \"${dir}/index.js\" << 'NODE'\n", 1
+        )[1].split("\n          NODE", 1)[0]
+        base_line = (
+            "* **0-bootstrap:** gate "
+            "([#293](https://github.com/google/stellar-engine/issues/293)) "
+            "([936a692]"
+            "(https://github.com/google/stellar-engine/commit/936a6925b2))"
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            index_js = pathlib.Path(tmpdir) / "index.js"
+            index_js.write_text(
+                "const fs = require('fs');\n"
+                "const commits = [{sha: '936a6925b2', pullRequest: {body: "
+                f"{json.dumps('## Description\n' + sample)}}}}}"
+                "];\n"
+                "const options = {commits: []};\n"
+                "const preset = {writerOpts: {}};\n"
+                "const context = {};\n"
+                "const changelogCommits = [];\n"
+                "const writer = {parseArray: () => "
+                f"{json.dumps(base_line)}}};\n"
+                "const out = writer\n"
+                "            .parseArray("
+                "changelogCommits, context, preset.writerOpts)\n"
+                "            .trim();\n"
+                "console.log(out);\n",
+                encoding="utf-8",
+            )
+            subprocess.run(
+                ["node", "-", str(index_js)],
+                input=node_block,
+                text=True,
+                check=True,
+            )
+            rendered = subprocess.check_output(
+                ["node", str(index_js)],
+                text=True,
+                env={
+                    **os.environ,
+                    "GITHUB_REPOSITORY": "google/stellar-engine",
+                },
+            ).strip()
+        self.assertEqual(rendered, f"{base_line}\n  * {expected_sub}")
 
     def test_dependabot_uses_only_curated_labels(self):
         dependabot_path = _REPO_ROOT / ".github/dependabot.yml"
