@@ -100,6 +100,13 @@ class TestLabelTaxonomy(unittest.TestCase):
         config = json.loads(config_path.read_text(encoding="utf-8"))
         self.assertEqual(config.get("label"), "Release - Pending")
         self.assertEqual(config.get("release-label"), "Release - Tagged")
+        self.assertEqual(
+            config.get("pull-request-footer"),
+            "---\nBeep Boop. This PR was generated with "
+            "[Release Please](https://github.com/googleapis/release-please). "
+            "See [documentation]"
+            "(https://github.com/googleapis/release-please#release-please).",
+        )
 
     def test_release_docs_and_workflow_omit_warning_symbol(self):
         for rel_path in ("RELEASES.md", "CHANGELOG.md"):

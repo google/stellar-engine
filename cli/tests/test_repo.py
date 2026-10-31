@@ -277,7 +277,8 @@ def test_templated_keys_follow_regime_conditions():
 
 _TEMPLATE_VARS = (
     'organization_id = "1", domain_name = "example.com", '
-    'customer_id = "C0", drs_tag_name = "x/y", allowed_domains = ["C0"]'
+    'customer_id = "C0", drs_tag_name = "x/y", allowed_domains = ["C0"], '
+    "allowed_vpc_peering_producers = []"
 )
 
 
