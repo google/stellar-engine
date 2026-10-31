@@ -57,6 +57,7 @@
     import_defaults = false
     constraints = {
       allowed_policy_member_domains = []
+      allowed_vpc_peering_producers = ["under:folders/832634261155"]
     }
   }
   
@@ -190,6 +191,7 @@
     import_defaults = false
     constraints = {
       allowed_policy_member_domains = ["C0AAAAAAA"]
+      allowed_vpc_peering_producers = ["under:folders/832634261155"]
     }
   }
   
@@ -314,6 +316,7 @@
     import_defaults = false
     constraints = {
       allowed_policy_member_domains = []
+      allowed_vpc_peering_producers = ["under:folders/832634261155"]
     }
   }
   
@@ -433,6 +436,7 @@
     import_defaults = false
     constraints = {
       allowed_policy_member_domains = []
+      allowed_vpc_peering_producers = ["under:folders/832634261155"]
     }
   }
   
@@ -552,6 +556,7 @@
         "is:C0BBBBBBB",
         "is:principalSet://iam.googleapis.com/organizations/123456789012",
       ]
+      allowed_vpc_peering_producers = ["under:folders/832634261155"]
     }
   }
   
@@ -696,6 +701,7 @@
     import_defaults = false
     constraints = {
       allowed_policy_member_domains = []
+      allowed_vpc_peering_producers = ["under:folders/832634261155"]
     }
   }
   
