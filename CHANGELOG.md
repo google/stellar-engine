@@ -1,6 +1,37 @@
 # Changelog
 
 
+## [5.2.0](https://github.com/google/stellar-engine/compare/v5.1.1...v5.2.0) (2026-10-31)
+
+
+### Features
+
+* **0-bootstrap:** add granular deploy_org_resources toggles for folder-scoped deployments ([#381](https://github.com/google/stellar-engine/issues/381)) ([3f9d8a5](https://github.com/google/stellar-engine/commit/3f9d8a5b5d1810b3e7ad2adccf3d42c233db39cd))
+  * Adds `var.deploy_org_resources` to `fast/stages-aw/0-bootstrap` so brownfield and folder-scoped deployments can selectively disable organization-level audit configs, custom roles, organization policies, and logging sinks without organization-level IAM permissions.
+* **0-bootstrap:** gate compute.requireOsLogin by compliance regime ([#293](https://github.com/google/stellar-engine/issues/293)) ([936a692](https://github.com/google/stellar-engine/commit/936a6925b26ef67d3dfdfb0442fde015c09db5d3))
+  * Moves `compute.requireOsLogin` from static `fast/stages-aw/0-bootstrap/data/org-policies/compute_policy.yaml` into regime-aware `fast/stages-aw/0-bootstrap/data/custom-org-policies/compute_policy.yaml` so OS Login is enforced on FedRAMP Moderate, FedRAMP High, and US Region Restricted workloads while skipped on IL4 and IL5 workloads managed directly by Assured Workloads, fixing [#197](https://github.com/google/stellar-engine/issues/197).
+* **0-bootstrap:** make compute.restrictVpcPeering producers configurable ([#352](https://github.com/google/stellar-engine/issues/352)) ([59095e9](https://github.com/google/stellar-engine/commit/59095e958c776496cf4c980f3d3b56e692913a91))
+  * Adds `org_policies_config.constraints.allowed_vpc_peering_producers` defaulting to `["under:folders/832634261155"]` in `fast/stages-aw/0-bootstrap` so deployments can append or override Google-managed Private Services Access and GKE producer hierarchies on `constraints/compute.restrictVpcPeering`, fixing [#351](https://github.com/google/stellar-engine/issues/351).
+* **1-resman:** support project organization policy overrides ([#294](https://github.com/google/stellar-engine/issues/294)) ([db8271c](https://github.com/google/stellar-engine/commit/db8271cffaaf840f87017f8caa1718d7a53b08c7))
+  * Adds `org_policies = optional(string, "data/org-policies")` to `var.factories_config` in `fast/stages-aw/1-resman` and passes environment-scoped YAML factory paths to tenant automation and main projects, fixing [#14](https://github.com/google/stellar-engine/issues/14).
+* **cli:** configure and render stages 0 and 1 ([#357](https://github.com/google/stellar-engine/issues/357)) ([f68b707](https://github.com/google/stellar-engine/commit/f68b70746f3df790fd342d2e399e1559cd9a0cd8))
+  * Adds `stellar init` and `stellar render` commands under `cli/` to validate deployment answers into `answers.yaml` and render ready-to-run Terraform workspaces for `0-bootstrap` and `1-resman`, closing [#50](https://github.com/google/stellar-engine/issues/50).
+* **security:** document security advisory policy and release workflow ([#382](https://github.com/google/stellar-engine/issues/382)) ([14f28c2](https://github.com/google/stellar-engine/commit/14f28c2876c44c8a9b24c99305a552fc23bb103e))
+  * Adds `SECURITY.md` and a `Security advisories` section in `RELEASES.md` routing vulnerability reports through `https://g.co/vulnz` and reserving GitHub Security Advisories for confirmed vulnerabilities affecting tagged releases.
+
+
+### Bug Fixes
+
+* **blueprints:** apply fedramp-high/gitlab GKE control plane and node settings ([#345](https://github.com/google/stellar-engine/issues/345)) ([2be6eae](https://github.com/google/stellar-engine/commit/2be6eae2b5a1108157c1da4553f8838e9fc7cd87))
+  * Authorizes the internal `10.203.0.0/16` CIDR block on the private GKE control plane endpoint via `vpc_config.master_authorized_ranges` and configures Confidential GKE Nodes on the node pool in `blueprints/fedramp-high/gitlab/main.tf`, closing [#314](https://github.com/google/stellar-engine/issues/314).
+* **blueprints:** apply il5/gke-hardened CIS node settings ([#344](https://github.com/google/stellar-engine/issues/344)) ([46e268e](https://github.com/google/stellar-engine/commit/46e268e3d5601a23cf484b9b2e7eacb5fe829028))
+  * Passes `block-project-ssh-keys`, `machine_type`, and `confidential_nodes` directly to `module.cluster-nodepool` in `blueprints/il5/gke-hardened` and exposes CIS node pool hardening inputs in `modules/gke-nodepool`, closing [#315](https://github.com/google/stellar-engine/issues/315).
+* **docs:** fix stale Cloud Setup steps, a dead clone URL, committed conflict markers and private doc links ([#353](https://github.com/google/stellar-engine/issues/353)) ([5236231](https://github.com/google/stellar-engine/commit/5236231411d4fec25919f4b395ed1ac5b2d42c60))
+  * Replaces placeholder clone URLs, committed merge conflict markers, private document links, and stale Cloud Setup group instructions across `README.md`, `docs/`, `fast/stages-aw/README.md`, and blueprint documentation.
+* **security:** enforce Trivy SARIF severity filter and suppress false positives ([#342](https://github.com/google/stellar-engine/issues/342)) ([345616a](https://github.com/google/stellar-engine/commit/345616ac5c4f0c68fa4d3b1841233955649727ab))
+  * Enables `limit-severities-for-sarif: true` and sample recipe `skip-dirs` on `aquasecurity/trivy-action` in `.github/workflows/ci.yml` and scopes `.trivyignore.yaml` rules to suppress false-positive Code Scanning alerts.
+
+
 ## [5.1.1](https://github.com/google/stellar-engine/compare/v5.1.0...v5.1.1) (2026-10-26)
 
 
