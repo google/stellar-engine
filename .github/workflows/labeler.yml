@@ -14,24 +14,188 @@
 
 name: "Pull Request Labeler"
 
-on:
+# Pull requests opened from external forks receive a read-only GITHUB_TOKEN
+# under the standard `pull_request` trigger, which causes both `actions/labeler`
+# and the GitHub Issues Labels API to fail with 403 Forbidden. Using
+# `pull_request_target` runs the workflow in the base repository context so it
+# has `pull-requests: write` permission to apply labels on fork pull requests.
+# This is safe because the workflow never checks out or executes code from the
+# pull request head ref, passes all event fields strictly through environment
+# variables rather than template interpolation, and only posts fixed curated
+# label names to the GitHub Labels endpoint.
+on: # zizmor: ignore[dangerous-triggers]
   pull_request_target:
     types:
       - opened
+      - edited
       - synchronize
+      - reopened
+      - ready_for_review
+  issues:
+    types:
+      - opened
+      - edited
       - reopened
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 jobs:
   label:
     name: Run Labeler
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Apply PR Labels
+        if: github.event_name == 'pull_request_target'
         uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7.0.0
         with:
           configuration-path: .github/labeler.yml
           sync-labels: false
+
+      - name: Infer Curated Triage Labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_ADDITIONS: ${{ github.event.pull_request.additions }}
+          PR_DELETIONS: ${{ github.event.pull_request.deletions }}
+          PR_CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          shopt -s nocasematch
+          inferred=()
+          add_if() {
+            local subject="$1" pattern="$2" label="$3"
+            [[ "$subject" =~ $pattern ]] && inferred+=("$label") || true
+          }
+
+          if [[ "$EVENT_NAME" == "pull_request_target" ]]; then
+            item_number="${PR_NUMBER:-}"
+            title="${PR_TITLE:-}"
+            raw_body="${PR_BODY:-}"
+          elif [[ "$EVENT_NAME" == "issues" ]]; then
+            item_number="${ISSUE_NUMBER:-}"
+            title="${ISSUE_TITLE:-}"
+            raw_body="${ISSUE_BODY:-}"
+          else
+            exit 0
+          fi
+          [[ -n "$item_number" ]] || exit 0
+
+          body="${raw_body//$'\r'/}"
+          cleaned="$(
+            printf '%s\n' "$body" | sed -E \
+              -e '/^[[:space:]]*[-*][[:space:]]+\[[[:space:]]\][[:space:]]/d' \
+              -e '/Does this documentation relate to a specific compliance regime/d' \
+              -e 's/\((e\.g\.,|If this PR|If applicable)[^)]*\)//g'
+          )"
+          text="${title}"$'\n'"${cleaned}"
+
+          add_if "$body" '[-*][[:space:]]+\[x\][[:space:]]+FedRAMP[[:space:]]+Moderate' "Framework - FedRAMP Moderate"
+          add_if "$body" '[-*][[:space:]]+\[x\][[:space:]]+FedRAMP[[:space:]]+High' "Framework - FedRAMP High"
+          add_if "$body" '[-*][[:space:]]+\[x\][[:space:]]+DoD[[:space:]]+IL4' "Framework - IL4"
+          add_if "$body" '[-*][[:space:]]+\[x\][[:space:]]+DoD[[:space:]]+IL5' "Framework - IL5"
+
+          pr_type="" pr_scope="" is_breaking=0
+          if [[ "$EVENT_NAME" == "pull_request_target" ]]; then
+            re_cc='^[[:space:]]*([a-z]+)(\(([^)]+)\))?(!?):[[:space:]]+'
+            if [[ "$title" =~ $re_cc ]]; then
+              pr_type="${BASH_REMATCH[1]}"
+              pr_scope="${BASH_REMATCH[3]}"
+              [[ "${BASH_REMATCH[4]}" == "!" ]] && is_breaking=1 || true
+            fi
+
+            if [[ ! "$pr_scope" =~ ^deps$ ]]; then
+              add_if "$pr_type" '^fix$' "Bug"
+              add_if "$body" '[-*][[:space:]]+\[x\][[:space:]]+Bug[[:space:]]+fix' "Bug"
+              add_if "$body" '[-*][[:space:]]+\[x\][[:space:]]+New[[:space:]]+feature' "Enhancement"
+              add_if "$body" '[-*][[:space:]]+\[x\][[:space:]]+Documentation[[:space:]]+update' "Documentation"
+            fi
+            add_if "$pr_type" '^(feat|refactor|perf)$' "Enhancement"
+            add_if "$pr_type" '^docs$' "Documentation"
+
+            add_if "$pr_scope" '^modules(/|$)' "Scope - Module"
+            add_if "$pr_scope" '^(fast|stages-aw|0-bootstrap|1-resman|2-networking|3-security|cli|scripts)(/|$)' "Scope - Fast"
+            add_if "$pr_scope" '^(blueprints|gitlab|gke|beyondcorp|gem4gov|gem4gov-cli|gemini-enterprise|fedramp-high|fedramp-moderate|il4|il5)(/|$)' "Scope - Blueprint"
+          else
+            add_if "$title" '^[[:space:]]*(\[bug\]|bug:|fix(\([^)]+\))?:)' "Bug"
+            add_if "$title" '^[[:space:]]*(\[(feature([[:space:]]+request)?|enhancement|feat)\]|(feature([[:space:]]+request)?|enhancement|feat):)' "Enhancement"
+            add_if "$title" '^[[:space:]]*(\[(documentation|docs)\]|(documentation|docs):)' "Documentation"
+            add_if "$title" '^[[:space:]]*(\[question\]|question:)' "Question"
+
+            add_if "$body" '[-*][[:space:]]+\[x\][[:space:]]+Stage[[:space:]]+[0123]' "Scope - Fast"
+            add_if "$body" '[-*][[:space:]]+\[x\][[:space:]]+Stage[[:space:]]+3' "Security"
+
+            add_if "$text" '(^|[^a-z0-9_])modules(/[a-z0-9_.-]+|/|$)' "Scope - Module"
+            add_if "$text" '(^|[^a-z0-9_])(fast/[a-z0-9_/-]+|stages-aw(/[a-z0-9_/-]+)?|[0-3]-(bootstrap|resman|networking|security)|stellar[[:space:]]+cli|cli/|scripts/)' "Scope - Fast"
+            add_if "$text" '(^|[^a-z0-9_])blueprints(/[a-z0-9_/-]+|/|$)' "Scope - Blueprint"
+            add_if "$text" '(^|[^a-z0-9_])fedramp[-_[:space:]]?high([^a-z0-9_]|$)' "Framework - FedRAMP High"
+            add_if "$text" '(^|[^a-z0-9_])fedramp[-_[:space:]]?mod(erate)?([^a-z0-9_]|$)' "Framework - FedRAMP Moderate"
+            add_if "$text" '(^|[^a-z0-9_])(dod[[:space:]]+|blueprints/)?il4([^a-z0-9_]|$)' "Framework - IL4"
+            add_if "$text" '(^|[^a-z0-9_])(dod[[:space:]]+|blueprints/)?il5([^a-z0-9_]|$)' "Framework - IL5"
+            add_if "$text" '(^|[^a-z0-9_])gemini[-_[:space:]]?enterprise([^a-z0-9_]|$)' "Gemini - Enterprise"
+            add_if "$text" '(^|[^a-z0-9_])(gem4gov|g4g|gemini[-_[:space:]]?for[-_[:space:]]?government)([^a-z0-9_]|$)' "Gemini - Government"
+          fi
+
+          add_if "$pr_scope" '^(security|3-security)$' "Security"
+          add_if "$text" '(^|[^a-z0-9_])(cve-[0-9]{4}-[0-9]+|ghsa-[a-z0-9-]{4,}|trivy|zizmor|advisories|advisory|vulnerability|vulnerabilities|cmek|vpc-sc|beyondcorp)([^a-z0-9_]|$)' "Security"
+          shopt -u nocasematch
+          add_if "$cleaned" '(^|[^A-Z0-9_])(AC|AT|AU|CA|CM|CP|IA|IR|MA|MP|PE|PL|PM|PS|PT|RA|SA|SC|SI|SR)-[0-9]+([^A-Z0-9_]|$)' "Security"
+          shopt -s nocasematch
+
+          if [[ -n "${EXISTING_LABELS_OVERRIDE+x}" ]]; then
+            existing="$EXISTING_LABELS_OVERRIDE"
+          else
+            existing="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${item_number}/labels" --paginate --jq '.[].name' || true)"
+          fi
+
+          all_labels="$(printf '%s\n' "$existing" "${inferred[@]+"${inferred[@]}"}" | sed '/^$/d')"
+          has_label() { grep -Fxq "$1" <<< "$all_labels"; }
+          has_prefix() { grep -Eq "^$1" <<< "$all_labels"; }
+
+          if [[ "$EVENT_NAME" == "pull_request_target" ]]; then
+            if ! has_prefix "Level of Effort - "; then
+              lines=$(( ${PR_ADDITIONS:-0} + ${PR_DELETIONS:-0} ))
+              files=$(( ${PR_CHANGED_FILES:-0} ))
+              if (( lines <= 150 && files <= 5 )); then
+                inferred+=("Level of Effort - Low")
+              elif (( lines <= 600 && files <= 20 )); then
+                inferred+=("Level of Effort - Medium")
+              else
+                inferred+=("Level of Effort - High")
+              fi
+            fi
+            all_labels="$(printf '%s\n' "$existing" "${inferred[@]+"${inferred[@]}"}" | sed '/^$/d')"
+            if ! has_prefix "Priority - "; then
+              if (( is_breaking == 1 )) || { has_label "Security" && { has_label "Bug" || has_prefix "Dependencies - " || [[ "$pr_scope" =~ ^deps$ ]]; }; }; then
+                inferred+=("Priority - High")
+              elif has_label "Bug" || has_label "Enhancement"; then
+                inferred+=("Priority - Medium")
+              else
+                inferred+=("Priority - Low")
+              fi
+            fi
+          fi
+
+          to_add=()
+          while IFS= read -r lbl; do
+            [[ -n "$lbl" ]] || continue
+            grep -Fxq "$lbl" <<< "$existing" || to_add+=("$lbl")
+          done < <(printf '%s\n' "${inferred[@]+"${inferred[@]}"}" | sort -u)
+
+          (( ${#to_add[@]} > 0 )) || exit 0
+          if [[ "${DRY_RUN:-0}" == "1" ]]; then
+            printf '%s\n' "${to_add[@]}"
+            exit 0
+          fi
+
+          printf '%s\n' "${to_add[@]}" | jq -R . | jq -s '{labels: .}' \
+            | gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${item_number}/labels" --input - >/dev/null
