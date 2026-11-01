@@ -63,6 +63,59 @@ jobs:
               except Exception:
                   return None
 
+          def normalize_gh_refs(text):
+              if not text:
+                  return text
+
+              def fmt_link(owner_repo, kind, num):
+                  label = (
+                      f"#{num}"
+                      if owner_repo.lower() == repo.lower()
+                      else f"{owner_repo}#{num}"
+                  )
+                  return f"[{label}](https://github.com/{owner_repo}/{kind}/{num})"
+
+              parts = re.split(r"(`[^`]+`|\[[^\]]+\]\([^)]+\))", text)
+              out = []
+              for idx, part in enumerate(parts):
+                  if idx % 2 == 1:
+                      m_link = re.match(
+                          r"^\[[^\]]+\]\(https://github\.com/"
+                          r"([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/"
+                          r"(issues|pull)/(\d+)(?:#[^)]*)?\)$",
+                          part,
+                      )
+                      if m_link:
+                          out.append(
+                              fmt_link(
+                                  m_link.group(1),
+                                  m_link.group(2),
+                                  m_link.group(3),
+                              )
+                          )
+                      else:
+                          out.append(part)
+                      continue
+                  s = re.sub(
+                      r"https://github\.com/"
+                      r"([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/"
+                      r"(issues|pull)/(\d+)(?:#[^\s.,;)]*)?",
+                      lambda m: fmt_link(m.group(1), m.group(2), m.group(3)),
+                      part,
+                  )
+                  s = re.sub(
+                      r"(?<![/\w.-])([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#(\d+)\b",
+                      lambda m: fmt_link(m.group(1), "issues", m.group(2)),
+                      s,
+                  )
+                  s = re.sub(
+                      r"(?<![&\w/\[])#(\d+)\b",
+                      lambda m: f"[#{m.group(1)}](https://github.com/{repo}/issues/{m.group(1)})",
+                      s,
+                  )
+                  out.append(s)
+              return "".join(out)
+
           def extract_existing(markdown_text):
               found = {}
               lines = (markdown_text or "").replace("\r\n", "\n").split("\n")
@@ -71,7 +124,7 @@ jobs:
                       r"^\* .*?\(\[([0-9a-f]{7,40})\]\([^)]+\)\)\s*$", line
                   )
                   if m and lines[i + 1].startswith("  * "):
-                      sub = lines[i + 1][4:].strip()
+                      sub = normalize_gh_refs(lines[i + 1][4:].strip())
                       if sub:
                           found[m.group(1)[:7]] = sub
               return found
@@ -84,8 +137,11 @@ jobs:
                   "sentence in active present tense starting with a verb (for "
                   "example: 'Wires...', 'Removes...', 'Adds...', 'Updates...') "
                   "that explains what changed and how it affects deployments. "
-                  "Do not include leading bullet markers, em-dashes, "
-                  "ampersands, or line breaks.\n\n"
+                  "Format any GitHub issue or pull request reference strictly "
+                  f"as [#NNNN](https://github.com/{repo}/issues/NNNN) so only "
+                  "the hyperlinked number renders, never bare #NNNN, raw URLs, "
+                  "or issue/PR titles. Do not include leading bullet markers, "
+                  "em-dashes, ampersands, or line breaks.\n\n"
                   f"Commit Title: {title}\n"
                   f"Files: {', '.join(files[:15])}\n"
                   f"PR Description:\n{(pr_body or '')[:3000]}"
@@ -115,7 +171,7 @@ jobs:
                   text = re.sub(r"^[-*•]\s*", "", text).strip()
                   if text and not text.endswith("."):
                       text += "."
-                  return text
+                  return normalize_gh_refs(text)
               except Exception:
                   return ""
 
@@ -219,6 +275,23 @@ jobs:
                   }
                 }
                 if (sb && !sb.endsWith('.')) sb += '.';
+              }
+              if (sb) {
+                const repoSlug = process.env.GITHUB_REPOSITORY || 'google/stellar-engine';
+                const fmtLink = (or, kind, num) => {
+                  const lbl = or.toLowerCase() === repoSlug.toLowerCase() ? '#' + num : or + '#' + num;
+                  return '[' + lbl + '](https://github.com/' + or + '/' + kind + '/' + num + ')';
+                };
+                sb = sb.split(/(\`[^\`]+\`|\\[[^\\]]+\\]\\([^)]+\\))/g).map((part, idx) => {
+                  if (idx % 2 === 1) {
+                    const ml = part.match(/^\\[[^\\]]+\\]\\(https:\\/\\/github\\.com\\/([A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+)\\/(issues|pull)\\/(\\d+)(?:#[^)]*)?\\)$/);
+                    return ml ? fmtLink(ml[1], ml[2], ml[3]) : part;
+                  }
+                  return part
+                    .replace(/https:\\/\\/github\\.com\\/([A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+)\\/(issues|pull)\\/(\\d+)(?:#[^\\s.,;)]*)?/g, (_, or, kind, num) => fmtLink(or, kind, num))
+                    .replace(/(?<![\\/\\w.-])([A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+)#(\\d+)\\b/g, (_, or, num) => fmtLink(or, 'issues', num))
+                    .replace(/(?<![&\\w\\/\\[])#(\\d+)\\b/g, (_, num) => '[#' + num + '](https://github.com/' + repoSlug + '/issues/' + num + ')');
+                }).join('');
               }
               return sb ? \`\${line}\\n  * \${sb}\` : line;
             });`;
