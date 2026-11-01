@@ -232,6 +232,175 @@ class TestLabelTaxonomy(unittest.TestCase):
                 self.assertTrue(labels)
                 self.assertTrue(set(labels).issubset(_CURATED_LABELS))
 
+    def test_labeler_covers_dependencies_and_security(self):
+        labeler_path = _REPO_ROOT / ".github/labeler.yml"
+        config = yaml.safe_load(labeler_path.read_text(encoding="utf-8"))
+        for expected in (
+            "Dependencies - Docker",
+            "Dependencies - GitHub Actions",
+            "Dependencies - JavaScript",
+            "Dependencies - Python",
+            "Security",
+        ):
+            self.assertIn(expected, config)
+
+    def test_labeler_workflow_triage_logic_and_env_safety(self):
+        workflow_path = _REPO_ROOT / ".github/workflows/labeler.yml"
+        raw = workflow_path.read_text(encoding="utf-8")
+        workflow = yaml.safe_load(raw)
+        triggers = workflow.get("on") or workflow.get(True)
+        self.assertIn("pull_request_target", triggers)
+        self.assertIn("edited", triggers["pull_request_target"]["types"])
+        self.assertIn("issues", triggers)
+        self.assertIn("opened", triggers["issues"]["types"])
+        self.assertIn("edited", triggers["issues"]["types"])
+
+        run_script = workflow["jobs"]["label"]["steps"][1]["run"]
+        self.assertNotIn("${{", run_script)
+        self.assertNotIn("python", run_script)
+
+        inferred_literals = set(
+            re.findall(
+                r'(?:inferred\+=\(|add_if\s+\S+\s+\'[^\']+\'\s+)"([^"$]+)"',
+                run_script,
+            )
+        )
+        self.assertTrue(inferred_literals)
+        self.assertTrue(inferred_literals.issubset(_CURATED_LABELS))
+
+        def run_triage(env_overrides):
+            env = {
+                **os.environ,
+                "DRY_RUN": "1",
+                "EXISTING_LABELS_OVERRIDE": "",
+                **env_overrides,
+            }
+            out = subprocess.run(
+                ["bash", "-e", "-o", "pipefail", "-c", run_script],
+                env=env,
+                capture_output=True,
+                check=True,
+                text=True,
+            ).stdout
+            return {line.strip() for line in out.splitlines() if line.strip()}
+
+        pr_template = (
+            _REPO_ROOT / ".github/pull_request_template.md"
+        ).read_text(encoding="utf-8")
+        dep_body = pr_template.replace(
+            "*   **NIST 800-53r5 Controls:** (If this PR helps satisfy or "
+            "modifies control implementations, list them here)",
+            "*   **NIST 800-53r5 Controls:** SI-2",
+        )
+        self.assertEqual(
+            run_triage(
+                {
+                    "EVENT_NAME": "pull_request_target",
+                    "PR_NUMBER": "392",
+                    "PR_TITLE": (
+                        "build(deps): bump pyasn1 to 0.6.5 for four HIGH "
+                        "advisories"
+                    ),
+                    "PR_BODY": dep_body,
+                    "PR_ADDITIONS": "6",
+                    "PR_DELETIONS": "6",
+                    "PR_CHANGED_FILES": "2",
+                    "EXISTING_LABELS_OVERRIDE": (
+                        "Scope - Fast\nDependencies - Python"
+                    ),
+                }
+            ),
+            {"Security", "Level of Effort - Low", "Priority - High"},
+        )
+
+        feat_body = pr_template.replace(
+            "- [ ] New feature", "- [x] New feature"
+        ).replace("*   [ ] DoD IL5", "*   [x] DoD IL5")
+        self.assertEqual(
+            run_triage(
+                {
+                    "EVENT_NAME": "pull_request_target",
+                    "PR_NUMBER": "386",
+                    "PR_TITLE": "feat(cli): guided deploy",
+                    "PR_BODY": feat_body,
+                    "PR_ADDITIONS": "900",
+                    "PR_DELETIONS": "50",
+                    "PR_CHANGED_FILES": "12",
+                    "EXISTING_LABELS_OVERRIDE": "Scope - Fast",
+                }
+            ),
+            {
+                "Enhancement",
+                "Framework - IL5",
+                "Level of Effort - High",
+                "Priority - Medium",
+            },
+        )
+
+        bug_template = (
+            _REPO_ROOT / ".github/ISSUE_TEMPLATE/bug_report.md"
+        ).read_text(encoding="utf-8")
+        self.assertEqual(
+            run_triage(
+                {
+                    "EVENT_NAME": "issues",
+                    "ISSUE_NUMBER": "100",
+                    "ISSUE_TITLE": "[Bug] unexpected error",
+                    "ISSUE_BODY": bug_template,
+                    "EXISTING_LABELS_OVERRIDE": "Bug",
+                }
+            ),
+            set(),
+        )
+
+        populated_bug = bug_template.replace(
+            "*   [ ] FedRAMP High", "*   [x] FedRAMP High"
+        ).replace(
+            "*   [ ] Stage 3 (Security and Audit)",
+            "*   [x] Stage 3 (Security and Audit)",
+        )
+        self.assertEqual(
+            run_triage(
+                {
+                    "EVENT_NAME": "issues",
+                    "ISSUE_NUMBER": "101",
+                    "ISSUE_TITLE": (
+                        "[Bug] blueprints/fedramp-high: KMS grant error"
+                    ),
+                    "ISSUE_BODY": populated_bug,
+                    "EXISTING_LABELS_OVERRIDE": "Bug",
+                }
+            ),
+            {
+                "Framework - FedRAMP High",
+                "Scope - Blueprint",
+                "Scope - Fast",
+                "Security",
+            },
+        )
+
+        self.assertEqual(
+            run_triage(
+                {
+                    "EVENT_NAME": "issues",
+                    "ISSUE_NUMBER": "387",
+                    "ISSUE_TITLE": (
+                        "Feature Request: Support regulated multi-tenancy"
+                    ),
+                    "ISSUE_BODY": (
+                        "Extend fast/stages-aw/0-bootstrap for Gemini for "
+                        "Government."
+                    ),
+                    "EXISTING_LABELS_OVERRIDE": "",
+                }
+            ),
+            {
+                "Enhancement",
+                "Gemini - Government",
+                "Scope - Fast",
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

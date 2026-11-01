@@ -31,25 +31,103 @@
 
 "Documentation":
   - changed-files:
-      - any-glob-to-any-file:
+      - any-glob-to-any-file: 'docs/**'
+  - changed-files:
+      - all-globs-to-all-files:
           - 'docs/**'
           - '*.md'
+          - '**/*.md'
+
+"Dependencies - Python":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'uv.lock'
+          - '**/uv.lock'
+          - 'pyproject.toml'
+          - '**/pyproject.toml'
+          - 'requirements*.txt'
+          - '**/requirements*.txt'
+
+"Dependencies - Docker":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'Dockerfile*'
+          - '**/Dockerfile*'
+
+"Dependencies - JavaScript":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'package.json'
+          - '**/package.json'
+          - 'package-lock.json'
+          - '**/package-lock.json'
+
+"Dependencies - GitHub Actions":
+  - all:
+      - changed-files:
+          - any-glob-to-any-file:
+              - '.github/workflows/**'
+              - '.github/actions/**'
+      - head-branch:
+          - '^dependabot/github_actions/.*$'
+          - '^.*deps.*$'
+
+"Security":
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'SECURITY.md'
+          - '.trivyignore*'
+          - 'fast/stages-aw/3-security/**'
+          - 'modules/kms/**'
+          - 'modules/secret-manager/**'
+          - 'modules/access-context-manager/**'
+          - 'modules/vpc-sc/**'
+          - 'blueprints/**/beyondcorp/**'
+          - 'blueprints/**/access-context-manager/**'
+          - 'blueprints/**/cloud-armor/**'
+          - 'blueprints/**/cloud-ids/**'
+          - 'blueprints/**/scc/**'
+          - 'blueprints/**/secret-manager/**'
+  - head-branch:
+      - '^.*(security|cve|ghsa|trivy|zizmor|cmek|vpc-sc).*$'
 
 "Framework - FedRAMP Moderate":
   - changed-files:
-      - any-glob-to-any-file: 'blueprints/fedramp-moderate/**'
+      - any-glob-to-any-file:
+          - 'blueprints/fedramp-moderate/**'
+          - '**/fedramp-moderate/**'
+          - '**/*fedramp_moderate*'
+          - '**/*fedramp-moderate*'
+  - head-branch:
+      - '^.*fedramp[-_]?mod(erate)?.*$'
 
 "Framework - FedRAMP High":
   - changed-files:
-      - any-glob-to-any-file: 'blueprints/fedramp-high/**'
+      - any-glob-to-any-file:
+          - 'blueprints/fedramp-high/**'
+          - '**/fedramp-high/**'
+          - '**/*fedramp_high*'
+          - '**/*fedramp-high*'
+  - head-branch:
+      - '^.*fedramp[-_]?high.*$'
 
 "Framework - IL4":
   - changed-files:
-      - any-glob-to-any-file: 'blueprints/il4/**'
+      - any-glob-to-any-file:
+          - 'blueprints/il4/**'
+          - '**/il4/**'
+          - '**/*il4*'
+  - head-branch:
+      - '^.*([^a-z0-9]|^)il4([^a-z0-9]|$).*$'
 
 "Framework - IL5":
   - changed-files:
-      - any-glob-to-any-file: 'blueprints/il5/**'
+      - any-glob-to-any-file:
+          - 'blueprints/il5/**'
+          - '**/il5/**'
+          - '**/*il5*'
+  - head-branch:
+      - '^.*([^a-z0-9]|^)il5([^a-z0-9]|$).*$'
 
 "Gemini - Enterprise":
   - changed-files:
