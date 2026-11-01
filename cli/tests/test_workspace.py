@@ -354,7 +354,6 @@ def test_sync_real_engine_layout(env):
 def test_bootstrap_workspace_validates(env):
     workspace.sync(env, conftest.REPO_ROOT, "0-bootstrap")
     ws = env.workspace("0-bootstrap")
-    init = helpers.terraform(ws, "init", "-backend=false", "-input=false")
-    assert init.returncode == 0, init.stderr
+    helpers.terraform_init(ws)
     validate = helpers.terraform(ws, "validate")
     assert validate.returncode == 0, validate.stderr

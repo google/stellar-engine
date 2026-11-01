@@ -644,6 +644,79 @@ class TestPrecreate:
         assert TENANT_IDS[0] not in found["billing.precreate"].detail
 
 
+def addresses(items):
+    return [item.address for item in items]
+
+
+class TestPrecreateStatus:
+    def test_nothing_imported_misses_every_resource(self, make_ctx):
+        found = checks.precreate_status(make_ctx(billing_no_iam=True))
+        assert addresses(found.resources) == list(NO_IAM_IMPORTS)
+        assert found.missing == found.resources
+        assert found.blockers == ()
+        assert not found.covered
+
+    def test_org_billing_adds_the_billing_export(self, make_ctx):
+        found = checks.precreate_status(
+            make_ctx(imported_addresses=NO_IAM_IMPORTS)
+        )
+        assert addresses(found.missing) == [conftest.BILLING_EXPORT_ADDRESS]
+        assert not found.covered
+
+    def test_partial_imports_miss_the_rest(self, make_ctx):
+        found = checks.precreate_status(
+            make_ctx(
+                billing_no_iam=True,
+                imported_addresses=(conftest.AUTOMATION_ADDRESS,),
+            )
+        )
+        assert addresses(found.missing) == list(NO_IAM_IMPORTS[1:])
+        assert not found.covered
+
+    def test_all_imported_is_covered(self, make_ctx):
+        found = checks.precreate_status(
+            make_ctx(billing_no_iam=True, imported_addresses=NO_IAM_IMPORTS)
+        )
+        assert addresses(found.resources) == list(NO_IAM_IMPORTS)
+        assert found.missing == ()
+        assert found.blockers == ()
+        assert found.covered
+
+    @pytest.mark.parametrize(
+        ("overrides", "blocker"),
+        [
+            (
+                {"billing_is_org_level": False},
+                "grants roles on the billing account itself",
+            ),
+            (
+                {"billing_no_iam": True, "billing_budget": True},
+                "creates the billing-account-budget budget",
+            ),
+        ],
+    )
+    def test_billing_account_use_blocks_coverage(
+        self, make_ctx, overrides, blocker
+    ):
+        found = checks.precreate_status(
+            make_ctx(imported_addresses=NO_IAM_IMPORTS, **overrides)
+        )
+        assert found.missing == ()
+        (sentence,) = found.blockers
+        assert blocker in sentence
+        assert not found.covered
+
+    @pytest.mark.usefixtures("replacing_workload")
+    def test_replacing_workload_import_blocks_coverage(self, make_ctx):
+        found = checks.precreate_status(
+            make_ctx(billing_no_iam=True, imported_addresses=NO_IAM_IMPORTS)
+        )
+        assert found.missing == ()
+        (sentence,) = found.blockers
+        assert "cannot adopt a pre-created Assured Workloads" in sentence
+        assert not found.covered
+
+
 class TestWorkloadFolder:
     def test_imported_workload_folder_passes(self, make_ctx, cloud):
         cloud.folders = ["folders/1"]
@@ -811,10 +884,13 @@ class TestNaming:
         cloud.projects["tst-prod-iac-core-0"] = api.ApiDisabledError(
             "cloudresourcemanager.googleapis.com", "1"
         )
-        found = statuses(checks.check_naming(resolved(make_ctx)))
-        assert found["naming.projects"] == Status.WARN
-        assert found["naming.buckets"] == Status.PASS
-        assert found["naming.region"] == Status.PASS
+        found = by_id(checks.check_naming(resolved(make_ctx)))
+        assert found["naming.projects"].status == Status.WARN
+        assert found["naming.projects"].detail.startswith(
+            "Cannot check for existing resources: "
+        )
+        assert found["naming.buckets"].status == Status.PASS
+        assert found["naming.region"].status == Status.PASS
 
     def test_skips_without_inputs(self, make_ctx):
         found = statuses(
@@ -983,9 +1059,12 @@ class TestImportedProjects:
             "cloudresourcemanager.googleapis.com", "1"
         )
         ctx = resolved(make_ctx, imported_project_ids=(CORE,))
-        found = statuses(checks.check_naming(ctx))
-        assert found["naming.imported_projects"] == Status.WARN
-        assert found["naming.projects"] == Status.PASS
+        found = by_id(checks.check_naming(ctx))
+        assert found["naming.imported_projects"].status == Status.WARN
+        assert found["naming.imported_projects"].detail.startswith(
+            "Cannot check the pre-created projects: "
+        )
+        assert found["naming.projects"].status == Status.PASS
 
     def test_invalid_prefix_skips_imports(self, make_ctx):
         ctx = make_ctx(prefix="Bad", imported_project_ids=(CORE,))
@@ -1215,3 +1294,38 @@ def test_manual_items(make_ctx):
         "manual.access_transparency": Status.MANUAL,
         "manual.quota": Status.MANUAL,
     }
+
+
+@pytest.mark.parametrize(
+    ("holder", "expected"),
+    [
+        (repo_lib.Holder(repo_lib.HolderKind.GROUP, "gcp-devops"), "group:x"),
+        (
+            repo_lib.Holder(repo_lib.HolderKind.SERVICE_ACCOUNT, "bootstrap-0"),
+            "serviceAccount:tst-prod-bootstrap-0@tst-prod-iac-core-0"
+            ".iam.gserviceaccount.com",
+        ),
+        (
+            repo_lib.Holder(repo_lib.HolderKind.BOOTSTRAP_USER, ""),
+            f"user:{conftest.USER}",
+        ),
+        (repo_lib.Holder(repo_lib.HolderKind.DOMAIN, ""), "domain:example.com"),
+    ],
+)
+def test_holder_member_resolves_each_holder_kind(holder, expected):
+    member = checks.holder_member(
+        holder,
+        prefix="tst",
+        groups={"gcp-devops": "group:x"},
+        bootstrap_user=conftest.USER,
+        domain="example.com",
+    )
+    assert member == expected
+
+
+def test_holder_member_needs_the_inputs_that_name_the_member():
+    holder = repo_lib.Holder(repo_lib.HolderKind.SERVICE_ACCOUNT, "bootstrap-0")
+    member = checks.holder_member(
+        holder, prefix=None, groups={}, bootstrap_user=None, domain=None
+    )
+    assert member is None
