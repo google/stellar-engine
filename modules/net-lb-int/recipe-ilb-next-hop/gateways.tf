@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Google LLC
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,19 @@
  */
 
 module "gw" {
-  source        = "../../../modules/compute-vm"
-  for_each      = local.zones
-  project_id    = module.project.project_id
-  zone          = each.value
-  name          = "${var.prefix}-gw-${each.key}"
-  instance_type = "f1-micro"
+  source       = "../../../modules/compute-vm"
+  for_each     = local.zones
+  project_id   = module.project.project_id
+  zone         = each.value
+  name         = "${var.prefix}-gw-${each.key}"
+  machine_type = "f1-micro"
   boot_disk = {
+    source = {
+      image = "projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-amd64"
+    }
     initialize_params = {
-      image = "projects/ubuntu-os-cloud/global/images/family/ubuntu-2004-lts",
-      type  = "pd-ssd",
-      size  = 10
+      type = "pd-ssd",
+      size = 10
     }
   }
   network_interfaces = [
@@ -73,7 +75,8 @@ module "ilb-left" {
     }
   }
   backend_service_config = {
-    session_affinity = var.ilb_session_affinity
+    connection_tracking = var.ilb_connection_tracking
+    session_affinity    = var.ilb_session_affinity
   }
   backends = [for z, mod in module.gw : {
     group = mod.group.self_link
@@ -101,15 +104,14 @@ module "ilb-right" {
     }
   }
   backend_service_config = {
-    session_affinity = var.ilb_session_affinity
+    connection_tracking = var.ilb_connection_tracking
+    session_affinity    = var.ilb_session_affinity
   }
   backends = [for z, mod in module.gw : {
     group = mod.group.self_link
   }]
-  health_check_config = {
-    enable_logging = true
-    tcp = {
-      port = 22
-    }
-  }
+  # reuse the left ILB health check so backend health is evaluated
+  # identically on both sides of the sandwich
+  health_check        = module.ilb-left.health_check_self_link
+  health_check_config = null
 }

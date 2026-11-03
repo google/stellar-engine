@@ -37,8 +37,16 @@ output "name" {
 output "random_secret" {
   description = "Generated secret."
   value       = local.secret
+  sensitive   = true
 }
 
+
+output "route_policies" {
+  description = "BGP route policy ids, keyed by route policy key."
+  value = {
+    for k, v in google_compute_router_route_policy.default : k => v.id
+  }
+}
 
 output "router" {
   description = "Router resource (only if auto-created)."

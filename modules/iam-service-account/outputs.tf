@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Google LLC
+ * Copyright 2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,37 +16,42 @@
 
 output "email" {
   description = "Service account email."
-  value       = local.resource_email_static
+  value       = local.static_email
   depends_on = [
-    local.service_account,
+    local.service_account
   ]
 }
 
 output "iam_email" {
   description = "IAM-format service account email."
-  value       = local.resource_iam_email_static
+  value       = local.static_iam_email
   depends_on = [
-    local.service_account,
+    local.service_account
   ]
 }
 
 output "id" {
   description = "Fully qualified service account id."
-  value       = local.service_account_id_static
+  value       = local.static_id
   depends_on = [
-    local.service_account,
+    local.service_account
   ]
 }
 
 output "name" {
-  description = "Service account name."
-  value       = local.service_account_id_static
+  description = "Service account email (mirrors email output for symmetry when chaining create and reuse)."
+  value       = local.static_email
   depends_on = [
-    local.service_account,
+    local.service_account
   ]
 }
 
 output "service_account" {
   description = "Service account resource."
   value       = local.service_account
+}
+
+output "unique_id" {
+  description = "Fully qualified service account id."
+  value       = try(local.service_account.unique_id, null)
 }

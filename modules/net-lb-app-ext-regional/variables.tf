@@ -20,6 +20,20 @@ variable "address" {
   default     = null
 }
 
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    addresses         = optional(map(string), {})
+    locations         = optional(map(string), {})
+    networks          = optional(map(string), {})
+    project_ids       = optional(map(string), {})
+    security_policies = optional(map(string), {})
+    subnets           = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "description" {
   description = "Optional description used for resources."
   type        = string
@@ -29,6 +43,8 @@ variable "description" {
 variable "group_configs" {
   description = "Optional unmanaged groups to create. Can be referenced in backends via key or outputs."
   type = map(object({
+    name        = optional(string)
+    description = optional(string, "Terraform managed.")
     zone        = string
     instances   = optional(list(string))
     named_ports = optional(map(number), {})
@@ -38,12 +54,27 @@ variable "group_configs" {
   nullable = false
 }
 
+variable "http_proxy_config" {
+  description = "HTTP proxy configuration."
+  type = object({
+    name                   = optional(string)
+    description            = optional(string, "Terraform managed.")
+    http_keepalive_timeout = optional(string)
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "https_proxy_config" {
   description = "HTTPS proxy connfiguration."
   type = object({
+    name                             = optional(string)
+    description                      = optional(string, "Terraform managed.")
     certificate_manager_certificates = optional(list(string))
     certificate_map                  = optional(string)
+    http_keepalive_timeout           = optional(string)
     quic_override                    = optional(string)
+    server_tls_policy                = optional(string)
     ssl_policy                       = optional(string)
   })
   default  = {}
@@ -64,6 +95,7 @@ variable "name" {
 variable "neg_configs" {
   description = "Optional network endpoint groups to create. Can be referenced in backends via key or outputs."
   type = map(object({
+    project_id  = optional(string)
     description = optional(string)
     cloudfunction = optional(object({
       region          = string
@@ -100,11 +132,13 @@ variable "neg_configs" {
       })))
     }))
     internet = optional(object({
-      use_fqdn = optional(bool, true)
-      endpoints = optional(map(object({
-        destination = string
-        port        = number
-      })))
+      region  = string
+      network = string
+      endpoints = map(object({
+        fqdn       = optional(string)
+        ip_address = optional(string)
+        port       = number
+      }))
     }))
     psc = optional(object({
       region         = string
@@ -148,6 +182,18 @@ variable "neg_configs" {
     ])
     error_message = "Cloud Function NEGs need either target function or target urlmask defined."
   }
+  validation {
+    condition = alltrue([
+      for k, v in var.neg_configs : (
+        v.internet == null
+        ? true
+        : alltrue([
+          for ek, ev in v.internet.endpoints : (ev.fqdn != null || ev.ip_address != null)
+        ])
+      )
+    ])
+    error_message = "Internet NEG endpoints must specify either fqdn or ip_address."
+  }
 }
 
 variable "network_tier_standard" {
@@ -158,9 +204,13 @@ variable "network_tier_standard" {
 }
 
 variable "ports" {
-  description = "Optional ports for HTTP load balancer, valid ports are 80 and 8080."
+  description = "Optional ports for HTTP load balancer."
   type        = list(string)
   default     = null
+  validation {
+    condition     = length(coalesce(var.ports, [])) <= 1
+    error_message = "Application Load Balancer supports at most one port per forwarding rule."
+  }
 }
 
 variable "project_id" {
@@ -191,6 +241,7 @@ variable "ssl_certificates" {
   type = object({
     certificate_ids = optional(list(string), [])
     create_configs = optional(map(object({
+      name        = optional(string)
       certificate = string
       private_key = string
     })), {})
@@ -200,8 +251,11 @@ variable "ssl_certificates" {
 }
 
 
-variable "vpc" {
+variable "vpc_config" {
   description = "VPC-level configuration."
-  type        = string
-  nullable    = false
+  type = object({
+    network = string
+  })
+  nullable = false
 }
+

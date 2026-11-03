@@ -1,5 +1,5 @@
 /**
- * Copyright 2025 Google LLC
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +22,24 @@ output "alert_ids" {
   }
 }
 
+output "asset_search_results" {
+  description = "Cloud Asset Inventory search results."
+  value = {
+    for k, v in data.google_cloud_asset_search_all_resources.default : k => v.results
+  }
+}
+
+output "bigquery_reservations" {
+  description = "BigQuery reservations and assignments."
+  value = {
+    reservations = google_bigquery_reservation.default
+    assignments  = local.bigquery_reservations_assigments
+  }
+}
+
 output "custom_role_id" {
   description = "Map of custom role IDs created in the project."
-  value = {
-    for k, v in google_project_iam_custom_role.roles :
-    # build the string manually so that role IDs can be used as map
-    # keys (useful for folder/organization/project-level iam bindings)
-    (k) => "projects/${local.project_id}/roles/${local.custom_roles[k].name}"
-  }
+  value       = local.custom_role_ids
 }
 
 output "custom_roles" {
@@ -39,10 +49,7 @@ output "custom_roles" {
 
 output "default_service_accounts" {
   description = "Emails of the default service accounts for this project."
-  value = {
-    compute = "${local.project.number}-compute@developer.gserviceaccount.com"
-    gae     = "${local.project.project_id}@appspot.gserviceaccount.com"
-  }
+  value       = local.default_service_accounts
 }
 
 output "id" {
@@ -59,8 +66,17 @@ output "id" {
     google_project_iam_member.shared_vpc_host_robots,
     google_kms_crypto_key_iam_member.service_agent_cmek,
     google_project_service_identity.default,
-    google_project_iam_member.service_agents
+    google_project_iam_member.service_agents,
+    google_folder_iam_member.service_agents_folder_bindings,
+    google_project_iam_member.service_agents_project_bindings
   ]
+}
+
+output "kms_autokeys" {
+  description = "KMS Autokey key ids."
+  value = {
+    for k, v in google_kms_key_handle.default : k => v.kms_key
+  }
 }
 
 output "name" {
@@ -88,7 +104,7 @@ output "network_tag_values" {
   description = "Tag value resources."
   value = {
     for k, v in google_tags_tag_value.default :
-    k => v if local.tag_values[k].tag_network
+    k => v if try(local.tag_values[k].tag_network, null) != null
   }
 }
 
@@ -117,8 +133,14 @@ output "number" {
     google_project_iam_member.shared_vpc_host_robots,
     google_kms_crypto_key_iam_member.service_agent_cmek,
     google_project_service_identity.default,
-    google_project_iam_member.service_agents
+    google_project_iam_member.service_agents,
+    google_folder_iam_member.service_agents_folder_bindings,
+    google_project_iam_member.service_agents_project_bindings
   ]
+}
+output "organization_policies_ids" {
+  description = "Map of ORGANIZATION_POLICIES => ID in the organization."
+  value       = { for k, v in google_org_policy_policy.default : k => v.id }
 }
 
 # TODO: deprecate in favor of id
@@ -137,7 +159,9 @@ output "project_id" {
     google_project_iam_member.shared_vpc_host_robots,
     google_kms_crypto_key_iam_member.service_agent_cmek,
     google_project_service_identity.default,
-    google_project_iam_member.service_agents
+    google_project_iam_member.service_agents,
+    google_folder_iam_member.service_agents_folder_bindings,
+    google_project_iam_member.service_agents_project_bindings
   ]
 }
 
@@ -157,12 +181,19 @@ output "quotas" {
   value       = google_cloud_quotas_quota_preference.default
 }
 
+output "scc_custom_sha_modules_ids" {
+  description = "Map of SCC CUSTOM SHA MODULES => ID in the project."
+  value       = { for k, v in google_scc_management_project_security_health_analytics_custom_module.scc_project_custom_module : k => v.id }
+}
+
 output "service_agents" {
   description = "List of all (active) service agents for this project."
   value       = local.aliased_service_agents
   depends_on = [
     google_project_service_identity.default,
-    google_project_iam_member.service_agents
+    google_project_iam_member.service_agents,
+    google_folder_iam_member.service_agents_folder_bindings,
+    google_project_iam_member.service_agents_project_bindings
   ]
 }
 
@@ -195,6 +226,32 @@ output "tag_values" {
   description = "Tag value resources."
   value = {
     for k, v in google_tags_tag_value.default :
-    k => v if !local.tag_values[k].tag_network
+    k => v if try(local.tag_values[k].tag_network, null) == null
+  }
+}
+
+output "workload_identity_pool_ids" {
+  description = "Workload identity provider ids."
+  value = {
+    for k, v in google_iam_workload_identity_pool.default : k => v.name
+  }
+}
+
+output "workload_identity_provider_ids" {
+  description = "Workload identity provider attributes."
+  value = {
+    for k, v in google_iam_workload_identity_pool_provider.default :
+    k => v.name
+  }
+}
+
+output "workload_identity_providers" {
+  description = "Workload identity provider attributes."
+  value = {
+    for k, v in local.wif_providers : k => {
+      name = google_iam_workload_identity_pool_provider.default[k].name
+      pool = google_iam_workload_identity_pool.default[v.pool].name
+      type = try(v.identity_provider.oidc.template, null)
+    }
   }
 }

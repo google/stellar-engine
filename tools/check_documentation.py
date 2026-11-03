@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-
+#
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "click",
+#   "marko",
+# ]
+# ///
 # Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -221,13 +228,15 @@ def main(
                 print(f"[{state.label}] {readme_path}")
 
     if errors:
-        if show_diffs:
-            print("Errored diffs:")
-            print("\n".join([e[1] for e in errors]))
-        else:
-            print("Errored modules:")
-            print("\n".join([e[0] for e in errors]))
-
+        print("\nErrored modules:\n")
+        for e in errors:
+            module, diff = e
+            print(f"- {module}")
+            if show_diffs:
+                print()
+                print("".join(diff))
+                print()
+        print()
         raise SystemExit("Errors found.")
 
 

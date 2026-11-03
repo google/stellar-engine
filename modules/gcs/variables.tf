@@ -23,7 +23,28 @@ variable "autoclass" {
 variable "bucket_create" {
   description = "Create bucket."
   type        = bool
+  nullable    = false
   default     = true
+}
+
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    condition_vars  = optional(map(map(string)), {})
+    custom_roles    = optional(map(string), {})
+    iam_principals  = optional(map(string), {})
+    kms_keys        = optional(map(string), {})
+    locations       = optional(map(string), {})
+    project_ids     = optional(map(string), {})
+    storage_buckets = optional(map(string), {})
+    tag_values      = optional(map(string), {})
+    tag_vars = optional(object({
+      projects     = optional(map(map(string)), {})
+      organization = optional(map(string), {})
+    }), {})
+  })
+  default  = {}
+  nullable = false
 }
 
 variable "cors" {
@@ -73,47 +94,33 @@ variable "force_destroy" {
   default     = false
 }
 
-variable "iam" {
-  description = "IAM bindings in {ROLE => [MEMBERS]} format."
-  type        = map(list(string))
-  default     = {}
+variable "ip_filter" {
+  description = "The bucket's IP filter configuration."
+  type = object({
+    allow_cross_org_vpcs           = optional(bool)
+    allow_all_service_agent_access = optional(bool)
+    public_network_sources         = optional(list(string))
+    vpc_network_sources            = optional(map(list(string)), {})
+  })
+  default = null
 }
 
-variable "iam_bindings" {
-  description = "Authoritative IAM bindings in {KEY => {role = ROLE, members = [], condition = {}}}. Keys are arbitrary."
+variable "kms_autokeys" {
+  description = "KMS Autokey key handles. If location is not specified the bucket location will be used. Key handle names will be added to the kms_keys context with an `autokeys/` prefix."
   type = map(object({
-    members = list(string)
-    role    = string
-    condition = optional(object({
-      expression  = string
-      title       = string
-      description = optional(string)
-    }))
+    location               = optional(string)
+    resource_type_selector = optional(string, "storage.googleapis.com/Bucket")
   }))
   nullable = false
   default  = {}
-}
-
-variable "iam_bindings_additive" {
-  description = "Individual additive IAM bindings. Keys are arbitrary."
-  type = map(object({
-    member = string
-    role   = string
-    condition = optional(object({
-      expression  = string
-      title       = string
-      description = optional(string)
-    }))
-  }))
-  nullable = false
-  default  = {}
-}
-
-variable "iam_by_principals" {
-  description = "Authoritative IAM binding in {PRINCIPAL => [ROLES]} format. Principals need to be statically defined to avoid cycle errors. Merged internally with the `iam` variable."
-  type        = map(list(string))
-  default     = {}
-  nullable    = false
+  validation {
+    condition = alltrue([
+      for k, v in var.kms_autokeys : k == try(regex(
+        "^[a-z][a-z0-9-]+[a-z0-9]$", k
+      ), null)
+    ])
+    error_message = "Autokey keys need to be valid GCP resource names."
+  }
 }
 
 variable "labels" {
@@ -176,8 +183,8 @@ variable "location" {
   type        = string
   default     = null
   validation {
-    condition     = ((var.bucket_create == true) == (var.location != null))
-    error_message = "Bucket location is required if and only if bucket_create is true."
+    condition     = var.bucket_create != true || var.location != null
+    error_message = "Bucket location needs to be defined when creating a bucket."
   }
 }
 
@@ -231,6 +238,7 @@ variable "notification_config" {
     sa_email       = string
     topic_name     = string
     create_topic = optional(object({
+      create     = optional(bool, true)
       kms_key_id = optional(string)
     }), {})
     event_types        = optional(list(string))
@@ -277,8 +285,22 @@ variable "prefix" {
 }
 
 variable "project_id" {
-  description = "Bucket project id."
+  description = "Bucket project id. Only required when creating buckets, or notification config topics."
   type        = string
+  nullable    = true
+  default     = null
+  validation {
+    condition = (
+      var.bucket_create != true || var.project_id != null
+    )
+    error_message = "Project id needs to be defined when creating a bucket."
+  }
+  validation {
+    condition = (
+      try(var.notification_config.create_topic.create, null) != true || var.project_id != null
+    )
+    error_message = "Project id needs to be defined when creating a notification topic."
+  }
 }
 
 variable "public_access_prevention" {
@@ -300,7 +322,7 @@ variable "requester_pays" {
 variable "retention_policy" {
   description = "Bucket retention policy."
   type = object({
-    retention_period = number
+    retention_period = string
     is_locked        = optional(bool)
   })
   default = null
