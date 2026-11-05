@@ -41,7 +41,7 @@ it easy to copy and paste.
 
 The deployment process is broken up into stages. During each stage, certain
 variables are required to be added to the **`terraform.tfvars`** file. Upon
-completion of a stage, the Terraform code will write out a **``<stage-name>`-tfvar.auto.tfvars.json`** file to the Google Cloud Storage
+completion of a stage, the Terraform code will write out a **`<stage-name>.auto.tfvars.json`** file to the Google Cloud Storage
 (GCS) bucket created in the initial **0-bootstrap stage**. Subsequent stages
 will use the **gcloud** command line interface (CLI) to copy the files into the
 new stage folder, as well as a provider file that impersonates a stage-specific
