@@ -24,9 +24,10 @@ moved {
 }
 
 module "cloud-spanner" {
-  source     = "../../../modules/spanner-instance-se"
-  project_id = var.main_project_id
-  edition    = var.edition
+  source       = "../../../modules/spanner-instance-se"
+  project_id   = var.main_project_id
+  edition      = var.edition
+  kms_key_name = var.kms_key_name
   instance = {
     name         = var.instance_name
     display_name = var.display_name
@@ -56,4 +57,19 @@ module "cloud-spanner" {
   }
 
   depends_on = [google_project_service.spanner_api]
+}
+
+# Grant Spanner service identity access to CMEK key when provided
+resource "google_project_service_identity" "spanner" {
+  provider = google-beta
+  project  = var.main_project_id
+  service  = "spanner.googleapis.com"
+  count    = var.kms_key_name != null ? 1 : 0
+}
+
+resource "google_kms_crypto_key_iam_member" "spanner_sa_kms_access" {
+  count         = var.kms_key_name != null ? 1 : 0
+  crypto_key_id = var.kms_key_name
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = google_project_service_identity.spanner[0].member
 }
