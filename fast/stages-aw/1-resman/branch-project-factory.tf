@@ -103,14 +103,16 @@ module "branch-pf-prod-r-sa" {
 # automation buckets
 
 module "branch-pf-dev-gcs" {
-  source        = "../../../modules/gcs"
-  count         = var.fast_features.project_factory ? 1 : 0
-  project_id    = var.automation.project_id
-  name          = "dev-resman-pf-0"
-  prefix        = var.prefix
-  location      = var.regions.primary
-  storage_class = local.gcs_storage_class
-  versioning    = true
+  source         = "../../../modules/gcs"
+  count          = var.fast_features.project_factory ? 1 : 0
+  project_id     = var.automation.project_id
+  name           = "dev-resman-pf-0"
+  prefix         = var.prefix
+  location       = var.regions.primary
+  storage_class  = local.gcs_storage_class
+  versioning     = true
+  force_destroy  = var.force_destroy
+  encryption_key = "projects/${var.automation.project_id}/locations/${var.regions.primary}/keyRings/gcs/cryptoKeys/gcs"
   iam = {
     "roles/storage.objectAdmin"  = [module.branch-pf-dev-sa[0].iam_email]
     "roles/storage.objectViewer" = [module.branch-pf-dev-r-sa[0].iam_email]
@@ -118,14 +120,16 @@ module "branch-pf-dev-gcs" {
 }
 
 module "branch-pf-prod-gcs" {
-  source        = "../../../modules/gcs"
-  count         = var.fast_features.project_factory ? 1 : 0
-  project_id    = var.automation.project_id
-  name          = "prod-resman-pf-0"
-  prefix        = var.prefix
-  location      = var.regions.primary
-  storage_class = local.gcs_storage_class
-  versioning    = true
+  source         = "../../../modules/gcs"
+  count          = var.fast_features.project_factory ? 1 : 0
+  project_id     = var.automation.project_id
+  name           = "prod-resman-pf-0"
+  prefix         = var.prefix
+  location       = var.regions.primary
+  storage_class  = local.gcs_storage_class
+  versioning     = true
+  force_destroy  = var.force_destroy
+  encryption_key = "projects/${var.automation.project_id}/locations/${var.regions.primary}/keyRings/gcs/cryptoKeys/gcs"
   iam = {
     "roles/storage.objectAdmin"  = [module.branch-pf-prod-sa[0].iam_email]
     "roles/storage.objectViewer" = [module.branch-pf-prod-r-sa[0].iam_email]
