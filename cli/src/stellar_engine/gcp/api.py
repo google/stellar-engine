@@ -12,16 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Interface between preflight checks and Google Cloud.
+"""Interface between the CLI and Google Cloud.
 
-Checks depend only on the `CloudApi` protocol defined here. The live
-implementation in `live.py` calls Google Cloud client libraries, and tests
-supply an in-memory fake, so no unit test touches the network.
+Preflight checks and deploy step checks depend only on the read-only
+`CloudApi` protocol defined here; deploy steps that change Google Cloud
+also take the `CloudWriter` protocol. The live implementation in `live.py`
+calls Google Cloud client libraries, and tests supply an in-memory fake,
+so no unit test touches the network.
 """
 
+from collections.abc import Sequence
 import dataclasses
 import enum
 from typing import Protocol
+
+from stellar_engine import iam_diff
 
 
 class CloudError(Exception):
@@ -51,8 +56,20 @@ class ApiDisabledError(AccessDeniedError):
         )
 
 
+class ConflictError(CloudError):
+    """Raised when a write lost a race with another change.
+
+    The resource changed after the read, so the etag the write sent is
+    stale. Read again, reapply the change and retry.
+    """
+
+
 class CredentialsError(Exception):
     """Raised when Application Default Credentials are missing or invalid."""
+
+
+# Every error a Google Cloud call raises, for `except api.CLOUD_ERRORS`.
+CLOUD_ERRORS = (CloudError, CredentialsError)
 
 
 class PrincipalKind(enum.StrEnum):
@@ -118,24 +135,102 @@ class ProjectBilling:
 
 
 @dataclasses.dataclass(frozen=True)
-class IamBinding:
-    """One role binding from an IAM policy.
+class AdcInfo:
+    """Application Default Credentials as read locally, without a call.
 
     Attributes:
-        role: Role name, for example `roles/owner`.
-        members: Principals bound to the role.
+        kind: Whether the credentials belong to a user or a service
+            account.
+        quota_project: Project the credentials bill API quota to, or None.
     """
 
-    role: str
-    members: tuple[str, ...]
+    kind: PrincipalKind
+    quota_project: str | None
+
+
+@dataclasses.dataclass(frozen=True)
+class ServiceRestriction:
+    """The effective `gcp.restrictServiceUsage` policy on a resource.
+
+    Attributes:
+        allow_all: Whether a rule allows every service.
+        deny_all: Whether a rule denies every service.
+        allowed: Services that the rules allow, without `is:` prefixes.
+        denied: Services that the rules deny, without `is:` prefixes.
+    """
+
+    allow_all: bool = False
+    deny_all: bool = False
+    allowed: tuple[str, ...] = ()
+    denied: tuple[str, ...] = ()
+
+    def allows(self, service: str) -> bool:
+        """Returns whether projects under the resource may use a service.
+
+        A deny wins over an allow. Without any allow list the constraint
+        allows every service, as its default does.
+
+        Args:
+            service: Service name, such as `bigquery.googleapis.com`.
+        """
+        service = service.removeprefix("is:")
+        if self.deny_all or service in self.denied:
+            return False
+        return self.allow_all or not self.allowed or service in self.allowed
+
+
+@dataclasses.dataclass(frozen=True)
+class WorkloadInfo:
+    """Subset of an Assured Workloads workload.
+
+    Attributes:
+        name: Workload name,
+            `organizations/<org>/locations/<location>/workloads/<id>`.
+        regime: Compliance regime, such as `IL5`.
+        folder: Consumer folder as `folders/<id>`, or None.
+        compliant_but_disallowed: Services the regime supports that the
+            workload's `gcp.restrictServiceUsage` policy still blocks.
+    """
+
+    name: str
+    regime: str
+    folder: str | None
+    compliant_but_disallowed: tuple[str, ...] = ()
+
+
+@dataclasses.dataclass(frozen=True)
+class ObjectData:
+    """Content of a Cloud Storage object.
+
+    Attributes:
+        data: Object bytes.
+        generation: Object generation that the bytes belong to.
+    """
+
+    data: bytes
+    generation: int
+
+
+@dataclasses.dataclass(frozen=True)
+class ServiceAccount:
+    """Subset of an IAM service account.
+
+    Attributes:
+        email: Service account email.
+        disabled: Whether the account is disabled.
+    """
+
+    email: str
+    disabled: bool
 
 
 class CloudApi(Protocol):
-    """Read-only Google Cloud operations used by preflight checks.
+    """Read-only Google Cloud operations.
 
-    Methods raise `AccessDeniedError` when the caller lacks permission,
-    `CloudError` for any other failed call, and return None or False when a
-    resource does not exist.
+    Preflight checks and the `check()` of every deploy step use only these
+    calls, so neither changes anything. Methods raise `AccessDeniedError`
+    when the caller lacks permission, `CloudError` for any other failed
+    call, and return None or False when a resource does not exist.
     """
 
     def adc_principal(self) -> Principal:
@@ -164,8 +259,8 @@ class CloudApi(Protocol):
         """Returns the subset of permissions the caller has on the org."""
         ...
 
-    def org_iam_bindings(self, org_id: str) -> list[IamBinding]:
-        """Returns the organization IAM policy bindings."""
+    def get_org_iam_policy(self, org_id: str) -> iam_diff.Policy:
+        """Returns the organization IAM policy, conditions included."""
         ...
 
     def get_billing_account(self, account_id: str) -> BillingAccount | None:
@@ -234,4 +329,129 @@ class CloudApi(Protocol):
 
     def group_exists(self, email: str) -> bool:
         """Returns whether a Cloud Identity group exists."""
+        ...
+
+    def adc_info(self) -> AdcInfo:
+        """Returns the kind and quota project of the local credentials."""
+        ...
+
+    def effective_service_restriction(
+        self, resource: str
+    ) -> ServiceRestriction:
+        """Returns the effective `gcp.restrictServiceUsage` on a resource.
+
+        Args:
+            resource: Resource such as `folders/123456789012`.
+        """
+        ...
+
+    def assured_workload(self, name: str) -> WorkloadInfo | None:
+        """Returns an Assured Workloads workload by name.
+
+        Args:
+            name: Workload name,
+                `organizations/<org>/locations/<location>/workloads/<id>`.
+        """
+        ...
+
+    def read_object(
+        self, bucket: str, name: str, *, impersonate: str | None = None
+    ) -> ObjectData | None:
+        """Returns a Cloud Storage object, or None when it does not exist.
+
+        Args:
+            bucket: Bucket name.
+            name: Object name.
+            impersonate: Service account email to read as, or None to read
+                with Application Default Credentials.
+        """
+        ...
+
+    def billing_account_iam(self, account_id: str) -> iam_diff.Policy:
+        """Returns the IAM policy of a billing account."""
+        ...
+
+    def service_accounts(self, project_id: str) -> list[ServiceAccount]:
+        """Returns the service accounts of a project."""
+        ...
+
+    def gcs_service_agent(self, project_id: str) -> str:
+        """Returns the Cloud Storage service agent email of a project.
+
+        Cloud Storage creates the agent on this first read, which some
+        regimes need before a CMEK bucket can be created.
+        """
+        ...
+
+
+class CloudWriter(Protocol):
+    """Google Cloud changes that deploy steps make outside Terraform.
+
+    Only `run()` of a deploy step calls these, after the operator agreed.
+    Methods raise `AccessDeniedError` when the caller lacks permission,
+    `ConflictError` when a concurrent change made an etag stale, and
+    `CloudError` for any other failed call.
+    """
+
+    def set_org_iam_policy(
+        self,
+        org_id: str,
+        policy: iam_diff.Policy,
+        *,
+        etag: str,
+        update_mask: Sequence[str],
+    ) -> iam_diff.Policy:
+        """Replaces fields of the organization IAM policy.
+
+        Args:
+            org_id: Organization ID.
+            policy: The policy to write; it is sent as version 3.
+            etag: Etag of the read the policy is based on. It must not be
+                empty, so a concurrent change fails the write.
+            update_mask: Policy fields to replace, such as
+                `("bindings", "etag", "auditConfigs")`.
+
+        Returns:
+            The policy as written.
+        """
+        ...
+
+    def enable_services(self, project_id: str, services: Sequence[str]) -> None:
+        """Enables services on a project and waits until they are enabled.
+
+        Mirrors `0-bootstrap/enableServices.sh`.
+        """
+        ...
+
+    def restrict_allowed_resources(self, name: str) -> None:
+        """Allows the compliant services of a workload on its folder.
+
+        Calls `restrictAllowedResources` with `APPEND_COMPLIANT_RESOURCES`,
+        which adds the services the regime supports to the existing allow
+        list, replacing `scripts/allow_bq.sh`.
+
+        Args:
+            name: Workload name.
+        """
+        ...
+
+    def add_billing_account_binding(
+        self, account_id: str, role: str, member: str
+    ) -> None:
+        """Grants a role on a billing account, keeping the other grants.
+
+        Mirrors `gcloud billing accounts add-iam-policy-binding`.
+        """
+        ...
+
+    def generate_service_identity(
+        self, project_id: str, service: str
+    ) -> str | None:
+        """Creates the service agent of a service in a project.
+
+        Mirrors `gcloud beta services identity create`.
+
+        Returns:
+            The agent email, or None when the operation did not report it.
+        """
         ...

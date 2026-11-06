@@ -91,6 +91,12 @@ class PreflightInputs(pydantic.BaseModel):
     # imports, from `existing_org_policies` in answers.yaml. None when the
     # inputs come without answers.yaml, which has nowhere to list them.
     existing_org_policies: tuple[str, ...] | None = None
+    # The `iam` and `iam_by_principals` overrides of Stage 0, from
+    # `overrides.0-bootstrap` in answers.yaml. They add members to the
+    # roles Stage 0 manages authoritatively, so grants they list stay.
+    stage0_iam_overrides: dict[str, dict[str, tuple[str, ...]]] = (
+        pydantic.Field(default_factory=dict)
+    )
 
 
 def read_config_env(path):

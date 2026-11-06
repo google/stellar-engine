@@ -15,6 +15,7 @@
 """Tests for the individual preflight checks."""
 
 import dataclasses
+import re
 
 import pytest
 
@@ -40,6 +41,25 @@ def remedy(item):
 
 def statuses(results):
     return {item.check_id: item.status for item in results}
+
+
+def iam_policy(*bindings, audit_configs=None):
+    """Returns an organization policy in the gcloud JSON shape.
+
+    Args:
+        *bindings: `(role, members)` pairs.
+        audit_configs: Optional `auditConfigs` entries.
+    """
+    policy = conftest.empty_policy()
+    policy["bindings"] = [
+        {"role": role, "members": list(members)} for role, members in bindings
+    ]
+    if audit_configs is not None:
+        policy["auditConfigs"] = audit_configs
+    return policy
+
+
+ORG_ADMIN = "roles/resourcemanager.organizationAdmin"
 
 
 class TestTools:
@@ -1160,14 +1180,15 @@ class TestSharedOrg:
         for name in ("tagViewer", "custom.kmsRotation", "audit-logs"):
             assert name in detail
 
-    def test_foreign_grants_on_authoritative_roles_warn(self, make_ctx, cloud):
+    @staticmethod
+    def foreign_grants_policy():
         prefix_sa = (
             "serviceAccount:tst-prod-bootstrap-0@"
             "tst-prod-iac-core-0.iam.gserviceaccount.com"
         )
-        cloud.bindings = [
-            api.IamBinding(
-                "roles/resourcemanager.organizationAdmin",
+        return iam_policy(
+            (
+                ORG_ADMIN,
                 (
                     "group:gcp-organization-admins@example.com",
                     f"user:{conftest.USER}",
@@ -1176,9 +1197,12 @@ class TestSharedOrg:
                     "deleted:user:gone@example.com",
                 ),
             ),
-            api.IamBinding("roles/browser", ("domain:example.com",)),
-            api.IamBinding("roles/viewer", ("user:unmanaged@example.com",)),
-        ]
+            ("roles/browser", ("domain:example.com",)),
+            ("roles/viewer", ("user:unmanaged@example.com",)),
+        )
+
+    def test_foreign_grants_on_authoritative_roles_warn(self, make_ctx, cloud):
+        cloud.policy = self.foreign_grants_policy()
         ctx = resolved(make_ctx)
         checks.check_identity(ctx)
         found = by_id(checks.check_shared_org(ctx))
@@ -1187,6 +1211,97 @@ class TestSharedOrg:
         assert "removes 1 existing grants" in iam.detail
         assert "someone-else@example.com" in iam.detail
         assert "unmanaged" not in iam.detail
+        assert "gone@example.com" not in iam.detail
+        assert "It keeps 4 existing grants on those roles." in iam.detail
+
+    @pytest.mark.parametrize(
+        "overrides",
+        [
+            {"iam": {ORG_ADMIN: ["user:someone-else@example.com"]}},
+            {
+                "iam_by_principals": {
+                    "user:someone-else@example.com": [ORG_ADMIN]
+                }
+            },
+        ],
+    )
+    def test_grants_kept_by_overrides_count_as_kept(
+        self, make_ctx, cloud, overrides
+    ):
+        cloud.policy = self.foreign_grants_policy()
+        ctx = resolved(make_ctx, stage0_iam_overrides=overrides)
+        checks.check_identity(ctx)
+        iam = by_id(checks.check_shared_org(ctx))["shared.iam"]
+        assert iam.status == Status.PASS
+        assert iam.detail == (
+            "No existing grants would be removed by Stage 0. It keeps 5 "
+            "existing grants on those roles."
+        )
+
+    def test_overrides_add_authoritative_roles(self, make_ctx, cloud):
+        # An iam override on a role Stage 0 does not manage makes the role
+        # authoritative, so its other members go.
+        cloud.policy = iam_policy(
+            ("roles/viewer", ("user:a@example.com", "user:b@example.com"))
+        )
+        ctx = resolved(
+            make_ctx,
+            stage0_iam_overrides={
+                "iam": {"roles/viewer": ["user:a@example.com"]}
+            },
+        )
+        iam = by_id(checks.check_shared_org(ctx))["shared.iam"]
+        assert iam.status == Status.WARN
+        assert "roles/viewer user:b@example.com" in iam.detail
+
+    def test_conditional_grants_on_authoritative_roles_stay(
+        self, make_ctx, cloud
+    ):
+        policy = iam_policy()
+        policy["bindings"] = [
+            {
+                "role": ORG_ADMIN,
+                "members": ["user:someone-else@example.com"],
+                "condition": {"title": "temporary", "expression": "true"},
+            }
+        ]
+        cloud.policy = policy
+        iam = by_id(checks.check_shared_org(resolved(make_ctx)))["shared.iam"]
+        assert iam.status == Status.PASS
+
+    def test_audit_config_overwrite_warns(self, make_ctx, cloud):
+        cloud.policy = iam_policy(
+            audit_configs=[
+                {
+                    "service": "allServices",
+                    "auditLogConfigs": [
+                        {
+                            "logType": "DATA_READ",
+                            "exemptedMembers": ["user:quiet@example.com"],
+                        }
+                    ],
+                }
+            ]
+        )
+        iam = by_id(checks.check_shared_org(resolved(make_ctx)))["shared.iam"]
+        assert iam.status == Status.WARN
+        assert "replaces the existing allServices audit log" in iam.detail
+
+    def test_matching_audit_config_passes(self, make_ctx, cloud):
+        cloud.policy = iam_policy(
+            audit_configs=[
+                {
+                    "service": "allServices",
+                    "auditLogConfigs": [
+                        {"logType": "DATA_WRITE"},
+                        {"logType": "ADMIN_READ"},
+                        {"logType": "DATA_READ"},
+                    ],
+                }
+            ]
+        )
+        iam = by_id(checks.check_shared_org(resolved(make_ctx)))["shared.iam"]
+        assert iam.status == Status.PASS
 
     @pytest.mark.parametrize(
         ("role", "member", "removed"),
@@ -1230,7 +1345,7 @@ class TestSharedOrg:
         ],
     )
     def test_per_role_semantics(self, make_ctx, cloud, role, member, removed):
-        cloud.bindings = [api.IamBinding(role, (member,))]
+        cloud.policy = iam_policy((role, (member,)))
         ctx = resolved(make_ctx)
         checks.check_identity(ctx)
         iam = by_id(checks.check_shared_org(ctx))["shared.iam"]
@@ -1239,12 +1354,9 @@ class TestSharedOrg:
 
     def test_named_bootstrap_user_is_kept(self, make_ctx, cloud):
         cloud.principal = api.Principal(SA, api.PrincipalKind.SERVICE_ACCOUNT)
-        cloud.bindings = [
-            api.IamBinding(
-                "roles/resourcemanager.organizationAdmin",
-                ("user:admin@example.com", f"serviceAccount:{SA}"),
-            )
-        ]
+        cloud.policy = iam_policy(
+            (ORG_ADMIN, ("user:admin@example.com", f"serviceAccount:{SA}"))
+        )
         ctx = resolved(make_ctx, bootstrap_user="admin@example.com")
         checks.check_identity(ctx)
         iam = by_id(checks.check_shared_org(ctx))["shared.iam"]
@@ -1252,9 +1364,12 @@ class TestSharedOrg:
         assert SA in iam.detail
 
     def test_policy_denied_warns(self, make_ctx, cloud):
-        cloud.bindings = api.AccessDeniedError("nope")
-        found = statuses(checks.check_shared_org(resolved(make_ctx)))
-        assert found["shared.iam"] == Status.WARN
+        cloud.policy = api.AccessDeniedError("nope")
+        found = by_id(checks.check_shared_org(resolved(make_ctx)))
+        assert found["shared.iam"].status == Status.WARN
+        assert found["shared.iam"].detail == (
+            "Cannot read the organization IAM policy: nope"
+        )
 
     def test_skipped_without_org(self, make_ctx):
         found = statuses(checks.check_shared_org(make_ctx()))
@@ -1296,36 +1411,17 @@ def test_manual_items(make_ctx):
     }
 
 
-@pytest.mark.parametrize(
-    ("holder", "expected"),
-    [
-        (repo_lib.Holder(repo_lib.HolderKind.GROUP, "gcp-devops"), "group:x"),
-        (
-            repo_lib.Holder(repo_lib.HolderKind.SERVICE_ACCOUNT, "bootstrap-0"),
-            "serviceAccount:tst-prod-bootstrap-0@tst-prod-iac-core-0"
-            ".iam.gserviceaccount.com",
-        ),
-        (
-            repo_lib.Holder(repo_lib.HolderKind.BOOTSTRAP_USER, ""),
-            f"user:{conftest.USER}",
-        ),
-        (repo_lib.Holder(repo_lib.HolderKind.DOMAIN, ""), "domain:example.com"),
-    ],
-)
-def test_holder_member_resolves_each_holder_kind(holder, expected):
-    member = checks.holder_member(
-        holder,
-        prefix="tst",
-        groups={"gcp-devops": "group:x"},
-        bootstrap_user=conftest.USER,
-        domain="example.com",
-    )
-    assert member == expected
+def test_required_services_follow_enable_services_script(repo):
+    script = (repo.bootstrap_dir / "enableServices.sh").read_text()
+    names = re.search(r'list_of_services="([^"]+)"', script)
+    assert names is not None
+    assert checks.required_services(repo) == [
+        *(f"{name}.googleapis.com" for name in names.group(1).split()),
+        *checks.EXTRA_APIS,
+    ]
 
 
-def test_holder_member_needs_the_inputs_that_name_the_member():
-    holder = repo_lib.Holder(repo_lib.HolderKind.SERVICE_ACCOUNT, "bootstrap-0")
-    member = checks.holder_member(
-        holder, prefix=None, groups={}, bootstrap_user=None, domain=None
+def test_enable_command():
+    assert checks.enable_command("my-project", ["a.googleapis.com"]) == (
+        "gcloud services enable a.googleapis.com --project=my-project"
     )
-    assert member is None

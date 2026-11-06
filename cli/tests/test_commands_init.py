@@ -19,9 +19,12 @@ from ruamel import yaml
 
 import conftest
 import helpers
+import helpers_deploy
 from stellar_engine import cli
+from stellar_engine import paths
 from stellar_engine.commands import common
 from stellar_engine.config import answers as answers_lib
+from stellar_engine.deploy import run_state
 from stellar_engine.wizard import flow
 
 pytestmark = pytest.mark.usefixtures("isolated_home")
@@ -113,6 +116,26 @@ def test_init_rerun_keeps_comments(cli_runner, isolated_home):
     saved = path.read_text()
     assert "# Closest to the operators.\nregion: us-east4" in saved
     assert helpers.load_answers(isolated_home).budget.amount == 100
+
+
+def test_init_repairs_answers_that_fail_the_model(cli_runner, isolated_home):
+    assert helpers.init_env(cli_runner).exit_code == 0
+    path = isolated_home / "envs" / "tst" / "answers.yaml"
+    text = path.read_text()
+    assert "region: us-east4" in text
+    path.write_text(text.replace("region: us-east4", "region: [1]"))
+    outcome = helpers.invoke(
+        cli_runner,
+        "init",
+        "--prefix",
+        "tst",
+        "--non-interactive",
+        "--offline",
+        "--set",
+        "region=us-east4",
+    )
+    assert outcome.exit_code == 0, outcome.output
+    assert helpers.load_answers(isolated_home).region == "us-east4"
 
 
 def test_init_refuses_to_replace_another_env(cli_runner):
@@ -355,3 +378,59 @@ def test_init_requires_bootstrap_user_in_the_bootstrap_phase(
     assert "bootstrap_user is required while stage0_phase is bootstrap" in (
         outcome.output
     )
+
+
+def _final_env(cli_runner, home, *, final_applied):
+    """Creates an environment in the final phase with recorded history."""
+    assert helpers.init_env(cli_runner).exit_code == 0
+    final = helpers.invoke(
+        cli_runner, "init", "--non-interactive", "--set", "stage0_phase=final"
+    )
+    assert final.exit_code == 0, final.output
+    env = paths.EnvPaths(home / "envs" / "tst", "tst")
+    state = run_state.RunState(prefix="tst")
+    state.stage0.final_applied = final_applied
+    run_state.save(env, state, helpers_deploy.NOW)
+    return env
+
+
+def _back_to_bootstrap(cli_runner):
+    return helpers.invoke(
+        cli_runner,
+        "init",
+        "--non-interactive",
+        "--set",
+        "stage0_phase=bootstrap",
+    )
+
+
+def test_init_refuses_bootstrap_after_a_final_apply(cli_runner, isolated_home):
+    _final_env(cli_runner, isolated_home, final_applied=True)
+    outcome = _back_to_bootstrap(cli_runner)
+    assert outcome.exit_code == 2, outcome.output
+    assert "stage0_phase cannot return from final to bootstrap" in (
+        outcome.output
+    )
+    assert helpers.load_answers(isolated_home).stage0_phase == "final"
+
+
+def test_init_allows_bootstrap_before_a_final_apply(cli_runner, isolated_home):
+    _final_env(cli_runner, isolated_home, final_applied=False)
+    outcome = _back_to_bootstrap(cli_runner)
+    assert outcome.exit_code == 0, outcome.output
+    assert helpers.load_answers(isolated_home).stage0_phase == "bootstrap"
+
+
+def test_init_keeps_the_phase_without_readable_history(
+    cli_runner, isolated_home
+):
+    env = _final_env(cli_runner, isolated_home, final_applied=False)
+    env.run_state.write_text("{broken")
+    outcome = _back_to_bootstrap(cli_runner)
+    assert outcome.exit_code == 2, outcome.output
+    assert "Move it away" in outcome.output
+    # Other changes need no history.
+    other = helpers.invoke(
+        cli_runner, "init", "--non-interactive", "--set", "region=us-east4"
+    )
+    assert other.exit_code == 0, other.output

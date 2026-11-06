@@ -61,9 +61,9 @@ def header(prefix: str) -> list[str]:
     return [
         f"{writer.MARKER}{prefix}/answers.yaml stage0_phase and {VARIABLE}.",
         "# The file exists only in the bootstrap phase, so every Stage 0",
-        f"# run sets {VARIABLE} without a -var option. After the state",
-        "# migration, run stellar init --set "
-        f"stage0_phase={models.STAGE0_FINAL} and then",
+        f"# run sets {VARIABLE} without a -var option. stellar deploy",
+        "# removes it after the state migration. By hand, run",
+        f"# stellar init --set stage0_phase={models.STAGE0_FINAL} and then",
         "# stellar render, which removes this file for the final apply.",
     ]
 
@@ -100,6 +100,20 @@ def text(answers: models.Answers, repo: repo_lib.Repo) -> str:
     )
 
 
+def declares_remote_backend(text: str) -> bool:
+    """Returns whether a providers file declares the remote state backend.
+
+    The remote providers file that Stage 0 writes declares `backend "gcs"`,
+    and `providers.tf.tmp` declares none. The file turns remote when the
+    operator or `stellar deploy` copies it into the workspace, which is
+    before the state migration, so this alone never shows a migration.
+
+    Args:
+        text: The providers file text.
+    """
+    return _REMOTE_BACKEND_RE.search(text) is not None
+
+
 def warnings(workspace: pathlib.Path, answers: models.Answers) -> list[str]:
     """Returns non-fatal findings about the phase of a Stage 0 workspace.
 
@@ -115,13 +129,13 @@ def warnings(workspace: pathlib.Path, answers: models.Answers) -> list[str]:
     if answers.stage0_phase != models.STAGE0_BOOTSTRAP:
         return []
     providers = workspace / workspace_lib.BOOTSTRAP_PROVIDERS
-    text = fsutil.read_text_or_none(providers) or ""
-    if not _REMOTE_BACKEND_RE.search(text):
+    if not declares_remote_backend(fsutil.read_text_or_none(providers) or ""):
         return []
     return [
         f"{providers} uses the remote state backend, so the first Stage 0 "
         "apply already ran, but stage0_phase is still "
-        f"{models.STAGE0_BOOTSTRAP}; run stellar init --set "
+        f"{models.STAGE0_BOOTSTRAP}; run stellar deploy --stage 0, whose "
+        "s0.phase_final step switches it, or run stellar init --set "
         f"stage0_phase={models.STAGE0_FINAL} and stellar render before the "
         "next apply."
     ]

@@ -23,6 +23,7 @@ import helpers
 from stellar_engine import paths
 from stellar_engine import workspace
 from stellar_engine.config import models
+from stellar_engine.config import validate
 from stellar_engine.render import imports
 from stellar_engine.render import phase
 from stellar_engine.render import pipeline
@@ -122,6 +123,7 @@ def test_warnings_follow_the_stage_order(repo, env, monkeypatch):
     monkeypatch.setattr(
         phase, "warnings", lambda workspace, answers: [f"phase {workspace}"]
     )
+    monkeypatch.setattr(validate, "warnings", lambda answers: ["billing"])
     found = pipeline.warnings(
         ["0", paths.RESMAN], helpers.minimal_answers(), repo, env
     )
@@ -131,7 +133,18 @@ def test_warnings_follow_the_stage_order(repo, env, monkeypatch):
         f"phase {env.workspace(paths.BOOTSTRAP)}",
         f"imports {paths.RESMAN}",
         f"stages {paths.RESMAN}",
+        "billing",
     ]
+
+
+def test_warnings_name_a_redundant_external_grant(repo, env):
+    answers = helpers.minimal_answers(
+        billing={"account_id": conftest.BILLING, "external_grant": True}
+    )
+    (found,) = pipeline.warnings([paths.RESMAN], answers, repo, env)
+    assert "billing.external_grant is set while billing.no_iam" in found
+    stage0 = pipeline.warnings([paths.BOOTSTRAP], answers, repo, env)
+    assert not any("external_grant" in line for line in stage0)
 
 
 def test_warnings_report_an_import_that_would_fail(repo, env):

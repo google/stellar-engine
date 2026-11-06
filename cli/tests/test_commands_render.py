@@ -60,18 +60,16 @@ def test_render_creates_workspace_tfvars_and_imports(
     ).is_file()
     assert f"created    {tfvars}" in outcome.output
     assert f"created    {imports_file}" in outcome.output
-    assert f"terraform -chdir={workspace} init" in outcome.output
     phase_file = workspace / "0-bootstrap-phase.auto.tfvars"
     assert 'bootstrap_user = "admin@example.com"' in phase_file.read_text()
     assert conftest.mode(phase_file) == 0o600
     assert f"created    {phase_file}" in outcome.output
-    assert f"terraform -chdir={workspace} plan -out=s0.tfplan" in (
-        outcome.output
-    )
-    assert f"terraform -chdir={workspace} apply s0.tfplan" in outcome.output
+    assert "Next: stellar deploy --stage 0" in outcome.output
+    assert "terraform -chdir" not in outcome.output
     assert "-var" not in outcome.output
-    assert "stellar init --set stage0_phase=final" in outcome.output
+    assert "switches stage0_phase to final" in outcome.output
     assert "1-resman waits for Stage 0 outputs" in outcome.output
+    assert "stellar deploy --stage 1 then fetches them" in outcome.output
 
 
 def test_render_rerun_is_unchanged(cli_runner, isolated_home, fake_tools):
@@ -328,11 +326,7 @@ def test_render_final_phase_removes_the_phase_file(
     assert outcome.exit_code == 0, outcome.output
     assert f"removed    {phase_file}" in outcome.output
     assert not phase_file.exists()
-    workspace = helpers.workspace(isolated_home, "0-bootstrap")
-    assert f"terraform -chdir={workspace} plan -out=s0.tfplan" in (
-        outcome.output
-    )
-    assert f"terraform -chdir={workspace} apply s0.tfplan" in outcome.output
+    assert "Next: stellar deploy --stage 0" in outcome.output
     assert "stage0_phase" not in outcome.output
     again = helpers.invoke(cli_runner, "render")
     assert str(phase_file) not in again.output
@@ -499,3 +493,21 @@ def test_render_diff_prints_earlier_stages_before_an_error(
     assert outcome.exit_code == 2, outcome.output
     assert '+prefix = "tst"' in outcome.stdout
     assert outcome.stderr.endswith("Error: 1-resman cannot render\n")
+
+
+def test_render_of_a_ready_stage1_points_at_its_deploy(
+    cli_runner, isolated_home, fake_tools
+):
+    assert helpers.init_env(cli_runner).exit_code == 0
+    fast_config = isolated_home / "envs" / "tst" / "fast-config"
+    for name in (
+        "providers/1-resman-providers.tf",
+        "tfvars/0-globals.auto.tfvars.json",
+        "tfvars/0-bootstrap.auto.tfvars.json",
+    ):
+        (fast_config / name).parent.mkdir(parents=True, exist_ok=True)
+        (fast_config / name).write_text("{}\n")
+    outcome = helpers.invoke(cli_runner, "render", "--stage", "1")
+    assert outcome.exit_code == 0, outcome.output
+    assert outcome.output.splitlines()[-1] == "Next: stellar deploy --stage 1"
+    assert "waits for Stage 0 outputs" not in outcome.output

@@ -101,6 +101,24 @@ def resolve_stage(name: str) -> str:
     raise ValueError(f"Unknown stage {name!r}; expected one of {known}")
 
 
+def stage_alias(name: str) -> str:
+    """Returns the alias of a stage, the inverse of `resolve_stage`.
+
+    Args:
+        name: A stage name such as `1-resman` or an alias such as `1`.
+
+    Returns:
+        The alias, such as `1`.
+
+    Raises:
+        ValueError: If the name is neither a stage nor an alias.
+    """
+    stage = resolve_stage(name)
+    return next(
+        alias for alias, found in STAGE_ALIASES.items() if found == stage
+    )
+
+
 def stage_dir(root: pathlib.Path, stage: str) -> pathlib.Path:
     """Returns the directory of a stage under an engine or environment root.
 
@@ -184,6 +202,11 @@ class EnvPaths:
     def run_state(self) -> pathlib.Path:
         """Returns the `run-state.json` path."""
         return self.root / "run-state.json"
+
+    @property
+    def deploy_lock(self) -> pathlib.Path:
+        """Returns the lock file that `stellar deploy` holds while it runs."""
+        return self.root / "deploy.lock"
 
     @property
     def logs(self) -> pathlib.Path:
