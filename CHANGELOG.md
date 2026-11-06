@@ -1,6 +1,16 @@
 # Changelog
 
 
+## [5.2.1](https://github.com/google/stellar-engine/compare/v5.2.0...v5.2.1) (2026-11-06)
+
+
+### Bug Fixes
+
+* **cli:** map REST Forbidden and Unauthorized errors to access denied ([#383](https://github.com/google/stellar-engine/issues/383)) ([74a2d0d](https://github.com/google/stellar-engine/commit/74a2d0ddcd0ab0566663c76292f181085089341b))
+  * The preflight facade in the `cli/src/stellar_engine/gcp/live.py` module translated only the gRPC `PermissionDenied` and `Unauthenticated` classes into its access denied error.
+* **gitlab:** store gitlab.rb and TLS key in Secret Manager and validate hostname ([#295](https://github.com/google/stellar-engine/issues/295)) ([8ee6ffe](https://github.com/google/stellar-engine/commit/8ee6ffe069820973187492ac122312c6c54b73fa))
+  * Provision `google_secret_manager_secret.gitlab_rb` and `google_secret_manager_secret.gitlab_ssl_key` with secret versions and `roles/secretmanager.secretAccessor` IAM bindings in `blueprints/third-party-solutions/gitlab/gitlab.tf`, and fetch `gitlab.rb` and the TLS private key via `gcloud secrets versions access latest` in `blueprints/third-party-solutions/gitlab/assets/cloud-config.yaml` rather than storing sensitive values in cleartext GCE instance metadata.
+
 ## [5.2.0](https://github.com/google/stellar-engine/compare/v5.1.1...v5.2.0) (2026-10-31)
 
 
