@@ -15,10 +15,10 @@ This module simplifies the deployment and configuration of BeyondCorp.
 | [iap_user_email](variables.tf#L20) | User or group email for IAP access. | <code>string</code> | ✓ |  |
 | [oauth_client_id](variables.tf#L25) | OAuth Client ID for IAP. | <code>string</code> | ✓ |  |
 | [oauth_client_secret](variables.tf#L30) | OAuth Client Secret for IAP. | <code>string</code> | ✓ |  |
-| [organization_id](variables.tf#L35) | GCP Organization ID. | <code>string</code> | ✓ |  |
-| [project_id](variables.tf#L46) | GCP Project ID. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L51) | Region. | <code>string</code> | ✓ |  |
-| [policy_title](variables.tf#L40) | Title for the Access Context Manager Policy. | <code>string</code> |  | <code>&#34;BeyondCorp Policy&#34;</code> |
+| [organization_id](variables.tf#L36) | GCP Organization ID. | <code>string</code> | ✓ |  |
+| [project_id](variables.tf#L47) | GCP Project ID. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L52) | Region. | <code>string</code> | ✓ |  |
+| [policy_title](variables.tf#L41) | Title for the Access Context Manager Policy. | <code>string</code> |  | <code>&#34;BeyondCorp Policy&#34;</code> |
 
 ## Outputs
 
