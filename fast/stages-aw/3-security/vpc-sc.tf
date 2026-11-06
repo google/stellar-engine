@@ -85,9 +85,7 @@ module "vpc-sc" {
       spec = (
         var.vpc_sc.perimeter_default.dry_run ? local.vpc_sc_perimeter : null
       )
-      status = (
-        !var.vpc_sc.perimeter_default.dry_run ? local.vpc_sc_perimeter : null
-      )
+      status                    = local.vpc_sc_perimeter
       use_explicit_dry_run_spec = var.vpc_sc.perimeter_default.dry_run
     }
   }

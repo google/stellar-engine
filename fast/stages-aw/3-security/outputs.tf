@@ -41,15 +41,16 @@ locals {
 
 resource "local_file" "tfvars" {
   for_each        = var.outputs_location == null ? {} : { 1 = 1 }
-  file_permission = "0644"
+  file_permission = "0600"
   filename        = "${pathexpand(var.outputs_location)}/tfvars/3-security.auto.tfvars.json"
   content         = jsonencode(local.tfvars)
 }
 
 resource "google_storage_bucket_object" "tfvars" {
-  bucket  = var.automation.outputs_bucket
-  name    = "tfvars/3-security.auto.tfvars.json"
-  content = jsonencode(local.tfvars)
+  bucket       = var.automation.outputs_bucket
+  name         = "tfvars/3-security.auto.tfvars.json"
+  content      = jsonencode(local.tfvars)
+  kms_key_name = try(module.prod-sec-kms[keys(module.prod-sec-kms)[0]].keys.default.id, null)
 }
 
 output "kms_keys" {
