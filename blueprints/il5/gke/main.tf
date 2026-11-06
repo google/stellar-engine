@@ -204,7 +204,7 @@ module "cluster" {
   }
 
   access_config = {
-    private_nodes = var.gke_cluster_enable_private_endpoint
+    private_nodes = true
     ip_access = {
       disable_public_endpoint = var.gke_cluster_enable_private_endpoint
       authorized_ranges       = { for k, v in var.master_authorized_ranges : k => v }
