@@ -110,11 +110,12 @@ module "hub-project" {
     google      = google.billing
     google-beta = google-beta.billing
   }
-  billing_account = var.billing_account.id
-  name            = "net-hub-host"
-  lien_reason     = "Protected by default as a core project."
-  parent          = var.folder_ids.networking
-  prefix          = var.prefix
+  billing_account         = var.billing_account.id
+  name                    = "net-hub-host"
+  default_service_account = "deprivilege"
+  lien_reason             = "Protected by default as a core project."
+  parent                  = var.folder_ids.networking
+  prefix                  = var.prefix
   services = concat([
     "compute.googleapis.com",
     "certificatemanager.googleapis.com",
@@ -211,6 +212,7 @@ module "hub-nat" {
   project_id     = module.hub-project.project_id
   region         = each.value
   name           = "hub-nat-${each.value}"
+  logging_filter = "ALL"
   router_create  = true
   router_name    = "hub-nat-${each.value}"
   router_network = module.hub-vpc.name

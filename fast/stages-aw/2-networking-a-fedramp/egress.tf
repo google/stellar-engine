@@ -78,6 +78,11 @@ module "egress-vpc" {
       region                = var.regions.primary
       description           = "Secure Web Proxy next-hop egress subnet."
       enable_private_access = true
+      flow_logs_config = {
+        aggregation_interval = "INTERVAL_5_SEC"
+        flow_sampling        = 1
+        metadata             = "INCLUDE_ALL_METADATA"
+      }
     }
   ]
   subnets_proxy_only = [
@@ -140,6 +145,7 @@ module "egress-nat" {
   region         = var.regions.primary
   name           = "egress-swp-nat-${var.regions.primary}"
   endpoint_types = ["ENDPOINT_TYPE_SWG"]
+  logging_filter = "ALL"
   router_create  = true
   router_name    = "egress-swp-nat-${var.regions.primary}"
   router_network = module.egress-vpc[0].name
@@ -203,12 +209,30 @@ module "egress-dns-priv-psc" {
 }
 
 module "egress-dns-policy-googleapis" {
-  count      = local._egress_psc_enabled ? 1 : 0
+  count      = var.centralized_egress.enabled ? 1 : 0
   source     = "../../../modules/dns-response-policy"
   project_id = module.hub-project.project_id
   name       = "egress-googleapis"
   rules      = local._psc_egress_dns_rules
   networks = {
     egress = module.egress-vpc[0].self_link
+  }
+}
+
+module "egress-dns-peer-hub-root" {
+  count      = var.centralized_egress.enabled ? 1 : 0
+  source     = "../../../modules/dns"
+  project_id = module.hub-project.project_id
+  name       = "egress-root-dns-peering"
+  zone_config = {
+    domain = (
+      var.psc_google_apis.enabled
+      ? lower("${var.organization.domain}.")
+      : "."
+    )
+    peering = {
+      client_networks = [module.egress-vpc[0].self_link]
+      peer_network    = module.hub-vpc.self_link
+    }
   }
 }

@@ -53,7 +53,8 @@ class TestStage2Networking(unittest.TestCase):
         )
 
         self.assertIn('module "hub-project"', net_hub)
-        self.assertIn('name            = "net-hub-host"', net_hub)
+        self.assertIn('name                    = "net-hub-host"', net_hub)
+        self.assertIn('default_service_account = "deprivilege"', net_hub)
         self.assertIn("compute_metadata = {", net_hub)
         self.assertNotIn("google_compute_project_metadata", net_hub)
         self.assertIn('module "hub-vpc"', net_hub)
@@ -61,6 +62,7 @@ class TestStage2Networking(unittest.TestCase):
         self.assertIn("context   = local._fw_policy_context", net_hub)
         self.assertIn("ingress_mirroring_rules = lookup(", net_hub)
         self.assertIn('module "hub-nat"', net_hub)
+        self.assertIn('logging_filter = "ALL"', net_hub)
         self.assertIn(
             'firewall_policy_enforcement_order = "BEFORE_CLASSIC_FIREWALL"',
             net_hub,
@@ -78,8 +80,10 @@ class TestStage2Networking(unittest.TestCase):
             'group                 = "$ncc_groups:main/edge"', net_hub
         )
 
+        self.assertIn('default_service_account = "deprivilege"', branch_tf)
         self.assertIn('module "env-spoke-firewall-policy"', branch_tf)
         self.assertIn('module "env-spoke-nat"', branch_tf)
+        self.assertIn('logging_filter = "ALL"', branch_tf)
         self.assertIn(
             'firewall_policy_enforcement_order = "BEFORE_CLASSIC_FIREWALL"',
             branch_tf,
@@ -103,6 +107,9 @@ class TestStage2Networking(unittest.TestCase):
         self.assertIn('module "egress-firewall-policy"', egress_tf)
         self.assertIn('module "egress-nat"', egress_tf)
         self.assertIn('endpoint_types = ["ENDPOINT_TYPE_SWG"]', egress_tf)
+        self.assertIn('logging_filter = "ALL"', egress_tf)
+        self.assertIn("flow_logs_config = {", egress_tf)
+        self.assertIn('module "egress-dns-peer-hub-root"', egress_tf)
         self.assertIn('module "egress-swp"', egress_tf)
         self.assertIn(
             "tls_inspection_config = "

@@ -90,7 +90,7 @@ locals {
   }
   _psc_egress_dns_rules = merge(
     var.dns_policy_rules,
-    {
+    !var.psc_google_apis.enabled ? {} : {
       googleapis-private = {
         dns_name = "private.googleapis.com."
         behavior = "bypassResponsePolicy"

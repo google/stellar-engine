@@ -54,12 +54,13 @@ module "env-spoke-projects" {
     google      = google.billing
     google-beta = google-beta.billing
   }
-  for_each        = var.envs_folders
-  billing_account = var.billing_account.id
-  name            = lower("${each.key}-net-host")
-  lien_reason     = "Protected by default as a core project."
-  parent          = var.folder_ids.networking
-  prefix          = var.prefix
+  for_each                = var.envs_folders
+  billing_account         = var.billing_account.id
+  name                    = lower("${each.key}-net-host")
+  default_service_account = "deprivilege"
+  lien_reason             = "Protected by default as a core project."
+  parent                  = var.folder_ids.networking
+  prefix                  = var.prefix
   services = concat([
     "container.googleapis.com",
     "compute.googleapis.com",
@@ -182,6 +183,7 @@ module "env-spoke-nat" {
   project_id     = module.env-spoke-projects[each.key].project_id
   region         = var.regions.primary
   name           = lower("${each.key}-nat-${var.regions.primary}")
+  logging_filter = "ALL"
   router_create  = true
   router_name    = lower("${each.key}-nat-${var.regions.primary}")
   router_network = module.env-spoke-vpc[each.key].name
