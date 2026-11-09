@@ -17,6 +17,7 @@
 # tfdoc:file:description Optional centralized SWP next-hop Internet Egress VPC.
 
 locals {
+  _egress_fw_dir = "${var.factories_config.data_dir}/firewall-policies"
   _egress_psc_enabled = (
     var.centralized_egress.enabled && var.psc_google_apis.enabled
   )
@@ -103,17 +104,20 @@ module "egress-firewall-policy" {
   name      = "${var.prefix}-egress-fw-policy-0"
   parent_id = module.hub-project.project_id
   region    = "global"
+  context   = local._fw_policy_context
   attachments = {
     egress-0 = module.egress-vpc[0].id
   }
   security_profile_group_ids = var.security_profile_group_ids
   factories_config = {
-    cidr_file_path = "${var.factories_config.data_dir}/cidrs.yaml"
-    egress_rules_file_path = (
-      "${var.factories_config.data_dir}/firewall-policies/egress-egress.yaml"
+    cidr_file_path          = "${var.factories_config.data_dir}/cidrs.yaml"
+    egress_rules_file_path  = "${local._egress_fw_dir}/egress-egress.yaml"
+    ingress_rules_file_path = "${local._egress_fw_dir}/egress-ingress.yaml"
+    egress_mirroring_rules_file_path = (
+      "${local._egress_fw_dir}/egress-egress-mirroring.yaml"
     )
-    ingress_rules_file_path = (
-      "${var.factories_config.data_dir}/firewall-policies/egress-ingress.yaml"
+    ingress_mirroring_rules_file_path = (
+      "${local._egress_fw_dir}/egress-ingress-mirroring.yaml"
     )
   }
   ingress_rules = merge(
@@ -121,6 +125,12 @@ module "egress-firewall-policy" {
     lookup(local._expanded_fw_ingress, "egress", {})
   )
   egress_rules = lookup(local._expanded_fw_egress, "egress", {})
+  ingress_mirroring_rules = lookup(
+    local._expanded_fw_ingress_mirroring, "egress", {}
+  )
+  egress_mirroring_rules = lookup(
+    local._expanded_fw_egress_mirroring, "egress", {}
+  )
 }
 
 module "egress-nat" {
@@ -136,14 +146,15 @@ module "egress-nat" {
 }
 
 module "egress-swp" {
-  count        = var.centralized_egress.enabled ? 1 : 0
-  source       = "../../../modules/net-swp"
-  project_id   = module.hub-project.project_id
-  region       = var.regions.primary
-  name         = "egress-swp-0"
-  network      = module.egress-vpc[0].id
-  subnetwork   = local._egress_swp_subnet_id
-  certificates = var.centralized_egress.certificates
+  count                 = var.centralized_egress.enabled ? 1 : 0
+  source                = "../../../modules/net-swp"
+  project_id            = module.hub-project.project_id
+  region                = var.regions.primary
+  name                  = "egress-swp-0"
+  network               = module.egress-vpc[0].id
+  subnetwork            = local._egress_swp_subnet_id
+  certificates          = var.centralized_egress.certificates
+  tls_inspection_config = var.centralized_egress.tls_inspection_config
   gateway_config = {
     addresses             = [var.centralized_egress.swp_ip]
     next_hop_routing_mode = true
@@ -167,6 +178,9 @@ module "egress-psc-addresses" {
       network = module.egress-vpc[0].self_link
       service_attachment = {
         psc_service_attachment_link = var.psc_google_apis.bundle
+        service_directory_registration = (
+          var.psc_google_apis.service_directory_registration
+        )
       }
     }
   }

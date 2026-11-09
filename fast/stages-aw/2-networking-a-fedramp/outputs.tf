@@ -42,23 +42,41 @@ locals {
     {
       hub = {
         address       = var.psc_google_apis.hub_ip
-        address_id    = module.hub-psc-addresses[0].psc_addresses["pschub0"].id
+        address_id    = module.hub-psc-addresses[0].psc["pschub0"].address.id
         endpoint_name = "pschub0"
+        forwarding_rule_id = (
+          module.hub-psc-addresses[0].psc["pschub0"].forwarding_rule.id
+        )
+        psc_connection_id = (
+          module.hub-psc-addresses[0].psc["pschub0"].forwarding_rule.psc_connection_id
+        )
       }
     },
     !local._egress_psc_enabled ? {} : {
       egress = {
         address       = var.psc_google_apis.egress_ip
-        address_id    = module.egress-psc-addresses[0].psc_addresses["pscegress0"].id
+        address_id    = module.egress-psc-addresses[0].psc["pscegress0"].address.id
         endpoint_name = "pscegress0"
+        forwarding_rule_id = (
+          module.egress-psc-addresses[0].psc["pscegress0"].forwarding_rule.id
+        )
+        psc_connection_id = (
+          module.egress-psc-addresses[0].psc["pscegress0"].forwarding_rule.psc_connection_id
+        )
       }
     },
     {
       for k, v in module.env-psc-addresses :
       lower(k) => {
         address       = local._psc_spoke_ips[k]
-        address_id    = v.psc_addresses[local._psc_spoke_fr_names[k]].id
+        address_id    = v.psc[local._psc_spoke_fr_names[k]].address.id
         endpoint_name = local._psc_spoke_fr_names[k]
+        forwarding_rule_id = (
+          v.psc[local._psc_spoke_fr_names[k]].forwarding_rule.id
+        )
+        psc_connection_id = (
+          v.psc[local._psc_spoke_fr_names[k]].forwarding_rule.psc_connection_id
+        )
       }
     }
   )

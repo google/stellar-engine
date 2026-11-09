@@ -86,6 +86,14 @@ variable "centralized_egress" {
       values      = list(string)
       description = optional(string)
     })), {})
+    tls_inspection_config = optional(object({
+      create_config = optional(object({
+        ca_pool               = optional(string)
+        description           = optional(string)
+        exclude_public_ca_set = optional(bool, false)
+      }))
+      id = optional(string)
+    }), {})
   })
   default  = {}
   nullable = false
@@ -254,6 +262,42 @@ variable "firewall_policy_rules" {
         })), [{}])
       })
     })), {})
+    ingress_mirroring = optional(map(object({
+      priority               = number
+      action                 = optional(string, "mirror")
+      description            = optional(string)
+      disabled               = optional(bool, false)
+      security_profile_group = optional(string)
+      target_tags            = optional(list(string))
+      tls_inspect            = optional(bool, null)
+      match = object({
+        destination_ranges = optional(list(string))
+        source_ranges      = optional(list(string))
+        source_tags        = optional(list(string))
+        layer4_configs = optional(list(object({
+          protocol = optional(string, "all")
+          ports    = optional(list(string))
+        })), [{}])
+      })
+    })), {})
+    egress_mirroring = optional(map(object({
+      priority               = number
+      action                 = optional(string, "mirror")
+      description            = optional(string)
+      disabled               = optional(bool, false)
+      security_profile_group = optional(string)
+      target_tags            = optional(list(string))
+      tls_inspect            = optional(bool, null)
+      match = object({
+        destination_ranges = optional(list(string))
+        source_ranges      = optional(list(string))
+        source_tags        = optional(list(string))
+        layer4_configs = optional(list(object({
+          protocol = optional(string, "all")
+          ports    = optional(list(string))
+        })), [{}])
+      })
+    })), {})
   }))
   default  = {}
   nullable = false
@@ -267,10 +311,18 @@ variable "firewall_policy_rules" {
         [
           for rk, rv in pol.egress :
           contains(["allow", "deny", "goto_next", "apply_security_profile_group"], rv.action)
+        ],
+        [
+          for rk, rv in pol.ingress_mirroring :
+          contains(["mirror", "do_not_mirror", "goto_next"], rv.action)
+        ],
+        [
+          for rk, rv in pol.egress_mirroring :
+          contains(["mirror", "do_not_mirror", "goto_next"], rv.action)
         ]
       )
     ]))
-    error_message = "Firewall policy rule action must be allow, deny, goto_next, or apply_security_profile_group."
+    error_message = "Firewall policy rule action must be allow, deny, goto_next, or apply_security_profile_group (or mirror, do_not_mirror, goto_next for mirroring rules)."
   }
 }
 
@@ -477,6 +529,10 @@ variable "psc_google_apis" {
     hub_ip    = optional(string, "10.255.255.1")
     egress_ip = optional(string, "10.255.255.2")
     spoke_ips = optional(map(string), {})
+    service_directory_registration = optional(object({
+      namespace = optional(string)
+      region    = optional(string)
+    }))
   })
   default  = {}
   nullable = false

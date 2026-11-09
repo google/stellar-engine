@@ -22,9 +22,17 @@ locals {
     for k in keys(var.envs_folders) :
     k => "${local._fw_policy_dir}/${lower(k)}-egress.yaml"
   }
+  _spoke_fw_egress_mirroring_files = {
+    for k in keys(var.envs_folders) :
+    k => "${local._fw_policy_dir}/${lower(k)}-egress-mirroring.yaml"
+  }
   _spoke_fw_ingress_files = {
     for k in keys(var.envs_folders) :
     k => "${local._fw_policy_dir}/${lower(k)}-ingress.yaml"
+  }
+  _spoke_fw_ingress_mirroring_files = {
+    for k in keys(var.envs_folders) :
+    k => "${local._fw_policy_dir}/${lower(k)}-ingress-mirroring.yaml"
   }
   tenant_subnets_map_of_maps = {
     for pairing in setproduct(
@@ -66,6 +74,10 @@ module "env-spoke-projects" {
   ], local._ncc_enabled ? ["networkconnectivity.googleapis.com"] : [])
   shared_vpc_host_config = {
     enabled = true
+  }
+  compute_metadata = {
+    block-project-ssh-keys = "true" # CIS Compliance Benchmark 4.3
+    enable-oslogin         = "true" # CIS Compliance Benchmark 4.4
   }
   metric_scopes = [module.hub-project.project_id]
   iam = merge(
@@ -133,6 +145,7 @@ module "env-spoke-firewall-policy" {
   name      = lower("${var.prefix}-${each.key}-fw-policy-0")
   parent_id = module.env-spoke-projects[each.key].project_id
   region    = "global"
+  context   = local._fw_policy_context
   attachments = {
     (lower("${each.key}-spoke-0")) = module.env-spoke-vpc[each.key].id
   }
@@ -141,9 +154,21 @@ module "env-spoke-firewall-policy" {
     cidr_file_path          = "${var.factories_config.data_dir}/cidrs.yaml"
     egress_rules_file_path  = local._spoke_fw_egress_files[each.key]
     ingress_rules_file_path = local._spoke_fw_ingress_files[each.key]
+    egress_mirroring_rules_file_path = (
+      local._spoke_fw_egress_mirroring_files[each.key]
+    )
+    ingress_mirroring_rules_file_path = (
+      local._spoke_fw_ingress_mirroring_files[each.key]
+    )
   }
   ingress_rules = lookup(local._expanded_fw_ingress, lower(each.key), {})
   egress_rules  = lookup(local._expanded_fw_egress, lower(each.key), {})
+  ingress_mirroring_rules = lookup(
+    local._expanded_fw_ingress_mirroring, lower(each.key), {}
+  )
+  egress_mirroring_rules = lookup(
+    local._expanded_fw_egress_mirroring, lower(each.key), {}
+  )
 }
 
 module "env-spoke-nat" {

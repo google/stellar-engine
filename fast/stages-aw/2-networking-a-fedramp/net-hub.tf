@@ -130,6 +130,10 @@ module "hub-project" {
   shared_vpc_host_config = {
     enabled = true
   }
+  compute_metadata = {
+    block-project-ssh-keys = "true" # CIS Compliance Benchmark 4.3
+    enable-oslogin         = "true" # CIS Compliance Benchmark 4.4
+  }
   iam = {
     "roles/dns.admin" = compact([
       try(local.service_accounts.project-factory-prod, null)
@@ -137,14 +141,6 @@ module "hub-project" {
     (local.custom_roles.service_project_network_admin) = compact([
       try(local.service_accounts.project-factory-prod, null)
     ])
-  }
-}
-
-resource "google_compute_project_metadata" "metadata_hub_project" {
-  project = module.hub-project.project_id
-  metadata = {
-    block-project-ssh-keys = true # CIS Compliance Benchmark 4.3
-    enable-oslogin         = true # CIS Compliance Benchmark 4.4
   }
 }
 
@@ -177,14 +173,21 @@ module "hub-firewall-policy" {
   name      = "${var.prefix}-hub-fw-policy-0"
   parent_id = module.hub-project.project_id
   region    = "global"
+  context   = local._fw_policy_context
   attachments = {
     hub-0 = module.hub-vpc.id
   }
   security_profile_group_ids = var.security_profile_group_ids
   factories_config = {
     cidr_file_path = "${var.factories_config.data_dir}/cidrs.yaml"
+    egress_mirroring_rules_file_path = (
+      "${var.factories_config.data_dir}/firewall-policies/hub-egress-mirroring.yaml"
+    )
     egress_rules_file_path = (
       "${var.factories_config.data_dir}/firewall-policies/hub-egress.yaml"
+    )
+    ingress_mirroring_rules_file_path = (
+      "${var.factories_config.data_dir}/firewall-policies/hub-ingress-mirroring.yaml"
     )
     ingress_rules_file_path = (
       "${var.factories_config.data_dir}/firewall-policies/hub-ingress.yaml"
@@ -192,6 +195,12 @@ module "hub-firewall-policy" {
   }
   ingress_rules = lookup(local._expanded_fw_ingress, "hub", {})
   egress_rules  = lookup(local._expanded_fw_egress, "hub", {})
+  ingress_mirroring_rules = lookup(
+    local._expanded_fw_ingress_mirroring, "hub", {}
+  )
+  egress_mirroring_rules = lookup(
+    local._expanded_fw_egress_mirroring, "hub", {}
+  )
 }
 
 module "hub-nat" {

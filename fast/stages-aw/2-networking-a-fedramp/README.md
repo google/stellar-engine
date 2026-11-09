@@ -17,8 +17,8 @@ Stage 2 provisions a central hub Shared VPC (`hub-0`) inside `<prefix>-net-hub-h
 Stage 2 combines a folder-level hierarchical firewall policy (`module.firewall-policy-default`) on the `Networking` folder with per-VPC global network firewall policies (`module.hub-firewall-policy`, `module.env-spoke-firewall-policy`, and `module.egress-firewall-policy`) attached to `hub-0`, each `<env>-spoke-0` VPC, and the optional `egress-0` VPC.
 
 - Every Stage 2 VPC sets `firewall_policy_enforcement_order = "BEFORE_CLASSIC_FIREWALL"` so global network firewall policies evaluate after the folder hierarchical firewall policy and before any blueprint-local classic VPC firewall rules (`google_compute_firewall`) created by workload blueprints such as `blueprints/fedramp-high/postgresql`.
-- Configure per-VPC ingress and egress rules inline through `firewall_policy_rules` or declaratively through YAML files under `data/firewall-policies/<vpc>-ingress.yaml` and `data/firewall-policies/<vpc>-egress.yaml`.
-- Global network firewall policy rules support Cloud NGFW Essentials Layer 4 controls and IAM secure tags, Cloud NGFW Standard `fqdns`, `region_codes`, and `threat_intelligences` matchers, and Cloud NGFW Enterprise Layer 7 inspection (`action = "apply_security_profile_group"` with `security_profile_group_ids` and `tls_inspect`).
+- Configure per-VPC ingress, egress, and packet-mirroring rules inline through `firewall_policy_rules` or declaratively through YAML files under `data/firewall-policies/<vpc>-ingress.yaml`, `<vpc>-egress.yaml`, `<vpc>-ingress-mirroring.yaml`, and `<vpc>-egress-mirroring.yaml`, using `$cidr_ranges_sets:`, `$cidr_ranges:`, and `$security_profile_groups:` context references.
+- Global network firewall policy rules support Cloud NGFW Essentials Layer 4 controls and IAM secure tags, Cloud NGFW Standard `fqdns`, `region_codes`, and `threat_intelligences` matchers, and Cloud NGFW Enterprise Layer 7 inspection (`action = "apply_security_profile_group"` with `security_profile_group_ids` and `tls_inspect`) plus out-of-band packet mirroring (`ingress_mirroring` and `egress_mirroring`).
 - When collecting CM-6 and SC-7 firewall evidence, inspect the folder hierarchical firewall policy (`gcloud compute firewall-policies rules list --firewall-policy=<policy-id> --organization=<org-id>`), each host-project global network firewall policy (`gcloud compute network-firewall-policies rules list --firewall-policy=<name> --global --project=<network-project-id>`), and any blueprint classic VPC firewall rules (`gcloud compute firewall-rules list --project=<network-project-id>`).
 
 ## 3 Private Google APIs access
@@ -36,7 +36,7 @@ Outbound internet egress defaults to distributed per-VPC Cloud NAT gateways (`en
 
 - Set `centralized_egress.enabled = true` to deploy a dedicated `egress-0` VPC spoke in the `main` hub `center` group running Secure Web Proxy (`modules/net-swp`) in `NEXT_HOP_ROUTING_MODE` paired with a Cloud NAT gateway configured with `endpoint_types = ["ENDPOINT_TYPE_SWG"]`.
 - Enabling `centralized_egress` replaces per-VPC Cloud NAT on `hub-0` and `<env>-spoke-0` with static `0.0.0.0/0` next-hop IP routes pointing to `centralized_egress.swp_ip` so outbound HTTP and HTTPS traffic traverses centralized URL lists and Layer 7 proxy rules.
-- Define Secure Web Proxy URL lists and policy rules inline via `centralized_egress.url_lists` and `centralized_egress.policy_rules` or in YAML files under `data/swp-url-lists/` and `data/swp-policy-rules/`.
+- Define Secure Web Proxy URL lists, policy rules, and optional TLS inspection (`centralized_egress.tls_inspection_config`) inline or in YAML files under `data/swp-url-lists/` and `data/swp-policy-rules/`.
 
 ## 5 NCC hub factory
 
@@ -82,51 +82,51 @@ spokes:
 | [alert_email](variables.tf#L17) | Email to receive log alerts. | <code>string</code> | ✓ |  |
 | [automation](variables.tf#L33) | Automation resources created by the bootstrap stage. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [billing_account](variables.tf#L41) | Billing account id. If billing account is not part of the same org set `is_org_level` to false. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [envs_folders](variables.tf#L159) | List of environments to be created for projects to go into. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [folder_ids](variables.tf#L277) | Folders to be used for the networking resources in folders/nnnnnnnnnnn format. If null, folder will be created. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [organization](variables.tf#L416) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [prefix](variables.tf#L432) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
-| [regions](variables.tf#L495) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [tenant_accounts](variables.tf#L567) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [envs_folders](variables.tf#L167) | List of environments to be created for projects to go into. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [folder_ids](variables.tf#L329) | Folders to be used for the networking resources in folders/nnnnnnnnnnn format. If null, folder will be created. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [organization](variables.tf#L468) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [prefix](variables.tf#L484) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
+| [regions](variables.tf#L551) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [tenant_accounts](variables.tf#L623) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [assured_workloads](variables.tf#L22) | Configuration for Assured Workloads. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [billing_override](variables.tf#L54) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [centralized_egress](variables.tf#L63) | Optional centralized Internet Egress VPC spoke running Secure Web Proxy in next-hop routing mode with Cloud NAT. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [cidrs](variables.tf#L100) | Named CIDR ranges to use in firewall policy rules. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [common_services_folder](variables.tf#L107) | Common services folder ID. | <code>string</code> |  | <code>null</code> |
-| [custom_roles](variables.tf#L113) | Custom roles defined at the org level, in key => id format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [dns](variables.tf#L121) | DNS configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [dns_policy_rules](variables.tf#L131) | DNS response policy rules in name => rule format. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [enable_cloud_nat](variables.tf#L145) | Enable per-VPC Cloud NAT and default internet gateway routes on the central hub VPC and environment spoke VPCs when centralized_egress.enabled is false. | <code>bool</code> |  | <code>true</code> |
-| [enable_default_ncc_hub](variables.tf#L152) | Provision the default STAR-topology Network Connectivity Center hub connecting the central hub VPC (center group) and environment spoke VPCs (edge group). | <code>bool</code> |  | <code>true</code> |
-| [essential_contacts](variables.tf#L166) | Email or map of emails to notification category lists used for essential contacts, unset if null or empty. | <code>any</code> |  | <code>&#123;&#125;</code> |
-| [factories_config](variables.tf#L180) | Configuration for network resource factories. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
-| [fast_features](variables.tf#L198) | FAST features enabled. | <code>any</code> |  | <code>null</code> |
-| [firewall_policy_rules](variables.tf#L204) | Global network firewall policy rules keyed by VPC name (hub, egress, or environment spoke name), supporting Cloud NGFW Essentials, Standard, and Enterprise attributes. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [gcp_ranges](variables.tf#L286) | GCP address ranges in name => range format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
-| [groups](variables.tf#L296) | IAM groups mapping. | <code>any</code> |  | <code>null</code> |
-| [kms_protection_level](variables.tf#L302) | KMS protection level. | <code>string</code> |  | <code>null</code> |
-| [logging](variables.tf#L310) | Logging configuration. | <code>any</code> |  | <code>null</code> |
-| [ncc_hubs](variables.tf#L316) | Network Connectivity Center hubs, groups, and spokes in hub_name => config format, merged with YAML definitions from factories_config.ncc_hubs. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [outputs_location](variables.tf#L426) | Path where providers and tfvars files for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
-| [proxy_subnets](variables.tf#L443) | VPC proxy-only subnet CIDRs keyed by environment. One entry per key of envs_folders is required: every environment spoke gets a proxy-only subnet in regions.primary. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [psa_ranges](variables.tf#L456) | Optional Private Services Access (PSA) IP ranges keyed by environment name (for example prod, int, or test) for services that do not use Private Service Connect. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [psc_google_apis](variables.tf#L472) | Private Service Connect endpoints for Google APIs created in the central hub VPC, environment spoke VPCs, and optional centralized egress VPC. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [regime_mapping](variables.tf#L489) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
-| [security_profile_group_ids](variables.tf#L504) | Optional Cloud NGFW Enterprise security profile group IDs in logical_key => //networksecurity.googleapis.com/<id> format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [service_accounts](variables.tf#L511) | Automation service accounts in name => email format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [spoke_project_iam](variables.tf#L525) | Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [subnets](variables.tf#L532) | VPC subnet configurations keyed by network name. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [cidrs](variables.tf#L108) | Named CIDR ranges to use in firewall policy rules. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [common_services_folder](variables.tf#L115) | Common services folder ID. | <code>string</code> |  | <code>null</code> |
+| [custom_roles](variables.tf#L121) | Custom roles defined at the org level, in key => id format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [dns](variables.tf#L129) | DNS configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [dns_policy_rules](variables.tf#L139) | DNS response policy rules in name => rule format. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [enable_cloud_nat](variables.tf#L153) | Enable per-VPC Cloud NAT and default internet gateway routes on the central hub VPC and environment spoke VPCs when centralized_egress.enabled is false. | <code>bool</code> |  | <code>true</code> |
+| [enable_default_ncc_hub](variables.tf#L160) | Provision the default STAR-topology Network Connectivity Center hub connecting the central hub VPC (center group) and environment spoke VPCs (edge group). | <code>bool</code> |  | <code>true</code> |
+| [essential_contacts](variables.tf#L174) | Email or map of emails to notification category lists used for essential contacts, unset if null or empty. | <code>any</code> |  | <code>&#123;&#125;</code> |
+| [factories_config](variables.tf#L188) | Configuration for network resource factories. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [fast_features](variables.tf#L206) | FAST features enabled. | <code>any</code> |  | <code>null</code> |
+| [firewall_policy_rules](variables.tf#L212) | Global network firewall policy rules keyed by VPC name (hub, egress, or environment spoke name), supporting Cloud NGFW Essentials, Standard, and Enterprise attributes. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [gcp_ranges](variables.tf#L338) | GCP address ranges in name => range format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [groups](variables.tf#L348) | IAM groups mapping. | <code>any</code> |  | <code>null</code> |
+| [kms_protection_level](variables.tf#L354) | KMS protection level. | <code>string</code> |  | <code>null</code> |
+| [logging](variables.tf#L362) | Logging configuration. | <code>any</code> |  | <code>null</code> |
+| [ncc_hubs](variables.tf#L368) | Network Connectivity Center hubs, groups, and spokes in hub_name => config format, merged with YAML definitions from factories_config.ncc_hubs. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [outputs_location](variables.tf#L478) | Path where providers and tfvars files for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
+| [proxy_subnets](variables.tf#L495) | VPC proxy-only subnet CIDRs keyed by environment. One entry per key of envs_folders is required: every environment spoke gets a proxy-only subnet in regions.primary. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [psa_ranges](variables.tf#L508) | Optional Private Services Access (PSA) IP ranges keyed by environment name (for example prod, int, or test) for services that do not use Private Service Connect. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [psc_google_apis](variables.tf#L524) | Private Service Connect endpoints for Google APIs created in the central hub VPC, environment spoke VPCs, and optional centralized egress VPC. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [regime_mapping](variables.tf#L545) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
+| [security_profile_group_ids](variables.tf#L560) | Optional Cloud NGFW Enterprise security profile group IDs in logical_key => //networksecurity.googleapis.com/<id> format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [service_accounts](variables.tf#L567) | Automation service accounts in name => email format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [spoke_project_iam](variables.tf#L581) | Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [subnets](variables.tf#L588) | VPC subnet configurations keyed by network name. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [host_project_ids](outputs.tf#L108) | Network project ids. |  |
-| [host_project_numbers](outputs.tf#L113) | Network project numbers. |  |
-| [hub](outputs.tf#L118) | Central hub host project, VPC, and optional SWP egress identifiers. |  |
-| [ncc_groups](outputs.tf#L123) | Network Connectivity Center group IDs keyed by hub/group. |  |
-| [ncc_hubs](outputs.tf#L128) | Network Connectivity Center hub IDs keyed by hub name. |  |
-| [ncc_spokes](outputs.tf#L133) | Network Connectivity Center spoke IDs grouped by spoke type. |  |
-| [psc_google_apis_endpoints](outputs.tf#L138) | Per-VPC Private Service Connect Google APIs endpoint addresses and forwarding rules. |  |
-| [tfvars](outputs.tf#L143) | Terraform variables file for the following stages. | ✓ |
+| [host_project_ids](outputs.tf#L126) | Network project ids. |  |
+| [host_project_numbers](outputs.tf#L131) | Network project numbers. |  |
+| [hub](outputs.tf#L136) | Central hub host project, VPC, and optional SWP egress identifiers. |  |
+| [ncc_groups](outputs.tf#L141) | Network Connectivity Center group IDs keyed by hub/group. |  |
+| [ncc_hubs](outputs.tf#L146) | Network Connectivity Center hub IDs keyed by hub name. |  |
+| [ncc_spokes](outputs.tf#L151) | Network Connectivity Center spoke IDs grouped by spoke type. |  |
+| [psc_google_apis_endpoints](outputs.tf#L156) | Per-VPC Private Service Connect Google APIs endpoint addresses and forwarding rules. |  |
+| [tfvars](outputs.tf#L161) | Terraform variables file for the following stages. | ✓ |
 <!-- END TFDOC -->

@@ -128,6 +128,9 @@ module "hub-psc-addresses" {
       network = module.hub-vpc.self_link
       service_attachment = {
         psc_service_attachment_link = var.psc_google_apis.bundle
+        service_directory_registration = (
+          var.psc_google_apis.service_directory_registration
+        )
       }
     }
   }
@@ -162,6 +165,9 @@ module "env-psc-addresses" {
       network = module.env-spoke-vpc[each.key].self_link
       service_attachment = {
         psc_service_attachment_link = var.psc_google_apis.bundle
+        service_directory_registration = (
+          var.psc_google_apis.service_directory_registration
+        )
       }
     }
   }

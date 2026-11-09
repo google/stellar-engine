@@ -41,6 +41,9 @@ class TestStage2Networking(unittest.TestCase):
             encoding="utf-8"
         )
         egress_tf = (_FEDRAMP_NET_DIR / "egress.tf").read_text(encoding="utf-8")
+        conn_tf = (_FEDRAMP_NET_DIR / "connectivity-tests.tf").read_text(
+            encoding="utf-8"
+        )
         main_tf = (_FEDRAMP_NET_DIR / "main.tf").read_text(encoding="utf-8")
         vars_tf = (_FEDRAMP_NET_DIR / "variables.tf").read_text(
             encoding="utf-8"
@@ -51,8 +54,12 @@ class TestStage2Networking(unittest.TestCase):
 
         self.assertIn('module "hub-project"', net_hub)
         self.assertIn('name            = "net-hub-host"', net_hub)
+        self.assertIn("compute_metadata = {", net_hub)
+        self.assertNotIn("google_compute_project_metadata", net_hub)
         self.assertIn('module "hub-vpc"', net_hub)
         self.assertIn('module "hub-firewall-policy"', net_hub)
+        self.assertIn("context   = local._fw_policy_context", net_hub)
+        self.assertIn("ingress_mirroring_rules = lookup(", net_hub)
         self.assertIn('module "hub-nat"', net_hub)
         self.assertIn(
             'firewall_policy_enforcement_order = "BEFORE_CLASSIC_FIREWALL"',
@@ -84,16 +91,27 @@ class TestStage2Networking(unittest.TestCase):
 
         self.assertIn('module "hub-psc-addresses"', psc_tf)
         self.assertIn('module "env-psc-addresses"', psc_tf)
+        self.assertIn("service_directory_registration = (", psc_tf)
         self.assertIn('domain = "p.googleapis.com."', psc_tf)
         self.assertIn('module "env-dns-policy-googleapis"', psc_tf)
+
+        self.assertIn('module "hub-test-addresses"', conn_tf)
+        self.assertIn('module "env-test-addresses"', conn_tf)
+        self.assertNotIn('resource "google_compute_address"', conn_tf)
 
         self.assertIn('module "egress-vpc"', egress_tf)
         self.assertIn('module "egress-firewall-policy"', egress_tf)
         self.assertIn('module "egress-nat"', egress_tf)
         self.assertIn('endpoint_types = ["ENDPOINT_TYPE_SWG"]', egress_tf)
         self.assertIn('module "egress-swp"', egress_tf)
+        self.assertIn(
+            "tls_inspection_config = "
+            "var.centralized_egress.tls_inspection_config",
+            egress_tf,
+        )
         self.assertIn("next_hop_routing_mode = true", egress_tf)
         self.assertIn('module "egress-psc-addresses"', egress_tf)
+        self.assertIn("_fw_policy_context = {", main_tf)
         self.assertIn("next_hop      = var.centralized_egress.swp_ip", main_tf)
 
         self.assertIn('variable "centralized_egress"', vars_tf)
