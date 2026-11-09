@@ -27,6 +27,8 @@ class TestStage2Networking(unittest.TestCase):
         self.assertFalse((_FEDRAMP_NET_DIR / "nva.tf").exists())
         self.assertFalse((_FEDRAMP_NET_DIR / "net-vdss.tf").exists())
         self.assertFalse((_FEDRAMP_NET_DIR / "net-landing.tf").exists())
+        self.assertFalse((_FEDRAMP_NET_DIR / "psc.tf").exists())
+        self.assertTrue((_IL5_NET_DIR / "psc.tf").is_file())
         self.assertTrue((_FEDRAMP_NET_DIR / "net-hub.tf").is_file())
         self.assertTrue((_FEDRAMP_NET_DIR / "psc-google-apis.tf").is_file())
         self.assertTrue((_FEDRAMP_NET_DIR / "egress.tf").is_file())

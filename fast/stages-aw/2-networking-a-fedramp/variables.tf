@@ -454,21 +454,17 @@ variable "proxy_subnets" {
 }
 
 variable "psa_ranges" {
-  description = "IP ranges used for Private Service Access (e.g. CloudSQL). Ranges is in name => range format."
-  type = object({
-    dev = optional(list(object({
-      ranges         = map(string)
-      export_routes  = optional(bool, false)
-      import_routes  = optional(bool, false)
-      peered_domains = optional(list(string), [])
-    })), [])
-    prod = optional(list(object({
-      ranges         = map(string)
-      export_routes  = optional(bool, false)
-      import_routes  = optional(bool, false)
-      peered_domains = optional(list(string), [])
-    })), [])
-  })
+  description = "Optional Private Services Access (PSA) IP ranges keyed by environment name (for example prod, int, or test) for services that do not use Private Service Connect."
+  type = map(list(object({
+    deletion_policy  = optional(string)
+    ranges           = map(string)
+    labels           = optional(map(string), {})
+    export_routes    = optional(bool, false)
+    import_routes    = optional(bool, false)
+    peered_domains   = optional(list(string), [])
+    range_prefix     = optional(string)
+    service_producer = optional(string, "servicenetworking.googleapis.com")
+  })))
   nullable = false
   default  = {}
 }

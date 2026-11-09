@@ -119,6 +119,15 @@ proxy_subnets = {
   Test = "10.1.3.0/24"
 }
 
+# Optional Private Services Access (PSA) IP Ranges per Environment
+# Prefer Private Service Connect (PSC) endpoints for managed services (propagated
+# via NCC export_psc = true). Uncomment only for workloads that still require PSA.
+# psa_ranges = {
+#   prod = [{ ranges = { default = "10.202.252.0/22" } }]
+#   int  = [{ ranges = { default = "10.30.252.0/22" } }]
+#   test = [{ ranges = { default = "10.203.252.0/22" } }]
+# }
+
 # Named IP Ranges to reference in Network Firewall Policy Rules
 cidrs = {
   healthchecks = [

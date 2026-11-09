@@ -98,7 +98,11 @@ module "env-spoke-vpc" {
   dns_policy = {
     logging = var.dns.enable_logging
   }
-  psa_configs = try(var.psa_ranges[lower(each.key)], var.psa_ranges.dev)
+  psa_configs = lookup(
+    var.psa_ranges,
+    lower(each.key),
+    lookup(var.psa_ranges, each.key, [])
+  )
   create_googleapis_routes = (
     var.psc_google_apis.enabled
     ? null
