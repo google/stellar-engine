@@ -19,6 +19,8 @@
 variable "backend_service_configs" {
   description = "Backend service level configuration."
   type = map(object({
+    name                            = optional(string)
+    description                     = optional(string, "Terraform managed.")
     affinity_cookie_ttl_sec         = optional(number)
     compression_mode                = optional(string)
     connection_draining_timeout_sec = optional(number)
@@ -26,21 +28,25 @@ variable "backend_service_configs" {
     custom_response_headers         = optional(list(string))
     enable_cdn                      = optional(bool)
     health_checks                   = optional(list(string), ["default"])
-    log_sample_rate                 = optional(number)
     locality_lb_policy              = optional(string)
-    port_name                       = optional(string)
-    project_id                      = optional(string)
-    protocol                        = optional(string)
-    security_policy                 = optional(string)
-    session_affinity                = optional(string)
-    timeout_sec                     = optional(number)
+    log_config = optional(object({
+      enable          = optional(bool)
+      sample_rate     = optional(number)
+      optional_mode   = optional(string)
+      optional_fields = optional(list(string))
+    }))
+    port_name        = optional(string)
+    project_id       = optional(string)
+    protocol         = optional(string)
+    security_policy  = optional(string)
+    session_affinity = optional(string)
+    timeout_sec      = optional(number)
     backends = list(object({
-      # group renamed to backend
-      backend         = string
+      group           = string
+      preferred       = optional(bool, false)
       balancing_mode  = optional(string, "UTILIZATION")
       capacity_scaler = optional(number, 1)
       description     = optional(string, "Terraform managed.")
-      failover        = optional(bool, false)
       max_connections = optional(object({
         per_endpoint = optional(number)
         per_group    = optional(number)
@@ -54,13 +60,14 @@ variable "backend_service_configs" {
       max_utilization = optional(number)
     }))
     cdn_policy = optional(object({
-      cache_mode                   = optional(string)
-      client_ttl                   = optional(number)
-      default_ttl                  = optional(number)
-      max_ttl                      = optional(number)
-      negative_caching             = optional(bool)
-      serve_while_stale            = optional(number)
-      signed_url_cache_max_age_sec = optional(number)
+      bypass_cache_on_request_headers = optional(list(string))
+      cache_mode                      = optional(string)
+      client_ttl                      = optional(number)
+      default_ttl                     = optional(number)
+      max_ttl                         = optional(number)
+      negative_caching                = optional(bool)
+      serve_while_stale               = optional(number)
+      signed_url_cache_max_age_sec    = optional(number)
       cache_key_policy = optional(object({
         include_host           = optional(bool)
         include_named_cookies  = optional(list(string))
@@ -98,8 +105,8 @@ variable "backend_service_configs" {
       }))
     }))
     iap_config = optional(object({
-      oauth2_client_id            = string
-      oauth2_client_secret        = string
+      oauth2_client_id            = optional(string)
+      oauth2_client_secret        = optional(string)
       oauth2_client_secret_sha256 = optional(string)
     }))
     locality_lb_policies = optional(list(object({
@@ -139,15 +146,33 @@ variable "backend_service_configs" {
         access_key_version = optional(string)
         origin_region      = optional(string)
       }))
-  })) }))
+    }))
+    tls_settings = optional(object({
+      sni = optional(string)
+    }))
+  }))
   default  = {}
   nullable = false
+  validation {
+    condition = alltrue([
+      for backend_service in values(var.backend_service_configs) : (
+        backend_service.cdn_policy == null
+        || try(backend_service.cdn_policy.cache_key_policy, null) != null
+        || try(
+          backend_service.cdn_policy.signed_url_cache_max_age_sec, null
+        ) != null
+      )
+    ])
+    error_message = "Backend service cdn_policy requires one of cache_key_policy or signed_url_cache_max_age_sec."
+  }
   validation {
     condition = alltrue([
       for backend_service in values(var.backend_service_configs) : contains(
         [
           "NONE", "CLIENT_IP", "CLIENT_IP_NO_DESTINATION",
-          "CLIENT_IP_PORT_PROTO", "CLIENT_IP_PROTO"
+          "CLIENT_IP_PORT_PROTO", "CLIENT_IP_PROTO",
+          "GENERATED_COOKIE", "HEADER_FIELD", "HTTP_COOKIE",
+          "STRONG_COOKIE_AFFINITY"
         ],
         coalesce(backend_service.session_affinity, "NONE")
       )
@@ -185,6 +210,6 @@ variable "backend_service_configs" {
         )
       ]
     ]))
-    error_message = "When specified, all locality lb polcies must have EITHER policy or custom_policy filled, not both."
+    error_message = "When specified, all locality lb policies must have EITHER policy or custom_policy filled, not both."
   }
 }

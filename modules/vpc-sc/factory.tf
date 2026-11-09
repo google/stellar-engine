@@ -22,7 +22,7 @@ locals {
     }
   }
   _data_paths = {
-    for k in ["access_levels", "egress_policies", "ingress_policies"] : k => (
+    for k in ["access_levels", "egress_policies", "ingress_policies", "perimeters"] : k => (
       var.factories_config[k] == null
       ? null
       : pathexpand(var.factories_config[k])
@@ -32,7 +32,6 @@ locals {
     access_levels = {
       for k, v in local._data.access_levels : k => {
         combining_function = try(v.combining_function, null)
-        description        = try(v.description, null)
         conditions = [
           for c in try(v.conditions, []) : merge({
             device_policy          = null
@@ -44,15 +43,18 @@ locals {
             vpc_subnets            = {}
           }, c)
         ]
+        description = try(v.description, null)
+        title       = try(v.title, null)
       }
     }
     egress_policies = {
-      for k, v in local._data.egress_policies : k => {
+      for k, v in local._data.egress_policies : "$egress_policies:${k}" => {
         title = try(v.title, null)
         from = merge({
           access_levels = []
           identity_type = null
           identities    = []
+          psc_endpoints = []
           resources     = []
         }, try(v.from, {}))
         to = {
@@ -65,16 +67,18 @@ locals {
             }, o)
           ]
           resources = try(v.to.resources, [])
+          roles     = try(v.to.roles, [])
         }
       }
     }
     ingress_policies = {
-      for k, v in local._data.ingress_policies : k => {
+      for k, v in local._data.ingress_policies : "$ingress_policies:${k}" => {
         title = try(v.title, null)
         from = merge({
           access_levels = []
           identity_type = null
           identities    = []
+          psc_endpoints = []
           resources     = []
         }, try(v.from, {}))
         to = {
@@ -86,7 +90,71 @@ locals {
             }, o)
           ]
           resources = try(v.to.resources, [])
+          roles     = try(v.to.roles, [])
         }
+      }
+    }
+    perimeters = {
+      for k, v in local._data.perimeters :
+      k => {
+        description             = try(v.description, null)
+        ignore_resource_changes = try(v.ignore_resource_changes, false)
+        title                   = try(v.title, null)
+        spec = !can(v.spec) ? null : merge(v.spec, {
+          access_levels       = try(v.spec.access_levels, [])
+          egress_policies     = try(v.spec.egress_policies, [])
+          ingress_policies    = try(v.spec.ingress_policies, [])
+          restricted_services = try(v.spec.restricted_services, [])
+          resources           = try(v.spec.resources, [])
+          vpc_accessible_services = (
+            try(v.spec.vpc_accessible_services, null) == null ? null : {
+              allow_all_restricted_services = try(
+                v.spec.vpc_accessible_services.allow_all_restricted_services, true
+              )
+              allowed_service_patterns = (
+                try(v.spec.vpc_accessible_services.allowed_service_patterns, null) == null
+                ? null
+                : {
+                  for pk, pv in v.spec.vpc_accessible_services.allowed_service_patterns :
+                  pk => {
+                    x_goog_allowed_resources   = try(pv.x_goog_allowed_resources, null)
+                    x_googapps_allowed_domains = try(pv.x_googapps_allowed_domains, null)
+                  }
+                }
+              )
+              allowed_services   = try(v.spec.vpc_accessible_services.allowed_services, [])
+              enable_restriction = try(v.spec.vpc_accessible_services.enable_restriction, true)
+            }
+          )
+        })
+        status = !can(v.status) ? null : merge(v.status, {
+          access_levels       = try(v.status.access_levels, [])
+          egress_policies     = try(v.status.egress_policies, [])
+          ingress_policies    = try(v.status.ingress_policies, [])
+          restricted_services = try(v.status.restricted_services, [])
+          resources           = try(v.status.resources, [])
+          vpc_accessible_services = (
+            try(v.status.vpc_accessible_services, null) == null ? null : {
+              allow_all_restricted_services = try(
+                v.status.vpc_accessible_services.allow_all_restricted_services, true
+              )
+              allowed_service_patterns = (
+                try(v.status.vpc_accessible_services.allowed_service_patterns, null) == null
+                ? null
+                : {
+                  for pk, pv in v.status.vpc_accessible_services.allowed_service_patterns :
+                  pk => {
+                    x_goog_allowed_resources   = try(pv.x_goog_allowed_resources, null)
+                    x_googapps_allowed_domains = try(pv.x_googapps_allowed_domains, null)
+                  }
+                }
+              )
+              allowed_services   = try(v.status.vpc_accessible_services.allowed_services, [])
+              enable_restriction = try(v.status.vpc_accessible_services.enable_restriction, true)
+            }
+          )
+        })
+        use_explicit_dry_run_spec = try(v.use_explicit_dry_run_spec, false)
       }
     }
   }

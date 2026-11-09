@@ -204,11 +204,11 @@ class TestStage2Networking(unittest.TestCase):
         org_tf = (
             _REPO_ROOT / "fast/stages-aw/0-bootstrap/organization.tf"
         ).read_text(encoding="utf-8")
-        self.assertIn(
-            "contacts     = !var.deploy_org_resources.iam"
-            " || var.bootstrap_user != null"
-            " ? {} : local.essential_contacts",
+        self.assertRegex(
             org_tf,
+            r"contacts\s*=\s*\(\s*!var\.deploy_org_resources\.iam"
+            r" \|\| var\.bootstrap_user != null\s*\?\s*\{\}\s*:\s*"
+            r"local\.essential_contacts",
         )
         self.assertIn(
             '{ (tostring(var.essential_contacts)) = ["ALL"] }', org_tf
@@ -245,6 +245,13 @@ class TestStage2Networking(unittest.TestCase):
         self.assertIn("ngfw-ssh-public-key", bastion_tf)
         self.assertIn("module.bastion-service-account.email", bastion_tf)
         self.assertIn("roles/secretmanager.secretAccessor", bastion_tf)
+        # The secrets keep a CMEK replica in the primary region and
+        # write-only data.
+        self.assertIn("global_replica_locations = {", bastion_tf)
+        self.assertIn(
+            "(var.regions.primary) = module.kms.keys.default.id", bastion_tf
+        )
+        self.assertIn("data_config = { write_only_version = 1 }", bastion_tf)
         self.assertIn(
             "module.vdss-host-project.service_agents.secretmanager.iam_email",
             ngfw_tf,

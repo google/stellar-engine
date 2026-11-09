@@ -15,10 +15,23 @@
  */
 
 locals {
-  _name        = "${local.prefix}${lower(var.name)}"
-  prefix       = var.prefix == null ? "" : "${var.prefix}-"
+  _name = "${local.prefix}${lower(var.name)}"
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    } if !endswith(k, "_vars")
+  }
+  ctx_kms_keys = merge(local.ctx.kms_keys, {
+    for k, v in google_kms_key_handle.default : "$kms_keys:autokeys/${k}" => v.kms_key
+  })
+  ctx_p    = "$"
+  location = try(local.ctx.locations[var.location], var.location)
+  prefix   = var.prefix == null ? "" : "${var.prefix}-"
+  project_id = var.project_id == null ? null : lookup(
+    local.ctx.project_ids, var.project_id, var.project_id
+  )
   notification = try(var.notification_config.enabled, false)
-  topic_create = try(var.notification_config.create_topic, null) != null
+  topic_create = try(var.notification_config.create_topic.create, null) == true
   bucket = (
     var.bucket_create ? {
       name = try(google_storage_bucket.bucket[0].name, null)
@@ -33,16 +46,23 @@ locals {
   )
 }
 
-moved {
-  from = google_storage_bucket.bucket
-  to   = google_storage_bucket.bucket[0]
+resource "google_kms_key_handle" "default" {
+  for_each = var.kms_autokeys
+  project  = local.project_id
+  name     = each.key
+  location = coalesce(
+    try(local.ctx.locations[each.value.location], null),
+    each.value.location,
+    local.location
+  )
+  resource_type_selector = each.value.resource_type_selector
 }
 
 resource "google_storage_bucket" "bucket" {
   count                       = var.bucket_create ? 1 : 0
   name                        = local._name
-  project                     = var.project_id
-  location                    = var.location
+  project                     = local.project_id
+  location                    = local.location
   storage_class               = var.storage_class
   force_destroy               = var.force_destroy
   uniform_bucket_level_access = var.uniform_bucket_level_access
@@ -79,7 +99,6 @@ resource "google_storage_bucket" "bucket" {
 
   dynamic "custom_placement_config" {
     for_each = var.custom_placement_config == null ? [] : [""]
-
     content {
       data_locations = var.custom_placement_config
     }
@@ -87,15 +106,17 @@ resource "google_storage_bucket" "bucket" {
 
   dynamic "encryption" {
     for_each = var.encryption_key == null ? [] : [""]
-
     content {
-      default_kms_key_name = var.encryption_key
+      default_kms_key_name = lookup(
+        local.ctx_kms_keys,
+        var.encryption_key,
+        var.encryption_key
+      )
     }
   }
 
   dynamic "hierarchical_namespace" {
     for_each = var.enable_hierarchical_namespace == null ? [] : [""]
-
     content {
       enabled = var.enable_hierarchical_namespace
     }
@@ -104,7 +125,12 @@ resource "google_storage_bucket" "bucket" {
   dynamic "logging" {
     for_each = var.logging_config == null ? [] : [""]
     content {
-      log_bucket        = var.logging_config.log_bucket
+      # log_bucket is actually a storage bucket (and not a logging bucket)
+      log_bucket = var.logging_config.log_bucket == null ? null : lookup(
+        local.ctx.storage_buckets,
+        var.logging_config.log_bucket,
+        var.logging_config.log_bucket
+      )
       log_object_prefix = var.logging_config.log_object_prefix
     }
   }
@@ -156,11 +182,32 @@ resource "google_storage_bucket" "bucket" {
       not_found_page   = var.website.not_found_page
     }
   }
+
+  dynamic "ip_filter" {
+    for_each = var.ip_filter == null ? [] : [""]
+    content {
+      mode                           = "Enabled"
+      allow_cross_org_vpcs           = var.ip_filter.allow_cross_org_vpcs
+      allow_all_service_agent_access = var.ip_filter.allow_all_service_agent_access
+      dynamic "public_network_source" {
+        for_each = var.ip_filter.public_network_sources == null ? [] : [""]
+        content {
+          allowed_ip_cidr_ranges = var.ip_filter.public_network_sources
+        }
+      }
+      dynamic "vpc_network_sources" {
+        for_each = var.ip_filter.vpc_network_sources
+        content {
+          network                = vpc_network_sources.key
+          allowed_ip_cidr_ranges = vpc_network_sources.value
+        }
+      }
+    }
+  }
 }
 
 resource "google_storage_bucket_object" "objects" {
-  for_each = var.objects_to_upload
-
+  for_each            = var.objects_to_upload
   bucket              = local.bucket.id
   name                = each.value.name
   metadata            = each.value.metadata
@@ -175,11 +222,12 @@ resource "google_storage_bucket_object" "objects" {
   temporary_hold      = each.value.temporary_hold
   detect_md5hash      = each.value.detect_md5hash
   storage_class       = each.value.storage_class
-  kms_key_name        = each.value.kms_key_name
-
+  kms_key_name = try(
+    local.ctx_kms_keys[each.value.kms_key_name],
+    each.value.kms_key_name
+  )
   dynamic "customer_encryption" {
     for_each = each.value.customer_encryption == null ? [] : [""]
-
     content {
       encryption_algorithm = each.value.customer_encryption.encryption_algorithm
       encryption_key       = each.value.customer_encryption.encryption_key
@@ -209,7 +257,7 @@ resource "google_pubsub_topic_iam_binding" "binding" {
 
 resource "google_pubsub_topic" "topic" {
   count        = local.topic_create ? 1 : 0
-  project      = var.project_id
+  project      = local.project_id
   name         = var.notification_config.topic_name
-  kms_key_name = try(var.notification_config.topic_create.kms_key_id, null)
+  kms_key_name = try(var.notification_config.create_topic.kms_key_id, null)
 }

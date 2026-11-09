@@ -15,6 +15,7 @@ region       = "us-central" # us-central1 is recommended
 
 notebooks = {
   "notebook-00" = {
+    # USER_MANAGED is the only supported type and the default.
     type  = "USER_MANAGED"
     owner = "user@example.com"
   }

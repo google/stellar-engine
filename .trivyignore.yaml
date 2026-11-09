@@ -13,6 +13,14 @@
 # limitations under the License.
 
 misconfigurations:
+  - id: GCP-0001
+    paths:
+      - "modules/gcs/iam.tf"
+    statement: "Reusable modules/gcs/iam.tf only binds principals supplied via var.iam; Trivy flags the upstream modules/net-cloud-armor/recipe-glb-waf sample recipe which demonstrates Cloud Armor WAF in front of a public backend bucket."
+  - id: AVD-GCP-0001
+    paths:
+      - "modules/gcs/iam.tf"
+    statement: "Reusable modules/gcs/iam.tf only binds principals supplied via var.iam; Trivy flags the upstream modules/net-cloud-armor/recipe-glb-waf sample recipe which demonstrates Cloud Armor WAF in front of a public backend bucket."
   - id: GCP-0007
     paths:
       - "modules/gcs/iam.tf"
@@ -49,3 +57,15 @@ misconfigurations:
       - "modules/gke-cluster-standard/main.tf"
       - "modules/gke-cluster-standard-se/main.tf"
     statement: "Trivy flags the cluster-level inline node_config block where workload_metadata_config.mode is unset, which only applies to the temporary default node pool deleted at creation (remove_default_node_pool = var.default_nodepool.remove_pool, defaulting to true) while workload node pools are managed via modules/gke-nodepool."
+  - id: GCP-0061
+    paths:
+      - "modules/gke-cluster-autopilot/main.tf"
+      - "modules/gke-cluster-standard/main.tf"
+      - "modules/gke-cluster-standard-se/main.tf"
+    statement: "Reusable GKE cluster modules default private_nodes and disable_public_endpoint to true and expose master_authorized_networks_config dynamically via var.access_config.ip_access when callers configure authorized CIDR ranges."
+  - id: AVD-GCP-0061
+    paths:
+      - "modules/gke-cluster-autopilot/main.tf"
+      - "modules/gke-cluster-standard/main.tf"
+      - "modules/gke-cluster-standard-se/main.tf"
+    statement: "Reusable GKE cluster modules default private_nodes and disable_public_endpoint to true and expose master_authorized_networks_config dynamically via var.access_config.ip_access when callers configure authorized CIDR ranges."

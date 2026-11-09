@@ -23,8 +23,8 @@ Enable the following APIs in your GCP project by running the enable-apis.sh scri
 | [function_memory_mb](variables.tf#L62) | The amount of memory (in MB) allocated for the Cloud Function. | <code>number</code> |  | <code>256</code> |
 | [function_runtime](variables.tf#L73) | The runtime to use for the Cloud Function (e.g., nodejs18, python39, etc.). | <code>string</code> |  | <code>&#34;nodejs20&#34;</code> |
 | [function_timeout_seconds](variables.tf#L79) | The maximum amount of time (in seconds) the Cloud Function is allowed to run. | <code>number</code> |  | <code>60</code> |
-| [labels](variables.tf#L90) | Labels to attach to the Cloud Function resources. | <code>map&#40;string&#41;</code> |  | <code title="&#123;&#10;  environment &#61; &#34;development&#34;&#10;  team        &#61; &#34;devops&#34;&#10;&#125;">&#123;&#8230;&#125;</code> |
-| [secrets](variables.tf#L109) | Secrets for the Cloud Function (can be environment variables or volume mounts). | <code title="map&#40;object&#40;&#123;&#10;  project_id &#61; string&#10;  secret     &#61; string&#10;  versions   &#61; list&#40;string&#41;&#10;  is_volume  &#61; bool&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [labels](variables.tf#L90) | Labels to attach to the Cloud Function resources. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [secrets](variables.tf#L109) | Secrets for the Cloud Function (can be environment variables or volume mounts). | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [service_account](variables.tf#L120) | The service account email to associate with the Cloud Function. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs

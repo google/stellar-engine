@@ -19,6 +19,7 @@
 variable "urlmap_config" {
   description = "The URL map configuration."
   type = object({
+    description = optional(string, "Terraform managed.")
     default_custom_error_response_policy = optional(object({
       error_service = optional(string)
       error_response_rules = optional(list(object({
@@ -214,12 +215,12 @@ variable "urlmap_config" {
           request_mirror_backend = optional(string)
           cors_policy = optional(object({
             allow_credentials    = optional(bool)
-            allow_headers        = optional(string)
-            allow_methods        = optional(string)
-            allow_origin_regexes = list(string)
-            allow_origins        = list(string)
+            allow_headers        = optional(list(string))
+            allow_methods        = optional(list(string))
+            allow_origin_regexes = optional(list(string))
+            allow_origins        = optional(list(string))
             disabled             = optional(bool)
-            expose_headers       = optional(string)
+            expose_headers       = optional(list(string))
             max_age              = optional(string)
           }))
           fault_injection_policy = optional(object({
@@ -279,6 +280,14 @@ variable "urlmap_config" {
       route_rules = optional(list(object({
         priority = number
         service  = optional(string)
+        custom_error_response_policy = optional(object({
+          error_service = optional(string)
+          error_response_rules = optional(list(object({
+            match_response_codes   = optional(list(string))
+            path                   = optional(string)
+            override_response_code = optional(number)
+          })))
+        }))
         header_action = optional(object({
           request_add = optional(map(object({
             value   = string
@@ -321,12 +330,12 @@ variable "urlmap_config" {
           request_mirror_backend = optional(string)
           cors_policy = optional(object({
             allow_credentials    = optional(bool)
-            allow_headers        = optional(string)
-            allow_methods        = optional(string)
-            allow_origin_regexes = list(string)
-            allow_origins        = list(string)
+            allow_headers        = optional(list(string))
+            allow_methods        = optional(list(string))
+            allow_origin_regexes = optional(list(string))
+            allow_origins        = optional(list(string))
             disabled             = optional(bool)
-            expose_headers       = optional(string)
+            expose_headers       = optional(list(string))
             max_age              = optional(string)
           }))
           fault_injection_policy = optional(object({

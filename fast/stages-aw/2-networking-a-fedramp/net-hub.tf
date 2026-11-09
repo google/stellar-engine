@@ -164,6 +164,7 @@ module "hub-vpc" {
     var.psc_google_apis.enabled
     ? null
     : {
+      directpath = false
       private    = true
       restricted = true
     }

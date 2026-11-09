@@ -533,11 +533,12 @@ variable "subnets" {
   description = "VPC subnet configurations keyed by network name."
   type = map(list(object({
     name                             = string
-    ip_cidr_range                    = string
+    ip_cidr_range                    = optional(string)
     region                           = string
     description                      = optional(string)
     enable_private_access            = optional(bool, true)
     allow_subnet_cidr_routes_overlap = optional(bool)
+    reserved_internal_range          = optional(string)
     flow_logs_config = optional(object({
       aggregation_interval = optional(string)
       filter_expression    = optional(string)
@@ -545,9 +546,12 @@ variable "subnets" {
       metadata             = optional(string)
       metadata_fields      = optional(list(string))
     }))
-    secondary_ip_ranges = optional(map(string))
-    iam                 = optional(map(list(string)), {})
-    tenant              = optional(string)
+    secondary_ip_ranges = optional(map(object({
+      ip_cidr_range           = optional(string)
+      reserved_internal_range = optional(string)
+    })))
+    iam    = optional(map(list(string)), {})
+    tenant = optional(string)
   })))
   default  = {}
   nullable = false

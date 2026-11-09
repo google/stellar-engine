@@ -4,8 +4,45 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "ip_cidr_range",
     "region"
+  ],
+  "not": {
+    "anyOf": [
+      {
+        "properties": {
+          "psc": {"const": true},
+          "proxy_only": {"const": true}
+        },
+        "required": ["psc", "proxy_only"]
+      },
+      {
+        "properties": {
+          "psc": {"const": true},
+          "private_nat": {"const": true}
+        },
+        "required": ["psc", "private_nat"]
+      },
+      {
+        "properties": {
+          "proxy_only": {"const": true},
+          "private_nat": {"const": true}
+        },
+        "required": ["proxy_only", "private_nat"]
+      }
+    ]
+  },
+  "anyOf": [
+    {"required": ["ip_cidr_range"]},
+    {"required": ["reserved_internal_range"]},
+    {"required": ["ip_collection"]},
+    {
+      "allOf": [
+        {"not": {"required": ["ip_cidr_range"]}},
+        {"not": {"required": ["reserved_internal_range"]}},
+        {"not": {"required": ["ip_collection"]}},
+        {"properties": {"ipv6": {"properties": {"ipv6_only": {"const": true}}}}, "required": ["ipv6"]}
+      ]
+    }
   ],
   "properties": {
     "active": {
@@ -15,6 +52,9 @@
       "type": "string"
     },
     "enable_private_access": {
+      "type": "boolean"
+    },
+    "allow_subnet_cidr_routes_overlap": {
       "type": "boolean"
     },
     "flow_logs_config": {
@@ -47,14 +87,24 @@
     "ip_cidr_range": {
       "type": "string"
     },
+    "reserved_internal_range": {
+      "type": "string",
+      "description": "Name of the internal range to use for this subnet. Mutually exclusive with ip_collection."
+    },
     "ipv6": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "access_type": {
           "type": "string"
+        },
+        "ipv6_only": {
+          "type": "boolean"
         }
       }
+    },
+    "ip_collection": {
+      "type": "string"
     },
     "name": {
       "type": "string"
@@ -68,10 +118,28 @@
     "proxy_only": {
       "type": "boolean"
     },
+    "private_nat": {
+      "type": "boolean"
+    },
     "secondary_ip_ranges": {
       "type": "object",
       "additionalProperties": {
-        "type": "string"
+        "type": "object",
+        "additionalProperties": false,
+        "anyOf": [
+          {"required": ["ip_cidr_range"]},
+          {"required": ["reserved_internal_range"]}
+        ],
+        "properties": {
+          "ip_cidr_range": {
+            "type": "string",
+            "description": "IP CIDR range for this secondary range"
+          },
+          "reserved_internal_range": {
+            "type": "string",
+            "description": "Name of the internal range to use for this secondary range"
+          }
+        }
       }
     },
     "iam": {
@@ -89,11 +157,11 @@
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {
-        "^roles/": {
+        "^(?:roles/|\\$custom_roles:|organizations/[0-9]+/roles/|([a-z0-9.]+:)?projects/[a-z0-9-]+/roles/)": {
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|ro|rw)"
+            "pattern": "^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|ro|rw|\\$iam_principals:[a-z0-9_-]+)"
           }
         }
       }
@@ -110,12 +178,12 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "pattern": "^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|ro|rw)"
+                "pattern": "^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|ro|rw|\\$iam_principals:[a-z0-9_-]+)"
               }
             },
             "role": {
               "type": "string",
-              "pattern": "^roles/"
+              "pattern": "^(?:roles/|\\$custom_roles:|organizations/[0-9]+/roles/|([a-z0-9.]+:)?projects/[a-z0-9-]+/roles/)"
             },
             "condition": {
               "type": "object",
@@ -150,11 +218,11 @@
           "properties": {
             "member": {
               "type": "string",
-              "pattern": "^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|ro|rw)"
+              "pattern": "^(?:domain:|group:|serviceAccount:|user:|principal:|principalSet:|ro|rw|\\$iam_principals:[a-z0-9_-]+)"
             },
             "role": {
               "type": "string",
-              "pattern": "^roles/"
+              "pattern": "^(?:roles/|\\$custom_roles:|organizations/[0-9]+/roles/|([a-z0-9.]+:)?projects/[a-z0-9-]+/roles/)"
             },
             "condition": {
               "type": "object",

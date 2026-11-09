@@ -27,6 +27,9 @@
 # - Terraform provider versions stay out of scope. The default-versions.tf
 #   file sets them for every versions.tf copy at once, and tools/lint.sh
 #   expects the copies to match it.
+# - Manifests in modules that tools/sync-from-cff.sh owns stay out of
+#   scope. The cff-sync.yml workflow brings their updates from upstream
+#   Cloud Foundation Fabric.
 
 version: 2
 

@@ -1,5 +1,5 @@
 /**
- * Copyright 2024 Google LLC
+ * Copyright 2025 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,220 @@
  * limitations under the License.
  */
 
+variable "access_config" {
+  description = "Control plane endpoint and nodes access configurations."
+  type = object({
+    dns_access = optional(object({
+      allow_external_traffic = optional(bool, true)
+      enable_k8s_tokens      = optional(bool)
+      enable_k8s_certs       = optional(bool)
+    }), {})
+    ip_access = optional(object({
+      authorized_ranges                              = optional(map(string))
+      disable_public_endpoint                        = optional(bool)
+      gcp_public_cidrs_access_enabled                = optional(bool)
+      private_endpoint_authorized_ranges_enforcement = optional(bool)
+      private_endpoint_config = optional(object({
+        endpoint_subnetwork = optional(string)
+        global_access       = optional(bool, true)
+      }))
+    }))
+    master_ipv4_cidr_block = optional(string)
+    private_nodes          = optional(bool, true)
+  })
+  nullable = false
+  default  = {}
+  validation {
+    condition = (
+      try(var.access_config.ip_access.disable_public_endpoint, null) != true ||
+      var.access_config.private_nodes == true
+    )
+    error_message = "Private endpoint can only be enabled with private nodes."
+  }
+}
 
 variable "backup_configs" {
   description = "Configuration for Backup for GKE."
   type = object({
     enable_backup_agent = optional(bool, false)
+    backup_channels = optional(map(object({
+      destination_project = string
+      region              = optional(string)
+      deletion_policy     = optional(string)
+      description         = optional(string)
+      labels              = optional(map(string))
+    })), {})
     backup_plans = optional(map(object({
-      region                            = string
+      region                            = optional(string)
       applications                      = optional(map(list(string)))
+      deletion_policy                   = optional(string)
+      description                       = optional(string)
       encryption_key                    = optional(string)
       include_secrets                   = optional(bool, true)
       include_volume_data               = optional(bool, true)
       labels                            = optional(map(string))
       namespaces                        = optional(list(string))
+      permissive_mode                   = optional(bool)
       schedule                          = optional(string)
       retention_policy_days             = optional(number)
       retention_policy_lock             = optional(bool, false)
       retention_policy_delete_lock_days = optional(number)
     })), {})
+    restore_channels = optional(map(object({
+      destination_project = string
+      region              = optional(string)
+      deletion_policy     = optional(string)
+      description         = optional(string)
+      labels              = optional(map(string))
+    })), {})
+    restore_plans = optional(map(object({
+      backup_plan     = string
+      region          = optional(string)
+      deletion_policy = optional(string)
+      description     = optional(string)
+      labels          = optional(map(string))
+      cluster_resource_restore_scope = optional(object({
+        all_group_kinds = optional(bool)
+        no_group_kinds  = optional(bool)
+        conflict_policy = optional(string)
+        excluded_group_kinds = optional(list(object({
+          resource_group = optional(string)
+          resource_kind  = optional(string)
+        })))
+        selected_group_kinds = optional(list(object({
+          resource_group = optional(string)
+          resource_kind  = optional(string)
+        })))
+      }))
+      namespaced_restore_scope = optional(object({
+        all_namespaces      = optional(bool)
+        no_namespaces       = optional(bool)
+        applications        = optional(map(list(string)))
+        excluded_namespaces = optional(list(string))
+        restore_mode        = optional(string)
+        selected_namespaces = optional(list(string))
+      }), { all_namespaces = true })
+      restore_order = optional(list(object({
+        requiring = object({
+          resource_group = optional(string)
+          resource_kind  = optional(string)
+        })
+        satisfying = object({
+          resource_group = optional(string)
+          resource_kind  = optional(string)
+        })
+      })))
+      transformation_rules = optional(list(object({
+        description = optional(string)
+        field_actions = list(object({
+          op        = string
+          from_path = optional(string)
+          path      = optional(string)
+          value     = optional(string)
+        }))
+        resource_filter = optional(object({
+          json_path  = optional(string)
+          namespaces = optional(list(string))
+          group_kinds = optional(list(object({
+            resource_group = optional(string)
+            resource_kind  = optional(string)
+          })))
+        }))
+      })))
+      volume_data_restore = optional(object({
+        policy   = optional(string)
+        bindings = optional(map(string), {})
+      }))
+    })), {})
   })
   default  = {}
   nullable = false
+  validation {
+    condition = (
+      alltrue([
+        for v in values(var.backup_configs.backup_channels) :
+        v.deletion_policy == null || contains(["DELETE", "PREVENT", "ABANDON"], v.deletion_policy)
+      ]) &&
+      alltrue([
+        for v in values(var.backup_configs.restore_channels) :
+        v.deletion_policy == null || contains(["DELETE", "PREVENT", "ABANDON"], v.deletion_policy)
+      ]) &&
+      alltrue([
+        for v in values(var.backup_configs.backup_plans) :
+        v.deletion_policy == null || contains(["DELETE", "ABANDON"], v.deletion_policy)
+      ]) &&
+      alltrue([
+        for v in values(var.backup_configs.restore_plans) :
+        v.deletion_policy == null || contains(["DELETE", "ABANDON"], v.deletion_policy)
+      ])
+    )
+    error_message = "Invalid deletion_policy value in backup_configs."
+  }
+  validation {
+    condition = alltrue([
+      for v in values(var.backup_configs.restore_plans) :
+      try(v.cluster_resource_restore_scope.conflict_policy, null) == null || contains(
+        ["USE_EXISTING_VERSION", "USE_BACKUP_VERSION"],
+        v.cluster_resource_restore_scope.conflict_policy
+      )
+    ])
+    error_message = "Invalid cluster_resource_restore_scope.conflict_policy value in backup_configs.restore_plans."
+  }
+  validation {
+    condition = alltrue([
+      for v in values(var.backup_configs.restore_plans) :
+      try(v.namespaced_restore_scope.restore_mode, null) == null || contains(
+        [
+          "DELETE_AND_RESTORE",
+          "FAIL_ON_CONFLICT",
+          "MERGE_SKIP_ON_CONFLICT",
+          "MERGE_REPLACE_VOLUME_ON_CONFLICT",
+          "MERGE_REPLACE_ON_CONFLICT"
+        ],
+        v.namespaced_restore_scope.restore_mode
+      )
+    ])
+    error_message = "Invalid namespaced_restore_scope.restore_mode value in backup_configs.restore_plans."
+  }
+  validation {
+    condition = alltrue([
+      for v in values(var.backup_configs.restore_plans) : (
+        (
+          try(v.volume_data_restore.policy, null) == null || contains(
+            [
+              "RESTORE_VOLUME_DATA_FROM_BACKUP",
+              "REUSE_VOLUME_HANDLE_FROM_BACKUP",
+              "NO_VOLUME_DATA_RESTORATION"
+            ],
+            v.volume_data_restore.policy
+          )
+          ) && alltrue([
+            for p in values(try(v.volume_data_restore.bindings, {})) : contains(
+              [
+                "RESTORE_VOLUME_DATA_FROM_BACKUP",
+                "REUSE_VOLUME_HANDLE_FROM_BACKUP",
+                "NO_VOLUME_DATA_RESTORATION"
+              ],
+              p
+            )
+        ])
+      )
+    ])
+    error_message = "Invalid volume_data_restore policy in backup_configs.restore_plans."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for v in values(var.backup_configs.restore_plans) : [
+        for r in coalesce(v.transformation_rules, []) : [
+          for a in r.field_actions : contains(
+            ["REMOVE", "MOVE", "COPY", "ADD", "TEST", "REPLACE"],
+            a.op
+          )
+        ]
+      ]
+    ]))
+    error_message = "Invalid transformation_rules.field_actions.op in backup_configs.restore_plans."
+  }
 }
 
 variable "cluster_autoscaling" {
@@ -73,6 +266,7 @@ variable "cluster_autoscaling" {
       }))
       # add validation rule to ensure only one is present if upgrade settings is defined
     }))
+    auto_provisioning_locations = optional(list(string))
     cpu_limits = optional(object({
       min = optional(number, 0)
       max = number
@@ -116,6 +310,25 @@ variable "cluster_autoscaling" {
   }
 }
 
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    bigquery_datasets = optional(map(string), {})
+    cidr_ranges       = optional(map(string), {})
+    email_addresses   = optional(map(string), {})
+    iam_principals    = optional(map(string), {})
+    kms_keys          = optional(map(string), {})
+    locations         = optional(map(string), {})
+    networks          = optional(map(string), {})
+    project_ids       = optional(map(string), {})
+    pubsub_topics     = optional(map(string), {})
+    subnets           = optional(map(string), {})
+    tag_values        = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "default_nodepool" {
   description = "Enable default nodepool."
   type = object({
@@ -150,14 +363,15 @@ variable "description" {
 variable "enable_addons" {
   description = "Addons enabled in the cluster (true means enabled)."
   type = object({
+    agent_sandbox                  = optional(bool)
     cloudrun                       = optional(bool, false)
     config_connector               = optional(bool, false)
-    dns_cache                      = optional(bool, false)
-    gce_persistent_disk_csi_driver = optional(bool, false)
-    gcp_filestore_csi_driver       = optional(bool, false)
-    gcs_fuse_csi_driver            = optional(bool, false)
-    horizontal_pod_autoscaling     = optional(bool, false)
-    http_load_balancing            = optional(bool, false)
+    dns_cache                      = optional(bool, true)
+    gce_persistent_disk_csi_driver = optional(bool, true)
+    gcp_filestore_csi_driver       = optional(bool, true)
+    gcs_fuse_csi_driver            = optional(bool, true)
+    horizontal_pod_autoscaling     = optional(bool, true)
+    http_load_balancing            = optional(bool, true)
     istio = optional(object({
       enable_tls = bool
     }))
@@ -165,38 +379,52 @@ variable "enable_addons" {
     network_policy = optional(bool, false)
     stateful_ha    = optional(bool, false)
   })
-  default = {
-    horizontal_pod_autoscaling = true
-    http_load_balancing        = true
-  }
+  default  = {}
   nullable = false
 }
 
 variable "enable_features" {
   description = "Enable cluster-level features. Certain features allow configuration."
   type = object({
+    anonymous_authentication          = optional(string)
     beta_apis                         = optional(list(string))
     binary_authorization              = optional(bool, false)
     cilium_clusterwide_network_policy = optional(bool, false)
-    cost_management                   = optional(bool, false)
+    cost_management                   = optional(bool, true)
     dns = optional(object({
-      provider = optional(string)
-      scope    = optional(string)
-      domain   = optional(string)
+      additive_vpc_scope_dns_domain = optional(string)
+      provider                      = optional(string)
+      scope                         = optional(string)
+      domain                        = optional(string)
     }))
+    multi_networking = optional(bool, false)
     database_encryption = optional(object({
       state    = string
       key_name = string
     }))
-    dataplane_v2         = optional(bool, false)
-    fqdn_network_policy  = optional(bool, false)
-    gateway_api          = optional(bool, false)
-    groups_for_rbac      = optional(string)
-    image_streaming      = optional(bool, false)
-    intranode_visibility = optional(bool, false)
-    l4_ilb_subsetting    = optional(bool, false)
-    mesh_certificates    = optional(bool)
-    pod_security_policy  = optional(bool, false)
+    dataplane_v2          = optional(bool, true)
+    fqdn_network_policy   = optional(bool, true)
+    gateway_api           = optional(bool, false)
+    groups_for_rbac       = optional(string)
+    identity_service      = optional(bool, false)
+    image_streaming       = optional(bool, false)
+    intranode_visibility  = optional(bool, false)
+    l4_ilb_subsetting     = optional(bool, false)
+    managed_opentelemetry = optional(bool)
+    mesh_certificates     = optional(bool)
+    pod_security_policy   = optional(bool, false)
+    rbac_binding_config = optional(object({
+      enable_insecure_binding_system_unauthenticated = optional(bool)
+      enable_insecure_binding_system_authenticated   = optional(bool)
+    }))
+    secret_manager_config = optional(bool)
+    secret_sync_config = optional(object({
+      enabled = bool
+      rotation_config = optional(object({
+        enabled           = optional(bool)
+        rotation_interval = optional(string)
+      }))
+    }))
     security_posture_config = optional(object({
       mode               = string
       vulnerability_mode = string
@@ -210,21 +438,47 @@ variable "enable_features" {
     shielded_nodes       = optional(bool, true)
     tpu                  = optional(bool, false)
     upgrade_notifications = optional(object({
-      topic_id = optional(string)
+      enabled      = optional(bool, true)
+      event_types  = optional(list(string), [])
+      topic_id     = optional(string)
+      kms_key_name = optional(string)
     }))
     vertical_pod_autoscaling = optional(bool, false)
     workload_identity        = optional(bool, true)
   })
-  default = {
-    shielded_nodes    = true
-    workload_identity = true
-  }
+  default = {}
   validation {
     condition = (
       var.enable_features.fqdn_network_policy ? var.enable_features.dataplane_v2 : true
     )
     error_message = "FQDN network policy is only supported for clusters with Dataplane v2."
   }
+  validation {
+    condition = alltrue([
+      for e in try(var.enable_features.upgrade_notifications.event_types, []) :
+      contains([
+        "UPGRADE_AVAILABLE_EVENT", "UPGRADE_EVENT",
+        "SECURITY_BULLETIN_EVENT", "UPGRADE_INFO_EVENT"
+      ], e)
+    ])
+    error_message = "Invalid upgrade notification event type."
+  }
+  validation {
+    condition = (
+      var.enable_features.anonymous_authentication == null ||
+      contains(
+        ["ENABLED", "LIMITED"],
+        var.enable_features.anonymous_authentication
+      )
+    )
+    error_message = "enable_features.anonymous_authentication must be ENABLED or LIMITED."
+  }
+}
+
+variable "fleet_project" {
+  description = "The name of the fleet host project where this cluster will be registered."
+  type        = string
+  default     = null
 }
 
 variable "issue_client_certificate" {
@@ -285,7 +539,7 @@ variable "maintenance_config" {
   default = {
     daily_window_start_time = "03:00"
     recurring_window        = null
-    maintenance_exclusion   = []
+    maintenance_exclusions  = []
   }
 }
 
@@ -316,6 +570,7 @@ variable "monitoring_config" {
     enable_pod_metrics         = optional(bool, false)
     enable_statefulset_metrics = optional(bool, false)
     enable_storage_metrics     = optional(bool, false)
+    enable_cadvisor_metrics    = optional(bool, false)
     # Google Cloud Managed Service for Prometheus
     enable_managed_prometheus = optional(bool, true)
     advanced_datapath_observability = optional(object({
@@ -336,6 +591,7 @@ variable "monitoring_config" {
       var.monitoring_config.enable_pod_metrics,
       var.monitoring_config.enable_statefulset_metrics,
       var.monitoring_config.enable_storage_metrics,
+      var.monitoring_config.enable_cadvisor_metrics,
     ]) ? var.monitoring_config.enable_system_metrics : true
     error_message = "System metrics are the minimum required component for enabling metrics collection."
   }
@@ -347,6 +603,7 @@ variable "monitoring_config" {
       var.monitoring_config.enable_pod_metrics,
       var.monitoring_config.enable_statefulset_metrics,
       var.monitoring_config.enable_storage_metrics,
+      var.monitoring_config.enable_cadvisor_metrics,
     ]) ? var.monitoring_config.enable_managed_prometheus : true
     error_message = "Kube state metrics collection requires Google Cloud Managed Service for Prometheus to be enabled."
   }
@@ -360,14 +617,24 @@ variable "name" {
 variable "node_config" {
   description = "Node-level configuration."
   type = object({
-    boot_disk_kms_key = optional(string)
-    k8s_labels        = optional(map(string))
-    labels            = optional(map(string))
-    service_account   = optional(string)
-    tags              = optional(list(string))
+    boot_disk_kms_key             = optional(string)
+    k8s_labels                    = optional(map(string))
+    labels                        = optional(map(string))
+    service_account               = optional(string)
+    tags                          = optional(list(string))
+    workload_metadata_config_mode = optional(string)
+    kubelet_readonly_port_enabled = optional(bool)
+    resource_manager_tags         = optional(map(string), {})
   })
   default  = {}
   nullable = false
+  validation {
+    condition = contains(
+      ["GCE_METADATA", "GKE_METADATA", "null"],
+      coalesce(var.node_config.workload_metadata_config_mode, "null")
+    )
+    error_message = "node_config.workload_metadata_config_mode must be GCE_METADATA or GKE_METADATA."
+  }
 }
 
 variable "node_locations" {
@@ -377,18 +644,21 @@ variable "node_locations" {
   nullable    = false
 }
 
-variable "private_cluster_config" {
-  description = "Private cluster configuration."
+variable "node_pool_auto_config" {
+  description = "Node pool configs that apply to auto-provisioned node pools in autopilot clusters and node auto-provisioning-enabled clusters."
   type = object({
-    enable_private_endpoint = optional(bool)
-    master_global_access    = optional(bool)
-    peering_config = optional(object({
-      export_routes = optional(bool)
-      import_routes = optional(bool)
-      project_id    = optional(string)
-    }))
+    cgroup_mode                   = optional(string)
+    kubelet_readonly_port_enabled = optional(bool)
+    network_tags                  = optional(list(string), [])
+    resource_manager_tags         = optional(map(string), {})
   })
-  default = null
+  default  = {}
+  nullable = false
+  validation {
+    condition = contains(["CGROUPMODE_UNSPECIFIED", "CGROUPMODE_V1", "CGROUPMODE_V2"],
+    coalesce(var.node_pool_auto_config.cgroup_mode, "CGROUPMODE_UNSPECIFIED"))
+    error_message = "node_pool_auto_config.cgroup_mode must be CGROUPMODE_UNSPECIFIED, CGROUPMODE_V1 or CGROUPMODE_V2"
+  }
 }
 
 variable "project_id" {
@@ -405,11 +675,10 @@ variable "release_channel" {
 variable "vpc_config" {
   description = "VPC-level configuration."
   type = object({
-    disable_default_snat       = optional(bool)
-    network                    = string
-    subnetwork                 = string
-    master_ipv4_cidr_block     = optional(string)
-    master_endpoint_subnetwork = optional(string)
+    disable_default_snat                  = optional(bool)
+    disable_l4_lb_firewall_reconciliation = optional(bool)
+    network                               = string
+    subnetwork                            = string
     secondary_range_blocks = optional(object({
       pods     = string
       services = string
@@ -418,9 +687,8 @@ variable "vpc_config" {
       pods     = optional(string)
       services = optional(string)
     }))
-    additional_ranges        = optional(list(string))
-    master_authorized_ranges = optional(map(string))
-    stack_type               = optional(string)
+    additional_ranges = optional(list(string))
+    stack_type        = optional(string)
   })
   nullable = false
 }

@@ -79,4 +79,3 @@ resource "google_data_fusion_instance" "default" {
     ip_allocation = local.ip_allocation
   }
 }
-
