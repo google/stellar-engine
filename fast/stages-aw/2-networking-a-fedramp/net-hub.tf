@@ -24,10 +24,15 @@ locals {
     landing      = module.hub-project.project_id
     net-hub-host = module.hub-project.project_id
   }
-  _hub_vpcs = {
-    hub     = module.hub-vpc.self_link
-    landing = module.hub-vpc.self_link
-  }
+  _hub_vpcs = merge(
+    {
+      hub     = module.hub-vpc.self_link
+      landing = module.hub-vpc.self_link
+    },
+    var.centralized_egress.enabled
+    ? { egress = module.egress-vpc[0].self_link }
+    : {}
+  )
   _default_ncc_spokes_vpcs = merge(
     {
       hub = {
@@ -36,6 +41,18 @@ locals {
         project_id            = "$project_ids:hub"
         group                 = "$ncc_groups:main/center"
         description           = "Central hub VPC spoke."
+        labels                = tomap({})
+        exclude_export_ranges = tolist(null)
+        include_export_ranges = tolist(null)
+      }
+    },
+    !var.centralized_egress.enabled ? {} : {
+      egress = {
+        vpc                   = "$vpcs:egress"
+        name                  = "egress-0"
+        project_id            = "$project_ids:hub"
+        group                 = "$ncc_groups:main/center"
+        description           = "Centralized SWP Internet Egress VPC spoke."
         labels                = tomap({})
         exclude_export_ranges = tolist(null)
         include_export_ranges = tolist(null)
@@ -104,8 +121,10 @@ module "hub-project" {
     "dns.googleapis.com",
     "iap.googleapis.com",
     "networkmanagement.googleapis.com",
-    "stackdriver.googleapis.com",
+    "networksecurity.googleapis.com",
     "networkservices.googleapis.com",
+    "servicedirectory.googleapis.com",
+    "stackdriver.googleapis.com",
     "cloudkms.googleapis.com"
   ], local._ncc_enabled ? ["networkconnectivity.googleapis.com"] : [])
   shared_vpc_host_config = {
@@ -130,44 +149,54 @@ resource "google_compute_project_metadata" "metadata_hub_project" {
 }
 
 module "hub-vpc" {
-  source                          = "../../../modules/net-vpc"
-  project_id                      = module.hub-project.project_id
-  name                            = "hub-0"
-  delete_default_routes_on_create = true
-  mtu                             = 1500
-  subnets                         = try(var.subnets.hub, [])
+  source                            = "../../../modules/net-vpc"
+  project_id                        = module.hub-project.project_id
+  name                              = "hub-0"
+  delete_default_routes_on_create   = true
+  firewall_policy_enforcement_order = "BEFORE_CLASSIC_FIREWALL"
+  mtu                               = 1500
+  subnets                           = try(var.subnets.hub, [])
   dns_policy = {
     inbound = true
     logging = var.dns.enable_logging
   }
-  create_googleapis_routes = {
-    private    = true
-    restricted = true
-  }
-  routes = var.enable_cloud_nat ? {
-    default = {
-      dest_range    = "0.0.0.0/0"
-      next_hop      = "default-internet-gateway"
-      next_hop_type = "gateway"
-      priority      = 1000
+  create_googleapis_routes = (
+    var.psc_google_apis.enabled
+    ? null
+    : {
+      private    = true
+      restricted = true
     }
-  } : {}
+  )
+  routes = local._default_egress_routes
 }
 
-module "hub-firewall" {
-  source     = "../../../modules/net-vpc-firewall"
-  project_id = module.hub-project.project_id
-  network    = module.hub-vpc.name
-  default_rules_config = {
-    disabled = true
+module "hub-firewall-policy" {
+  source    = "../../../modules/net-firewall-policy"
+  name      = "${var.prefix}-hub-fw-policy-0"
+  parent_id = module.hub-project.project_id
+  region    = "global"
+  attachments = {
+    hub-0 = module.hub-vpc.id
   }
-  named_ranges  = var.cidrs
-  ingress_rules = try(var.firewall_rules.hub.ingress, {})
-  egress_rules  = try(var.firewall_rules.hub.egress, {})
+  security_profile_group_ids = var.security_profile_group_ids
+  factories_config = {
+    cidr_file_path = "${var.factories_config.data_dir}/cidrs.yaml"
+    egress_rules_file_path = (
+      "${var.factories_config.data_dir}/firewall-policies/hub-egress.yaml"
+    )
+    ingress_rules_file_path = (
+      "${var.factories_config.data_dir}/firewall-policies/hub-ingress.yaml"
+    )
+  }
+  ingress_rules = lookup(local._expanded_fw_ingress, "hub", {})
+  egress_rules  = lookup(local._expanded_fw_egress, "hub", {})
 }
 
 module "hub-nat" {
-  for_each       = var.enable_cloud_nat ? var.regions : {}
+  for_each = (
+    var.enable_cloud_nat && !var.centralized_egress.enabled ? var.regions : {}
+  )
   source         = "../../../modules/net-cloudnat"
   project_id     = module.hub-project.project_id
   region         = each.value
@@ -196,7 +225,7 @@ module "hub-dns-policy-googleapis" {
   source     = "../../../modules/dns-response-policy"
   project_id = module.hub-project.project_id
   name       = "googleapis"
-  rules      = var.dns_policy_rules
+  rules      = local._psc_hub_dns_rules
   networks = {
     hub = module.hub-vpc.self_link
   }

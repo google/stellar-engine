@@ -4,9 +4,18 @@
 # terraform.tfvars file. The stage validates that the first tenant subnet of
 # each environment uses that region.
 
-# Outbound Cloud NAT and Default STAR-Topology NCC Hub
-enable_cloud_nat       = true
+# Default STAR-Topology NCC Hub and Outbound Internet Egress
 enable_default_ncc_hub = true
+enable_cloud_nat       = true
+
+# Per-VPC Private Service Connect (PSC) Endpoints for Google APIs
+# Each VPC receives its own non-transitive PSC endpoint and p.googleapis.com
+# zone; set bundle = "vpc-sc" when enforcing VPC Service Controls perimeters.
+psc_google_apis = {
+  enabled = true
+  bundle  = "all-apis"
+  hub_ip  = "10.255.255.1"
+}
 
 # VPC Subnetwork Configurations
 subnets = {
@@ -103,14 +112,14 @@ subnets = {
   ]
 }
 
-# Proxy-only Subnet CIDRs (used for regional load balancers)
+# Proxy-only Subnet CIDRs (used for distributed regional load balancers + WAF)
 proxy_subnets = {
   Prod = "10.1.1.0/24"
   Int  = "10.1.2.0/24"
   Test = "10.1.3.0/24"
 }
 
-# Named IP Ranges to reference in Firewall Rules
+# Named IP Ranges to reference in Network Firewall Policy Rules
 cidrs = {
   healthchecks = [
     "35.191.0.0/16",
@@ -131,67 +140,90 @@ cidrs = {
   ]
 }
 
-# Custom Firewall Rules for Central Hub and Environment Spoke VPCs
-firewall_rules = {
+# Global Network Firewall Policy Rules per VPC (Cloud NGFW Essentials, Standard,
+# and Enterprise ready: supports fqdns, region_codes, threat_intelligences, and
+# apply_security_profile_group)
+firewall_policy_rules = {
   hub = {
     ingress = {
       allow-iap-ssh-hub = {
-        description   = "Allow traffic from Google IAP over SSH"
-        source_ranges = ["iap"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
+        priority       = 1000
+        action         = "allow"
+        description    = "Allow traffic from Google IAP over SSH"
+        enable_logging = true
+        match = {
+          source_ranges = ["iap"]
+          layer4_configs = [
+            {
+              protocol = "tcp"
+              ports    = ["22"]
+            }
+          ]
+        }
       }
     }
   }
   prod = {
     ingress = {
       allow-iap-ssh = {
-        description   = "Allow traffic from Google IAP over SSH"
-        source_ranges = ["iap"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
+        priority       = 1000
+        action         = "allow"
+        description    = "Allow traffic from Google IAP over SSH"
+        enable_logging = true
+        match = {
+          source_ranges = ["iap"]
+          layer4_configs = [
+            {
+              protocol = "tcp"
+              ports    = ["22"]
+            }
+          ]
+        }
       }
     }
   }
   int = {
     ingress = {
       allow-iap-ssh = {
-        description   = "Allow traffic from Google IAP over SSH"
-        source_ranges = ["iap"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
+        priority       = 1000
+        action         = "allow"
+        description    = "Allow traffic from Google IAP over SSH"
+        enable_logging = true
+        match = {
+          source_ranges = ["iap"]
+          layer4_configs = [
+            {
+              protocol = "tcp"
+              ports    = ["22"]
+            }
+          ]
+        }
       }
     }
   }
   test = {
     ingress = {
       allow-iap-ssh = {
-        description   = "Allow traffic from Google IAP over SSH"
-        source_ranges = ["iap"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
+        priority       = 1000
+        action         = "allow"
+        description    = "Allow traffic from Google IAP over SSH"
+        enable_logging = true
+        match = {
+          source_ranges = ["iap"]
+          layer4_configs = [
+            {
+              protocol = "tcp"
+              ports    = ["22"]
+            }
+          ]
+        }
       }
     }
   }
 }
 
-# Private DNS Zone Response Policy Rules
+# Private DNS Zone Response Policy Rules (automatically pointed at each VPC's
+# local PSC endpoint IP when psc_google_apis.enabled = true)
 dns_policy_rules = {
   accounts                      = { dns_name = "accounts.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
   aiplatform-notebook-cloud-all = { dns_name = "*.aiplatform-notebook.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
@@ -233,6 +265,32 @@ dns_policy_rules = {
   source                        = { dns_name = "source.developers.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
   storage                       = { dns_name = "storage.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
 }
+
+# Optional Centralized Internet Egress VPC Spoke with Secure Web Proxy Next-Hop
+# Enabling this replaces per-VPC Cloud NAT with a dedicated egress-0 VPC spoke
+# in the NCC center group and routes 0.0.0.0/0 from spoke VPCs to swp_ip.
+# centralized_egress = {
+#   enabled           = true
+#   subnet_cidr       = "10.64.250.0/24"
+#   proxy_subnet_cidr = "10.64.251.0/24"
+#   swp_ip            = "10.64.250.10"
+#   ports             = [80, 443]
+#   url_lists = {
+#     allowed-package-repos = {
+#       values = ["*.ubuntu.com", "*.debian.org", "*.pypi.org"]
+#     }
+#   }
+#   policy_rules = {
+#     allow-package-repos = {
+#       priority        = 1000
+#       allow           = true
+#       session_matcher = "inUrlList(host(), '%s')"
+#       matcher_args = {
+#         session = ["url_list:allowed-package-repos"]
+#       }
+#     }
+#   }
+# }
 
 # Optional Additional NCC Spokes or Hubs (merged with the default "main" STAR hub)
 # ncc_hubs = {

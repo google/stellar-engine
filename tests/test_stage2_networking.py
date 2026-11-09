@@ -28,11 +28,18 @@ class TestStage2Networking(unittest.TestCase):
         self.assertFalse((_FEDRAMP_NET_DIR / "net-vdss.tf").exists())
         self.assertFalse((_FEDRAMP_NET_DIR / "net-landing.tf").exists())
         self.assertTrue((_FEDRAMP_NET_DIR / "net-hub.tf").is_file())
+        self.assertTrue((_FEDRAMP_NET_DIR / "psc-google-apis.tf").is_file())
+        self.assertTrue((_FEDRAMP_NET_DIR / "egress.tf").is_file())
 
         net_hub = (_FEDRAMP_NET_DIR / "net-hub.tf").read_text(encoding="utf-8")
         branch_tf = (_FEDRAMP_NET_DIR / "branch-net-envs.tf").read_text(
             encoding="utf-8"
         )
+        psc_tf = (_FEDRAMP_NET_DIR / "psc-google-apis.tf").read_text(
+            encoding="utf-8"
+        )
+        egress_tf = (_FEDRAMP_NET_DIR / "egress.tf").read_text(encoding="utf-8")
+        main_tf = (_FEDRAMP_NET_DIR / "main.tf").read_text(encoding="utf-8")
         vars_tf = (_FEDRAMP_NET_DIR / "variables.tf").read_text(
             encoding="utf-8"
         )
@@ -43,10 +50,17 @@ class TestStage2Networking(unittest.TestCase):
         self.assertIn('module "hub-project"', net_hub)
         self.assertIn('name            = "net-hub-host"', net_hub)
         self.assertIn('module "hub-vpc"', net_hub)
+        self.assertIn('module "hub-firewall-policy"', net_hub)
         self.assertIn('module "hub-nat"', net_hub)
+        self.assertIn(
+            'firewall_policy_enforcement_order = "BEFORE_CLASSIC_FIREWALL"',
+            net_hub,
+        )
         self.assertNotIn('module "dmz-vpc"', net_hub)
+        self.assertNotIn('module "hub-firewall"', net_hub)
         self.assertNotIn("moved {", net_hub)
         self.assertNotIn("vdss", net_hub)
+        self.assertIn("export_psc      = true", net_hub)
         self.assertIn('preset_topology = "STAR"', net_hub)
         self.assertIn(
             'group                 = "$ncc_groups:main/center"', net_hub
@@ -55,16 +69,42 @@ class TestStage2Networking(unittest.TestCase):
             'group                 = "$ncc_groups:main/edge"', net_hub
         )
 
+        self.assertIn('module "env-spoke-firewall-policy"', branch_tf)
         self.assertIn('module "env-spoke-nat"', branch_tf)
+        self.assertIn(
+            'firewall_policy_enforcement_order = "BEFORE_CLASSIC_FIREWALL"',
+            branch_tf,
+        )
+        self.assertNotIn('module "env-spoke-firewall"', branch_tf)
         self.assertNotIn('module "peering-envs"', branch_tf)
         self.assertNotIn("moved {", branch_tf)
         self.assertNotIn("vdss", branch_tf)
 
+        self.assertIn('module "hub-psc-addresses"', psc_tf)
+        self.assertIn('module "env-psc-addresses"', psc_tf)
+        self.assertIn('domain = "p.googleapis.com."', psc_tf)
+        self.assertIn('module "env-dns-policy-googleapis"', psc_tf)
+
+        self.assertIn('module "egress-vpc"', egress_tf)
+        self.assertIn('module "egress-firewall-policy"', egress_tf)
+        self.assertIn('module "egress-nat"', egress_tf)
+        self.assertIn('endpoint_types = ["ENDPOINT_TYPE_SWG"]', egress_tf)
+        self.assertIn('module "egress-swp"', egress_tf)
+        self.assertIn("next_hop_routing_mode = true", egress_tf)
+        self.assertIn('module "egress-psc-addresses"', egress_tf)
+        self.assertIn("next_hop      = var.centralized_egress.swp_ip", main_tf)
+
+        self.assertIn('variable "centralized_egress"', vars_tf)
         self.assertIn('variable "enable_cloud_nat"', vars_tf)
         self.assertIn('variable "enable_default_ncc_hub"', vars_tf)
+        self.assertIn('variable "firewall_policy_rules"', vars_tf)
+        self.assertIn('variable "psc_google_apis"', vars_tf)
+        self.assertIn('variable "security_profile_group_ids"', vars_tf)
+        self.assertNotIn('variable "firewall_rules"', vars_tf)
         self.assertNotIn('variable "nva_spot_vms"', vars_tf)
         self.assertNotIn('variable "enable_hub_and_spoke_peering"', vars_tf)
         self.assertIn('output "hub"', outputs_tf)
+        self.assertIn('output "psc_google_apis_endpoints"', outputs_tf)
 
     def test_firewall_policy_name_defaults_to_prefixed_name(self):
         for stage_dir in (_FEDRAMP_NET_DIR, _IL5_NET_DIR):
@@ -280,7 +320,7 @@ class TestStage2Networking(unittest.TestCase):
         outputs_tf = (_FEDRAMP_NET_DIR / "outputs.tf").read_text(
             encoding="utf-8"
         )
-        self.assertIn("_hub_vpcs = {", hub_tf)
+        self.assertIn("_hub_vpcs = merge(", hub_tf)
         self.assertIn("_default_ncc_hubs", hub_tf)
         self.assertIn(ncc_api_gate, hub_tf)
         self.assertIn(ncc_api_gate, branch_tf)

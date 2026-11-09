@@ -14,11 +14,23 @@
  * limitations under the License.
  */
 
-# tfdoc:file:description Dev spoke VPC and related resources.
+# tfdoc:file:description Workload spoke Shared VPCs, policies, NAT, and DNS.
 
 locals {
+  _fw_policy_dir = "${var.factories_config.data_dir}/firewall-policies"
+  _spoke_fw_egress_files = {
+    for k in keys(var.envs_folders) :
+    k => "${local._fw_policy_dir}/${lower(k)}-egress.yaml"
+  }
+  _spoke_fw_ingress_files = {
+    for k in keys(var.envs_folders) :
+    k => "${local._fw_policy_dir}/${lower(k)}-ingress.yaml"
+  }
   tenant_subnets_map_of_maps = {
-    for pairing in setproduct(values(var.tenant_accounts), values(var.regions)) : "${pairing[0].main_project}-${pairing[1]}" => {
+    for pairing in setproduct(
+      values(var.tenant_accounts),
+      values(var.regions)
+      ) : "${pairing[0].main_project}-${pairing[1]}" => {
       "project"         = pairing[0].main_project,
       "tenant"          = pairing[0].tenant,
       "admin_principal" = pairing[0].admin_principal
@@ -27,6 +39,7 @@ locals {
     }
   }
 }
+
 module "env-spoke-projects" {
   source = "../../../modules/project"
   providers = {
@@ -45,6 +58,8 @@ module "env-spoke-projects" {
     "dns.googleapis.com",
     "iap.googleapis.com",
     "networkmanagement.googleapis.com",
+    "networksecurity.googleapis.com",
+    "servicedirectory.googleapis.com",
     "servicenetworking.googleapis.com",
     "stackdriver.googleapis.com",
     "vpcaccess.googleapis.com"
@@ -69,54 +84,30 @@ module "env-spoke-projects" {
       ))
     }
   )
-  #   # allow specific service accounts to assign a set of roles
-  #   iam_bindings = {
-  #     sa_delegated_grants = {
-  #       role = "roles/resourcemanager.projectIamAdmin"
-  #       members = compact([
-  #         try(local.service_accounts.data-platform-dev, null),
-  #         try(local.service_accounts.project-factory-dev, null),
-  #         try(local.service_accounts.project-factory-prod, null),
-  #         try(local.service_accounts.gke-dev, null),
-  #       ])
-  #       condition = {
-  #         title       = "dev_stage3_sa_delegated_grants"
-  #         description = "Development host project delegated grants."
-  #         expression = format(
-  #           "api.getAttribute('iam.googleapis.com/modifiedGrantsByRole', []).hasOnly([%s])",
-  #           join(",", formatlist("'%s'", local.stage3_sas_delegated_grants))
-  #         )
-  #       }
-  #     }
-  #   }
 }
-
 
 module "env-spoke-vpc" {
   source   = "../../../modules/net-vpc"
   for_each = var.envs_folders
 
-  project_id = module.env-spoke-projects[each.key].project_id
-
-  name = lower("${each.key}-spoke-0")
-  mtu  = 1500
+  project_id                        = module.env-spoke-projects[each.key].project_id
+  name                              = lower("${each.key}-spoke-0")
+  mtu                               = 1500
+  delete_default_routes_on_create   = true
+  firewall_policy_enforcement_order = "BEFORE_CLASSIC_FIREWALL"
   dns_policy = {
     logging = var.dns.enable_logging
   }
-  delete_default_routes_on_create = true
-  psa_configs                     = try(var.psa_ranges[lower(each.key)], var.psa_ranges.dev)
-  create_googleapis_routes = {
-    private    = true
-    restricted = true
-  }
-  routes = var.enable_cloud_nat ? {
-    default = {
-      dest_range    = "0.0.0.0/0"
-      next_hop      = "default-internet-gateway"
-      next_hop_type = "gateway"
-      priority      = 1000
+  psa_configs = try(var.psa_ranges[lower(each.key)], var.psa_ranges.dev)
+  create_googleapis_routes = (
+    var.psc_google_apis.enabled
+    ? null
+    : {
+      private    = true
+      restricted = true
     }
-  } : {}
+  )
+  routes  = local._default_egress_routes
   subnets = try(var.subnets[lower(each.key)], [])
   subnets_proxy_only = [{
     region        = var.regions.primary
@@ -125,49 +116,38 @@ module "env-spoke-vpc" {
     ip_cidr_range = var.proxy_subnets[each.key]
   }]
 
-  shared_vpc_host             = true
-  shared_vpc_service_projects = [for k, v in var.tenant_accounts : v.main_project if v.env == each.key]
-
+  shared_vpc_host = true
+  shared_vpc_service_projects = [
+    for k, v in var.tenant_accounts : v.main_project if v.env == each.key
+  ]
 }
 
-# resource "google_network_connectivity_internal_range" "reserved_ranges" {
-#   for_each          = var.envs_folders
-#   name              = lower("${each.key}-range")
-#   project           = module.env-spoke-projects[each.key].project_id
-#   description       = "Automatically reserved range for ${each.key}"
-#   network           = module.env-spoke-vpc[each.key].id
-#   usage             = "FOR_VPC"
-#   peering           = "FOR_SELF"
-#   prefix_length     = 22
-#   target_cidr_range = ["10.200.0.0/16", ]
-# }
-
-# resource "google_compute_subnetwork" "defaults" {
-#   for_each      = var.envs_folders
-#   name          = lower("${each.key}-default-0")
-#   project       = module.env-spoke-projects[each.key].project_id
-#   ip_cidr_range = google_network_connectivity_internal_range.reserved_ranges[each.key].ip_cidr_range
-#   region        = var.regions.primary
-#   network       = module.env-spoke-vpc[each.key].id
-# }
-
-module "env-spoke-firewall" {
-  source   = "../../../modules/net-vpc-firewall"
-  for_each = var.envs_folders
-
-  project_id = module.env-spoke-projects[each.key].project_id
-  network    = module.env-spoke-vpc[each.key].name
-  default_rules_config = {
-    disabled = true
+module "env-spoke-firewall-policy" {
+  source    = "../../../modules/net-firewall-policy"
+  for_each  = var.envs_folders
+  name      = lower("${var.prefix}-${each.key}-fw-policy-0")
+  parent_id = module.env-spoke-projects[each.key].project_id
+  region    = "global"
+  attachments = {
+    (lower("${each.key}-spoke-0")) = module.env-spoke-vpc[each.key].id
   }
-  named_ranges  = var.cidrs
-  ingress_rules = try(var.firewall_rules[lower(each.key)].ingress, {})
-  egress_rules  = try(var.firewall_rules[lower(each.key)].egress, {})
+  security_profile_group_ids = var.security_profile_group_ids
+  factories_config = {
+    cidr_file_path          = "${var.factories_config.data_dir}/cidrs.yaml"
+    egress_rules_file_path  = local._spoke_fw_egress_files[each.key]
+    ingress_rules_file_path = local._spoke_fw_ingress_files[each.key]
+  }
+  ingress_rules = lookup(local._expanded_fw_ingress, lower(each.key), {})
+  egress_rules  = lookup(local._expanded_fw_egress, lower(each.key), {})
 }
 
 module "env-spoke-nat" {
-  source   = "../../../modules/net-cloudnat"
-  for_each = var.enable_cloud_nat ? var.envs_folders : {}
+  source = "../../../modules/net-cloudnat"
+  for_each = (
+    var.enable_cloud_nat && !var.centralized_egress.enabled
+    ? var.envs_folders
+    : {}
+  )
 
   project_id     = module.env-spoke-projects[each.key].project_id
   region         = var.regions.primary
@@ -177,8 +157,7 @@ module "env-spoke-nat" {
   router_network = module.env-spoke-vpc[each.key].name
 }
 
-# DNS
-# GCP-specific environment zone
+# Environment private DNS zone and org-domain DNS peering to hub-0.
 
 module "env-dns-priv-example" {
   source   = "../../../modules/dns"
@@ -197,15 +176,17 @@ module "env-dns-priv-example" {
   }
 }
 
-# root zone peering to central hub VPC; remove if unneeded
-
 module "env-dns-peer-hub-root" {
   source     = "../../../modules/dns"
   for_each   = var.envs_folders
   project_id = module.env-spoke-projects[each.key].project_id
   name       = lower("${each.key}-root-dns-peering")
   zone_config = {
-    domain = "."
+    domain = (
+      var.psc_google_apis.enabled
+      ? lower("${var.organization.domain}.")
+      : "."
+    )
     peering = {
       client_networks = [module.env-spoke-vpc[each.key].self_link]
       peer_network    = module.hub-vpc.self_link
@@ -219,7 +200,8 @@ resource "google_compute_subnetwork_iam_member" "allow_admin_principals" {
   region   = each.value.region
   subnetwork = module.env-spoke-vpc[each.value.env].subnet_ids[
     "${each.value.region}/${one([
-      for s in try(var.subnets[lower(each.value.env)], []) : s.name if s.tenant == each.value.tenant
+      for s in try(var.subnets[lower(each.value.env)], []) :
+      s.name if s.tenant == each.value.tenant
     ])}"
   ]
   role   = "roles/compute.networkUser"

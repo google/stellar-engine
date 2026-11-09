@@ -13,7 +13,7 @@
 # limitations under the License.
 
 resource "google_network_management_connectivity_test" "hub_test" {
-  for_each = var.enable_cloud_nat ? var.regions : {}
+  for_each = local._has_internet_egress ? var.regions : {}
 
   name    = "hub-subnet-test-${each.key}"
   project = module.hub-project.project_id
@@ -36,7 +36,7 @@ resource "google_network_management_connectivity_test" "hub_test" {
 }
 
 resource "google_compute_address" "source_addr" {
-  for_each     = var.enable_cloud_nat ? var.regions : {}
+  for_each     = local._has_internet_egress ? var.regions : {}
   project      = module.hub-project.project_id
   name         = "hub-test-addr-${each.value}"
   subnetwork   = try(module.hub-vpc.subnet_self_links["${each.value}/hub-default"], null)
@@ -45,7 +45,7 @@ resource "google_compute_address" "source_addr" {
 }
 
 resource "google_network_management_connectivity_test" "env_tests" {
-  for_each = var.enable_cloud_nat ? var.envs_folders : {}
+  for_each = local._has_internet_egress ? var.envs_folders : {}
 
   name    = lower("${each.key}-host-project-test")
   project = module.env-spoke-projects[each.key].project_id
@@ -68,7 +68,7 @@ resource "google_network_management_connectivity_test" "env_tests" {
 }
 
 resource "google_compute_address" "env_source_addrs" {
-  for_each = var.enable_cloud_nat ? var.envs_folders : {}
+  for_each = local._has_internet_egress ? var.envs_folders : {}
 
   project = module.env-spoke-projects[each.key].project_id
 

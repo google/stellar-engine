@@ -35,6 +35,80 @@ locals {
     for k, v in coalesce(var.service_accounts, {}) :
     k => "serviceAccount:${v}" if v != null
   }
+  _has_internet_egress = (
+    var.centralized_egress.enabled || var.enable_cloud_nat
+  )
+  _default_egress_routes = (
+    var.centralized_egress.enabled
+    ? {
+      default = {
+        dest_range    = "0.0.0.0/0"
+        next_hop      = var.centralized_egress.swp_ip
+        next_hop_type = "ip"
+        priority      = 1000
+      }
+    }
+    : (
+      var.enable_cloud_nat
+      ? {
+        default = {
+          dest_range    = "0.0.0.0/0"
+          next_hop      = "default-internet-gateway"
+          next_hop_type = "gateway"
+          priority      = 1000
+        }
+      }
+      : {}
+    )
+  )
+  _expanded_fw_ingress = {
+    for net, pol in var.firewall_policy_rules : lower(net) => {
+      for rk, rv in pol.ingress : rk => merge(rv, {
+        match = merge(rv.match, {
+          destination_ranges = (
+            rv.match.destination_ranges == null
+            ? null
+            : flatten([
+              for r in rv.match.destination_ranges :
+              lookup(var.cidrs, r, [r])
+            ])
+          )
+          source_ranges = (
+            rv.match.source_ranges == null
+            ? null
+            : flatten([
+              for r in rv.match.source_ranges :
+              lookup(var.cidrs, r, [r])
+            ])
+          )
+        })
+      })
+    }
+  }
+  _expanded_fw_egress = {
+    for net, pol in var.firewall_policy_rules : lower(net) => {
+      for rk, rv in pol.egress : rk => merge(rv, {
+        match = merge(rv.match, {
+          destination_ranges = (
+            rv.match.destination_ranges == null
+            ? null
+            : flatten([
+              for r in rv.match.destination_ranges :
+              lookup(var.cidrs, r, [r])
+            ])
+          )
+          source_ranges = (
+            rv.match.source_ranges == null
+            ? null
+            : flatten([
+              for r in rv.match.source_ranges :
+              lookup(var.cidrs, r, [r])
+            ])
+          )
+        })
+      })
+    }
+  }
 }
 
 module "folder" {

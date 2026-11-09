@@ -60,8 +60,45 @@ variable "billing_override" {
   default = null
 }
 
+variable "centralized_egress" {
+  description = "Optional centralized Internet Egress VPC spoke running Secure Web Proxy in next-hop routing mode with Cloud NAT."
+  type = object({
+    enabled           = optional(bool, false)
+    subnet_cidr       = optional(string, "10.64.250.0/24")
+    proxy_subnet_cidr = optional(string, "10.64.251.0/24")
+    swp_ip            = optional(string, "10.64.250.10")
+    ports             = optional(list(number), [80, 443])
+    certificates      = optional(list(string), [])
+    policy_rules = optional(map(object({
+      priority            = number
+      allow               = optional(bool, true)
+      description         = optional(string)
+      enabled             = optional(bool, true)
+      application_matcher = optional(string)
+      session_matcher     = optional(string)
+      tls_inspect         = optional(bool)
+      matcher_args = optional(object({
+        application = optional(list(string), [])
+        session     = optional(list(string), [])
+      }), {})
+    })), {})
+    url_lists = optional(map(object({
+      values      = list(string)
+      description = optional(string)
+    })), {})
+  })
+  default  = {}
+  nullable = false
+  validation {
+    condition = (
+      !var.centralized_egress.enabled || length(var.centralized_egress.ports) > 0
+    )
+    error_message = "centralized_egress.ports must contain at least one TCP port when centralized_egress.enabled is true."
+  }
+}
+
 variable "cidrs" {
-  description = "Named CIDR ranges to use in firewall rules."
+  description = "Named CIDR ranges to use in firewall policy rules."
   type        = map(list(string))
   default     = {}
   nullable    = false
@@ -106,7 +143,7 @@ variable "dns_policy_rules" {
 }
 
 variable "enable_cloud_nat" {
-  description = "Enable Cloud NAT and default internet gateway routes on the central hub VPC and environment spoke VPCs."
+  description = "Enable per-VPC Cloud NAT and default internet gateway routes on the central hub VPC and environment spoke VPCs when centralized_egress.enabled is false."
   type        = bool
   default     = true
   nullable    = false
@@ -164,35 +201,77 @@ variable "fast_features" {
   default     = null
 }
 
-variable "firewall_rules" {
-  description = "Firewall rules for each VPC / environment spoke."
+variable "firewall_policy_rules" {
+  description = "Global network firewall policy rules keyed by VPC name (hub, egress, or environment spoke name), supporting Cloud NGFW Essentials, Standard, and Enterprise attributes."
   type = map(object({
     ingress = optional(map(object({
-      description          = optional(string)
-      deny                 = optional(bool, false)
-      source_ranges        = optional(list(string))
-      sources              = optional(list(string))
-      targets              = optional(list(string))
-      use_service_accounts = optional(bool, false)
-      rules = optional(list(object({
-        protocol = string
-        ports    = optional(list(string))
-      })))
+      priority                = number
+      action                  = optional(string, "allow")
+      description             = optional(string)
+      disabled                = optional(bool, false)
+      enable_logging          = optional(bool)
+      security_profile_group  = optional(string)
+      target_resources        = optional(list(string))
+      target_service_accounts = optional(list(string))
+      target_tags             = optional(list(string))
+      tls_inspect             = optional(bool, null)
+      match = object({
+        address_groups       = optional(list(string))
+        fqdns                = optional(list(string))
+        region_codes         = optional(list(string))
+        threat_intelligences = optional(list(string))
+        destination_ranges   = optional(list(string))
+        source_ranges        = optional(list(string))
+        source_tags          = optional(list(string))
+        layer4_configs = optional(list(object({
+          protocol = optional(string, "all")
+          ports    = optional(list(string))
+        })), [{}])
+      })
     })), {})
     egress = optional(map(object({
-      description          = optional(string)
-      deny                 = optional(bool, true)
-      destination_ranges   = optional(list(string))
-      targets              = optional(list(string))
-      use_service_accounts = optional(bool, false)
-      rules = optional(list(object({
-        protocol = string
-        ports    = optional(list(string))
-      })))
+      priority                = number
+      action                  = optional(string, "deny")
+      description             = optional(string)
+      disabled                = optional(bool, false)
+      enable_logging          = optional(bool)
+      security_profile_group  = optional(string)
+      target_resources        = optional(list(string))
+      target_service_accounts = optional(list(string))
+      target_tags             = optional(list(string))
+      tls_inspect             = optional(bool, null)
+      match = object({
+        address_groups       = optional(list(string))
+        fqdns                = optional(list(string))
+        region_codes         = optional(list(string))
+        threat_intelligences = optional(list(string))
+        destination_ranges   = optional(list(string))
+        source_ranges        = optional(list(string))
+        source_tags          = optional(list(string))
+        layer4_configs = optional(list(object({
+          protocol = optional(string, "all")
+          ports    = optional(list(string))
+        })), [{}])
+      })
     })), {})
   }))
   default  = {}
   nullable = false
+  validation {
+    condition = alltrue(flatten([
+      for net, pol in var.firewall_policy_rules : concat(
+        [
+          for rk, rv in pol.ingress :
+          contains(["allow", "deny", "goto_next", "apply_security_profile_group"], rv.action)
+        ],
+        [
+          for rk, rv in pol.egress :
+          contains(["allow", "deny", "goto_next", "apply_security_profile_group"], rv.action)
+        ]
+      )
+    ]))
+    error_message = "Firewall policy rule action must be allow, deny, goto_next, or apply_security_profile_group."
+  }
 }
 
 variable "folder_ids" {
@@ -394,6 +473,23 @@ variable "psa_ranges" {
   default  = {}
 }
 
+variable "psc_google_apis" {
+  description = "Private Service Connect endpoints for Google APIs created in the central hub VPC, environment spoke VPCs, and optional centralized egress VPC."
+  type = object({
+    enabled   = optional(bool, true)
+    bundle    = optional(string, "all-apis")
+    hub_ip    = optional(string, "10.255.255.1")
+    egress_ip = optional(string, "10.255.255.2")
+    spoke_ips = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
+  validation {
+    condition     = contains(["all-apis", "vpc-sc"], var.psc_google_apis.bundle)
+    error_message = "psc_google_apis.bundle must be all-apis or vpc-sc."
+  }
+}
+
 variable "regime_mapping" {
   description = "Compliance regime shorthand mapping."
   type        = any
@@ -407,6 +503,13 @@ variable "regions" {
     primary = string
   })
   nullable = false
+}
+
+variable "security_profile_group_ids" {
+  description = "Optional Cloud NGFW Enterprise security profile group IDs in logical_key => //networksecurity.googleapis.com/<id> format."
+  type        = map(string)
+  default     = {}
+  nullable    = false
 }
 
 variable "service_accounts" {

@@ -24,15 +24,44 @@ locals {
     ]
     host_project = module.env-spoke-projects[name].project_id
     proxy_only   = module.env-spoke-vpc[name].subnets_proxy_only["${var.regions.primary}/proxy-${var.regions.primary}"].self_link
+    psc_api_ip   = var.psc_google_apis.enabled ? local._psc_spoke_ips[name] : null
   } }
   hub = {
     host_project = module.hub-project.project_id
     vpc          = module.hub-vpc.id
+    psc_api_ip   = var.psc_google_apis.enabled ? var.psc_google_apis.hub_ip : null
+    egress_vpc   = try(module.egress-vpc[0].id, null)
+    swp_gateway  = try(module.egress-swp[0].id, null)
+    swp_ip       = var.centralized_egress.enabled ? var.centralized_egress.swp_ip : null
   }
   host_project_ids = module.env-spoke-vpc
   host_project_numbers = {
     hub = module.hub-project.number
   }
+  psc_google_apis_endpoints = !var.psc_google_apis.enabled ? {} : merge(
+    {
+      hub = {
+        address       = var.psc_google_apis.hub_ip
+        address_id    = module.hub-psc-addresses[0].psc_addresses["pschub0"].id
+        endpoint_name = "pschub0"
+      }
+    },
+    !local._egress_psc_enabled ? {} : {
+      egress = {
+        address       = var.psc_google_apis.egress_ip
+        address_id    = module.egress-psc-addresses[0].psc_addresses["pscegress0"].id
+        endpoint_name = "pscegress0"
+      }
+    },
+    {
+      for k, v in module.env-psc-addresses :
+      lower(k) => {
+        address       = local._psc_spoke_ips[k]
+        address_id    = v.psc_addresses[local._psc_spoke_fr_names[k]].id
+        endpoint_name = local._psc_spoke_fr_names[k]
+      }
+    }
+  )
   ncc_spokes_output = {
     router_appliances = {
       for k, v in google_network_connectivity_spoke.router_appliances : k => v.id
@@ -48,13 +77,14 @@ locals {
     }
   }
   tfvars = {
-    host_project_ids     = local.host_project_ids
-    host_project_numbers = local.host_project_numbers
-    envs                 = local.envs
-    hub                  = local.hub
-    ncc_groups           = local._ctx_ncc_groups
-    ncc_hubs             = local._ctx_ncc_hubs
-    ncc_spokes           = local.ncc_spokes_output
+    host_project_ids          = local.host_project_ids
+    host_project_numbers      = local.host_project_numbers
+    envs                      = local.envs
+    hub                       = local.hub
+    ncc_groups                = local._ctx_ncc_groups
+    ncc_hubs                  = local._ctx_ncc_hubs
+    ncc_spokes                = local.ncc_spokes_output
+    psc_google_apis_endpoints = local.psc_google_apis_endpoints
   }
 }
 
@@ -86,7 +116,7 @@ output "host_project_numbers" {
 }
 
 output "hub" {
-  description = "Central hub host project and VPC identifiers."
+  description = "Central hub host project, VPC, and optional SWP egress identifiers."
   value       = local.hub
 }
 
@@ -103,6 +133,11 @@ output "ncc_hubs" {
 output "ncc_spokes" {
   description = "Network Connectivity Center spoke IDs grouped by spoke type."
   value       = local.ncc_spokes_output
+}
+
+output "psc_google_apis_endpoints" {
+  description = "Per-VPC Private Service Connect Google APIs endpoint addresses and forwarding rules."
+  value       = local.psc_google_apis_endpoints
 }
 
 output "tfvars" {
