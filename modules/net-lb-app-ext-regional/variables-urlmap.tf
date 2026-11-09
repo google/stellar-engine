@@ -19,6 +19,7 @@
 variable "urlmap_config" {
   description = "The URL map configuration."
   type = object({
+    description = optional(string, "Terraform managed.")
     default_route_action = optional(object({
       request_mirror_backend = optional(string)
       cors_policy = optional(object({
@@ -113,6 +114,18 @@ variable "urlmap_config" {
         prefix        = optional(string)
         response_code = optional(string)
         strip_query   = optional(bool)
+      }))
+      header_action = optional(object({
+        request_add = optional(map(object({
+          value   = string
+          replace = optional(bool, true)
+        })))
+        request_remove = optional(list(string))
+        response_add = optional(map(object({
+          value   = string
+          replace = optional(bool, true)
+        })))
+        response_remove = optional(list(string))
       }))
       path_rules = optional(list(object({
         paths   = list(string)
@@ -229,12 +242,12 @@ variable "urlmap_config" {
           request_mirror_backend = optional(string)
           cors_policy = optional(object({
             allow_credentials    = optional(bool)
-            allow_headers        = optional(string)
-            allow_methods        = optional(string)
-            allow_origin_regexes = list(string)
-            allow_origins        = list(string)
+            allow_headers        = optional(list(string))
+            allow_methods        = optional(list(string))
+            allow_origin_regexes = optional(list(string))
+            allow_origins        = optional(list(string))
             disabled             = optional(bool)
-            expose_headers       = optional(string)
+            expose_headers       = optional(list(string))
             max_age              = optional(string)
           }))
           fault_injection_policy = optional(object({

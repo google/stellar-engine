@@ -58,9 +58,9 @@ module "nva-template" {
   project_id      = module.vdss-host-project.project_id
   name            = "nva-template-${each.key}"
   zone            = "${each.value}-b"
-  instance_type   = "n2d-standard-2"
+  machine_type    = "n2d-standard-2"
   tags            = ["nva"]
-  create_template = true
+  create_template = {}
   can_ip_forward  = true
   network_interfaces = [
     {
@@ -77,18 +77,20 @@ module "nva-template" {
     }
   ]
   boot_disk = {
-    initialize_params = {
+    source = {
       image = "cos-cloud/cos-stable"
     }
   }
   encryption = {
     kms_key_self_link = module.kms.keys.default.id
   }
-  options = {
+  lifecycle_config = {
     allow_stopping_for_update = true
     deletion_protection       = false
-    spot                      = var.nva_spot_vms
-    termination_action        = var.nva_spot_vms ? "STOP" : null
+  }
+  scheduling_config = {
+    provisioning_model = var.nva_spot_vms ? "SPOT" : "STANDARD"
+    termination_action = var.nva_spot_vms ? "STOP" : null
   }
   metadata = {
     user-data              = module.nva-cloud-config.cloud_config
@@ -102,7 +104,7 @@ module "nva-template" {
   }
 
   # CIS Compliance Benchmark 4.11
-  confidential_compute = true
+  confidential_compute = "SEV"
   shielded_config = {
     enable_secure_boot          = true
     enable_vtpm                 = true

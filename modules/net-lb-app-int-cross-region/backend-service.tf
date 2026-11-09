@@ -38,14 +38,14 @@ locals {
 
 resource "google_compute_backend_service" "default" {
   provider = google-beta
-  for_each = var.backend_service_configs
+  for_each = local.backend_service_configs
   project = (
     each.value.project_id == null
-    ? var.project_id
+    ? local.project_id
     : each.value.project_id
   )
-  name                            = "${var.name}-${each.key}"
-  description                     = var.description
+  name                            = coalesce(each.value.name, "${var.name}-${each.key}")
+  description                     = each.value.description
   affinity_cookie_ttl_sec         = each.value.affinity_cookie_ttl_sec
   connection_draining_timeout_sec = each.value.connection_draining_timeout_sec
   health_checks = length(each.value.health_checks) == 0 ? null : [
@@ -139,21 +139,20 @@ resource "google_compute_backend_service" "default" {
     }
   }
 
-  dynamic "iap" {
-    for_each = each.value.iap_config == null ? [] : [each.value.iap_config]
-    content {
-      enabled                     = true
-      oauth2_client_id            = iap.value.oauth2_client_id
-      oauth2_client_secret        = iap.value.oauth2_client_secret
-      oauth2_client_secret_sha256 = iap.value.oauth2_client_secret_sha256
-    }
+  iap {
+    enabled                     = each.value.iap_config != null
+    oauth2_client_id            = try(each.value.iap_config.oauth2_client_id, null)
+    oauth2_client_secret        = try(each.value.iap_config.oauth2_client_secret, null)
+    oauth2_client_secret_sha256 = try(each.value.iap_config.oauth2_client_secret_sha256, null)
   }
 
   dynamic "log_config" {
-    for_each = each.value.log_sample_rate == null ? [] : [""]
+    for_each = each.value.log_config == null ? [] : [""]
     content {
-      enable      = true
-      sample_rate = each.value.log_sample_rate
+      enable          = each.value.log_config.enable
+      sample_rate     = each.value.log_config.sample_rate
+      optional_mode   = each.value.log_config.optional_mode
+      optional_fields = each.value.log_config.optional_fields
     }
   }
 

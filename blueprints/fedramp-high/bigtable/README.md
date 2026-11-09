@@ -90,7 +90,7 @@ table_info = {
 | [num_nodes](variables.tf#L56) | Number of nodes in the Bigtable cluster. | <code>number</code> |  | <code>1</code> |
 | [region](variables.tf#L62) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
 | [storage_type](variables.tf#L68) | Either SSD or HDD. | <code>string</code> |  | <code>&#34;SSD&#34;</code> |
-| [table](variables.tf#L74) | Table to create in the bigtable instance. Default is null. | <code title="map&#40;object&#40;&#123;&#10;  split_keys      &#61; optional&#40;list&#40;string&#41;&#41;&#10;  column_families &#61; map&#40;object&#40;&#123;&#125;&#41;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>null</code> |
+| [table](variables.tf#L74) | Table to create in the bigtable instance. Default is null. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>null</code> |
 | [zone](variables.tf#L83) | Google Cloud Zone. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
 
 ## Outputs

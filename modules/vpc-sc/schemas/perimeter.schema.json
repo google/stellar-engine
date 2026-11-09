@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "perimeters",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "ignore_resource_changes": {
+      "type": "boolean",
+      "default": false
+    },
+    "spec": {
+      "type": "object",
+      "properties": {
+        "access_levels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "egress_policies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ingress_policies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "restricted_services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "vpc_accessible_services": {
+          "$ref": "#/$defs/VpcAccessibleServices"
+        }
+      },
+      "additionalProperties": false
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "access_levels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "egress_policies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ingress_policies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "restricted_services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "vpc_accessible_services": {
+          "$ref": "#/$defs/VpcAccessibleServices"
+        }
+      },
+      "additionalProperties": false
+    },
+    "title": {
+      "type": "string"
+    },
+    "use_explicit_dry_run_spec": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "$defs": {
+    "VpcAccessibleServices": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allow_all_restricted_services": {
+          "type": "boolean",
+          "default": true
+        },
+        "allowed_service_patterns": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": [
+                  "null"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "x_goog_allowed_resources": {
+                    "type": "string"
+                  },
+                  "x_googapps_allowed_domains": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "allowed_services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "enable_restriction": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  }
+}

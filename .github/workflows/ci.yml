@@ -49,7 +49,8 @@ jobs:
           limit-severities-for-sarif: true
           exit-code: '1'
           trivyignores: '.trivyignore.yaml'
-          skip-dirs: 'modules/net-lb-int/recipe-ilb-next-hop,modules/net-lb-app-int-cross-region/recipe-cross-reg-int-app-lb-vm-dns'
+          # The vendored Fabric fixtures only feed README examples.
+          skip-dirs: 'modules/net-lb-int/recipe-ilb-next-hop,modules/net-lb-app-int-cross-region/recipe-cross-reg-int-app-lb-vm-dns,tests/fixtures'
 
       - name: Upload Trivy scan results to GitHub Security tab
         if: always()

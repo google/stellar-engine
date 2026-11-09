@@ -24,27 +24,45 @@ locals {
   }
 }
 
-resource "google_compute_firewall" "allow-admins" {
-  count         = length(local.default_rules.admin_ranges) > 0 ? 1 : 0
-  name          = "${var.network}-ingress-admins"
-  description   = "Access from the admin subnet to all subnets."
-  network       = var.network
-  project       = var.project_id
-  source_ranges = local.default_rules.admin_ranges
+moved {
+  from = google_compute_firewall.allow-admins
+  to   = google_compute_firewall.allow_admins
+}
+
+resource "google_compute_firewall" "allow_admins" {
+  count       = length(local.default_rules.admin_ranges) > 0 ? 1 : 0
+  project     = local.project_id
+  network     = local.network
+  name        = "${local.network_name}-ingress-admins"
+  description = "Access from the admin subnet to all subnets."
+  source_ranges = [
+    for r in local.default_rules.admin_ranges : lookup(local.ctx.cidr_ranges, r, r)
+  ]
   allow { protocol = "all" }
   log_config {
     metadata = "INCLUDE_ALL_METADATA"
   }
 }
 
-resource "google_compute_firewall" "allow-tag-http" {
-  count         = length(local.default_rules.http_ranges) > 0 ? 1 : 0
-  name          = "${var.network}-ingress-tag-http"
-  description   = "Allow http to machines with matching tags."
-  network       = var.network
-  project       = var.project_id
-  source_ranges = local.default_rules.http_ranges
-  target_tags   = local.default_rules.http_tags
+moved {
+  from = google_compute_firewall.allow-tag-http
+  to   = google_compute_firewall.allow_tag_http
+}
+
+resource "google_compute_firewall" "allow_tag_http" {
+  count = (
+    length(local.default_rules.http_ranges) > 0 &&
+    length(local.default_rules.http_tags) > 0
+    ? 1 : 0
+  )
+  project     = local.project_id
+  network     = local.network
+  name        = "${local.network_name}-ingress-tag-http"
+  description = "Allow http to machines with matching tags."
+  source_ranges = [
+    for r in local.default_rules.http_ranges : lookup(local.ctx.cidr_ranges, r, r)
+  ]
+  target_tags = local.default_rules.http_tags
   allow {
     protocol = "tcp"
     ports    = ["80"]
@@ -54,14 +72,25 @@ resource "google_compute_firewall" "allow-tag-http" {
   }
 }
 
-resource "google_compute_firewall" "allow-tag-https" {
-  count         = length(local.default_rules.https_ranges) > 0 ? 1 : 0
-  name          = "${var.network}-ingress-tag-https"
-  description   = "Allow http to machines with matching tags."
-  network       = var.network
-  project       = var.project_id
-  source_ranges = local.default_rules.https_ranges
-  target_tags   = local.default_rules.https_tags
+moved {
+  from = google_compute_firewall.allow-tag-https
+  to   = google_compute_firewall.allow_tag_https
+}
+
+resource "google_compute_firewall" "allow_tag_https" {
+  count = (
+    length(local.default_rules.https_ranges) > 0 &&
+    length(local.default_rules.https_tags) > 0
+    ? 1 : 0
+  )
+  project     = local.project_id
+  network     = local.network
+  name        = "${local.network_name}-ingress-tag-https"
+  description = "Allow http to machines with matching tags."
+  source_ranges = [
+    for r in local.default_rules.https_ranges : lookup(local.ctx.cidr_ranges, r, r)
+  ]
+  target_tags = local.default_rules.https_tags
   allow {
     protocol = "tcp"
     ports    = ["443"]
@@ -71,14 +100,25 @@ resource "google_compute_firewall" "allow-tag-https" {
   }
 }
 
-resource "google_compute_firewall" "allow-tag-ssh" {
-  count         = length(local.default_rules.ssh_ranges) > 0 ? 1 : 0
-  name          = "${var.network}-ingress-tag-ssh"
-  description   = "Allow SSH to machines with matching tags."
-  network       = var.network
-  project       = var.project_id
-  source_ranges = local.default_rules.ssh_ranges
-  target_tags   = local.default_rules.ssh_tags
+moved {
+  from = google_compute_firewall.allow-tag-ssh
+  to   = google_compute_firewall.allow_tag_ssh
+}
+
+resource "google_compute_firewall" "allow_tag_ssh" {
+  count = (
+    length(local.default_rules.ssh_ranges) > 0 &&
+    length(local.default_rules.ssh_tags) > 0
+    ? 1 : 0
+  )
+  project     = local.project_id
+  network     = local.network
+  name        = "${local.network_name}-ingress-tag-ssh"
+  description = "Allow SSH to machines with matching tags."
+  source_ranges = [
+    for r in local.default_rules.ssh_ranges : lookup(local.ctx.cidr_ranges, r, r)
+  ]
+  target_tags = local.default_rules.ssh_tags
   allow {
     protocol = "tcp"
     ports    = ["22"]

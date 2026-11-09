@@ -18,14 +18,14 @@ module "bastion-vm" {
   project_id           = module.vdss-host-project.project_id
   zone                 = "${var.regions["primary"]}-c"
   name                 = "management-bastion"
-  confidential_compute = true # CIS Compliance Benchmark 4.11 - Must use compliant instance and image types
+  confidential_compute = "SEV" # CIS Compliance Benchmark 4.11 - Must use compliant instance and image types
   shielded_config = {
     enable_secure_boot          = true
     enable_vtpm                 = true
     enable_integrity_monitoring = true
   }
-  tags          = ["bastion"]
-  instance_type = "n2d-highcpu-2"
+  tags         = ["bastion"]
+  machine_type = "n2d-highcpu-2"
   network_interfaces = [{
     network = module.mgmt-vpc.self_link
     subnetwork = try(
@@ -35,20 +35,17 @@ module "bastion-vm" {
   encryption = {
     kms_key_self_link = module.kms.keys.default.id
   }
-  attached_disks = [
-    {
+  attached_disks = {
+    data-disk = {
       auto_delete = true
-      size        = 10
-      name        = "data-disk"
       initialize_params = {
-        image = "projects/cos-cloud/global/images/family/cos-stable"
+        size = 10
       }
-      kms_key_self_link = module.kms.keys.default.id
     }
-  ]
+  }
 
   boot_disk = {
-    initialize_params = {
+    source = {
       image = "projects/cos-cloud/global/images/family/cos-stable"
     }
   }
@@ -76,47 +73,64 @@ module "bastion-service-account" {
   }
 }
 
+# The secret-manager module rewrite in Cloud Foundation Fabric v44.2.0
+# changed these state keys. The moves keep the IAM bindings in place, and
+# Terraform replaces each key version once with the same data, because the
+# module now sets a write-only version that older state lacks.
+moved {
+  from = module.ngfw-ssh-secrets.google_secret_manager_secret_version.default["ngfw-ssh-private-key:latest"]
+  to   = module.ngfw-ssh-secrets.google_secret_manager_secret_version.default["ngfw-ssh-private-key/latest"]
+}
+
+moved {
+  from = module.ngfw-ssh-secrets.google_secret_manager_secret_version.default["ngfw-ssh-public-key:latest"]
+  to   = module.ngfw-ssh-secrets.google_secret_manager_secret_version.default["ngfw-ssh-public-key/latest"]
+}
+
+moved {
+  from = module.ngfw-ssh-secrets.google_secret_manager_secret_iam_binding.default
+  to   = module.ngfw-ssh-secrets.google_secret_manager_secret_iam_binding.authoritative
+}
+
 module "ngfw-ssh-secrets" {
   source     = "../../../modules/secret-manager"
   project_id = module.vdss-host-project.project_id
   secrets = {
     ngfw-ssh-private-key = {
-      locations = [var.regions.primary]
-      keys = {
+      global_replica_locations = {
         (var.regions.primary) = module.kms.keys.default.id
       }
+      iam = {
+        "roles/secretmanager.secretAccessor" = [
+          module.bastion-service-account.iam_email
+        ]
+      }
+      versions = {
+        latest = {
+          enabled = true
+          data    = tls_private_key.ngfw_ssh.private_key_openssh
+          # Write-only data keeps a second copy of the key out of the secret
+          # version state, as the module did before v44.2.0.
+          data_config = { write_only_version = 1 }
+        }
+      }
     }
     ngfw-ssh-public-key = {
-      locations = [var.regions.primary]
-      keys = {
+      global_replica_locations = {
         (var.regions.primary) = module.kms.keys.default.id
       }
-    }
-  }
-  versions = {
-    ngfw-ssh-private-key = {
-      latest = {
-        enabled = true
-        data    = tls_private_key.ngfw_ssh.private_key_openssh
+      iam = {
+        "roles/secretmanager.secretAccessor" = [
+          module.bastion-service-account.iam_email
+        ]
       }
-    }
-    ngfw-ssh-public-key = {
-      latest = {
-        enabled = true
-        data    = tls_private_key.ngfw_ssh.public_key_openssh
+      versions = {
+        latest = {
+          enabled     = true
+          data        = tls_private_key.ngfw_ssh.public_key_openssh
+          data_config = { write_only_version = 1 }
+        }
       }
-    }
-  }
-  iam = {
-    ngfw-ssh-private-key = {
-      "roles/secretmanager.secretAccessor" = [
-        module.bastion-service-account.iam_email
-      ]
-    }
-    ngfw-ssh-public-key = {
-      "roles/secretmanager.secretAccessor" = [
-        module.bastion-service-account.iam_email
-      ]
     }
   }
   depends_on = [module.kms]

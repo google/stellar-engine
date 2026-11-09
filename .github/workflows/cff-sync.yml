@@ -1,0 +1,89 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Syncs the modules from the latest Cloud Foundation Fabric release every
+# week and keeps one pull request open with the result. docs/upstream-sync.md
+# describes the setup and the review procedure.
+name: Cloud Foundation Fabric sync
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      to:
+        description: Fabric release tag to sync to, or latest.
+        required: false
+        default: latest
+
+permissions: {}
+
+concurrency:
+  group: cff-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync Fabric Modules
+    if: github.repository == 'google/stellar-engine'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # Pull requests opened with the default GITHUB_TOKEN do not trigger
+      # other workflows, so the job prefers a GitHub App token when the
+      # repository configures one.
+      - name: Create GitHub App Token
+        id: app-token
+        if: vars.CFF_SYNC_APP_CLIENT_ID != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.CFF_SYNC_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CFF_SYNC_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout Repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          # The pull request step compares the sync branch with main.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The sync formats tracked Python files with the repository ruff.
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: Run Sync
+        id: sync
+        env:
+          TO: ${{ inputs.to || 'latest' }}
+        run: |
+          status=0
+          bash tools/sync-from-cff.sh --to "${TO}" --conflict-style ours \
+            --report "${RUNNER_TEMP}/cff-sync-report.md" || status=$?
+          if [[ ${status} -ne 0 && ${status} -ne 3 ]]; then
+            exit "${status}"
+          fi
+
+      - name: Open or Update Pull Request
+        if: steps.sync.outputs.changed != '0'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+          TARGET: ${{ steps.sync.outputs.target }}
+          CONFLICTS: ${{ steps.sync.outputs.conflicts }}
+          PROVIDER_MAJOR_CHANGE: ${{ steps.sync.outputs.provider_major_change }}
+        run: |
+          REPORT="${RUNNER_TEMP}/cff-sync-report.md" bash tools/cff-sync-pr.sh

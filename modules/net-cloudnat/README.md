@@ -113,7 +113,9 @@ module "nat" {
 }
 # tftest modules=2 resources=5 inventory=rules.yaml e2e
 ```
+
 ## Hybrid NAT
+
 ```hcl
 module "vpc1" {
   source     = "./fabric/modules/net-vpc"
@@ -150,24 +152,22 @@ module "vpc1-nat" {
       }
     ]
   }
-  config_port_allocation = {
-    enable_endpoint_independent_mapping = false
-    enable_dynamic_port_allocation      = true
-  }
   rules = [
     {
       description = "private nat"
       match       = "nexthop.is_hybrid"
+      rule_number = 100
       source_ranges = [
         module.vpc1.subnets_private_nat["${var.region}/vpc1-nat"].id
       ]
     }
   ]
 }
-# tftest modules=2 resources=7 inventory=hybrid.yaml
+# tftest modules=2 resources=8 inventory=hybrid.yaml
 ```
 
 ## NAT for Proxy net or Secure Web Proxy
+
 By default NAT is provided only for VMs (`ENDPOINT_TYPE_VM`). You can also define endpoint type for managed proxy (`ENDPOINT_TYPE_MANAGED_PROXY_LB`) or Secure Web Proxy (`ENDPOINT_TYPE_SWG`). Currently only one `endpoint_type` can be provided per NAT instance.
 
 ```hcl
@@ -186,21 +186,22 @@ module "nat" {
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [name](variables.tf#L107) | Name of the Cloud NAT resource. | <code>string</code> | ✓ |  |
-| [project_id](variables.tf#L112) | Project where resources will be created. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L117) | Region where resources will be created. | <code>string</code> | ✓ |  |
+| [name](variables.tf#L147) | Name of the Cloud NAT resource. | <code>string</code> | ✓ |  |
+| [project_id](variables.tf#L152) | Project where resources will be created. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L157) | Region where resources will be created. | <code>string</code> | ✓ |  |
 | [addresses](variables.tf#L17) | Optional list of external address self links. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
-| [config_port_allocation](variables.tf#L23) | Configuration for how to assign ports to virtual machines. min_ports_per_vm and max_ports_per_vm have no effect unless enable_dynamic_port_allocation is set to 'true'. | <code title="object&#40;&#123;&#10;  enable_endpoint_independent_mapping &#61; optional&#40;bool, true&#41;&#10;  enable_dynamic_port_allocation      &#61; optional&#40;bool, false&#41;&#10;  min_ports_per_vm                    &#61; optional&#40;number&#41;&#10;  max_ports_per_vm                    &#61; optional&#40;number, 65536&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [config_source_subnetworks](variables.tf#L39) | Subnetwork configuration. | <code title="object&#40;&#123;&#10;  all                 &#61; optional&#40;bool, true&#41;&#10;  primary_ranges_only &#61; optional&#40;bool&#41;&#10;  subnetworks &#61; optional&#40;list&#40;object&#40;&#123;&#10;    self_link        &#61; string&#10;    all_ranges       &#61; optional&#40;bool, true&#41;&#10;    primary_range    &#61; optional&#40;bool, false&#41;&#10;    secondary_ranges &#61; optional&#40;list&#40;string&#41;&#41;&#10;  &#125;&#41;&#41;, &#91;&#93;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [config_timeouts](variables.tf#L69) | Timeout configurations. | <code title="object&#40;&#123;&#10;  icmp            &#61; optional&#40;number&#41;&#10;  tcp_established &#61; optional&#40;number&#41;&#10;  tcp_time_wait   &#61; optional&#40;number&#41;&#10;  tcp_transitory  &#61; optional&#40;number&#41;&#10;  udp             &#61; optional&#40;number&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [endpoint_types](variables.tf#L82) | Specifies the endpoint Types supported by the NAT Gateway. Supported values include: ENDPOINT_TYPE_VM, ENDPOINT_TYPE_SWG, ENDPOINT_TYPE_MANAGED_PROXY_LB. | <code>list&#40;string&#41;</code> |  | <code>null</code> |
-| [logging_filter](variables.tf#L101) | Enables logging if not null, value is one of 'ERRORS_ONLY', 'TRANSLATIONS_ONLY', 'ALL'. | <code>string</code> |  | <code>null</code> |
-| [router_asn](variables.tf#L122) | Router ASN used for auto-created router. | <code>number</code> |  | <code>null</code> |
-| [router_create](variables.tf#L128) | Create router. | <code>bool</code> |  | <code>true</code> |
-| [router_name](variables.tf#L134) | Router name, leave blank if router will be created to use auto generated name. | <code>string</code> |  | <code>null</code> |
-| [router_network](variables.tf#L140) | Name of the VPC used for auto-created router. | <code>string</code> |  | <code>null</code> |
-| [rules](variables.tf#L146) | List of rules associated with this NAT. | <code title="list&#40;object&#40;&#123;&#10;  description   &#61; optional&#40;string&#41;&#10;  match         &#61; string&#10;  source_ips    &#61; optional&#40;list&#40;string&#41;&#41;&#10;  source_ranges &#61; optional&#40;list&#40;string&#41;&#41;&#10;&#125;&#41;&#41;">list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#91;&#93;</code> |
-| [type](variables.tf#L166) | Whether this Cloud NAT is used for public or private IP translation. One of 'PUBLIC' or 'PRIVATE'. | <code>string</code> |  | <code>&#34;PUBLIC&#34;</code> |
+| [config_port_allocation](variables.tf#L24) | Configuration for how to assign ports to virtual machines. enable_endpoint_independent_mapping defaults to true for PUBLIC NAT and false for PRIVATE NAT; enable_dynamic_port_allocation defaults to false for PUBLIC NAT and true for PRIVATE NAT. min_ports_per_vm and max_ports_per_vm have no effect unless enable_dynamic_port_allocation is set to 'true'. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [config_source_subnetworks](variables.tf#L54) | Subnetwork configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [config_timeouts](variables.tf#L96) | Timeout configurations. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [context](variables.tf#L109) | Context-specific interpolations. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [endpoint_types](variables.tf#L122) | Specifies the endpoint Types supported by the NAT Gateway. Supported values include: ENDPOINT_TYPE_VM, ENDPOINT_TYPE_SWG, ENDPOINT_TYPE_MANAGED_PROXY_LB. | <code>list&#40;string&#41;</code> |  | <code>null</code> |
+| [logging_filter](variables.tf#L141) | Enables logging if not null, value is one of 'ERRORS_ONLY', 'TRANSLATIONS_ONLY', 'ALL'. | <code>string</code> |  | <code>null</code> |
+| [router_asn](variables.tf#L162) | Router ASN used for auto-created router. | <code>number</code> |  | <code>null</code> |
+| [router_create](variables.tf#L168) | Create router. | <code>bool</code> |  | <code>true</code> |
+| [router_name](variables.tf#L174) | Router name, leave blank if router will be created to use auto generated name. | <code>string</code> |  | <code>null</code> |
+| [router_network](variables.tf#L180) | Name of the VPC used for auto-created router. | <code>string</code> |  | <code>null</code> |
+| [rules](variables.tf#L186) | List of rules associated with this NAT. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#91;&#93;</code> |
+| [type](variables.tf#L219) | Whether this Cloud NAT is used for public or private IP translation. One of 'PUBLIC' or 'PRIVATE'. | <code>string</code> |  | <code>&#34;PUBLIC&#34;</code> |
 
 ## Outputs
 
