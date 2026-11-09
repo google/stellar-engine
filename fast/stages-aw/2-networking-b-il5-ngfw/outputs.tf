@@ -34,6 +34,20 @@ locals {
   host_project_numbers = {
     prod-landing = module.vdss-host-project.number
   }
+  ncc_spokes_output = {
+    router_appliances = {
+      for k, v in google_network_connectivity_spoke.router_appliances : k => v.id
+    }
+    tunnels = {
+      for k, v in google_network_connectivity_spoke.tunnels : k => v.id
+    }
+    vlan_attachments = {
+      for k, v in google_network_connectivity_spoke.vlan_attachments : k => v.id
+    }
+    vpcs = {
+      for k, v in google_network_connectivity_spoke.vpcs : k => v.id
+    }
+  }
   tfvars = {
     host_project_ids     = local.host_project_ids
     host_project_numbers = local.host_project_numbers
@@ -67,6 +81,21 @@ output "host_project_ids" {
 output "host_project_numbers" {
   description = "Network project numbers."
   value       = local.host_project_numbers
+}
+
+output "ncc_groups" {
+  description = "Network Connectivity Center group IDs keyed by hub/group."
+  value       = local._ctx_ncc_groups
+}
+
+output "ncc_hubs" {
+  description = "Network Connectivity Center hub IDs keyed by hub name."
+  value       = local._ctx_ncc_hubs
+}
+
+output "ncc_spokes" {
+  description = "Network Connectivity Center spoke IDs grouped by spoke type."
+  value       = local.ncc_spokes_output
 }
 
 output "ngfw_password" {

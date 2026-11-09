@@ -105,6 +105,13 @@ variable "dns_policy_rules" {
   nullable = false
 }
 
+variable "enable_hub_and_spoke_peering" {
+  description = "Enable VPC network peering between the landing VPC and environment spoke VPCs. Set to false when attaching both the landing VPC and environment spoke VPCs to the same Network Connectivity Center hub."
+  type        = bool
+  default     = true
+  nullable    = false
+}
+
 variable "envs_folders" {
   description = "List of environments to be created for projects to go into."
   type = map(object({
@@ -132,6 +139,7 @@ variable "factories_config" {
     data_dir              = optional(string, "data")
     dns_policy_rules_file = optional(string, "data/dns-policy-rules.yaml")
     firewall_policy_name  = optional(string)
+    ncc_hubs              = optional(string)
   })
   default = {
     data_dir = "data"
@@ -218,6 +226,106 @@ variable "logging" {
   description = "Logging configuration."
   type        = any
   default     = null
+}
+
+variable "ncc_hubs" {
+  description = "Network Connectivity Center hubs, groups, and spokes in hub_name => config format, merged with YAML definitions from factories_config.ncc_hubs."
+  type = map(object({
+    project_id      = optional(string)
+    description     = optional(string, "Terraform-managed.")
+    export_psc      = optional(bool, true)
+    policy_mode     = optional(string)
+    preset_topology = optional(string)
+    labels          = optional(map(string), {})
+    groups = optional(map(object({
+      description = optional(string, "Terraform-managed.")
+      labels      = optional(map(string), {})
+      auto_accept = optional(list(string), [])
+    })), {})
+    spokes = optional(object({
+      vpcs = optional(map(object({
+        vpc                   = optional(string)
+        name                  = optional(string)
+        project_id            = optional(string)
+        group                 = optional(string)
+        description           = optional(string, "Terraform-managed.")
+        labels                = optional(map(string), {})
+        exclude_export_ranges = optional(list(string))
+        include_export_ranges = optional(list(string))
+      })), {})
+      tunnels = optional(map(object({
+        uris                       = list(string)
+        name                       = optional(string)
+        location                   = optional(string)
+        project_id                 = optional(string)
+        group                      = optional(string)
+        description                = optional(string, "Terraform-managed.")
+        labels                     = optional(map(string), {})
+        site_to_site_data_transfer = optional(bool, true)
+        include_import_ranges      = optional(list(string), ["ALL_IPV4_RANGES"])
+      })), {})
+      vlan_attachments = optional(map(object({
+        uris                       = list(string)
+        name                       = optional(string)
+        location                   = optional(string)
+        project_id                 = optional(string)
+        group                      = optional(string)
+        description                = optional(string, "Terraform-managed.")
+        labels                     = optional(map(string), {})
+        site_to_site_data_transfer = optional(bool, true)
+        include_import_ranges      = optional(list(string), ["ALL_IPV4_RANGES"])
+      })), {})
+      router_appliances = optional(map(object({
+        instances = list(object({
+          ip_address      = string
+          virtual_machine = string
+        }))
+        name                       = optional(string)
+        location                   = optional(string)
+        project_id                 = optional(string)
+        group                      = optional(string)
+        description                = optional(string, "Terraform-managed.")
+        labels                     = optional(map(string), {})
+        site_to_site_data_transfer = optional(bool, true)
+        include_import_ranges      = optional(list(string), ["ALL_IPV4_RANGES"])
+      })), {})
+    }), {})
+  }))
+  default  = {}
+  nullable = false
+  validation {
+    condition = alltrue([
+      for k, v in var.ncc_hubs :
+      v.policy_mode == null || contains(["CUSTOM", "PRESET"], v.policy_mode)
+    ])
+    error_message = "Each hub policy_mode must be null, CUSTOM, or PRESET."
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.ncc_hubs :
+      v.preset_topology == null || (
+        coalesce(v.policy_mode, "PRESET") == "PRESET" &&
+        contains(["MESH", "STAR"], v.preset_topology)
+      )
+    ])
+    error_message = "Each hub preset_topology must be MESH or STAR when policy_mode is PRESET, and null when policy_mode is CUSTOM."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.ncc_hubs : [
+        for gk, _ in v.groups : contains(["default", "center", "edge"], gk)
+      ]
+    ]))
+    error_message = "Each group key in ncc_hubs must be default, center, or edge."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.ncc_hubs : [
+        for sk, sv in v.spokes.router_appliances : length(sv.instances) > 0
+      ]
+    ]))
+    error_message = "Each router_appliances spoke must specify at least one instance."
+  }
 }
 
 variable "nva_spot_vms" {

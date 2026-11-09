@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import pathlib
 import unittest
 
@@ -209,6 +210,86 @@ class TestStage2Networking(unittest.TestCase):
                 )
                 self.assertIn('region        = "<region>"', sample)
                 self.assertNotRegex(sample, r'region\s*=\s*"us-')
+
+    def test_ncc_factory_symlink_schema_and_stage_integration(self):
+        """Verify Stage 2 NCC factory parity, schema, APIs, and peering gate."""
+        fedramp_factory = _FEDRAMP_NET_DIR / "factory-ncc.tf"
+        il5_factory = _IL5_NET_DIR / "factory-ncc.tf"
+        self.assertTrue(il5_factory.is_file())
+        self.assertFalse(il5_factory.is_symlink())
+        self.assertTrue(fedramp_factory.is_symlink())
+        self.assertEqual(
+            str(fedramp_factory.readlink()),
+            "../2-networking-b-il5-ngfw/factory-ncc.tf",
+        )
+
+        fedramp_schemas = _FEDRAMP_NET_DIR / "schemas"
+        il5_schema = _IL5_NET_DIR / "schemas/ncc-hub.schema.json"
+        self.assertTrue(il5_schema.is_file())
+        self.assertTrue(fedramp_schemas.is_symlink())
+        self.assertEqual(
+            str(fedramp_schemas.readlink()),
+            "../2-networking-b-il5-ngfw/schemas",
+        )
+
+        schema = json.loads(il5_schema.read_text(encoding="utf-8"))
+        self.assertEqual(
+            set(schema["$defs"]["groups"]["properties"]),
+            {"default", "center", "edge"},
+        )
+        self.assertEqual(
+            set(schema["$defs"]["spokes"]["properties"]),
+            {"vpcs", "tunnels", "vlan_attachments", "router_appliances"},
+        )
+
+        factory_tf = il5_factory.read_text(encoding="utf-8")
+        for expected in (
+            'resource "google_network_connectivity_hub" "default"',
+            'resource "google_network_connectivity_group" "default"',
+            'resource "google_network_connectivity_spoke" "vpcs"',
+            'resource "google_network_connectivity_spoke" "tunnels"',
+            'resource "google_network_connectivity_spoke" "vlan_attachments"',
+            'resource "google_network_connectivity_spoke" "router_appliances"',
+            'resource "terraform_data" "ncc_ra_instances"',
+            "replace_triggered_by = "
+            "[terraform_data.ncc_ra_instances[each.key]]",
+        ):
+            self.assertIn(expected, factory_tf)
+
+        ncc_api_gate = (
+            'local._ncc_enabled ? ["networkconnectivity.googleapis.com"]'
+        )
+        for stage_dir in (_FEDRAMP_NET_DIR, _IL5_NET_DIR):
+            with self.subTest(stage=stage_dir.name):
+                net_vdss = (stage_dir / "net-vdss.tf").read_text(
+                    encoding="utf-8"
+                )
+                branch_tf = (stage_dir / "branch-net-envs.tf").read_text(
+                    encoding="utf-8"
+                )
+                vars_tf = (stage_dir / "variables.tf").read_text(
+                    encoding="utf-8"
+                )
+                outputs_tf = (stage_dir / "outputs.tf").read_text(
+                    encoding="utf-8"
+                )
+                self.assertIn("_vdss_vpcs = {", net_vdss)
+                self.assertIn(ncc_api_gate, net_vdss)
+                self.assertIn(ncc_api_gate, branch_tf)
+                self.assertIn(
+                    "for_each = var.enable_hub_and_spoke_peering"
+                    " ? var.envs_folders : {}",
+                    branch_tf,
+                )
+                self.assertIn(
+                    'variable "enable_hub_and_spoke_peering"', vars_tf
+                )
+                self.assertIn(
+                    "ncc_hubs              = optional(string)", vars_tf
+                )
+                self.assertIn('variable "ncc_hubs"', vars_tf)
+                for out_name in ("ncc_groups", "ncc_hubs", "ncc_spokes"):
+                    self.assertIn(f'output "{out_name}"', outputs_tf)
 
 
 if __name__ == "__main__":
