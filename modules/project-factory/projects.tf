@@ -15,6 +15,7 @@
  */
 
 # TODO: add project sa to context
+# TODO: support referencing project numbers / workload_identity_pools in principalSet IAM members via context
 
 locals {
   # project data from folders tree
@@ -200,6 +201,7 @@ module "projects-iam" {
       services_enabled = module.projects[each.key].services
     }
   }
+  cloud_armor_policy = lookup(each.value, "cloud_armor_policy", null)
   context = merge(local.ctx, {
     condition_vars = merge(
       local.ctx.condition_vars, {

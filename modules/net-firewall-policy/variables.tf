@@ -15,7 +15,7 @@
  */
 
 variable "attachments" {
-  description = "Ids of the resources to which this policy will be attached, in descriptive name => self link format. Specify folders or organization for hierarchical policy, VPCs for network policy."
+  description = "Ids of the resources to which this policy will be attached, in descriptive name => self link format. Specify folders or organization for hierarchical policy, VPCs for network policy. Manage each association from one side only, either here or via the target module (`firewall_policy` in `organization` and `folder`, `firewall_policy_associations` in `net-vpc`), never both."
   type        = map(string)
   default     = {}
   nullable    = false
@@ -24,14 +24,15 @@ variable "attachments" {
 variable "context" {
   description = "Context-specific interpolations."
   type = object({
-    cidr_ranges      = optional(map(string), {})
-    cidr_ranges_sets = optional(map(list(string)), {})
-    folder_ids       = optional(map(string), {})
-    iam_principals   = optional(map(string), {})
-    locations        = optional(map(string), {})
-    networks         = optional(map(string), {})
-    project_ids      = optional(map(string), {})
-    tag_values       = optional(map(string), {})
+    cidr_ranges             = optional(map(string), {})
+    cidr_ranges_sets        = optional(map(list(string)), {})
+    folder_ids              = optional(map(string), {})
+    iam_principals          = optional(map(string), {})
+    locations               = optional(map(string), {})
+    networks                = optional(map(string), {})
+    project_ids             = optional(map(string), {})
+    security_profile_groups = optional(map(string), {})
+    tag_values              = optional(map(string), {})
     tag_vars = optional(object({
       projects     = optional(map(map(string)), {})
       organization = optional(map(string), {})

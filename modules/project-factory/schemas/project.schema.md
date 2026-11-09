@@ -32,7 +32,9 @@
   <br>*additional properties: false*
   - **prefix**: *string*
   - ⁺**project**: *string*
-  - **bucket**: *reference([bucket](#refs-bucket))*
+  - **bucket**: *oneof*
+    - *null*
+    - *reference([bucket](#refs-bucket))*
   - **service_accounts**: *object*
     <br>*additional properties: false*
     - **`^[a-z0-9-]+$`**: *object*
@@ -60,6 +62,10 @@
 - **billing_budgets**: *array*
   - items: *string*
 - **buckets**: *reference([buckets](#refs-buckets))*
+- **cloud_armor_policy**: *object*
+  <br>*additional properties: false*
+  - **name**: *string*
+  - ⁺**policy_id**: *string*
 - **contacts**: *object*
   <br>*additional properties: false*
   - **`^(\S+@\S+\.\S+|\$email_addresses:\S+)$`**: *array*
@@ -186,10 +192,20 @@
             - **protection_level**: *string*
               <br>*default: SOFTWARE*, *enum: ['SOFTWARE', 'HSM', 'EXTERNAL', 'EXTERNAL_VPC']*
 - **labels**: *reference([labels](#refs-labels))*
+- **lien_reason**: *string*
 - **pam_entitlements**: *reference([pam_entitlements](#refs-pam_entitlements))*
 - **log_buckets**: *object*
   <br>*additional properties: false*
   - **`^[a-zA-Z0-9_-]+$`**: *reference([log_bucket](#refs-log_bucket))*
+- **log_scopes**: *object*
+  <br>*additional properties: false*
+  - **`^[a-zA-Z0-9_-]+$`**: *object*
+    <br>*additional properties: false*
+    - **description**: *string*
+    - ⁺**resource_names**: *array*
+      - items: *string*
+- **logging_exclusions**: *object*
+  <br>*additional properties: string*
 - **logging_sinks**: *object*
   <br>*additional properties: false*
   - **`^[a-zA-Z0-9_-]+$`**: *reference([logging_sink](#refs-logging_sink))*
@@ -250,7 +266,7 @@
     - **ignore_safety_checks**: *string*
       <br>*enum: ['QUOTA_DECREASE_BELOW_USAGE', 'QUOTA_DECREASE_PERCENTAGE_TOO_HIGH', 'QUOTA_SAFETY_CHECK_UNSPECIFIED']*
 - **parent**: *string*
-- **prefix**: *string*
+- **prefix**: *(string|null)*
 - **project_reuse**: *object*
   <br>*additional properties: false*
   - **use_data_source**: *boolean*
@@ -629,7 +645,7 @@
     - items: *string*
 - **iam_folder_roles**<a name="refs-iam_folder_roles"></a>: *object*
   <br>*additional properties: false*
-  - **`^[a-z0-9-]+$`**: *array*
+  - **`^(?:(folders/)?[a-z0-9-]+|\$folder_ids:[a-z0-9_/-]+)$`**: *array*
     - items: *string*
 - **iam_organization_roles**<a name="refs-iam_organization_roles"></a>: *object*
   <br>*additional properties: false*
@@ -637,7 +653,7 @@
     - items: *string*
 - **iam_project_roles**<a name="refs-iam_project_roles"></a>: *object*
   <br>*additional properties: false*
-  - **`^(?:[a-z0-9-]|\$project_ids:[a-z0-9_-])+$`**: *array*
+  - **`^(?:([a-z0-9.]+:)?[a-z0-9-]+|\$project_ids:[a-z0-9_/-]+)$`**: *array*
     - items: *string*
 - **iam_sa_roles**<a name="refs-iam_sa_roles"></a>: *object*
   <br>*additional properties: false*
@@ -645,7 +661,7 @@
     - items: *string*
 - **iam_storage_roles**<a name="refs-iam_storage_roles"></a>: *object*
   <br>*additional properties: false*
-  - **`^[a-z0-9-]+$`**: *array*
+  - **`^(?:[a-z0-9_.-]+|\$storage_buckets:[a-z0-9_/-]+)$`**: *array*
     - items: *string*
 - **log_bucket**<a name="refs-log_bucket"></a>: *object*
   <br>*additional properties: false*
