@@ -7,22 +7,7 @@ Note that this module assumes that some options are the same for both the primar
 *Warning:* if you use the `users` field, you terraform state will contain each user's password in plain text.
 
 <!-- BEGIN TOC -->
-- [Examples](#examples)
-  - [Simple example](#simple-example)
-  - [Cross-regional read replica](#cross-regional-read-replica)
-  - [Custom flags, databases and users](#custom-flags-databases-and-users)
-  - [CMEK encryption](#cmek-encryption)
-  - [Instance with PSC enabled](#instance-with-psc-enabled)
-  - [Instance with PSC auto connections](#instance-with-psc-auto-connections)
-  - [Enable public IP](#enable-public-ip)
-  - [Query Insights](#query-insights)
-  - [Dataplex integration](#dataplex-integration)
-  - [Maintenance Config](#maintenance-config)
-  - [SSL Config](#ssl-config)
-  - [Password Validation Policy and Root Password Config](#password-validation-policy-and-root-password-config)
-- [Variables](#variables)
-- [Outputs](#outputs)
-- [Fixtures](#fixtures)
+
 <!-- END TOC -->
 
 ## Examples
@@ -543,8 +528,4 @@ module "db" {
 | [self_link](outputs.tf#L114) | Self link of the primary instance. |  |
 | [self_links](outputs.tf#L119) | Self links of all instances. |  |
 | [user_passwords](outputs.tf#L127) | Map of containing the password of all users created through terraform. | ✓ |
-
-## Fixtures
-
-- [iam-service-account.tf](../../tests/fixtures/iam-service-account.tf)
 <!-- END TFDOC -->

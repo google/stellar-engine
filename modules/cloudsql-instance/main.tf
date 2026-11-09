@@ -146,7 +146,11 @@ resource "google_sql_database_instance" "primary" {
         network_attachment_uri             = try(var.network_config.connectivity.psc_config.network_attachment_uri, null)
         psc_auto_connection_policy_enabled = try(var.network_config.connectivity.psc_config.psc_auto_connection_policy_enabled, null)
         psc_auto_dns_enabled               = try(var.network_config.connectivity.psc_config.psc_auto_dns_enabled, null)
-        psc_write_endpoint_dns_enabled     = try(var.network_config.connectivity.psc_config.psc_write_endpoint_dns_enabled, null)
+        psc_write_endpoint_dns_enabled = (
+          var.edition == "ENTERPRISE_PLUS"
+          ? try(var.network_config.connectivity.psc_config.psc_write_endpoint_dns_enabled, null)
+          : null
+        )
 
         dynamic "psc_auto_connections" {
           for_each = local.psc_auto_connections
@@ -353,7 +357,6 @@ resource "google_sql_database_instance" "replicas" {
         network_attachment_uri             = try(var.network_config.connectivity.psc_config.network_attachment_uri, null)
         psc_auto_connection_policy_enabled = try(var.network_config.connectivity.psc_config.psc_auto_connection_policy_enabled, null)
         psc_auto_dns_enabled               = try(var.network_config.connectivity.psc_config.psc_auto_dns_enabled, null)
-        psc_write_endpoint_dns_enabled     = try(var.network_config.connectivity.psc_config.psc_write_endpoint_dns_enabled, null)
 
         dynamic "psc_auto_connections" {
           for_each = local.psc_auto_connections

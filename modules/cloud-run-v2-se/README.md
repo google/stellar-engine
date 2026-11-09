@@ -3,23 +3,7 @@
 Cloud Run Services and Jobs, with support for IAM roles and Eventarc trigger creation. This module uses provider default value for `deletion_protection`, which means service is by default protected from removal (or reprovisioning).
 
 <!-- BEGIN TOC -->
-- [IAM and environment variables](#iam-and-environment-variables)
-- [Mounting secrets as volumes](#mounting-secrets-as-volumes)
-- [Mounting GCS buckets](#mounting-gcs-buckets)
-- [Connecting to Cloud SQL database](#connecting-to-cloud-sql-database)
-- [Direct VPC Egress](#direct-vpc-egress)
-- [VPC Access Connector](#vpc-access-connector)
-- [Using Customer-Managed Encryption Key](#using-customer-managed-encryption-key)
-- [Eventarc triggers](#eventarc-triggers)
-  - [PubSub](#pubsub)
-  - [Audit logs](#audit-logs)
-  - [Using custom service accounts for triggers](#using-custom-service-accounts-for-triggers)
-- [Cloud Run Service Account](#cloud-run-service-account)
-- [Creating Cloud Run Jobs](#creating-cloud-run-jobs)
-- [Tag bindings](#tag-bindings)
-- [Variables](#variables)
-- [Outputs](#outputs)
-- [Fixtures](#fixtures)
+
 <!-- END TOC -->
 
 ## IAM and environment variables
@@ -30,7 +14,7 @@ IAM bindings support the usual syntax. Container environment values can be decla
 module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
-  name       = "hello"
+  name       = "example-hello"
   region     = var.region
   containers = {
     hello = {
@@ -42,7 +26,7 @@ module "cloud_run" {
       env_from_key = {
         SECRET1 = {
           secret  = module.secret-manager.secrets["credentials"].name
-          version = module.secret-manager.version_versions["credentials:v1"]
+          version = module.secret-manager.version_versions["credentials/v1"]
         }
       }
     }
@@ -52,7 +36,7 @@ module "cloud_run" {
   }
   deletion_protection = false
 }
-# tftest modules=2 resources=5 fixtures=fixtures/secret-credentials.tf inventory=service-iam-env.yaml e2e
+# tftest fixtures=fixtures/secret-credentials.tf inventory=service-iam-env.yaml e2e skip-tofu
 ```
 
 ## Mounting secrets as volumes
@@ -61,7 +45,7 @@ module "cloud_run" {
 module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
-  name       = "hello"
+  name       = "example-hello"
   region     = var.region
   containers = {
     hello = {
@@ -82,7 +66,7 @@ module "cloud_run" {
   }
   deletion_protection = false
 }
-# tftest modules=2 resources=4 fixtures=fixtures/secret-credentials.tf inventory=service-volume-secretes.yaml e2e
+# tftest fixtures=fixtures/secret-credentials.tf inventory=service-volume-secretes.yaml e2e skip-tofu
 ```
 
 ## Mounting GCS buckets
@@ -91,7 +75,7 @@ module "cloud_run" {
 module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
-  name       = "hello"
+  name       = "example-hello"
   region     = var.region
   containers = {
     hello = {
@@ -101,7 +85,7 @@ module "cloud_run" {
       }
     }
   }
-  revision = {
+  service_config = {
     gen2_execution_environment = true
   }
   volumes = {
@@ -128,7 +112,7 @@ module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
   region     = var.region
-  name       = "hello"
+  name       = "example-hello"
   containers = {
     hello = {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
@@ -148,11 +132,12 @@ module "cloud_run" {
 ```
 
 ## Direct VPC Egress
+
 ```hcl
 module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
-  name       = "hello"
+  name       = "example-hello"
   region     = var.region
   containers = {
     hello = {
@@ -160,18 +145,20 @@ module "cloud_run" {
     }
   }
   revision = {
-    gen2_execution_environment = true
-    max_instance_count         = 20
     vpc_access = {
       egress = "ALL_TRAFFIC"
       subnet = var.subnet.name
       tags   = ["tag1", "tag2", "tag3"]
     }
   }
+  service_config = {
+    gen2_execution_environment = true
+    max_instance_count         = 20
+  }
   deletion_protection = false
 }
 # E2E test disabled due to b/332419038
-# tftest modules=1 resources=1 inventory=service-direct-vpc.yaml
+# tftest inventory=service-direct-vpc.yaml
 ```
 
 ## VPC Access Connector
@@ -182,14 +169,14 @@ You can use an existing [VPC Access Connector](https://cloud.google.com/vpc/docs
 module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
-  region     = var.region
-  name       = "hello"
+  region     = var.regions.secondary
+  name       = "example-hello"
   containers = {
     hello = {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
     }
   }
-  revision = {
+  service_config = {
     vpc_access = {
       connector = google_vpc_access_connector.connector.id
       egress    = "ALL_TRAFFIC"
@@ -197,17 +184,17 @@ module "cloud_run" {
   }
   deletion_protection = false
 }
-# tftest modules=1 resources=2 fixtures=fixtures/vpc-connector.tf inventory=service-vpc-access-connector.yaml e2e
+# tftest fixtures=fixtures/vpc-connector.tf inventory=service-vpc-access-connector.yaml e2e
 ```
 
-If creation of the VPC Access Connector is required, use the `vpc_connector_create` variable which also supports optional attributes like number of instances, machine type, or throughput. The connector will be used automatically.
+If creation of the VPC Access Connector is required, use the `vpc_connector_create` variable which also supports optional attributes like number of instances, machine type, or throughput. The connector will be used automatically by Cloud Run Service and Job. Worker Pool does not support connector.
 
 ```hcl
 module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
   region     = var.region
-  name       = "hello"
+  name       = "example-hello"
   containers = {
     hello = {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
@@ -223,7 +210,7 @@ module "cloud_run" {
   }
   deletion_protection = false
 }
-# tftest modules=1 resources=2 inventory=service-vpc-access-connector-create.yaml e2e
+# tftest inventory=service-vpc-access-connector-create.yaml e2e
 ```
 
 Note that if you are using a Shared VPC for the connector, you need to specify a subnet and the host project if this is not where the Cloud Run service is deployed.
@@ -233,7 +220,7 @@ module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = module.project-service.project_id
   region     = var.region
-  name       = "hello"
+  name       = "example-hello"
   containers = {
     hello = {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
@@ -252,7 +239,7 @@ module "cloud_run" {
   }
   deletion_protection = false
 }
-# tftest modules=4 resources=55 fixtures=fixtures/shared-vpc.tf inventory=service-vpc-access-connector-create-sharedvpc.yaml e2e
+# tftest fixtures=fixtures/shared-vpc.tf inventory=service-vpc-access-connector-create-sharedvpc.yaml e2e
 ```
 
 ## Using Customer-Managed Encryption Key
@@ -294,7 +281,7 @@ module "cloud_run" {
   source         = "./fabric/modules/cloud-run-v2"
   project_id     = module.project.project_id
   region         = var.region
-  name           = "hello"
+  name           = "example-hello"
   encryption_key = module.kms.keys.key-regional.id
   containers = {
     hello = {
@@ -303,7 +290,251 @@ module "cloud_run" {
   }
   deletion_protection = false
 }
-# tftest modules=3 resources=11 e2e
+# tftest inventory=cmek.yaml e2e
+```
+
+## Deploying OpenTelemetry Collector sidecar
+
+```yaml
+# Reference: https://cloud.google.com/stackdriver/docs/instrumentation/opentelemetry-collector-cloud-run#gotc-provided-config
+
+receivers:
+  # Open two OTLP servers:
+  # - On port 4317, open an OTLP GRPC server
+  # - On port 4318, open an OTLP HTTP server
+  #
+  # Docs:
+  # https://github.com/open-telemetry/opentelemetry-collector/tree/main/receiver/otlpreceiver
+  otlp:
+    protocols:
+      grpc:
+        endpoint: localhost:4317
+      http:
+        cors:
+          # This effectively allows any origin
+          # to make requests to the HTTP server.
+          allowed_origins:
+          - http://*
+          - https://*
+        endpoint: localhost:4318
+
+  # Using the prometheus scraper, scrape the Collector's self metrics.
+  #
+  # Docs:
+  # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/prometheusreceiver
+  # https://opentelemetry.io/docs/collector/internal-telemetry/
+  prometheus/self-metrics:
+    config:
+      scrape_configs:
+      - job_name: otel-self-metrics
+        scrape_interval: 1m
+        static_configs:
+        - targets:
+          - localhost:8888
+
+processors:
+  # The batch processor is in place to regulate both the number of requests
+  # being made and the size of those requests.
+  #
+  # Docs:
+  # https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor/batchprocessor
+  batch:
+    send_batch_max_size: 200
+    send_batch_size: 200
+    timeout: 5s
+
+  # The memorylimiter will check the memory usage of the collector process.
+  #
+  # Docs:
+  # https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor/memorylimiterprocessor
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 65
+    spike_limit_percentage: 20
+
+  # The resourcedetection processor is configured to detect GCP resources.
+  # Resource attributes that represent the GCP resource the collector is
+  # running on will be attached to all telemetry that goes through this
+  # processor.
+  #
+  # Docs:
+  # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/resourcedetectionprocessor
+  # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/resourcedetectionprocessor#gcp-metadata
+  resourcedetection:
+    detectors: [gcp]
+    timeout: 10s
+
+  # The transform/collision processor ensures that any attributes that may
+  # collide with the googlemanagedprometheus exporter's monitored resource
+  # construction are moved to a similar name that is not reserved.
+  transform/collision:
+    metric_statements:
+    - context: datapoint
+      statements:
+      - set(attributes["exported_location"], attributes["location"])
+      - delete_key(attributes, "location")
+      - set(attributes["exported_cluster"], attributes["cluster"])
+      - delete_key(attributes, "cluster")
+      - set(attributes["exported_namespace"], attributes["namespace"])
+      - delete_key(attributes, "namespace")
+      - set(attributes["exported_job"], attributes["job"])
+      - delete_key(attributes, "job")
+      - set(attributes["exported_instance"], attributes["instance"])
+      - delete_key(attributes, "instance")
+      - set(attributes["exported_project_id"], attributes["project_id"])
+      - delete_key(attributes, "project_id")
+
+exporters:
+  # The googlecloud exporter will export telemetry to different
+  # Google Cloud services:
+  # Logs -> Cloud Logging
+  # Metrics -> Cloud Monitoring
+  # Traces -> Cloud Trace
+  #
+  # Docs:
+  # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/googlecloudexporter
+  googlecloud:
+    log:
+      default_log_name: opentelemetry-collector
+
+  # The googlemanagedprometheus exporter will send metrics to
+  # Google Managed Service for Prometheus.
+  #
+  # Docs:
+  # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/googlemanagedprometheusexporter
+  googlemanagedprometheus:
+
+extensions:
+  # Opens an endpoint on 13133 that can be used to check the
+  # status of the collector. Since this does not configure the
+  # `path` config value, the endpoint will default to `/`.
+  #
+  # When running on Cloud Run, this extension is required and not optional.
+  # In other environments it is recommended but may not be required for operation
+  # (i.e. in Container-Optimized OS or other GCE environments).
+  #
+  # Docs:
+  # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/healthcheckextension
+  health_check:
+    endpoint: 0.0.0.0:13133
+
+service:
+  extensions:
+  - health_check
+  pipelines:
+    logs:
+      receivers:
+      - otlp
+      processors:
+      - resourcedetection
+      - memory_limiter
+      - batch
+      exporters:
+      - googlecloud
+    metrics/otlp:
+      receivers:
+      - otlp
+      processors:
+      - transform/collision
+      - resourcedetection
+      - memory_limiter
+      - batch
+      exporters:
+      - googlemanagedprometheus
+    metrics/self-metrics:
+      receivers:
+      - prometheus/self-metrics
+      processors:
+      - resourcedetection
+      - memory_limiter
+      - batch
+      exporters:
+      - googlemanagedprometheus
+    traces:
+      receivers:
+      - otlp
+      processors:
+      - resourcedetection
+      - memory_limiter
+      - batch
+      exporters:
+      - googlecloud
+  telemetry:
+    metrics:
+      address: localhost:8888
+
+# tftest-file id=otel-config path=config/otel-config.yaml
+```
+
+```hcl
+module "secrets" {
+  source     = "./fabric/modules/secret-manager"
+  project_id = var.project_id
+  secrets = {
+    otel-config = {
+      iam = {
+        "roles/secretmanager.secretAccessor" = [module.cloud_run.service_account_iam_email]
+      }
+      versions = {
+        v1 = {
+          data = {
+            value = file("${path.module}/config/otel-config.yaml")
+          }
+        }
+      }
+    }
+  }
+}
+module "cloud_run" {
+  source     = "./fabric/modules/cloud-run-v2"
+  project_id = var.project_id
+  region     = var.region
+  name       = "example-hello"
+  containers = {
+    hello = {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+      ports = {
+        default = {
+          container_port = 3000
+        }
+      }
+      depends_on = ["collector"]
+    }
+    collector = {
+      image = "us-docker.pkg.dev/cloud-ops-agents-artifacts/google-cloud-opentelemetry-collector/otelcol-google:0.122.1"
+      startup_probe = {
+        http_get = {
+          path = "/"
+          port = 13133
+        }
+        timeout_seconds = 30
+        period_seconds  = 30
+      }
+      liveness_probe = {
+        http_get = {
+          path = "/"
+          port = 13133
+        }
+        timeout_seconds = 30
+        period_seconds  = 30
+      }
+      volume_mounts = {
+        "otel-config" = "/etc/otelcol-google/"
+      }
+    }
+  }
+  volumes = {
+    otel-config = {
+      secret = {
+        name    = "otel-config"
+        version = "1"
+        path    = "config.yaml"
+      }
+    }
+  }
+  deletion_protection = false
+}
+# tftest files=otel-config inventory=service-otel-sidecar.yaml e2e skip-tofu
 ```
 
 ## Eventarc triggers
@@ -317,20 +548,22 @@ module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
   region     = var.region
-  name       = "hello"
+  name       = "example-hello"
   containers = {
     hello = {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
     }
   }
-  eventarc_triggers = {
-    pubsub = {
-      topic-1 = module.pubsub.topic.name
+  service_config = {
+    eventarc_triggers = {
+      pubsub = {
+        topic-1 = module.pubsub.topic.name
+      }
     }
   }
   deletion_protection = false
 }
-# tftest modules=2 resources=4 fixtures=fixtures/pubsub.tf inventory=service-eventarc-pubsub.yaml e2e
+# tftest fixtures=fixtures/pubsub.tf inventory=service-eventarc-pubsub.yaml e2e
 ```
 
 ### Audit logs
@@ -342,123 +575,192 @@ module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
   region     = var.region
-  name       = "hello"
+  name       = "example-hello"
   containers = {
     hello = {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
     }
   }
-  eventarc_triggers = {
-    audit_log = {
-      setiampolicy = {
-        method  = "SetIamPolicy"
-        service = "cloudresourcemanager.googleapis.com"
+  service_config = {
+    eventarc_triggers = {
+      audit_log = {
+        setiampolicy = {
+          method  = "SetIamPolicy"
+          service = "cloudresourcemanager.googleapis.com"
+        }
       }
+      service_account_email = module.iam-service-account.email
     }
-    service_account_create = true
+  }
+  iam = {
+    "roles/run.invoker" = [module.iam-service-account.iam_email]
   }
   deletion_protection = false
+  depends_on          = [google_project_iam_member.eventarc_receiver]
 }
-# tftest modules=1 resources=4 inventory=service-eventarc-auditlogs-sa-create.yaml
+
+resource "google_project_iam_member" "eventarc_receiver" {
+  project = var.project_id
+  role    = "roles/eventarc.eventReceiver"
+  member  = module.iam-service-account.iam_email
+}
+# tftest fixtures=fixtures/iam-service-account.tf inventory=service-eventarc-auditlogs-external-sa.yaml e2e
 ```
 
-### Using custom service accounts for triggers
+### GCS bucket
 
-By default `Compute default service account` is used to trigger Cloud Run. If you want to use custom Service Accounts you can either provide your own in `eventarc_triggers.service_account_email` or set `eventarc_triggers.service_account_create` to true and service account named `tf-cr-trigger-${var.name}` will be created with `roles/run.invoker` granted on this Cloud Run service.
-
-Example using provided service account:
+This deploys a Cloud Run service that will be triggered when files are uploaded to a GCS bucket.
 
 ```hcl
 module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
   region     = var.region
-  name       = "hello"
+  name       = "example-hello"
   containers = {
     hello = {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
     }
   }
-  eventarc_triggers = {
-    audit_log = {
-      setiampolicy = {
-        method  = "SetIamPolicy"
-        service = "cloudresourcemanager.googleapis.com"
+  service_config = {
+    eventarc_triggers = {
+      storage = {
+        bucket-upload = {
+          bucket = module.gcs.name
+          path   = "/webhook" # optional: URL path for the Cloud Run service
+        }
       }
+      service_account_email = module.iam-service-account.email
     }
-    service_account_email = "cloud-run-trigger@my-project.iam.gserviceaccount.com"
   }
+  deletion_protection = false
+  depends_on = [
+    google_project_iam_member.gcs_pubsb_publisher,
+    google_project_iam_member.trigger_sa_event_receiver,
+  ]
 }
-# tftest modules=1 resources=2 inventory=service-eventarc-auditlogs-external-sa.yaml
+
+resource "google_project_iam_member" "trigger_sa_event_receiver" {
+  member  = module.iam-service-account.iam_email
+  project = var.project_id
+  role    = "roles/eventarc.eventReceiver"
+}
+
+resource "google_project_iam_member" "gcs_pubsb_publisher" {
+  member  = "serviceAccount:service-${var.project_number}@gs-project-accounts.iam.gserviceaccount.com"
+  project = var.project_id
+  role    = "roles/pubsub.publisher"
+}
+
+# tftest fixtures=fixtures/gcs.tf,fixtures/iam-service-account.tf inventory=service-eventarc-storage.yaml e2e
 ```
 
-Example using automatically created service account:
+## Cloud Run Invoker IAM Disable
+
+To disables IAM permission check for `run.routes.invoke` for callers of this service set the `invoker_iam_disabled` variable of the module to `true` (default `false`). There should be no requirement to pass the `roles/run.invoker` to the IAM block to enable public access. This allows for the org policy `domain restricted sharing` org policy remain enabled.
 
 ```hcl
 module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
   region     = var.region
-  name       = "hello"
+  name       = "example-hello"
   containers = {
     hello = {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
     }
   }
-  eventarc_triggers = {
-    pubsub = {
-      topic-1 = module.pubsub.topic.name
-    }
-    service_account_create = true
+  service_config = {
+    invoker_iam_disabled = true
   }
   deletion_protection = false
 }
-# tftest modules=2 resources=6 fixtures=fixtures/pubsub.tf inventory=service-eventarc-pubsub-sa-create.yaml e2e
+# tftest inventory=service-invoker-iam-disable.yaml e2e
 ```
 
 ## Cloud Run Service Account
 
-To use a custom service account managed by the module, set `service_account_create` to `true` and leave `service_account` set to `null` (default).
+The module by default creates a service account that is associated with the Cloud Run instance. It grants the service account `roles/logging.logWriter` and `roles/monitoring.metricWriter` roles.
+
+To assign non-default roles, pass them as `service_account_config.roles`.
 
 ```hcl
 module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
   region     = var.region
-  name       = "hello"
+  name       = "example-hello"
   containers = {
     hello = {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
     }
   }
-  service_account_create = true
-  deletion_protection    = false
-}
-# tftest modules=1 resources=2 inventory=service-sa-create.yaml e2e
-```
-
-To use an externally managed service account, use its email in `service_account` and leave `service_account_create` to `false` (default).
-
-```hcl
-module "cloud_run" {
-  source     = "./fabric/modules/cloud-run-v2"
-  project_id = var.project_id
-  region     = var.region
-  name       = "hello"
-  containers = {
-    hello = {
-      image = "us-docker.pkg.dev/cloudrun/container/hello"
-    }
+  service_account_config = {
+    roles = [
+      "roles/logging.logWriter",
+      "roles/monitoring.metricWriter",
+      "roles/cloudsql.client",
+      "roles/cloudsql.instanceUser",
+    ]
   }
-  service_account     = module.iam-service-account.email
   deletion_protection = false
 }
-# tftest modules=2 resources=2 fixtures=fixtures/iam-service-account.tf inventory=service-external-sa.yaml e2e
+# tftest inventory=service-sa-create.yaml e2e
+```
+
+To use externally managed service account, pass its email in `service_account_config.email` and set `service_account_config.email` to `false`.
+
+```hcl
+module "cloud_run" {
+  source     = "./fabric/modules/cloud-run-v2"
+  project_id = var.project_id
+  region     = var.region
+  name       = "example-hello"
+  containers = {
+    hello = {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+    }
+  }
+  service_account_config = {
+    create = false
+    email  = module.iam-service-account.email
+  }
+  deletion_protection = false
+}
+# tftest fixtures=fixtures/iam-service-account.tf inventory=service-external-sa.yaml e2e
+```
+
+### Workload and agent identities
+
+Services can run under a Cloud Run managed identity instead of a service account, via `service_config.workload_identity_config`. This is what [Agent Platform](https://cloud.google.com/run/docs/ai/agent-platform-features) features build on: a workload with identity type `IDENTITY_TYPE_AGENT_IDENTITY` is assigned a system-managed SPIFFE identity and registered in the Agent Registry.
+
+When identity type is not `IDENTITY_TYPE_SERVICE_ACCOUNT` the module creates no service account and binds no roles, as there is no service account to bind them to. Cloud Run does not expose the resolved principal as an attribute, so roles for the managed identity need to be granted outside this module.
+
+```hcl
+module "cloud_run" {
+  source     = "./fabric/modules/cloud-run-v2"
+  project_id = var.project_id
+  region     = var.region
+  name       = "example-agent"
+  containers = {
+    hello = {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+    }
+  }
+  service_config = {
+    workload_identity_config = {
+      certificate_enabled = true
+      identity_type       = "IDENTITY_TYPE_AGENT_IDENTITY"
+    }
+  }
+  deletion_protection = false
+}
+# tftest inventory=service-agent-identity.yaml
 ```
 
 ## Creating Cloud Run Jobs
 
-To create a job instead of service set `create_job` to `true`. Jobs support all functions above apart from triggers.
+To create a job instead of service set `type` to `JOB`. Jobs support all functions above apart from triggers.
 
 Unsupported variables / attributes:
 
@@ -470,13 +772,19 @@ Unsupported variables / attributes:
 - containers.resources.cpu_idle
 - containers.resources.startup_cpu_boost
 
+Additional configuration can be passwed as `job_config`:
+
+- max_retries - maximum of retries per task
+- task_count - desired number of tasks
+- timeout - max allowed time per task, in seconds with up to nine fractional digits, ending with 's'. Example: `3.5s`
+
 ```hcl
 module "cloud_run" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
-  name       = "hello"
+  name       = "example-hello"
   region     = var.region
-  create_job = true
+  type       = "JOB"
   containers = {
     hello = {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
@@ -492,19 +800,26 @@ module "cloud_run" {
   deletion_protection = false
 }
 
-# tftest modules=1 resources=2 inventory=job-iam-env.yaml e2e
+# tftest inventory=job-iam-env.yaml e2e
 ```
 
 ## Tag bindings
 
-Tag bindings are not yet supported for jobs. Refer to the [Creating and managing tags](https://cloud.google.com/resource-manager/docs/tags/tags-creating-and-managing) documentation for details on usage.
+Tag bindings are not yet supported for Worker Pool. Refer to the [Creating and managing tags](https://cloud.google.com/resource-manager/docs/tags/tags-creating-and-managing) documentation for details on usage.
 
 ```hcl
-module "org" {
-  source          = "./fabric/modules/organization"
-  organization_id = var.organization_id
+module "project" {
+  source = "./fabric/modules/project"
+  name   = var.project_id
+  project_reuse = {
+    use_data_source = false
+    attributes = {
+      name   = var.project_id
+      number = var.project_number
+    }
+  }
   tags = {
-    environment = {
+    run_environment = {
       description = "Environment specification."
       values = {
         dev     = {}
@@ -515,28 +830,244 @@ module "org" {
   }
 }
 
-module "cloud_run" {
+module "cloud_run_service" {
   source     = "./fabric/modules/cloud-run-v2"
   project_id = var.project_id
-  name       = "hello"
+  name       = "hello-service"
   region     = var.region
   containers = {
     hello = {
       image = "us-docker.pkg.dev/cloudrun/container/hello"
-      env = {
-        VAR1 = "VALUE1"
-        VAR2 = "VALUE2"
+    }
+  }
+  tag_bindings = {
+    env-sandbox = module.project.tag_values["run_environment/sandbox"].id
+  }
+  deletion_protection = false
+}
+
+module "cloud_run_job" {
+  source     = "./fabric/modules/cloud-run-v2"
+  project_id = var.project_id
+  name       = "hello-job"
+  region     = var.region
+  type       = "JOB"
+  containers = {
+    hello = {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+    }
+  }
+  tag_bindings = {
+    env-sandbox = module.project.tag_values["run_environment/sandbox"].id
+  }
+  deletion_protection = false
+}
+
+# tftest inventory=tags.yaml e2e
+```
+
+## IAP Configuration
+
+IAP is only supported for service. Refer to the [Configure IAP directly on cloud run](https://cloud.google.com/run/docs/securing/identity-aware-proxy-cloud-run) documentation for details on usage.
+
+```hcl
+module "cloud_run" {
+  source     = "./fabric/modules/cloud-run-v2"
+  project_id = var.project_id
+  name       = "example-hello"
+  region     = var.region
+  containers = {
+    hello = {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+    }
+  }
+  service_config = {
+    iap_config = {
+      iam = ["group:${var.group_email}"]
+    }
+  }
+  deletion_protection = false
+}
+# tftest inventory=iap.yaml e2e
+```
+
+## Adding GPUs
+
+GPU support is available for all types of Cloud Run resources: jobs, services and worker pools.
+
+```hcl
+module "job" {
+  source     = "./fabric/modules/cloud-run-v2"
+  project_id = var.project_id
+  name       = "example-job"
+  region     = var.region
+  revision = {
+    gpu_zonal_redundancy_disabled = true
+    node_selector = {
+      accelerator = "nvidia-l4"
+    }
+  }
+  type = "JOB"
+  containers = {
+    hello = {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+      resources = {
+        limits = {
+          cpu              = "4000m"
+          memory           = "16Gi"
+          "nvidia.com/gpu" = "1"
+        }
       }
     }
   }
-  iam = {
-    "roles/run.invoker" = ["allUsers"]
-  }
-  tag_bindings = {
-    env-sandbox = module.org.tag_values["environment/sandbox"].id
-  }
+  deletion_protection = false
 }
-# tftest modules=2 resources=7
+# tftest inventory=gpu-job.yaml
+```
+
+```hcl
+module "service" {
+  source     = "./fabric/modules/cloud-run-v2"
+  project_id = var.project_id
+  name       = "service"
+  region     = var.region
+  revision = {
+    gpu_zonal_redundancy_disabled = true
+    node_selector = {
+      accelerator = "nvidia-l4"
+    }
+  }
+  service_config = {
+    gen2_execution_environment = true
+  }
+  containers = {
+    hello = {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+      resources = {
+        limits = {
+          cpu              = "4000m"
+          memory           = "16Gi"
+          "nvidia.com/gpu" = "1"
+        }
+      }
+    }
+  }
+  deletion_protection = false
+}
+# tftest inventory=gpu-service.yaml e2e
+```
+
+```hcl
+module "worker" {
+  source     = "./fabric/modules/cloud-run-v2"
+  project_id = var.project_id
+  name       = "worker"
+  region     = var.region
+  revision = {
+    gpu_zonal_redundancy_disabled = true
+    node_selector = {
+      accelerator = "nvidia-l4"
+    }
+  }
+  type = "WORKERPOOL"
+  containers = {
+    hello = {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+      resources = {
+        limits = {
+          cpu              = "4000m"
+          memory           = "16Gi"
+          "nvidia.com/gpu" = "1"
+        }
+      }
+    }
+  }
+  deletion_protection = false
+}
+# tftest inventory=gpu-workerpool.yaml e2e
+```
+
+## Multi-Region Service
+
+```hcl
+module "cloud_run" {
+  source     = "./fabric/modules/cloud-run-v2"
+  project_id = var.project_id
+  region     = "global"
+  name       = "example-mr"
+  containers = {
+    hello = {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+    }
+  }
+  service_config = {
+    ingress = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
+    multi_region_settings = {
+      regions = ["europe-west8", "europe-west1"]
+    }
+  }
+  deletion_protection = false
+}
+# tftest inventory=multiregion.yaml
+```
+
+## Traffic Splitting and Revision Tagging
+
+```hcl
+module "cloud_run" {
+  source     = "./fabric/modules/cloud-run-v2"
+  project_id = var.project_id
+  region     = var.region
+  name       = "example-traffic"
+  containers = {
+    hello = {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+    }
+  }
+  service_config = {
+    traffic = [
+      {
+        percent  = 90
+        revision = "example-traffic-v1"
+        type     = "TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION"
+      },
+      {
+        percent  = 10
+        revision = "example-traffic-v2"
+        tag      = "candidate"
+        type     = "TRAFFIC_TARGET_ALLOCATION_TYPE_REVISION"
+      }
+    ]
+  }
+  deletion_protection = false
+}
+# tftest inventory=traffic.yaml
+```
+
+## Security Configurations
+
+You can enable Binary Authorization to verify container image signatures and disable the default `*.a.run.app` URL when routing traffic exclusively through internal networks or Application Load Balancers:
+
+```hcl
+module "cloud_run" {
+  source     = "./fabric/modules/cloud-run-v2"
+  project_id = var.project_id
+  region     = var.region
+  name       = "example-security"
+  containers = {
+    hello = {
+      image = "us-docker.pkg.dev/cloudrun/container/hello"
+    }
+  }
+  binary_authorization = {
+    use_default = true
+  }
+  service_config = {
+    default_uri_disabled = true
+  }
+  deletion_protection = false
+}
+# tftest inventory=security.yaml
 ```
 <!-- BEGIN TFDOC -->
 ## Variables
@@ -581,13 +1112,4 @@ module "cloud_run" {
 | [service_name](outputs.tf#L64) | Cloud Run service name. |  |
 | [service_uri](outputs.tf#L69) | Main URI in which the service is serving traffic. |  |
 | [vpc_connector](outputs.tf#L74) | VPC connector resource if created. |  |
-
-## Fixtures
-
-- [cloudsql-instance.tf](../../tests/fixtures/cloudsql-instance.tf)
-- [iam-service-account.tf](../../tests/fixtures/iam-service-account.tf)
-- [pubsub.tf](../../tests/fixtures/pubsub.tf)
-- [secret-credentials.tf](../../tests/fixtures/secret-credentials.tf)
-- [shared-vpc.tf](../../tests/fixtures/shared-vpc.tf)
-- [vpc-connector.tf](../../tests/fixtures/vpc-connector.tf)
 <!-- END TFDOC -->
