@@ -232,28 +232,18 @@ class TestStage2Networking(unittest.TestCase):
                 self.assertIn('region        = "<region>"', sample)
                 self.assertNotRegex(sample, r'region\s*=\s*"us-')
 
-    def test_ncc_factory_symlink_schema_and_stage_integration(self):
-        """Verify Stage 2 NCC factory parity, schema, APIs, and stage hooks."""
+    def test_fedramp_ncc_factory_schema_and_stage_integration(self):
+        """Verify FedRAMP Stage 2 NCC factory, schema, APIs, and outputs."""
         fedramp_factory = _FEDRAMP_NET_DIR / "factory-ncc.tf"
-        il5_factory = _IL5_NET_DIR / "factory-ncc.tf"
-        self.assertTrue(il5_factory.is_file())
-        self.assertFalse(il5_factory.is_symlink())
-        self.assertTrue(fedramp_factory.is_symlink())
-        self.assertEqual(
-            str(fedramp_factory.readlink()),
-            "../2-networking-b-il5-ngfw/factory-ncc.tf",
-        )
+        fedramp_schema = _FEDRAMP_NET_DIR / "schemas/ncc-hub.schema.json"
+        self.assertTrue(fedramp_factory.is_file())
+        self.assertFalse(fedramp_factory.is_symlink())
+        self.assertTrue(fedramp_schema.is_file())
+        self.assertFalse((_FEDRAMP_NET_DIR / "schemas").is_symlink())
+        self.assertFalse((_IL5_NET_DIR / "factory-ncc.tf").exists())
+        self.assertFalse((_IL5_NET_DIR / "schemas").exists())
 
-        fedramp_schemas = _FEDRAMP_NET_DIR / "schemas"
-        il5_schema = _IL5_NET_DIR / "schemas/ncc-hub.schema.json"
-        self.assertTrue(il5_schema.is_file())
-        self.assertTrue(fedramp_schemas.is_symlink())
-        self.assertEqual(
-            str(fedramp_schemas.readlink()),
-            "../2-networking-b-il5-ngfw/schemas",
-        )
-
-        schema = json.loads(il5_schema.read_text(encoding="utf-8"))
+        schema = json.loads(fedramp_schema.read_text(encoding="utf-8"))
         self.assertEqual(
             set(schema["$defs"]["groups"]["properties"]),
             {"default", "center", "edge"},
@@ -263,7 +253,7 @@ class TestStage2Networking(unittest.TestCase):
             {"vpcs", "tunnels", "vlan_attachments", "router_appliances"},
         )
 
-        factory_tf = il5_factory.read_text(encoding="utf-8")
+        factory_tf = fedramp_factory.read_text(encoding="utf-8")
         for expected in (
             'resource "google_network_connectivity_hub" "default"',
             'resource "google_network_connectivity_group" "default"',
@@ -280,45 +270,24 @@ class TestStage2Networking(unittest.TestCase):
         ncc_api_gate = (
             'local._ncc_enabled ? ["networkconnectivity.googleapis.com"]'
         )
-        hub_files = {
-            _FEDRAMP_NET_DIR: "net-hub.tf",
-            _IL5_NET_DIR: "net-vdss.tf",
-        }
-        for stage_dir, hub_file in hub_files.items():
-            with self.subTest(stage=stage_dir.name):
-                hub_tf = (stage_dir / hub_file).read_text(encoding="utf-8")
-                branch_tf = (stage_dir / "branch-net-envs.tf").read_text(
-                    encoding="utf-8"
-                )
-                vars_tf = (stage_dir / "variables.tf").read_text(
-                    encoding="utf-8"
-                )
-                outputs_tf = (stage_dir / "outputs.tf").read_text(
-                    encoding="utf-8"
-                )
-                self.assertIn("_hub_vpcs = {", hub_tf)
-                self.assertIn("_default_ncc_hubs", hub_tf)
-                self.assertIn(ncc_api_gate, hub_tf)
-                self.assertIn(ncc_api_gate, branch_tf)
-                self.assertIn(
-                    "ncc_hubs              = optional(string)", vars_tf
-                )
-                self.assertIn('variable "ncc_hubs"', vars_tf)
-                for out_name in ("ncc_groups", "ncc_hubs", "ncc_spokes"):
-                    self.assertIn(f'output "{out_name}"', outputs_tf)
-
-        il5_branch_tf = (_IL5_NET_DIR / "branch-net-envs.tf").read_text(
+        hub_tf = (_FEDRAMP_NET_DIR / "net-hub.tf").read_text(encoding="utf-8")
+        branch_tf = (_FEDRAMP_NET_DIR / "branch-net-envs.tf").read_text(
             encoding="utf-8"
         )
-        il5_vars_tf = (_IL5_NET_DIR / "variables.tf").read_text(
+        vars_tf = (_FEDRAMP_NET_DIR / "variables.tf").read_text(
             encoding="utf-8"
         )
-        self.assertIn(
-            "for_each = var.enable_hub_and_spoke_peering"
-            " ? var.envs_folders : {}",
-            il5_branch_tf,
+        outputs_tf = (_FEDRAMP_NET_DIR / "outputs.tf").read_text(
+            encoding="utf-8"
         )
-        self.assertIn('variable "enable_hub_and_spoke_peering"', il5_vars_tf)
+        self.assertIn("_hub_vpcs = {", hub_tf)
+        self.assertIn("_default_ncc_hubs", hub_tf)
+        self.assertIn(ncc_api_gate, hub_tf)
+        self.assertIn(ncc_api_gate, branch_tf)
+        self.assertIn("ncc_hubs              = optional(string)", vars_tf)
+        self.assertIn('variable "ncc_hubs"', vars_tf)
+        for out_name in ("ncc_groups", "ncc_hubs", "ncc_spokes"):
+            self.assertIn(f'output "{out_name}"', outputs_tf)
 
 
 if __name__ == "__main__":

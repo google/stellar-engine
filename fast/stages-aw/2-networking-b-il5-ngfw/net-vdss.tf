@@ -16,26 +16,6 @@
 
 # tfdoc:file:description Landing VPC and related resources.
 
-locals {
-  _default_ncc_hubs = {}
-  _hub_project_id   = module.vdss-host-project.project_id
-  _hub_project_aliases = {
-    hub           = module.vdss-host-project.project_id
-    hub-host      = module.vdss-host-project.project_id
-    landing       = module.vdss-host-project.project_id
-    net-vdss-host = module.vdss-host-project.project_id
-    vdss          = module.vdss-host-project.project_id
-    vdss-host     = module.vdss-host-project.project_id
-  }
-  _hub_vpcs = {
-    dmz     = module.dmz-vpc.self_link
-    hub     = module.vdss-vpc.self_link
-    landing = module.vdss-vpc.self_link
-    mgmt    = module.mgmt-vpc.self_link
-    vdss    = module.vdss-vpc.self_link
-  }
-}
-
 module "vdss-host-project" {
   source = "../../../modules/project"
   providers = {
@@ -47,7 +27,7 @@ module "vdss-host-project" {
   lien_reason     = "Protected by default as a core project."
   parent          = var.folder_ids.networking
   prefix          = var.prefix
-  services = concat([
+  services = [
     "compute.googleapis.com",
     "certificatemanager.googleapis.com",
     "dns.googleapis.com",
@@ -57,7 +37,7 @@ module "vdss-host-project" {
     "networkservices.googleapis.com",
     "cloudkms.googleapis.com",
     "secretmanager.googleapis.com"
-  ], local._ncc_enabled ? ["networkconnectivity.googleapis.com"] : [])
+  ]
   shared_vpc_host_config = {
     enabled = true
   }

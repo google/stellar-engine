@@ -48,7 +48,8 @@ module "env-spoke-projects" {
     "servicenetworking.googleapis.com",
     "stackdriver.googleapis.com",
     "vpcaccess.googleapis.com"
-  ], local._ncc_enabled ? ["networkconnectivity.googleapis.com"] : [])
+    ]
+  )
   shared_vpc_host_config = {
     enabled = true
   }
@@ -158,7 +159,7 @@ module "env-spoke-firewall" {
 }
 
 resource "time_sleep" "peering_delay" {
-  for_each = var.enable_hub_and_spoke_peering ? var.envs_folders : {}
+  for_each = var.envs_folders
 
   create_duration = "${index(keys(var.envs_folders), each.key) * 30}s"
 
@@ -171,7 +172,7 @@ resource "time_sleep" "peering_delay" {
 
 module "peering-envs" {
   source   = "../../../modules/net-vpc-peering"
-  for_each = var.enable_hub_and_spoke_peering ? var.envs_folders : {}
+  for_each = var.envs_folders
 
   prefix        = lower("${each.key}-peering-0")
   local_network = time_sleep.peering_delay[each.key].triggers["local_network"]
