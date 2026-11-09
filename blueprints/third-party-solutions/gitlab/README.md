@@ -314,7 +314,7 @@ gitlab-rake “gitlab:password:reset”
 
 | name | description | modules | resources |
 |---|---|---|---|
-| [gitlab.tf](./gitlab.tf) | None | <code>compute-vm</code> · <code>iam-service-account</code> · <code>net-lb-int</code> |  |
+| [gitlab.tf](./gitlab.tf) | None | <code>compute-vm</code> · <code>iam-service-account</code> · <code>net-lb-int</code> | <code>google_secret_manager_secret</code> · <code>google_secret_manager_secret_iam_member</code> · <code>google_secret_manager_secret_version</code> |
 | [main.tf](./main.tf) | Module-level locals and resources. | <code>project</code> |  |
 | [outputs.tf](./outputs.tf) | Module outputs. |  |  |
 | [services.tf](./services.tf) | None | <code>cloudsql-instance</code> · <code>gcs</code> | <code>google_redis_instance</code> |
@@ -325,28 +325,28 @@ gitlab-rake “gitlab:password:reset”
 
 | name | description | type | required | default | producer |
 |---|---|:---:|:---:|:---:|:---:|
-| [network_config](variables.tf#L92) | Shared VPC network configurations to use for Gitlab Runner VM. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |  |
-| [prefix](variables.tf#L101) | Prefix used for resource names. | <code>string</code> | ✓ |  |  |
-| [project_id](variables.tf#L120) | Project id, references existing project if `project_create` is null. | <code>string</code> | ✓ |  |  |
-| [region](variables.tf#L139) | GCP Region. | <code>string</code> | ✓ |  |  |
+| [network_config](variables.tf#L96) | Shared VPC network configurations to use for Gitlab Runner VM. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |  |
+| [prefix](variables.tf#L105) | Prefix used for resource names. | <code>string</code> | ✓ |  |  |
+| [project_id](variables.tf#L124) | Project id, references existing project if `project_create` is null. | <code>string</code> | ✓ |  |  |
+| [region](variables.tf#L143) | GCP Region. | <code>string</code> | ✓ |  |  |
 | [admin_principals](variables.tf#L17) | Users, groups and/or service accounts that are assigned roles, in IAM format (`group:foo@example.com`). | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |  |
 | [cloudsql_config](variables.tf#L23) | Cloud SQL Postgres config. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
 | [gcs_config](variables.tf#L34) | GCS for Object Storage config. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
 | [gitlab_config](variables.tf#L45) | Gitlab configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
-| [gitlab_instance_config](variables.tf#L70) | Gitlab Compute Engine instance config. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
-| [project_create](variables.tf#L111) | Provide values if project creation is needed, uses existing project if null. Parent is in 'folders/nnn' or 'organizations/nnn' format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |  |
-| [redis_config](variables.tf#L125) | Redis Config. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
+| [gitlab_instance_config](variables.tf#L74) | Gitlab Compute Engine instance config. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
+| [project_create](variables.tf#L115) | Provide values if project creation is needed, uses existing project if null. Parent is in 'folders/nnn' or 'organizations/nnn' format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |  |
+| [redis_config](variables.tf#L129) | Redis Config. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |  |
 
 ## Outputs
 
 | name | description | sensitive | consumers |
 |---|---|:---:|---|
 | [gitlab_ilb_ip](outputs.tf#L26) | Gitlab Internal Load Balancer IP Address. |  |  |
-| [instance](outputs.tf#L31) | Gitlab compute engine instance. |  |  |
-| [postgresql_users](outputs.tf#L36) | Gitlab postgres user password. | ✓ |  |
-| [project](outputs.tf#L42) | GCP project. |  |  |
-| [ssh_to_gitlab](outputs.tf#L47) | gcloud command to ssh gitlab instance. |  |  |
-| [ssl_certs](outputs.tf#L52) | Gitlab SSL Certificates. | ✓ |  |
+| [instance](outputs.tf#L31) | Gitlab compute engine instance. | ✓ |  |
+| [postgresql_users](outputs.tf#L37) | Gitlab postgres user password. | ✓ |  |
+| [project](outputs.tf#L43) | GCP project. |  |  |
+| [ssh_to_gitlab](outputs.tf#L48) | gcloud command to ssh gitlab instance. |  |  |
+| [ssl_certs](outputs.tf#L53) | Gitlab SSL Certificates. | ✓ |  |
 <!-- END TFDOC -->
 ## Test
 

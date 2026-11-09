@@ -31,16 +31,6 @@ write_files:
           "max-size": "1024m"
         }
       }
-  - path: /tmp/gitlab/config/gitlab.rb
-    permissions: '0600'
-    owner: root
-    content: |
-      ${gitlab_rb}
-  - path: /tmp/gitlab/ssl/${gitlab_cert_name}.key
-    permissions: '0600'
-    owner: root
-    content: |
-      ${gitlab_ssl_key}
   - path: /tmp/gitlab/ssl/${gitlab_cert_name}.crt
     permissions: '0600'
     owner: root
@@ -74,10 +64,10 @@ write_files:
       ExecStart=/sbin/resize2fs /dev/disk/by-id/google-data
       ExecStart=/bin/mkdir -p /run/gitlab/config
       ExecStart=/bin/mkdir -p /run/gitlab/ssl
-      ExecStart=/bin/mv /tmp/gitlab/config/gitlab.rb /run/gitlab/config/gitlab.rb
-      ExecStart=/bin/mv /tmp/gitlab/sshd_config /run/gitlab/sshd_config
-      ExecStart=/bin/bash -c "base64 -d -i /tmp/gitlab/ssl/${gitlab_cert_name}.key > /run/gitlab/ssl/${gitlab_cert_name}.key"
-      ExecStart=/bin/bash -c "base64 -d -i /tmp/gitlab/ssl/${gitlab_cert_name}.crt > /run/gitlab/ssl/${gitlab_cert_name}.crt"
+      ExecStart=/bin/bash -c "gcloud secrets versions access latest --secret='${gitlab_rb_secret_id}' --project='${project_id}' > /run/gitlab/config/gitlab.rb && chmod 0600 /run/gitlab/config/gitlab.rb"
+      ExecStart=/bin/bash -c "[ ! -f /tmp/gitlab/sshd_config ] || mv /tmp/gitlab/sshd_config /run/gitlab/sshd_config"
+      ExecStart=/bin/bash -c "gcloud secrets versions access latest --secret='${gitlab_ssl_key_id}' --project='${project_id}' > '/run/gitlab/ssl/${gitlab_cert_name}.key' && chmod 0600 '/run/gitlab/ssl/${gitlab_cert_name}.key'"
+      ExecStart=/bin/bash -c "[ ! -f '/tmp/gitlab/ssl/${gitlab_cert_name}.crt' ] || base64 -d -i '/tmp/gitlab/ssl/${gitlab_cert_name}.crt' > '/run/gitlab/ssl/${gitlab_cert_name}.crt'"
       RemainAfterExit=true
 
   # https://docs.gitlab.com/ee/install/docker.html#pre-configure-docker-container
@@ -95,7 +85,7 @@ write_files:
       ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
       ExecStartPre=mkdir -p /run/gitlab
       ExecStart=/usr/bin/docker run --rm --name=gitlab  \
-        --hostname ${gitlab_config.hostname} \
+        --hostname "${gitlab_config.hostname}" \
         --shm-size 256m \
         --env GITLAB_OMNIBUS_CONFIG="" \
         --publish 443:443 \
