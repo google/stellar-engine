@@ -20,6 +20,8 @@ locals {
   _default_ncc_hubs = {}
   _hub_project_id   = module.vdss-host-project.project_id
   _hub_project_aliases = {
+    hub           = module.vdss-host-project.project_id
+    hub-host      = module.vdss-host-project.project_id
     landing       = module.vdss-host-project.project_id
     net-vdss-host = module.vdss-host-project.project_id
     vdss          = module.vdss-host-project.project_id
@@ -27,6 +29,7 @@ locals {
   }
   _hub_vpcs = {
     dmz     = module.dmz-vpc.self_link
+    hub     = module.vdss-vpc.self_link
     landing = module.vdss-vpc.self_link
     mgmt    = module.mgmt-vpc.self_link
     vdss    = module.vdss-vpc.self_link

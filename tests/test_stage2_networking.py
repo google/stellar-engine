@@ -22,15 +22,14 @@ _IL5_NET_DIR = _REPO_ROOT / "fast/stages-aw/2-networking-b-il5-ngfw"
 
 
 class TestStage2Networking(unittest.TestCase):
-    def test_fedramp_stage_uses_single_landing_vpc_and_default_ncc_hub(self):
-        """Verify Stage 2a replaces VDSS and NVA with Landing and NCC."""
+    def test_fedramp_stage_uses_central_hub_vpc_and_default_ncc_hub(self):
+        """Verify Stage 2a replaces VDSS and NVA with central Hub and NCC."""
         self.assertFalse((_FEDRAMP_NET_DIR / "nva.tf").exists())
         self.assertFalse((_FEDRAMP_NET_DIR / "net-vdss.tf").exists())
-        self.assertTrue((_FEDRAMP_NET_DIR / "net-landing.tf").is_file())
+        self.assertFalse((_FEDRAMP_NET_DIR / "net-landing.tf").exists())
+        self.assertTrue((_FEDRAMP_NET_DIR / "net-hub.tf").is_file())
 
-        net_landing = (_FEDRAMP_NET_DIR / "net-landing.tf").read_text(
-            encoding="utf-8"
-        )
+        net_hub = (_FEDRAMP_NET_DIR / "net-hub.tf").read_text(encoding="utf-8")
         branch_tf = (_FEDRAMP_NET_DIR / "branch-net-envs.tf").read_text(
             encoding="utf-8"
         )
@@ -41,29 +40,31 @@ class TestStage2Networking(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn('module "landing-project"', net_landing)
-        self.assertIn('module "landing-vpc"', net_landing)
-        self.assertIn('module "landing-nat"', net_landing)
-        self.assertNotIn('module "dmz-vpc"', net_landing)
-        self.assertNotIn("moved {", net_landing)
-        self.assertNotIn("vdss", net_landing)
-        self.assertIn('preset_topology = "STAR"', net_landing)
+        self.assertIn('module "hub-project"', net_hub)
+        self.assertIn('name            = "net-hub-host"', net_hub)
+        self.assertIn('module "hub-vpc"', net_hub)
+        self.assertIn('module "hub-nat"', net_hub)
+        self.assertNotIn('module "dmz-vpc"', net_hub)
+        self.assertNotIn("moved {", net_hub)
+        self.assertNotIn("vdss", net_hub)
+        self.assertIn('preset_topology = "STAR"', net_hub)
         self.assertIn(
-            'group                 = "$ncc_groups:landing/center"', net_landing
+            'group                 = "$ncc_groups:main/center"', net_hub
         )
         self.assertIn(
-            'group                 = "$ncc_groups:landing/edge"', net_landing
+            'group                 = "$ncc_groups:main/edge"', net_hub
         )
 
         self.assertIn('module "env-spoke-nat"', branch_tf)
         self.assertNotIn('module "peering-envs"', branch_tf)
+        self.assertNotIn("moved {", branch_tf)
         self.assertNotIn("vdss", branch_tf)
 
         self.assertIn('variable "enable_cloud_nat"', vars_tf)
         self.assertIn('variable "enable_default_ncc_hub"', vars_tf)
         self.assertNotIn('variable "nva_spot_vms"', vars_tf)
         self.assertNotIn('variable "enable_hub_and_spoke_peering"', vars_tf)
-        self.assertIn('output "landing"', outputs_tf)
+        self.assertIn('output "hub"', outputs_tf)
 
     def test_firewall_policy_name_defaults_to_prefixed_name(self):
         for stage_dir in (_FEDRAMP_NET_DIR, _IL5_NET_DIR):
@@ -280,7 +281,7 @@ class TestStage2Networking(unittest.TestCase):
             'local._ncc_enabled ? ["networkconnectivity.googleapis.com"]'
         )
         hub_files = {
-            _FEDRAMP_NET_DIR: "net-landing.tf",
+            _FEDRAMP_NET_DIR: "net-hub.tf",
             _IL5_NET_DIR: "net-vdss.tf",
         }
         for stage_dir, hub_file in hub_files.items():

@@ -52,7 +52,7 @@ module "env-spoke-projects" {
   shared_vpc_host_config = {
     enabled = true
   }
-  metric_scopes = [module.landing-project.project_id]
+  metric_scopes = [module.hub-project.project_id]
   iam = merge(
     lookup(var.spoke_project_iam, lower(each.key), lookup(var.spoke_project_iam, each.key, {})),
     {
@@ -189,7 +189,7 @@ module "env-dns-priv-example" {
   zone_config = {
     domain = lower("${each.key}.${var.organization.domain}.")
     private = {
-      client_networks = [module.landing-vpc.self_link]
+      client_networks = [module.hub-vpc.self_link]
     }
   }
   recordsets = {
@@ -197,9 +197,9 @@ module "env-dns-priv-example" {
   }
 }
 
-# root zone peering to landing to centralize configuration; remove if unneeded
+# root zone peering to central hub VPC; remove if unneeded
 
-module "env-dns-peer-landing-root" {
+module "env-dns-peer-hub-root" {
   source     = "../../../modules/dns"
   for_each   = var.envs_folders
   project_id = module.env-spoke-projects[each.key].project_id
@@ -208,14 +208,9 @@ module "env-dns-peer-landing-root" {
     domain = "."
     peering = {
       client_networks = [module.env-spoke-vpc[each.key].self_link]
-      peer_network    = module.landing-vpc.self_link
+      peer_network    = module.hub-vpc.self_link
     }
   }
-}
-
-moved {
-  from = google_compute_subnetwork_iam_member.allow-admin-principals
-  to   = google_compute_subnetwork_iam_member.allow_admin_principals
 }
 
 resource "google_compute_subnetwork_iam_member" "allow_admin_principals" {

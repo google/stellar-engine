@@ -4,9 +4,9 @@ This stage deploys a hub-and-spoke network topology built on Network Connectivit
 
 ## Topology and Regime Coverage
 
-- Stage 2 provisions a central landing Shared VPC (`landing-0`) inside `<prefix>-net-landing-0` and connects environment spoke Shared VPCs (`<env>-spoke-0`) through a default `STAR`-topology NCC hub (`landing`).
-- Placing the landing VPC in the `center` group and all environment spoke VPCs in the `edge` group enforces network segmentation across environments while allowing shared DNS and hybrid transit through the landing hub (NIST SP 800-53r5 SC-7, AC-4).
-- When `enable_cloud_nat` is `true` (the default), the stage configures Cloud NAT and explicit default internet gateway routes on both `landing-0` and each environment spoke VPC because NCC VPC spokes exchange subnet routes only and do not transit `0.0.0.0/0` default routes.
+- Stage 2 provisions a central hub Shared VPC (`hub-0`) inside `<prefix>-net-hub-host` and connects environment spoke Shared VPCs (`<env>-spoke-0`) through a default `STAR`-topology NCC hub (`main`).
+- Placing `hub-0` in the `center` group and all environment spoke VPCs in the `edge` group enforces network segmentation across environments while allowing centralized DNS and hybrid transit through the hub project (NIST SP 800-53r5 SC-7, AC-4).
+- When `enable_cloud_nat` is `true` (the default), the stage configures Cloud NAT and explicit default internet gateway routes on both `hub-0` and each environment spoke VPC because NCC VPC spokes exchange subnet routes only and do not transit `0.0.0.0/0` default routes.
 - While the Stage 0 `FEDRAMP_MODERATE` organization policy template only denies `in:asia-east2-locations` and `in:global`, this networking stage is validated and supported for US regions (`in:us-locations`, such as `us-east4`, `us-west1`, and `us-central1`).
 - Replace every `<region>` placeholder in the sample `terraform.tfvars` file with the `regions.primary` value from Stage 0, because the stage validates that the first tenant subnet of each environment uses that region.
 - `IL2` workloads land on `2-networking-a-fedramp`, whereas `IL4` and `IL5` workloads use `2-networking-b-il5-ngfw` with Palo Alto VM-Series Next-Generation Firewalls in a three-VPC VDSS layout.
@@ -20,25 +20,25 @@ Stage 2 attaches a **hierarchical firewall policy** (`module.firewall-policy-def
 
 ## Network Connectivity Center Factory
 
-By default (`enable_default_ncc_hub = true`), the stage provisions the `landing` `STAR` hub with `center` and `edge` groups and attaches `landing-0` plus every `<env>-spoke-0` VPC automatically. You can extend the `landing` hub (for example to attach Cloud VPN tunnels, Cloud Interconnect VLAN attachments, or router appliance spokes) or define additional hubs through YAML files under `data/ncc-hubs/` (or `factories_config.ncc_hubs`) and through the `ncc_hubs` variable.
+By default (`enable_default_ncc_hub = true`), the stage provisions the `main` `STAR` hub inside `<prefix>-net-hub-host` with `center` and `edge` groups and attaches `hub-0` plus every `<env>-spoke-0` VPC automatically. You can extend the `main` hub (for example to attach Cloud VPN tunnels, Cloud Interconnect VLAN attachments, or router appliance spokes) or define additional hubs through YAML files under `data/ncc-hubs/` (or `factories_config.ncc_hubs`) and through the `ncc_hubs` variable.
 
-- Symbolic `$project_ids:<key>` references resolve Stage 2 host projects (`landing`, `landing-host`, `net-landing-0`, `prod`, `int`, `test`) and Stage 1 tenant projects.
-- Symbolic `$vpcs:<key>` and `$networks:<key>` references resolve Stage 2 VPC networks (`landing` and each environment spoke).
+- Symbolic `$project_ids:<key>` references resolve Stage 2 host projects (`hub`, `hub-host`, `net-hub-host`, `prod`, `int`, `test`) and Stage 1 tenant projects.
+- Symbolic `$vpcs:<key>` and `$networks:<key>` references resolve Stage 2 VPC networks (`hub` and each environment spoke).
 - Symbolic `$locations:<key>`, `$ncc_hubs:<hub>`, and `$ncc_groups:<hub>/<group>` references resolve regions, hub IDs, and group IDs managed in the same stage.
-- Set `enable_default_ncc_hub = false` only when replacing the built-in `landing` hub with a completely custom hub layout.
+- Set `enable_default_ncc_hub = false` only when replacing the built-in `main` hub with a completely custom hub layout.
 
 ```yaml
 # yaml-language-server: $schema=../../schemas/ncc-hub.schema.json
 
-name: landing
+name: main
 spokes:
   tunnels:
     onprem-primary:
       location: $locations:primary
-      group: $ncc_groups:landing/center
+      group: $ncc_groups:main/center
       uris:
-        - projects/my-landing-project/regions/us-east4/vpnTunnels/onprem-0
-        - projects/my-landing-project/regions/us-east4/vpnTunnels/onprem-1
+        - projects/my-hub-project/regions/us-east4/vpnTunnels/onprem-0
+        - projects/my-hub-project/regions/us-east4/vpnTunnels/onprem-1
 ```
 
 <p align="center">
@@ -74,13 +74,13 @@ spokes:
 | [custom_roles](variables.tf#L76) | Custom roles defined at the org level, in key => id format. | <code title="object&#40;&#123;&#10;  service_project_network_admin &#61; string&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [dns](variables.tf#L84) | DNS configuration. | <code title="object&#40;&#123;&#10;  enable_logging &#61; optional&#40;bool, true&#41; &#35; CIS Compliance Benchmark 2.12&#10;  resolvers      &#61; optional&#40;list&#40;string&#41;, &#91;&#93;&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [dns_policy_rules](variables.tf#L94) | DNS response policy rules in name => rule format. | <code title="map&#40;object&#40;&#123;&#10;  dns_name &#61; string&#10;  behavior &#61; optional&#40;string, &#34;bypassResponsePolicy&#34;&#41;&#10;  local_data &#61; optional&#40;map&#40;object&#40;&#123;&#10;    ttl     &#61; optional&#40;number&#41;&#10;    rrdatas &#61; optional&#40;list&#40;string&#41;, &#91;&#93;&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [enable_cloud_nat](variables.tf#L108) | Enable Cloud NAT and default internet gateway routes on the landing VPC and environment spoke VPCs. | <code>bool</code> |  | <code>true</code> |
-| [enable_default_ncc_hub](variables.tf#L115) | Provision the default STAR-topology Network Connectivity Center hub connecting the landing VPC (center group) and environment spoke VPCs (edge group). | <code>bool</code> |  | <code>true</code> |
+| [enable_cloud_nat](variables.tf#L108) | Enable Cloud NAT and default internet gateway routes on the central hub VPC and environment spoke VPCs. | <code>bool</code> |  | <code>true</code> |
+| [enable_default_ncc_hub](variables.tf#L115) | Provision the default STAR-topology Network Connectivity Center hub connecting the central hub VPC (center group) and environment spoke VPCs (edge group). | <code>bool</code> |  | <code>true</code> |
 | [essential_contacts](variables.tf#L129) | Email or map of emails to notification category lists used for essential contacts, unset if null or empty. | <code>any</code> |  | <code>&#123;&#125;</code> |
 | [factories_config](variables.tf#L143) | Configuration for network resource factories. | <code title="object&#40;&#123;&#10;  data_dir              &#61; optional&#40;string, &#34;data&#34;&#41;&#10;  dns_policy_rules_file &#61; optional&#40;string, &#34;data&#47;dns-policy-rules.yaml&#34;&#41;&#10;  firewall_policy_name  &#61; optional&#40;string&#41;&#10;  ncc_hubs              &#61; optional&#40;string&#41;&#10;&#125;&#41;">object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code title="&#123;&#10;  data_dir &#61; &#34;data&#34;&#10;&#125;">&#123;&#8230;&#125;</code> |
 | [fast_features](variables.tf#L161) | FAST features enabled. | <code>any</code> |  | <code>null</code> |
 | [firewall_rules](variables.tf#L167) | Firewall rules for each VPC / environment spoke. | <code title="map&#40;object&#40;&#123;&#10;  ingress &#61; optional&#40;map&#40;object&#40;&#123;&#10;    description          &#61; optional&#40;string&#41;&#10;    deny                 &#61; optional&#40;bool, false&#41;&#10;    source_ranges        &#61; optional&#40;list&#40;string&#41;&#41;&#10;    sources              &#61; optional&#40;list&#40;string&#41;&#41;&#10;    targets              &#61; optional&#40;list&#40;string&#41;&#41;&#10;    use_service_accounts &#61; optional&#40;bool, false&#41;&#10;    rules &#61; optional&#40;list&#40;object&#40;&#123;&#10;      protocol &#61; string&#10;      ports    &#61; optional&#40;list&#40;string&#41;&#41;&#10;    &#125;&#41;&#41;&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;  egress &#61; optional&#40;map&#40;object&#40;&#123;&#10;    description          &#61; optional&#40;string&#41;&#10;    deny                 &#61; optional&#40;bool, true&#41;&#10;    destination_ranges   &#61; optional&#40;list&#40;string&#41;&#41;&#10;    targets              &#61; optional&#40;list&#40;string&#41;&#41;&#10;    use_service_accounts &#61; optional&#40;bool, false&#41;&#10;    rules &#61; optional&#40;list&#40;object&#40;&#123;&#10;      protocol &#61; string&#10;      ports    &#61; optional&#40;list&#40;string&#41;&#41;&#10;    &#125;&#41;&#41;&#41;&#10;  &#125;&#41;&#41;, &#123;&#125;&#41;&#10;&#125;&#41;&#41;">map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [gcp_ranges](variables.tf#L207) | GCP address ranges in name => range format. | <code>map&#40;string&#41;</code> |  | <code title="&#123;&#10;  gcp_dev_primary             &#61; &#34;10.68.0.0&#47;16&#34;&#10;  gcp_landing_landing_primary &#61; &#34;10.200.0.0&#47;16&#34;&#10;  gcp_prod_primary            &#61; &#34;10.72.0.0&#47;16&#34;&#10;&#125;">&#123;&#8230;&#125;</code> |
+| [gcp_ranges](variables.tf#L207) | GCP address ranges in name => range format. | <code>map&#40;string&#41;</code> |  | <code title="&#123;&#10;  gcp_dev_primary  &#61; &#34;10.68.0.0&#47;16&#34;&#10;  gcp_hub_primary  &#61; &#34;10.200.0.0&#47;16&#34;&#10;  gcp_prod_primary &#61; &#34;10.72.0.0&#47;16&#34;&#10;&#125;">&#123;&#8230;&#125;</code> |
 | [groups](variables.tf#L217) | IAM groups mapping. | <code>any</code> |  | <code>null</code> |
 | [kms_protection_level](variables.tf#L223) | KMS protection level. | <code>string</code> |  | <code>null</code> |
 | [logging](variables.tf#L231) | Logging configuration. | <code>any</code> |  | <code>null</code> |
@@ -99,7 +99,7 @@ spokes:
 |---|---|:---:|
 | [host_project_ids](outputs.tf#L78) | Network project ids. |  |
 | [host_project_numbers](outputs.tf#L83) | Network project numbers. |  |
-| [landing](outputs.tf#L88) | Landing host project and VPC identifiers. |  |
+| [hub](outputs.tf#L88) | Central hub host project and VPC identifiers. |  |
 | [ncc_groups](outputs.tf#L93) | Network Connectivity Center group IDs keyed by hub/group. |  |
 | [ncc_hubs](outputs.tf#L98) | Network Connectivity Center hub IDs keyed by hub name. |  |
 | [ncc_spokes](outputs.tf#L103) | Network Connectivity Center spoke IDs grouped by spoke type. |  |

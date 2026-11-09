@@ -10,12 +10,12 @@ enable_default_ncc_hub = true
 
 # VPC Subnetwork Configurations
 subnets = {
-  landing = [
+  hub = [
     {
-      name          = "landing-default"
+      name          = "hub-default"
       ip_cidr_range = "10.64.0.0/24"
       region        = "<region>"
-      description   = "Default subnet for landing VPC in primary region"
+      description   = "Default subnet for central hub VPC in primary region"
       flow_logs_config = {
         aggregation_interval = "INTERVAL_5_SEC"
         flow_sampling        = 1
@@ -131,11 +131,11 @@ cidrs = {
   ]
 }
 
-# Custom Firewall Rules for Landing and Environment Spoke VPCs
+# Custom Firewall Rules for Central Hub and Environment Spoke VPCs
 firewall_rules = {
-  landing = {
+  hub = {
     ingress = {
-      allow-iap-ssh-landing = {
+      allow-iap-ssh-hub = {
         description   = "Allow traffic from Google IAP over SSH"
         source_ranges = ["iap"]
         rules = [
@@ -234,17 +234,17 @@ dns_policy_rules = {
   storage                       = { dns_name = "storage.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
 }
 
-# Optional Additional NCC Spokes or Hubs (merged with the default "landing" STAR hub)
+# Optional Additional NCC Spokes or Hubs (merged with the default "main" STAR hub)
 # ncc_hubs = {
-#   landing = {
+#   main = {
 #     spokes = {
 #       tunnels = {
 #         onprem-primary = {
 #           location = "$locations:primary"
-#           group    = "$ncc_groups:landing/center"
+#           group    = "$ncc_groups:main/center"
 #           uris = [
-#             "projects/my-landing-project/regions/<region>/vpnTunnels/onprem-0",
-#             "projects/my-landing-project/regions/<region>/vpnTunnels/onprem-1",
+#             "projects/my-hub-project/regions/<region>/vpnTunnels/onprem-0",
+#             "projects/my-hub-project/regions/<region>/vpnTunnels/onprem-1",
 #           ]
 #         }
 #       }

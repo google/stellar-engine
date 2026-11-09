@@ -16,14 +16,9 @@
 
 # CIS Compliance Benchmark 2.4 - 2.11
 
-module "landing-log-metrics" {
+module "hub-log-metrics" {
   source  = "../../../modules/cis-log-metrics"
-  project = module.landing-project.id
-}
-
-moved {
-  from = module.spoke_log_metrics
-  to   = module.spoke-log-metrics
+  project = module.hub-project.id
 }
 
 module "spoke-log-metrics" {
@@ -34,14 +29,14 @@ module "spoke-log-metrics" {
 
 # Alerts require log metrics to be configured first.
 resource "time_sleep" "networking_wait_10_seconds" {
-  depends_on      = [module.landing-log-metrics, module.spoke-log-metrics]
+  depends_on      = [module.hub-log-metrics, module.spoke-log-metrics]
   create_duration = "10s"
 }
 
-module "landing-log-alerts" {
+module "hub-log-alerts" {
   source = "../../../modules/cis-log-alerts"
 
-  project            = module.landing-project.id
+  project            = module.hub-project.id
   combiner           = "OR"
   duration           = "0s"
   comparison         = "COMPARISON_GT"
@@ -50,11 +45,6 @@ module "landing-log-alerts" {
   alert_email        = var.alert_email
 
   depends_on = [time_sleep.networking_wait_10_seconds]
-}
-
-moved {
-  from = module.spoke_log_alerts
-  to   = module.spoke-log-alerts
 }
 
 module "spoke-log-alerts" {

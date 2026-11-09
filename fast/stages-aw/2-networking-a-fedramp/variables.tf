@@ -106,14 +106,14 @@ variable "dns_policy_rules" {
 }
 
 variable "enable_cloud_nat" {
-  description = "Enable Cloud NAT and default internet gateway routes on the landing VPC and environment spoke VPCs."
+  description = "Enable Cloud NAT and default internet gateway routes on the central hub VPC and environment spoke VPCs."
   type        = bool
   default     = true
   nullable    = false
 }
 
 variable "enable_default_ncc_hub" {
-  description = "Provision the default STAR-topology Network Connectivity Center hub connecting the landing VPC (center group) and environment spoke VPCs (edge group)."
+  description = "Provision the default STAR-topology Network Connectivity Center hub connecting the central hub VPC (center group) and environment spoke VPCs (edge group)."
   type        = bool
   default     = true
   nullable    = false
@@ -208,9 +208,9 @@ variable "gcp_ranges" {
   description = "GCP address ranges in name => range format."
   type        = map(string)
   default = {
-    gcp_dev_primary             = "10.68.0.0/16"
-    gcp_landing_landing_primary = "10.200.0.0/16"
-    gcp_prod_primary            = "10.72.0.0/16"
+    gcp_dev_primary  = "10.68.0.0/16"
+    gcp_hub_primary  = "10.200.0.0/16"
+    gcp_prod_primary = "10.72.0.0/16"
   }
 }
 

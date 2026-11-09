@@ -14,26 +14,28 @@
  * limitations under the License.
  */
 
-# tfdoc:file:description Landing VPC, Cloud NAT, DNS, and default NCC hub.
+# tfdoc:file:description Central hub VPC, Cloud NAT, DNS, and default NCC hub.
 
 locals {
-  _hub_project_id = module.landing-project.project_id
+  _hub_project_id = module.hub-project.project_id
   _hub_project_aliases = {
-    landing       = module.landing-project.project_id
-    landing-host  = module.landing-project.project_id
-    net-landing-0 = module.landing-project.project_id
+    hub          = module.hub-project.project_id
+    hub-host     = module.hub-project.project_id
+    landing      = module.hub-project.project_id
+    net-hub-host = module.hub-project.project_id
   }
   _hub_vpcs = {
-    landing = module.landing-vpc.self_link
+    hub     = module.hub-vpc.self_link
+    landing = module.hub-vpc.self_link
   }
   _default_ncc_spokes_vpcs = merge(
     {
-      landing = {
-        vpc                   = "$vpcs:landing"
-        name                  = "landing-0"
-        project_id            = "$project_ids:landing"
-        group                 = "$ncc_groups:landing/center"
-        description           = "Landing VPC spoke."
+      hub = {
+        vpc                   = "$vpcs:hub"
+        name                  = "hub-0"
+        project_id            = "$project_ids:hub"
+        group                 = "$ncc_groups:main/center"
+        description           = "Central hub VPC spoke."
         labels                = tomap({})
         exclude_export_ranges = tolist(null)
         include_export_ranges = tolist(null)
@@ -44,7 +46,7 @@ locals {
         vpc                   = "$vpcs:${lower(k)}"
         name                  = "${lower(k)}-spoke-0"
         project_id            = "$project_ids:${lower(k)}"
-        group                 = "$ncc_groups:landing/edge"
+        group                 = "$ncc_groups:main/edge"
         description           = "${k} environment spoke VPC."
         labels                = tomap({})
         exclude_export_ranges = tolist(null)
@@ -53,18 +55,18 @@ locals {
     }
   )
   _default_ncc_hubs = !var.enable_default_ncc_hub ? {} : {
-    landing = {
-      project_id      = "$project_ids:landing"
-      description     = "Default Stage 2 landing and environment NCC hub."
+    main = {
+      project_id      = "$project_ids:hub"
+      description     = "Default Stage 2 hub and environment spoke NCC hub."
       export_psc      = true
       policy_mode     = "PRESET"
       preset_topology = "STAR"
       labels          = tomap({})
       groups = {
         center = {
-          description = "Central landing and hybrid connectivity spokes."
+          description = "Central hub and hybrid connectivity spokes."
           labels      = tomap({})
-          auto_accept = ["$project_ids:landing"]
+          auto_accept = ["$project_ids:hub"]
         }
         edge = {
           description = "Environment workload spoke VPCs."
@@ -85,14 +87,14 @@ locals {
   }
 }
 
-module "landing-project" {
+module "hub-project" {
   source = "../../../modules/project"
   providers = {
     google      = google.billing
     google-beta = google-beta.billing
   }
   billing_account = var.billing_account.id
-  name            = "net-landing-0"
+  name            = "net-hub-host"
   lien_reason     = "Protected by default as a core project."
   parent          = var.folder_ids.networking
   prefix          = var.prefix
@@ -119,21 +121,21 @@ module "landing-project" {
   }
 }
 
-resource "google_compute_project_metadata" "metadata_landing_project" {
-  project = module.landing-project.project_id
+resource "google_compute_project_metadata" "metadata_hub_project" {
+  project = module.hub-project.project_id
   metadata = {
     block-project-ssh-keys = true # CIS Compliance Benchmark 4.3
     enable-oslogin         = true # CIS Compliance Benchmark 4.4
   }
 }
 
-module "landing-vpc" {
+module "hub-vpc" {
   source                          = "../../../modules/net-vpc"
-  project_id                      = module.landing-project.project_id
-  name                            = "landing-0"
+  project_id                      = module.hub-project.project_id
+  name                            = "hub-0"
   delete_default_routes_on_create = true
   mtu                             = 1500
-  subnets                         = try(var.subnets.landing, [])
+  subnets                         = try(var.subnets.hub, [])
   dns_policy = {
     inbound = true
     logging = var.dns.enable_logging
@@ -152,37 +154,37 @@ module "landing-vpc" {
   } : {}
 }
 
-module "landing-firewall" {
+module "hub-firewall" {
   source     = "../../../modules/net-vpc-firewall"
-  project_id = module.landing-project.project_id
-  network    = module.landing-vpc.name
+  project_id = module.hub-project.project_id
+  network    = module.hub-vpc.name
   default_rules_config = {
     disabled = true
   }
   named_ranges  = var.cidrs
-  ingress_rules = try(var.firewall_rules.landing.ingress, {})
-  egress_rules  = try(var.firewall_rules.landing.egress, {})
+  ingress_rules = try(var.firewall_rules.hub.ingress, {})
+  egress_rules  = try(var.firewall_rules.hub.egress, {})
 }
 
-module "landing-nat" {
+module "hub-nat" {
   for_each       = var.enable_cloud_nat ? var.regions : {}
   source         = "../../../modules/net-cloudnat"
-  project_id     = module.landing-project.project_id
+  project_id     = module.hub-project.project_id
   region         = each.value
-  name           = "landing-nat-${each.value}"
+  name           = "hub-nat-${each.value}"
   router_create  = true
-  router_name    = "landing-nat-${each.value}"
-  router_network = module.landing-vpc.name
+  router_name    = "hub-nat-${each.value}"
+  router_network = module.hub-vpc.name
 }
 
-module "landing-dns-priv-gcp" {
+module "hub-dns-priv-gcp" {
   source     = "../../../modules/dns"
-  project_id = module.landing-project.project_id
+  project_id = module.hub-project.project_id
   name       = "org-domain"
   zone_config = {
     domain = lower("${var.organization.domain}.")
     private = {
-      client_networks = [module.landing-vpc.self_link]
+      client_networks = [module.hub-vpc.self_link]
     }
   }
   recordsets = {
@@ -190,12 +192,12 @@ module "landing-dns-priv-gcp" {
   }
 }
 
-module "landing-dns-policy-googleapis" {
+module "hub-dns-policy-googleapis" {
   source     = "../../../modules/dns-response-policy"
-  project_id = module.landing-project.project_id
+  project_id = module.hub-project.project_id
   name       = "googleapis"
   rules      = var.dns_policy_rules
   networks = {
-    landing = module.landing-vpc.self_link
+    hub = module.hub-vpc.self_link
   }
 }
