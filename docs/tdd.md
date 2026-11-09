@@ -942,14 +942,13 @@ topology with distinct security appliance strategies:
 
 Supported Implementations:
 
-#### FedRAMP High / Moderate Pattern (2-networking-a-fedramp):
+#### FedRAMP High and Moderate Pattern (2-networking-a-fedramp):
 
-- Topology: VDSS (Landing + DMZ).
-- Perimeter Security: Uses Network Virtual Appliances (NVAs).
-- Implementation: Deploys a generic NVA cluster (based on simple-nva) to
-  handle routing and basic traffic filtering between Trust and Untrust zones.
+- Topology: Single Landing VPC (`landing-0`) and Network Connectivity Center (`STAR` hub).
+- Perimeter Security: Uses folder-level hierarchical firewall policies, VPC firewall rules, Cloud NAT, and NCC `center` and `edge` group isolation between environment spokes.
+- Implementation: Deploys a central `<prefix>-net-landing-0` Shared VPC host project for centralized DNS, Private Google Access response policies, and optional hybrid VPN or Interconnect transit, while connecting environment spoke Shared VPCs through the default `landing` `STAR` NCC hub.
 - Regime Coverage, Regional Support, and IL2 Placement:
-  - Earlier conceptual design (`2-networking-c-fedramp-mod`) proposed a separate single-VPC Cloud NGFW topology for FedRAMP Moderate and IL2. That standalone stage was superseded by consolidating FedRAMP Moderate and FedRAMP High into `2-networking-a-fedramp` so both regimes share a uniform VDSS (Landing + DMZ) boundary protection architecture (NIST SP 800-53 SC-7, AC-4), while `kms_protection_level` (`SOFTWARE` for Moderate/IL2 versus `HSM` for High) differentiates cryptographic key protection (SC-12, SC-13).
+  - FedRAMP Moderate, FedRAMP High, and IL2 consolidate onto `2-networking-a-fedramp` using NCC `STAR` group segmentation and hierarchical firewall governance (NIST SP 800-53 SC-7, AC-4), while `kms_protection_level` (`SOFTWARE` for Moderate and IL2 versus `HSM` for High) differentiates cryptographic key protection in downstream stages (SC-12, SC-13).
   - Although the `FEDRAMP_MODERATE` organization policy template in Stage 0 permits non-`asia-east2` locations at the organization policy layer, `2-networking-a-fedramp` is designed and validated for US regions (`in:us-locations`, defaulting to `us-east4` and `us-west1` or `us-central1`) to align with Assured Workloads regional controls.
   - DoD Impact Level 2 (`IL2`) deployments use the `2-networking-a-fedramp` stage (paired with `kms_protection_level = "SOFTWARE"`), whereas `IL4` and `IL5` deployments use `2-networking-b-il5-ngfw`.
 

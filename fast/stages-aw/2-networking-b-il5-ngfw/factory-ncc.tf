@@ -31,7 +31,11 @@ locals {
       )
     )
   ]
-  _ncc_enabled = length(local._ncc_yaml_raw) > 0 || length(var.ncc_hubs) > 0
+  _ncc_enabled = (
+    length(local._default_ncc_hubs) > 0 ||
+    length(local._ncc_yaml_raw) > 0 ||
+    length(var.ncc_hubs) > 0
+  )
 
   _ncc_yaml_configs = {
     for v in local._ncc_yaml_raw : tostring(v.name) => {
@@ -239,7 +243,73 @@ locals {
     }
   }
 
-  _ncc_configs = merge(local._ncc_yaml_configs, var.ncc_hubs)
+  _user_ncc_configs = merge(local._ncc_yaml_configs, var.ncc_hubs)
+  _all_ncc_hub_keys = toset(concat(
+    keys(local._default_ncc_hubs),
+    keys(local._user_ncc_configs)
+  ))
+  _ncc_configs = {
+    for hk in local._all_ncc_hub_keys : hk => {
+      project_id = (
+        try(local._user_ncc_configs[hk].project_id, null) != null
+        ? local._user_ncc_configs[hk].project_id
+        : try(local._default_ncc_hubs[hk].project_id, null)
+      )
+      description = (
+        try(local._user_ncc_configs[hk].description, null) != null
+        ? local._user_ncc_configs[hk].description
+        : try(
+          local._default_ncc_hubs[hk].description,
+          "Terraform-managed."
+        )
+      )
+      export_psc = (
+        try(local._user_ncc_configs[hk].export_psc, null) != null
+        ? local._user_ncc_configs[hk].export_psc
+        : try(local._default_ncc_hubs[hk].export_psc, true)
+      )
+      policy_mode = (
+        try(local._user_ncc_configs[hk].policy_mode, null) != null
+        ? local._user_ncc_configs[hk].policy_mode
+        : try(local._default_ncc_hubs[hk].policy_mode, null)
+      )
+      preset_topology = (
+        try(local._user_ncc_configs[hk].policy_mode, null) == "CUSTOM"
+        ? try(local._user_ncc_configs[hk].preset_topology, null)
+        : (
+          try(local._user_ncc_configs[hk].preset_topology, null) != null
+          ? local._user_ncc_configs[hk].preset_topology
+          : try(local._default_ncc_hubs[hk].preset_topology, null)
+        )
+      )
+      labels = merge(
+        try(local._default_ncc_hubs[hk].labels, {}),
+        try(local._user_ncc_configs[hk].labels, {})
+      )
+      groups = merge(
+        try(local._default_ncc_hubs[hk].groups, {}),
+        try(local._user_ncc_configs[hk].groups, {})
+      )
+      spokes = {
+        vpcs = merge(
+          try(local._default_ncc_hubs[hk].spokes.vpcs, {}),
+          try(local._user_ncc_configs[hk].spokes.vpcs, {})
+        )
+        tunnels = merge(
+          try(local._default_ncc_hubs[hk].spokes.tunnels, {}),
+          try(local._user_ncc_configs[hk].spokes.tunnels, {})
+        )
+        vlan_attachments = merge(
+          try(local._default_ncc_hubs[hk].spokes.vlan_attachments, {}),
+          try(local._user_ncc_configs[hk].spokes.vlan_attachments, {})
+        )
+        router_appliances = merge(
+          try(local._default_ncc_hubs[hk].spokes.router_appliances, {}),
+          try(local._user_ncc_configs[hk].spokes.router_appliances, {})
+        )
+      }
+    }
+  }
 
   # Stage 2 context lookup maps for symbolic $namespace:key references.
   _ctx_locations = {
@@ -259,21 +329,16 @@ locals {
       for k, v in module.env-spoke-projects :
       "${lower(k)}-net-host" => v.project_id
     },
-    {
-      landing       = module.vdss-host-project.project_id
-      net-vdss-host = module.vdss-host-project.project_id
-      vdss          = module.vdss-host-project.project_id
-      vdss-host     = module.vdss-host-project.project_id
-    }
+    local._hub_project_aliases
   )
   _ctx_vpcs = merge(
-    local._vdss_vpcs,
+    local._hub_vpcs,
     { for k, v in module.env-spoke-vpc : k => v.self_link },
     { for k, v in module.env-spoke-vpc : lower(k) => v.self_link }
   )
   _ctx_vpc_projects = merge(
     {
-      for k, _ in local._vdss_vpcs : k => module.vdss-host-project.project_id
+      for k, _ in local._hub_vpcs : k => local._hub_project_id
     },
     { for k, v in module.env-spoke-projects : k => v.project_id },
     { for k, v in module.env-spoke-projects : lower(k) => v.project_id }
@@ -288,13 +353,14 @@ locals {
   }
 
   _ncc_hub_projects = {
-    for k, v in local._ncc_configs : k => lookup(
-      local._ctx_projects,
-      trimprefix(
-        coalesce(v.project_id, "$project_ids:vdss-host"),
-        "$project_ids:"
-      ),
-      coalesce(v.project_id, module.vdss-host-project.project_id)
+    for k, v in local._ncc_configs : k => (
+      v.project_id == null
+      ? local._hub_project_id
+      : lookup(
+        local._ctx_projects,
+        trimprefix(v.project_id, "$project_ids:"),
+        v.project_id
+      )
     )
   }
 
@@ -539,7 +605,6 @@ resource "google_network_connectivity_hub" "default" {
   }
 
   depends_on = [
-    module.vdss-host-project,
     module.env-spoke-projects,
   ]
 }

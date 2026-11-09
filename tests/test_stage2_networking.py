@@ -22,10 +22,46 @@ _IL5_NET_DIR = _REPO_ROOT / "fast/stages-aw/2-networking-b-il5-ngfw"
 
 
 class TestStage2Networking(unittest.TestCase):
-    def test_nva_routing_config_flattens_all_tenant_subnets(self):
-        nva_tf = (_FEDRAMP_NET_DIR / "nva.tf").read_text(encoding="utf-8")
-        self.assertIn("routes = flatten([", nva_tf)
-        self.assertNotIn("s.name if s.tenant != null][0]", nva_tf)
+    def test_fedramp_stage_uses_single_landing_vpc_and_default_ncc_hub(self):
+        """Verify Stage 2a replaces VDSS and NVA with Landing and NCC."""
+        self.assertFalse((_FEDRAMP_NET_DIR / "nva.tf").exists())
+        self.assertFalse((_FEDRAMP_NET_DIR / "net-vdss.tf").exists())
+        self.assertTrue((_FEDRAMP_NET_DIR / "net-landing.tf").is_file())
+
+        net_landing = (_FEDRAMP_NET_DIR / "net-landing.tf").read_text(
+            encoding="utf-8"
+        )
+        branch_tf = (_FEDRAMP_NET_DIR / "branch-net-envs.tf").read_text(
+            encoding="utf-8"
+        )
+        vars_tf = (_FEDRAMP_NET_DIR / "variables.tf").read_text(
+            encoding="utf-8"
+        )
+        outputs_tf = (_FEDRAMP_NET_DIR / "outputs.tf").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn('module "landing-project"', net_landing)
+        self.assertIn('module "landing-vpc"', net_landing)
+        self.assertIn('module "landing-nat"', net_landing)
+        self.assertNotIn('module "dmz-vpc"', net_landing)
+        self.assertIn('preset_topology = "STAR"', net_landing)
+        self.assertIn(
+            'group                 = "$ncc_groups:landing/center"', net_landing
+        )
+        self.assertIn(
+            'group                 = "$ncc_groups:landing/edge"', net_landing
+        )
+
+        self.assertIn('module "env-spoke-nat"', branch_tf)
+        self.assertNotIn('module "peering-envs"', branch_tf)
+        self.assertNotIn("vdss", branch_tf)
+
+        self.assertIn('variable "enable_cloud_nat"', vars_tf)
+        self.assertIn('variable "enable_default_ncc_hub"', vars_tf)
+        self.assertNotIn('variable "nva_spot_vms"', vars_tf)
+        self.assertNotIn('variable "enable_hub_and_spoke_peering"', vars_tf)
+        self.assertIn('output "landing"', outputs_tf)
 
     def test_firewall_policy_name_defaults_to_prefixed_name(self):
         for stage_dir in (_FEDRAMP_NET_DIR, _IL5_NET_DIR):
@@ -43,40 +79,22 @@ class TestStage2Networking(unittest.TestCase):
                     "firewall_policy_name  = optional(string)", vars_tf
                 )
 
-    def test_peering_envs_depends_on_per_instance_sleep(self):
-        for stage_dir in (_FEDRAMP_NET_DIR, _IL5_NET_DIR):
-            with self.subTest(stage=stage_dir.name):
-                branch_tf = (stage_dir / "branch-net-envs.tf").read_text(
-                    encoding="utf-8"
-                )
-                self.assertIn(
-                    "local_network = "
-                    "time_sleep.peering_delay[each.key]"
-                    '.triggers["local_network"]',
-                    branch_tf,
-                )
-                self.assertNotIn(
-                    "depends_on = [\n    time_sleep.peering_delay\n  ]",
-                    branch_tf,
-                )
-
-    def test_nva_defaults_to_standard_on_demand_vms(self):
-        nva_tf = (_FEDRAMP_NET_DIR / "nva.tf").read_text(encoding="utf-8")
-        vars_tf = (_FEDRAMP_NET_DIR / "variables.tf").read_text(
+    def test_il5_peering_envs_depends_on_per_instance_sleep(self):
+        branch_tf = (_IL5_NET_DIR / "branch-net-envs.tf").read_text(
             encoding="utf-8"
         )
-        self.assertRegex(nva_tf, r"spot\s*=\s*var\.nva_spot_vms")
-        self.assertRegex(
-            nva_tf,
-            r'termination_action\s*=\s*var\.nva_spot_vms\s*\?\s*"STOP"\s*:\s*null',
+        self.assertIn(
+            "local_network = "
+            "time_sleep.peering_delay[each.key]"
+            '.triggers["local_network"]',
+            branch_tf,
         )
-        self.assertIn('variable "nva_spot_vms"', vars_tf)
-        self.assertRegex(vars_tf, r"default\s*=\s*false")
+        self.assertNotIn(
+            "depends_on = [\n    time_sleep.peering_delay\n  ]",
+            branch_tf,
+        )
 
-    def test_nva_and_ngfw_service_account_and_helper_hardening(self):
-        nva_tf = (_FEDRAMP_NET_DIR / "nva.tf").read_text(encoding="utf-8")
-        self.assertNotIn("google_service_account_key", nva_tf)
-
+    def test_il5_ngfw_service_account_and_helper_hardening(self):
         ngfw_tf = (_IL5_NET_DIR / "ngfw.tf").read_text(encoding="utf-8")
         self.assertNotIn("-compute@developer.gserviceaccount.com", ngfw_tf)
 
@@ -212,7 +230,7 @@ class TestStage2Networking(unittest.TestCase):
                 self.assertNotRegex(sample, r'region\s*=\s*"us-')
 
     def test_ncc_factory_symlink_schema_and_stage_integration(self):
-        """Verify Stage 2 NCC factory parity, schema, APIs, and peering gate."""
+        """Verify Stage 2 NCC factory parity, schema, APIs, and stage hooks."""
         fedramp_factory = _FEDRAMP_NET_DIR / "factory-ncc.tf"
         il5_factory = _IL5_NET_DIR / "factory-ncc.tf"
         self.assertTrue(il5_factory.is_file())
@@ -259,11 +277,13 @@ class TestStage2Networking(unittest.TestCase):
         ncc_api_gate = (
             'local._ncc_enabled ? ["networkconnectivity.googleapis.com"]'
         )
-        for stage_dir in (_FEDRAMP_NET_DIR, _IL5_NET_DIR):
+        hub_files = {
+            _FEDRAMP_NET_DIR: "net-landing.tf",
+            _IL5_NET_DIR: "net-vdss.tf",
+        }
+        for stage_dir, hub_file in hub_files.items():
             with self.subTest(stage=stage_dir.name):
-                net_vdss = (stage_dir / "net-vdss.tf").read_text(
-                    encoding="utf-8"
-                )
+                hub_tf = (stage_dir / hub_file).read_text(encoding="utf-8")
                 branch_tf = (stage_dir / "branch-net-envs.tf").read_text(
                     encoding="utf-8"
                 )
@@ -273,23 +293,29 @@ class TestStage2Networking(unittest.TestCase):
                 outputs_tf = (stage_dir / "outputs.tf").read_text(
                     encoding="utf-8"
                 )
-                self.assertIn("_vdss_vpcs = {", net_vdss)
-                self.assertIn(ncc_api_gate, net_vdss)
+                self.assertIn("_hub_vpcs = {", hub_tf)
+                self.assertIn("_default_ncc_hubs", hub_tf)
+                self.assertIn(ncc_api_gate, hub_tf)
                 self.assertIn(ncc_api_gate, branch_tf)
-                self.assertIn(
-                    "for_each = var.enable_hub_and_spoke_peering"
-                    " ? var.envs_folders : {}",
-                    branch_tf,
-                )
-                self.assertIn(
-                    'variable "enable_hub_and_spoke_peering"', vars_tf
-                )
                 self.assertIn(
                     "ncc_hubs              = optional(string)", vars_tf
                 )
                 self.assertIn('variable "ncc_hubs"', vars_tf)
                 for out_name in ("ncc_groups", "ncc_hubs", "ncc_spokes"):
                     self.assertIn(f'output "{out_name}"', outputs_tf)
+
+        il5_branch_tf = (_IL5_NET_DIR / "branch-net-envs.tf").read_text(
+            encoding="utf-8"
+        )
+        il5_vars_tf = (_IL5_NET_DIR / "variables.tf").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "for_each = var.enable_hub_and_spoke_peering"
+            " ? var.envs_folders : {}",
+            il5_branch_tf,
+        )
+        self.assertIn('variable "enable_hub_and_spoke_peering"', il5_vars_tf)
 
 
 if __name__ == "__main__":

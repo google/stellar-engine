@@ -12,23 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-locals {
-}
 moved {
   from = google_network_management_connectivity_test.landing-test
   to   = google_network_management_connectivity_test.landing_test
 }
 
 resource "google_network_management_connectivity_test" "landing_test" {
-  for_each = var.regions
+  for_each = var.enable_cloud_nat ? var.regions : {}
 
   name    = "landing-subnet-test-${each.key}"
-  project = module.vdss-host-project.project_id
+  project = module.landing-project.project_id
 
   source {
     ip_address   = google_compute_address.source_addr[each.key].address
-    project_id   = module.vdss-host-project.project_id
-    network      = module.vdss-vpc.id
+    project_id   = module.landing-project.project_id
+    network      = module.landing-vpc.id
     network_type = "GCP_NETWORK"
   }
   destination {
@@ -38,7 +36,7 @@ resource "google_network_management_connectivity_test" "landing_test" {
 
   protocol = "TCP"
   labels = {
-    env = "vdss"
+    env = "landing"
   }
 }
 
@@ -48,15 +46,13 @@ moved {
 }
 
 resource "google_compute_address" "source_addr" {
-  project = module.vdss-host-project.project_id
-
-  for_each     = var.regions
+  for_each     = var.enable_cloud_nat ? var.regions : {}
+  project      = module.landing-project.project_id
   name         = "landing-test-addr-${each.value}"
-  subnetwork   = try(module.vdss-vpc.subnet_self_links["${each.value}/landing-default"], null)
+  subnetwork   = try(module.landing-vpc.subnet_self_links["${each.value}/landing-default"], null)
   address_type = "INTERNAL"
   region       = each.value
 }
-
 
 moved {
   from = google_network_management_connectivity_test.env-tests
@@ -64,7 +60,7 @@ moved {
 }
 
 resource "google_network_management_connectivity_test" "env_tests" {
-  for_each = var.envs_folders
+  for_each = var.enable_cloud_nat ? var.envs_folders : {}
 
   name    = lower("${each.key}-host-project-test")
   project = module.env-spoke-projects[each.key].project_id
@@ -85,46 +81,22 @@ resource "google_network_management_connectivity_test" "env_tests" {
     env = lower(each.key)
   }
 }
+
 moved {
   from = google_compute_address.env-source-addrs
   to   = google_compute_address.env_source_addrs
 }
 
 resource "google_compute_address" "env_source_addrs" {
-  for_each = var.envs_folders
+  for_each = var.enable_cloud_nat ? var.envs_folders : {}
 
   project = module.env-spoke-projects[each.key].project_id
 
-  name         = lower("${each.key}-test-addr")
-  subnetwork   = module.env-spoke-vpc[each.key].subnets["${var.regions.primary}/${[for s in try(var.subnets[lower(each.key)], []) : s.name if s.tenant != null][0]}"].self_link
+  name = lower("${each.key}-test-addr")
+  subnetwork = module.env-spoke-vpc[each.key].subnets[
+    "${var.regions.primary}/${[for s in try(var.subnets[lower(each.key)], []) : s.name if s.tenant != null][0]}"
+  ].self_link
   address_type = "INTERNAL"
   region       = var.regions.primary
   depends_on   = [module.env-spoke-vpc]
 }
-
-
-# # These tests should fail
-## This isn't doing what I want it to, but I really like the idea of having something like this to test for route leaking between the envs
-
-# resource "google_network_management_connectivity_test" "fail-env-tests" {
-#   for_each = var.envs_folders
-
-#   name    = lower("must-fail-${each.key}-prod")
-#   project = module.env-spoke-projects[each.key].project_id
-
-#   source {
-#     ip_address   = google_compute_address.env_source_addrs[each.key].address
-#     project_id   = module.env-spoke-projects[each.key].project_id
-#     network      = module.env-spoke-vpc[each.key].id
-#     network_type = "GCP_NETWORK"
-#   }
-#   destination {
-#     ip_address = google_compute_address.env_source_addrs["Prod"].address
-#     project_id = module.env-spoke-projects["Prod"].project_id
-#     network    = module.env-spoke-vpc["Prod"].id
-#     port       = 443
-#   }
-
-#   protocol = "TCP"
-
-# }

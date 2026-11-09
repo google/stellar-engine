@@ -1,8 +1,12 @@
-# Sample terraform.tfvars file for Stage 2 (Networking - FedRAMP High)
+# Sample terraform.tfvars file for Stage 2 (Networking - FedRAMP)
 # Replace values with your desired network topologies.
 # Replace every <region> with the regions.primary value from the Stage 0
 # terraform.tfvars file. The stage validates that the first tenant subnet of
 # each environment uses that region.
+
+# Outbound Cloud NAT and Default STAR-Topology NCC Hub
+enable_cloud_nat       = true
+enable_default_ncc_hub = true
 
 # VPC Subnetwork Configurations
 subnets = {
@@ -11,20 +15,7 @@ subnets = {
       name          = "landing-default"
       ip_cidr_range = "10.64.0.0/24"
       region        = "<region>"
-      description   = "Default subnet for vdss in primary region"
-      flow_logs_config = {
-        aggregation_interval = "INTERVAL_5_SEC"
-        flow_sampling        = 1
-        metadata             = "INCLUDE_ALL_METADATA"
-      }
-    }
-  ]
-  dmz = [
-    {
-      name          = "dmz-default"
-      ip_cidr_range = "10.64.128.0/24"
-      region        = "<region>"
-      description   = "Default subnet for landing dmz in primary region"
+      description   = "Default subnet for landing VPC in primary region"
       flow_logs_config = {
         aggregation_interval = "INTERVAL_5_SEC"
         flow_sampling        = 1
@@ -43,7 +34,7 @@ subnets = {
         flow_sampling        = 1
         metadata             = "INCLUDE_ALL_METADATA"
       }
-      tenant        = "ten-1" # Links this subnet to tenant-1 project sharing
+      tenant = "ten-1" # Links this subnet to tenant-1 project sharing
     },
     {
       name          = "prod-tenant-2-subnet"
@@ -55,7 +46,7 @@ subnets = {
         flow_sampling        = 1
         metadata             = "INCLUDE_ALL_METADATA"
       }
-      tenant        = "ten-2" # Links this subnet to tenant-2 project sharing
+      tenant = "ten-2" # Links this subnet to tenant-2 project sharing
     }
   ]
   int = [
@@ -69,7 +60,7 @@ subnets = {
         flow_sampling        = 1
         metadata             = "INCLUDE_ALL_METADATA"
       }
-      tenant        = "ten-1"
+      tenant = "ten-1"
     },
     {
       name          = "int-tenant-2-subnet"
@@ -81,7 +72,7 @@ subnets = {
         flow_sampling        = 1
         metadata             = "INCLUDE_ALL_METADATA"
       }
-      tenant        = "ten-2"
+      tenant = "ten-2"
     }
   ]
   test = [
@@ -95,7 +86,7 @@ subnets = {
         flow_sampling        = 1
         metadata             = "INCLUDE_ALL_METADATA"
       }
-      tenant        = "ten-1"
+      tenant = "ten-1"
     },
     {
       name          = "test-tenant-2-subnet"
@@ -107,7 +98,7 @@ subnets = {
         flow_sampling        = 1
         metadata             = "INCLUDE_ALL_METADATA"
       }
-      tenant        = "ten-2"
+      tenant = "ten-2"
     }
   ]
 }
@@ -140,52 +131,13 @@ cidrs = {
   ]
 }
 
-# Custom Firewall Rules for each VPC / Spoke Spoke
+# Custom Firewall Rules for Landing and Environment Spoke VPCs
 firewall_rules = {
-  vdss = {
+  landing = {
     ingress = {
       allow-iap-ssh-landing = {
         description   = "Allow traffic from Google IAP over SSH"
         source_ranges = ["iap"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
-      }
-      allow-hc-nva-ssh-landing = {
-        description   = "Allow traffic from Google healthchecks to NVA appliances"
-        source_ranges = ["healthchecks"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
-      }
-      allow-traffic-internal = {
-        description   = "Allow traffic from inside the the networks"
-        targets       = ["nva"]
-        source_ranges = ["10.0.0.0/8"]
-      }
-    }
-  }
-  dmz = {
-    ingress = {
-      allow-iap-ssh-dmz = {
-        description   = "Allow traffic from Google IAP over SSH"
-        source_ranges = ["iap"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
-      }
-      allow-hc-nva-ssh-dmz = {
-        description   = "Allow traffic from Google healthchecks to NVA appliances"
-        source_ranges = ["healthchecks"]
         rules = [
           {
             protocol = "tcp"
@@ -282,43 +234,18 @@ dns_policy_rules = {
   storage                       = { dns_name = "storage.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
 }
 
-# Optional Network Connectivity Center (NCC) Hub and Spokes
-# Set enable_hub_and_spoke_peering = false when attaching both the landing VPC
-# and environment spoke VPCs to the same NCC hub.
-# enable_hub_and_spoke_peering = false
+# Optional Additional NCC Spokes or Hubs (merged with the default "landing" STAR hub)
 # ncc_hubs = {
-#   vdss-hub = {
-#     preset_topology = "STAR"
-#     export_psc      = true
-#     groups = {
-#       center = {
-#         auto_accept = ["$project_ids:vdss-host"]
-#       }
-#       edge = {
-#         auto_accept = [
-#           "$project_ids:prod",
-#           "$project_ids:int",
-#           "$project_ids:test",
-#         ]
-#       }
-#     }
+#   landing = {
 #     spokes = {
-#       vpcs = {
-#         landing = {
-#           vpc   = "$vpcs:landing"
-#           group = "$ncc_groups:vdss-hub/center"
-#         }
-#         prod = {
-#           vpc   = "$vpcs:prod"
-#           group = "$ncc_groups:vdss-hub/edge"
-#         }
-#         int = {
-#           vpc   = "$vpcs:int"
-#           group = "$ncc_groups:vdss-hub/edge"
-#         }
-#         test = {
-#           vpc   = "$vpcs:test"
-#           group = "$ncc_groups:vdss-hub/edge"
+#       tunnels = {
+#         onprem-primary = {
+#           location = "$locations:primary"
+#           group    = "$ncc_groups:landing/center"
+#           uris = [
+#             "projects/my-landing-project/regions/<region>/vpnTunnels/onprem-0",
+#             "projects/my-landing-project/regions/<region>/vpnTunnels/onprem-1",
+#           ]
 #         }
 #       }
 #     }

@@ -52,7 +52,7 @@ module "env-spoke-projects" {
   shared_vpc_host_config = {
     enabled = true
   }
-  metric_scopes = [module.vdss-host-project.project_id]
+  metric_scopes = [module.landing-project.project_id]
   iam = merge(
     lookup(var.spoke_project_iam, lower(each.key), lookup(var.spoke_project_iam, each.key, {})),
     {
@@ -105,10 +105,18 @@ module "env-spoke-vpc" {
   }
   delete_default_routes_on_create = true
   psa_configs                     = try(var.psa_ranges[lower(each.key)], var.psa_ranges.dev)
-  # Set explicit routes for googleapis; send everything else to NVAs
   create_googleapis_routes = {
-    private = true
-  restricted = true }
+    private    = true
+    restricted = true
+  }
+  routes = var.enable_cloud_nat ? {
+    default = {
+      dest_range    = "0.0.0.0/0"
+      next_hop      = "default-internet-gateway"
+      next_hop_type = "gateway"
+      priority      = 1000
+    }
+  } : {}
   subnets = try(var.subnets[lower(each.key)], [])
   subnets_proxy_only = [{
     region        = var.regions.primary
@@ -157,33 +165,16 @@ module "env-spoke-firewall" {
   egress_rules  = try(var.firewall_rules[lower(each.key)].egress, {})
 }
 
-resource "time_sleep" "peering_delay" {
-  for_each = var.enable_hub_and_spoke_peering ? var.envs_folders : {}
+module "env-spoke-nat" {
+  source   = "../../../modules/net-cloudnat"
+  for_each = var.enable_cloud_nat ? var.envs_folders : {}
 
-  create_duration = "${index(keys(var.envs_folders), each.key) * 30}s"
-
-  triggers = {
-    local_network = module.env-spoke-vpc[each.key].self_link
-  }
-
-  depends_on = [module.env-spoke-vpc]
-}
-
-module "peering-envs" {
-  source   = "../../../modules/net-vpc-peering"
-  for_each = var.enable_hub_and_spoke_peering ? var.envs_folders : {}
-
-  prefix        = lower("${each.key}-peering-0")
-  local_network = time_sleep.peering_delay[each.key].triggers["local_network"]
-  peer_network  = module.vdss-vpc.self_link
-  routes_config = {
-    local = {
-      public_import = false
-    }
-    peer = {
-      public_export = false
-    }
-  }
+  project_id     = module.env-spoke-projects[each.key].project_id
+  region         = var.regions.primary
+  name           = lower("${each.key}-nat-${var.regions.primary}")
+  router_create  = true
+  router_name    = lower("${each.key}-nat-${var.regions.primary}")
+  router_network = module.env-spoke-vpc[each.key].name
 }
 
 # DNS
@@ -198,7 +189,7 @@ module "env-dns-priv-example" {
   zone_config = {
     domain = lower("${each.key}.${var.organization.domain}.")
     private = {
-      client_networks = [module.vdss-vpc.self_link]
+      client_networks = [module.landing-vpc.self_link]
     }
   }
   recordsets = {
@@ -217,7 +208,7 @@ module "env-dns-peer-landing-root" {
     domain = "."
     peering = {
       client_networks = [module.env-spoke-vpc[each.key].self_link]
-      peer_network    = module.vdss-vpc.self_link
+      peer_network    = module.landing-vpc.self_link
     }
   }
 }

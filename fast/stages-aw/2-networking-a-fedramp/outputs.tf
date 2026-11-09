@@ -25,14 +25,13 @@ locals {
     host_project = module.env-spoke-projects[name].project_id
     proxy_only   = module.env-spoke-vpc[name].subnets_proxy_only["${var.regions.primary}/proxy-${var.regions.primary}"].self_link
   } }
-  vdss = {
-    landing_host = module.vdss-host-project.project_id
-    dmz_vpc      = module.dmz-vpc.id
-    landing_vpc  = module.vdss-vpc.id
+  landing = {
+    host_project = module.landing-project.project_id
+    vpc          = module.landing-vpc.id
   }
   host_project_ids = module.env-spoke-vpc
   host_project_numbers = {
-    prod-landing = module.vdss-host-project.number
+    prod-landing = module.landing-project.number
   }
   ncc_spokes_output = {
     router_appliances = {
@@ -52,7 +51,10 @@ locals {
     host_project_ids     = local.host_project_ids
     host_project_numbers = local.host_project_numbers
     envs                 = local.envs
-    vdss                 = local.vdss
+    landing              = local.landing
+    ncc_groups           = local._ctx_ncc_groups
+    ncc_hubs             = local._ctx_ncc_hubs
+    ncc_spokes           = local.ncc_spokes_output
   }
 }
 
@@ -81,6 +83,11 @@ output "host_project_ids" {
 output "host_project_numbers" {
   description = "Network project numbers."
   value       = local.host_project_numbers
+}
+
+output "landing" {
+  description = "Landing host project and VPC identifiers."
+  value       = local.landing
 }
 
 output "ncc_groups" {

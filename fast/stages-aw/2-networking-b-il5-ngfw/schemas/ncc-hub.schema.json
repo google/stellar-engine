@@ -11,7 +11,7 @@
     },
     "project_id": {
       "type": "string",
-      "description": "The project ID or $project_ids:<key> reference where the hub is created. Defaults to $project_ids:vdss-host."
+      "description": "The project ID or $project_ids:<key> reference where the hub is created. Defaults to $project_ids:landing."
     },
     "description": {
       "type": "string",

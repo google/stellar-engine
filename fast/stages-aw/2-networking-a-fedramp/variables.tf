@@ -105,8 +105,15 @@ variable "dns_policy_rules" {
   nullable = false
 }
 
-variable "enable_hub_and_spoke_peering" {
-  description = "Enable VPC network peering between the landing VPC and environment spoke VPCs. Set to false when attaching both the landing VPC and environment spoke VPCs to the same Network Connectivity Center hub."
+variable "enable_cloud_nat" {
+  description = "Enable Cloud NAT and default internet gateway routes on the landing VPC and environment spoke VPCs."
+  type        = bool
+  default     = true
+  nullable    = false
+}
+
+variable "enable_default_ncc_hub" {
+  description = "Provision the default STAR-topology Network Connectivity Center hub connecting the landing VPC (center group) and environment spoke VPCs (edge group)."
   type        = bool
   default     = true
   nullable    = false
@@ -203,7 +210,6 @@ variable "gcp_ranges" {
   default = {
     gcp_dev_primary             = "10.68.0.0/16"
     gcp_landing_landing_primary = "10.200.0.0/16"
-    gcp_dmz_primary             = "10.64.128.0/24"
     gcp_prod_primary            = "10.72.0.0/16"
   }
 }
@@ -326,13 +332,6 @@ variable "ncc_hubs" {
     ]))
     error_message = "Each router_appliances spoke must specify at least one instance."
   }
-}
-
-variable "nva_spot_vms" {
-  description = "Whether to provision NVA instances as Spot VMs. Defaults to false (standard on-demand instances with automatic restart)."
-  type        = bool
-  default     = false
-  nullable    = false
 }
 
 variable "organization" {
@@ -458,7 +457,7 @@ variable "subnets" {
       for k in keys(var.envs_folders) :
       try([for s in var.subnets[lower(k)] : s if s.tenant != null][0].region, null) == var.regions.primary
     ])
-    error_message = "Every environment in envs_folders needs a subnet list under subnets[lower(<env>)] whose first subnet with a non-null tenant is in regions.primary: the NVA landing routes, the connectivity-test addresses and the stage outputs all index that subnet."
+    error_message = "Every environment in envs_folders needs a subnet list under subnets[lower(<env>)] whose first subnet with a non-null tenant is in regions.primary: the connectivity-test addresses and the stage outputs index that subnet."
   }
 }
 
