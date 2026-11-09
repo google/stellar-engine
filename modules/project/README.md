@@ -5,7 +5,55 @@ This module implements the creation and management of one GCP project including 
 ## TOC
 
 <!-- BEGIN TOC -->
-
+- [TOC](#toc)
+- [Basic Project Creation](#basic-project-creation)
+- [IAM](#iam)
+  - [Authoritative IAM](#authoritative-iam)
+  - [Conditional IAM by Principals](#conditional-iam-by-principals)
+  - [Additive IAM](#additive-iam)
+  - [Service Agents](#service-agents)
+    - [Cloudservices Editor Role](#cloudservices-editor-role)
+    - [Skipping Service Agent IAM Grants](#skipping-service-agent-iam-grants)
+    - [Service Agent Aliases](#service-agent-aliases)
+    - [Service Agent Grants on External Resources](#service-agent-grants-on-external-resources)
+- [Shared VPC](#shared-vpc)
+- [Organization Policies](#organization-policies)
+  - [Dry-Run Mode](#dry-run-mode)
+  - [Organization Policy Factory](#organization-policy-factory)
+- [Log Sinks](#log-sinks)
+- [Data Access Logs](#data-access-logs)
+- [Log Scopes](#log-scopes)
+- [Cloud KMS Encryption Keys](#cloud-kms-encryption-keys)
+- [Custom Security Health Analytics Modules](#custom-security-health-analytics-modules)
+  - [Custom Security Health Analytics Modules Factory](#custom-security-health-analytics-modules-factory)
+- [Security Command Center Mute Configs](#security-command-center-mute-configs)
+  - [Security Command Center Mute Configs Factory](#security-command-center-mute-configs-factory)
+- [Tags](#tags)
+  - [Tags Factory](#tags-factory)
+- [Tag Bindings](#tag-bindings)
+- [Project-scoped Tags](#project-scoped-tags)
+- [Custom Roles](#custom-roles)
+  - [Custom Roles Factory](#custom-roles-factory)
+- [KMS Autokeys](#kms-autokeys)
+- [Quotas](#quotas)
+- [Quotas factory](#quotas-factory)
+- [Privileged Access Manager (PAM) Entitlements](#privileged-access-manager-pam-entitlements)
+  - [Privileged Access Manager (PAM) Entitlements Factory](#privileged-access-manager-pam-entitlements-factory)
+- [VPC Service Controls](#vpc-service-controls)
+- [Default compute network tier](#default-compute-network-tier)
+- [Cloud Asset Search](#cloud-asset-search)
+- [Cloud Asset Inventory Feeds](#cloud-asset-inventory-feeds)
+- [BigQuery Reservations](#bigquery-reservations)
+- [Project Related Outputs](#project-related-outputs)
+- [Managing project related configuration without creating it](#managing-project-related-configuration-without-creating-it)
+- [Observability](#observability)
+- [Observability factory](#observability-factory)
+- [Workload Identity Federation](#workload-identity-federation)
+- [IAM Deny Policies](#iam-deny-policies)
+- [Files](#files)
+- [Variables](#variables)
+- [Outputs](#outputs)
+- [Fixtures](#fixtures)
 <!-- END TOC -->
 
 ## Basic Project Creation
@@ -2511,4 +2559,8 @@ module "project" {
 | [workload_identity_pool_ids](outputs.tf#L233) | Workload identity provider ids. |  |
 | [workload_identity_provider_ids](outputs.tf#L240) | Workload identity provider attributes. |  |
 | [workload_identity_providers](outputs.tf#L248) | Workload identity provider attributes. |  |
+
+## Fixtures
+
+- [organization-custom-role.tf](../../tests/fixtures/organization-custom-role.tf)
 <!-- END TFDOC -->

@@ -122,7 +122,14 @@ VAR_RE = re.compile(r"""(?smx)
     (?:^(.*?)$)
 """)
 VAR_RE_TYPE = re.compile(r"([\(\{\}\)])")
-VAR_TEMPLATE = ("default", "description", "type", "nullable", "sensitive", "ephemeral")
+VAR_TEMPLATE = (
+    "default",
+    "description",
+    "type",
+    "nullable",
+    "sensitive",
+    "ephemeral",
+)
 
 Document = collections.namedtuple(
     "Document", "content files variables outputs recipes", defaults=[None]

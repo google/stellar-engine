@@ -3,7 +3,31 @@
 Cloud Run Services and Jobs, with support for IAM roles and Eventarc trigger creation. This module uses provider default value for `deletion_protection`, which means service is by default protected from removal (or reprovisioning).
 
 <!-- BEGIN TOC -->
-
+- [IAM and environment variables](#iam-and-environment-variables)
+- [Mounting secrets as volumes](#mounting-secrets-as-volumes)
+- [Mounting GCS buckets](#mounting-gcs-buckets)
+- [Connecting to Cloud SQL database](#connecting-to-cloud-sql-database)
+- [Direct VPC Egress](#direct-vpc-egress)
+- [VPC Access Connector](#vpc-access-connector)
+- [Using Customer-Managed Encryption Key](#using-customer-managed-encryption-key)
+- [Deploying OpenTelemetry Collector sidecar](#deploying-opentelemetry-collector-sidecar)
+- [Eventarc triggers](#eventarc-triggers)
+  - [PubSub](#pubsub)
+  - [Audit logs](#audit-logs)
+  - [GCS bucket](#gcs-bucket)
+- [Cloud Run Invoker IAM Disable](#cloud-run-invoker-iam-disable)
+- [Cloud Run Service Account](#cloud-run-service-account)
+  - [Workload and agent identities](#workload-and-agent-identities)
+- [Creating Cloud Run Jobs](#creating-cloud-run-jobs)
+- [Tag bindings](#tag-bindings)
+- [IAP Configuration](#iap-configuration)
+- [Adding GPUs](#adding-gpus)
+- [Multi-Region Service](#multi-region-service)
+- [Traffic Splitting and Revision Tagging](#traffic-splitting-and-revision-tagging)
+- [Security Configurations](#security-configurations)
+- [Variables](#variables)
+- [Outputs](#outputs)
+- [Fixtures](#fixtures)
 <!-- END TOC -->
 
 ## IAM and environment variables
@@ -1112,4 +1136,14 @@ module "cloud_run" {
 | [service_name](outputs.tf#L64) | Cloud Run service name. |  |
 | [service_uri](outputs.tf#L69) | Main URI in which the service is serving traffic. |  |
 | [vpc_connector](outputs.tf#L74) | VPC connector resource if created. |  |
+
+## Fixtures
+
+- [cloudsql-instance.tf](../../tests/fixtures/cloudsql-instance.tf)
+- [gcs.tf](../../tests/fixtures/gcs.tf)
+- [iam-service-account.tf](../../tests/fixtures/iam-service-account.tf)
+- [pubsub.tf](../../tests/fixtures/pubsub.tf)
+- [secret-credentials.tf](../../tests/fixtures/secret-credentials.tf)
+- [shared-vpc.tf](../../tests/fixtures/shared-vpc.tf)
+- [vpc-connector.tf](../../tests/fixtures/vpc-connector.tf)
 <!-- END TFDOC -->

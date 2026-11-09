@@ -6,7 +6,25 @@ This module offers a way to create and manage Google Kubernetes Engine (GKE) [St
 > This module should be used together with the [`gke-nodepool`](../gke-nodepool/) module because the default node pool is deleted upon cluster creation by default.
 
 <!-- BEGIN TOC -->
-
+- [Cluster access configurations](#cluster-access-configurations)
+  - [Private cluster with DNS endpoint enabled](#private-cluster-with-dns-endpoint-enabled)
+  - [Public cluster](#public-cluster)
+  - [Allowing access from Google Cloud services](#allowing-access-from-google-cloud-services)
+- [Restrict anonymous authentication](#restrict-anonymous-authentication)
+- [Regional cluster](#regional-cluster)
+- [Enable Dataplane V2](#enable-dataplane-v2)
+- [Managing GKE logs](#managing-gke-logs)
+- [Upgrade notifications](#upgrade-notifications)
+- [Monitoring configuration](#monitoring-configuration)
+- [Disable GKE logs or metrics collection](#disable-gke-logs-or-metrics-collection)
+- [Cloud DNS](#cloud-dns)
+- [Backup for GKE](#backup-for-gke)
+- [Automatic creation of new secondary ranges](#automatic-creation-of-new-secondary-ranges)
+- [Node auto-provisioning with GPUs and TPUs](#node-auto-provisioning-with-gpus-and-tpus)
+  - [Disable PSC endpoint creation](#disable-psc-endpoint-creation)
+- [GKE Identity Service](#gke-identity-service)
+- [Variables](#variables)
+- [Outputs](#outputs)
 <!-- END TOC -->
 
 ## Cluster access configurations

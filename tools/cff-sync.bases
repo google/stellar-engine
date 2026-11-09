@@ -11,6 +11,7 @@ project-factory project-factory v60.0.0
 # single file. A first field with a slash marks such an entry.
 #
 # <local path> <upstream path> <base release>
+adrs/modules adrs/modules v60.0.0
 tests/examples/utils.py tests/examples/utils.py v60.0.0
 tests/fixtures tests/fixtures v60.0.0
 tools/check_documentation.py tools/check_documentation.py v60.0.0

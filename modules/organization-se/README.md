@@ -13,7 +13,22 @@ To manage organization policies, the `orgpolicy.googleapis.com` service should b
 ## TOC
 
 <!-- BEGIN TOC -->
-
+- [TOC](#toc)
+- [Example](#example)
+- [IAM](#iam)
+- [Organization Policies](#organization-policies)
+  - [Organization Policy Factory](#organization-policy-factory)
+  - [Organization Policy Custom Constraints](#organization-policy-custom-constraints)
+  - [Organization Policy Custom Constraints Factory](#organization-policy-custom-constraints-factory)
+- [Hierarchical Firewall Policy Attachments](#hierarchical-firewall-policy-attachments)
+- [Log Sinks](#log-sinks)
+- [Data Access Logs](#data-access-logs)
+- [Custom Roles](#custom-roles)
+  - [Custom Roles Factory](#custom-roles-factory)
+- [Tags](#tags)
+- [Files](#files)
+- [Variables](#variables)
+- [Outputs](#outputs)
 <!-- END TOC -->
 
 ## Example

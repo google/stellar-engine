@@ -189,12 +189,11 @@ write_entry() {
 }
 
 # formatted_entry ENTRY PATH prints ENTRY unchanged, or for a Python file
-# outside modules/ the entry of its content after PY_FORMAT, which the
-# script writes to the object database so write_entry can read it.
+# the entry of its content after PY_FORMAT, which the script writes to the
+# object database so write_entry can read it.
 formatted_entry() {
   local entry="$1" path="$2" id
-  if [[ -z "${entry}" || "${path}" == modules/* || "${path}" != *.py ||
-    "${entry}" != [FX]:* ]]; then
+  if [[ -z "${entry}" || "${path}" != *.py || "${entry}" != [FX]:* ]]; then
     printf '%s\n' "${entry}"
     return 0
   fi
