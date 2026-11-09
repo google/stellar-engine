@@ -85,11 +85,6 @@ locals {
   }
 }
 
-moved {
-  from = module.vdss-host-project
-  to   = module.landing-project
-}
-
 module "landing-project" {
   source = "../../../modules/project"
   providers = {
@@ -124,27 +119,12 @@ module "landing-project" {
   }
 }
 
-moved {
-  from = google_compute_project_metadata.metadata-vdss-host-project
-  to   = google_compute_project_metadata.metadata_vdss_host_project
-}
-
-moved {
-  from = google_compute_project_metadata.metadata_vdss_host_project
-  to   = google_compute_project_metadata.metadata_landing_project
-}
-
 resource "google_compute_project_metadata" "metadata_landing_project" {
   project = module.landing-project.project_id
   metadata = {
     block-project-ssh-keys = true # CIS Compliance Benchmark 4.3
     enable-oslogin         = true # CIS Compliance Benchmark 4.4
   }
-}
-
-moved {
-  from = module.vdss-vpc
-  to   = module.landing-vpc
 }
 
 module "landing-vpc" {
@@ -172,11 +152,6 @@ module "landing-vpc" {
   } : {}
 }
 
-moved {
-  from = module.vdss-firewall
-  to   = module.landing-firewall
-}
-
 module "landing-firewall" {
   source     = "../../../modules/net-vpc-firewall"
   project_id = module.landing-project.project_id
@@ -187,11 +162,6 @@ module "landing-firewall" {
   named_ranges  = var.cidrs
   ingress_rules = try(var.firewall_rules.landing.ingress, {})
   egress_rules  = try(var.firewall_rules.landing.egress, {})
-}
-
-moved {
-  from = module.dmz-nat-primary
-  to   = module.landing-nat["primary"]
 }
 
 module "landing-nat" {

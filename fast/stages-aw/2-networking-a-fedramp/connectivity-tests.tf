@@ -12,11 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-moved {
-  from = google_network_management_connectivity_test.landing-test
-  to   = google_network_management_connectivity_test.landing_test
-}
-
 resource "google_network_management_connectivity_test" "landing_test" {
   for_each = var.enable_cloud_nat ? var.regions : {}
 
@@ -38,11 +33,6 @@ resource "google_network_management_connectivity_test" "landing_test" {
   labels = {
     env = "landing"
   }
-}
-
-moved {
-  from = google_compute_address.source-addr
-  to   = google_compute_address.source_addr
 }
 
 resource "google_compute_address" "source_addr" {

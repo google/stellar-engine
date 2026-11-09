@@ -45,6 +45,8 @@ class TestStage2Networking(unittest.TestCase):
         self.assertIn('module "landing-vpc"', net_landing)
         self.assertIn('module "landing-nat"', net_landing)
         self.assertNotIn('module "dmz-vpc"', net_landing)
+        self.assertNotIn("moved {", net_landing)
+        self.assertNotIn("vdss", net_landing)
         self.assertIn('preset_topology = "STAR"', net_landing)
         self.assertIn(
             'group                 = "$ncc_groups:landing/center"', net_landing

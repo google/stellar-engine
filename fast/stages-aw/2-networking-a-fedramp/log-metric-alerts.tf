@@ -16,16 +16,6 @@
 
 # CIS Compliance Benchmark 2.4 - 2.11
 
-moved {
-  from = module.vdss_log_metrics
-  to   = module.vdss-log-metrics
-}
-
-moved {
-  from = module.vdss-log-metrics
-  to   = module.landing-log-metrics
-}
-
 module "landing-log-metrics" {
   source  = "../../../modules/cis-log-metrics"
   project = module.landing-project.id
@@ -46,16 +36,6 @@ module "spoke-log-metrics" {
 resource "time_sleep" "networking_wait_10_seconds" {
   depends_on      = [module.landing-log-metrics, module.spoke-log-metrics]
   create_duration = "10s"
-}
-
-moved {
-  from = module.vdss_log_alerts
-  to   = module.vdss-log-alerts
-}
-
-moved {
-  from = module.vdss-log-alerts
-  to   = module.landing-log-alerts
 }
 
 module "landing-log-alerts" {
