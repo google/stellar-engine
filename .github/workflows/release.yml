@@ -176,21 +176,26 @@ jobs:
                   return ""
 
           sub_bullets = {}
-          branch_cl = gh_get(
-              "contents/CHANGELOG.md?ref=release-please--branches--main"
-          )
-          if isinstance(branch_cl, dict) and branch_cl.get("content"):
-              raw_cl = base64.b64decode(branch_cl["content"]).decode(
-                  "utf-8", errors="replace"
+          owner = repo.split("/", 1)[0]
+          for release_branch in (
+              "release-please--branches--main",
+              "release-please-branches-main",
+          ):
+              branch_cl = gh_get(
+                  f"contents/CHANGELOG.md?ref={release_branch}"
               )
-              sub_bullets.update(extract_existing(raw_cl))
+              if isinstance(branch_cl, dict) and branch_cl.get("content"):
+                  raw_cl = base64.b64decode(branch_cl["content"]).decode(
+                      "utf-8", errors="replace"
+                  )
+                  sub_bullets.update(extract_existing(raw_cl))
 
-          open_prs = gh_get(
-              "pulls?head=google:release-please--branches--main&state=open"
-          )
-          if isinstance(open_prs, list):
-              for pr in open_prs:
-                  sub_bullets.update(extract_existing(pr.get("body", "")))
+              open_prs = gh_get(
+                  f"pulls?head={owner}:{release_branch}&state=open"
+              )
+              if isinstance(open_prs, list):
+                  for pr in open_prs:
+                      sub_bullets.update(extract_existing(pr.get("body", "")))
 
           if gemini_key:
               manifest = gh_get(
@@ -298,7 +303,90 @@ jobs:
           if (!src.includes(target)) {
             throw new Error('Failed to locate parseArray target in ' + file);
           }
-          fs.writeFileSync(file, src.replace(target, replacement));
+          src = src.replace(target, () => replacement);
+          const replaceExact = (label, from, to) => {
+            if (!src.includes(from)) {
+              throw new Error('Failed to locate ' + label + ' target in ' + file);
+            }
+            src = src.replace(from, () => to);
+          };
+          replaceExact(
+            'ofTargetBranch',
+            'return new DefaultBranchName(`${RELEASE_PLEASE}--branches--${targetBranch}`);',
+            'return new DefaultBranchName(`${RELEASE_PLEASE}-branches-${targetBranch}`);'
+          );
+          replaceExact(
+            'AutoreleaseBranchName.matches',
+            'if (branchName.startsWith(RELEASE_PLEASE_BRANCH_PREFIX)) {',
+            "if (branchName.startsWith(RELEASE_PLEASE_BRANCH_PREFIX) || branchName.startsWith('release-please-branches-')) {"
+          );
+          replaceExact(
+            'DefaultBranchName',
+            [
+              'const DEFAULT_PATTERN = `^${RELEASE_PLEASE}--branches--(?<branch>.+)$`;',
+              'class DefaultBranchName extends BranchName {',
+              '    static matches(branchName) {',
+              '        return !!branchName.match(DEFAULT_PATTERN);',
+              '    }',
+              '    constructor(branchName) {',
+              '        super(branchName);',
+              '        const match = branchName.match(DEFAULT_PATTERN);',
+              '        if (match === null || match === void 0 ? void 0 : match.groups) {',
+              "            this.targetBranch = match.groups['branch'];",
+              '        }',
+              '    }',
+              '    toString() {',
+              '        return `${RELEASE_PLEASE}--branches--${this.targetBranch}`;',
+              '    }',
+              '}',
+            ].join('\n'),
+            [
+              'const DEFAULT_PATTERN = `^${RELEASE_PLEASE}-branches-(?<branch>.+)$`;',
+              'const LEGACY_DEFAULT_PATTERN = `^${RELEASE_PLEASE}--branches--(?<branch>.+)$`;',
+              'class DefaultBranchName extends BranchName {',
+              '    static matches(branchName) {',
+              '        return !!branchName.match(DEFAULT_PATTERN) || !!branchName.match(LEGACY_DEFAULT_PATTERN);',
+              '    }',
+              '    constructor(branchName) {',
+              '        super(branchName);',
+              '        const match = branchName.match(DEFAULT_PATTERN) || branchName.match(LEGACY_DEFAULT_PATTERN);',
+              '        if (match === null || match === void 0 ? void 0 : match.groups) {',
+              "            this.targetBranch = match.groups['branch'];",
+              '        }',
+              '    }',
+              '    toString() {',
+              '        return `${RELEASE_PLEASE}-branches-${this.targetBranch}`;',
+              '    }',
+              '}',
+            ].join('\n')
+          );
+          replaceExact(
+            'createOrUpdatePullRequest',
+            [
+              '        const existing = openPullRequests.find(openPullRequest => openPullRequest.headBranchName === pullRequest.headRefName);',
+              '        if (existing) {',
+              '            return this.alwaysUpdate',
+              '                ? await this.updateExistingPullRequest(existing, pullRequest)',
+              '                : await this.maybeUpdateExistingPullRequest(existing, pullRequest);',
+              '        }',
+            ].join('\n'),
+            [
+              "        const legacyHeadRefName = pullRequest.headRefName.replace(/^release-please-branches-/, 'release-please--branches--');",
+              '        const existing = openPullRequests.find(openPullRequest => openPullRequest.headBranchName === pullRequest.headRefName) ||',
+              '            (legacyHeadRefName !== pullRequest.headRefName',
+              '                ? openPullRequests.find(openPullRequest => openPullRequest.headBranchName === legacyHeadRefName)',
+              '                : undefined);',
+              '        if (existing) {',
+              '            const matchedPullRequest = existing.headBranchName === pullRequest.headRefName',
+              '                ? pullRequest',
+              '                : { ...pullRequest, headRefName: existing.headBranchName };',
+              '            return this.alwaysUpdate',
+              '                ? await this.updateExistingPullRequest(existing, matchedPullRequest)',
+              '                : await this.maybeUpdateExistingPullRequest(existing, matchedPullRequest);',
+              '        }',
+            ].join('\n')
+          );
+          fs.writeFileSync(file, src);
           NODE
           done
 

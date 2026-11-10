@@ -191,6 +191,74 @@ class TestLabelTaxonomy(unittest.TestCase):
             index_js = pathlib.Path(tmpdir) / "index.js"
             index_js.write_text(
                 "const fs = require('fs');\n"
+                "const RELEASE_PLEASE = 'release-please';\n"
+                "const RELEASE_PLEASE_BRANCH_PREFIX = "
+                "'release-please--branches';\n"
+                "const AUTORELEASE_PATTERN = "
+                "/^release-?(?<component>[\\w-.]*)?-v(?<version>[0-9].*)$/;\n"
+                "class BranchName {\n"
+                "    static ofTargetBranch(targetBranch) {\n"
+                "        return new DefaultBranchName("
+                "`${RELEASE_PLEASE}--branches--${targetBranch}`);\n"
+                "    }\n"
+                "    getTargetBranch() { return this.targetBranch; }\n"
+                "    getComponent() { return this.component; }\n"
+                "}\n"
+                "class AutoreleaseBranchName extends BranchName {\n"
+                "    static matches(branchName) {\n"
+                "        if (branchName.startsWith("
+                "RELEASE_PLEASE_BRANCH_PREFIX)) {\n"
+                "            return false;\n"
+                "        }\n"
+                "        return !!branchName.match(AUTORELEASE_PATTERN);\n"
+                "    }\n"
+                "}\n"
+                "const DEFAULT_PATTERN = "
+                "`^${RELEASE_PLEASE}--branches--(?<branch>.+)$`;\n"
+                "class DefaultBranchName extends BranchName {\n"
+                "    static matches(branchName) {\n"
+                "        return !!branchName.match(DEFAULT_PATTERN);\n"
+                "    }\n"
+                "    constructor(branchName) {\n"
+                "        super(branchName);\n"
+                "        const match = branchName.match(DEFAULT_PATTERN);\n"
+                "        if (match === null || match === void 0 "
+                "? void 0 : match.groups) {\n"
+                "            this.targetBranch = match.groups['branch'];\n"
+                "        }\n"
+                "    }\n"
+                "    toString() {\n"
+                "        return "
+                "`${RELEASE_PLEASE}--branches--${this.targetBranch}`;\n"
+                "    }\n"
+                "}\n"
+                "class ManifestStub {\n"
+                "    constructor() { this.alwaysUpdate = false; }\n"
+                "    async updateExistingPullRequest(existing, pr) {\n"
+                "        return {mode: 'force', number: existing.number, "
+                "headRefName: pr.headRefName};\n"
+                "    }\n"
+                "    async maybeUpdateExistingPullRequest(existing, pr) {\n"
+                "        return {mode: 'maybe', number: existing.number, "
+                "headRefName: pr.headRefName, "
+                "title: pr.title.toString()};\n"
+                "    }\n"
+                "    async createOrUpdatePullRequest("
+                "pullRequest, openPullRequests) {\n"
+                "        const existing = openPullRequests.find("
+                "openPullRequest => openPullRequest.headBranchName "
+                "=== pullRequest.headRefName);\n"
+                "        if (existing) {\n"
+                "            return this.alwaysUpdate\n"
+                "                ? await this.updateExistingPullRequest("
+                "existing, pullRequest)\n"
+                "                : await this.maybeUpdateExistingPullRequest("
+                "existing, pullRequest);\n"
+                "        }\n"
+                "        return {mode: 'create', "
+                "headRefName: pullRequest.headRefName};\n"
+                "    }\n"
+                "}\n"
                 "const commits = [{sha: '936a6925b2', pullRequest: {body: "
                 f"{json.dumps('## Description\n' + sample)}}}}}"
                 "];\n"
@@ -204,7 +272,37 @@ class TestLabelTaxonomy(unittest.TestCase):
                 "            .parseArray("
                 "changelogCommits, context, preset.writerOpts)\n"
                 "            .trim();\n"
-                "console.log(out);\n",
+                "(async () => {\n"
+                "  const m = new ManifestStub();\n"
+                "  const cand = {\n"
+                "    headRefName: BranchName.ofTargetBranch('main')"
+                ".toString(),\n"
+                "    title: {toString: () => 'release: v6.0.0'},\n"
+                "  };\n"
+                "  const legacyRes = await m.createOrUpdatePullRequest(\n"
+                "    cand,\n"
+                "    [{number: 394, headBranchName: "
+                "'release-please--branches--main'}],\n"
+                "  );\n"
+                "  const freshRes = await m.createOrUpdatePullRequest("
+                "cand, []);\n"
+                "  console.log(JSON.stringify({\n"
+                "    out,\n"
+                "    generated: cand.headRefName,\n"
+                "    matchesNew: DefaultBranchName.matches("
+                "'release-please-branches-main'),\n"
+                "    matchesLegacy: DefaultBranchName.matches("
+                "'release-please--branches--main'),\n"
+                "    parsedLegacy: new DefaultBranchName("
+                "'release-please--branches--main').getTargetBranch(),\n"
+                "    parsedNew: new DefaultBranchName("
+                "'release-please-branches-main').getTargetBranch(),\n"
+                "    autoreleaseHijack: AutoreleaseBranchName.matches("
+                "'release-please-branches-v6.0'),\n"
+                "    legacyRes,\n"
+                "    freshRes,\n"
+                "  }));\n"
+                "})();\n",
                 encoding="utf-8",
             )
             subprocess.run(
@@ -213,15 +311,39 @@ class TestLabelTaxonomy(unittest.TestCase):
                 text=True,
                 check=True,
             )
-            rendered = subprocess.check_output(
-                ["node", str(index_js)],
-                text=True,
-                env={
-                    **os.environ,
-                    "GITHUB_REPOSITORY": "google/stellar-engine",
-                },
-            ).strip()
-        self.assertEqual(rendered, f"{base_line}\n  * {expected_sub}")
+            payload = json.loads(
+                subprocess.check_output(
+                    ["node", str(index_js)],
+                    text=True,
+                    env={
+                        **os.environ,
+                        "GITHUB_REPOSITORY": "google/stellar-engine",
+                    },
+                ).strip()
+            )
+        self.assertEqual(payload["out"], f"{base_line}\n  * {expected_sub}")
+        self.assertEqual(payload["generated"], "release-please-branches-main")
+        self.assertTrue(payload["matchesNew"])
+        self.assertTrue(payload["matchesLegacy"])
+        self.assertEqual(payload["parsedLegacy"], "main")
+        self.assertEqual(payload["parsedNew"], "main")
+        self.assertFalse(payload["autoreleaseHijack"])
+        self.assertEqual(
+            payload["legacyRes"],
+            {
+                "mode": "maybe",
+                "number": 394,
+                "headRefName": "release-please--branches--main",
+                "title": "release: v6.0.0",
+            },
+        )
+        self.assertEqual(
+            payload["freshRes"],
+            {"mode": "create", "headRefName": "release-please-branches-main"},
+        )
+        gemini_md = (_REPO_ROOT / "GEMINI.md").read_text(encoding="utf-8")
+        self.assertIn("`release-please-branches-main`", gemini_md)
+        self.assertNotIn("`release-please--branches--main`", gemini_md)
 
     def test_dependabot_uses_only_curated_labels(self):
         dependabot_path = _REPO_ROOT / ".github/dependabot.yml"
