@@ -34,10 +34,14 @@ locals {
     swp_gateway  = try(module.egress-swp[0].id, null)
     swp_ip       = var.centralized_egress.enabled ? var.centralized_egress.swp_ip : null
   }
-  host_project_ids = module.env-spoke-vpc
-  host_project_numbers = {
-    hub = module.hub-project.number
-  }
+  host_project_ids = merge(
+    { hub = module.hub-project.id },
+    { for k, v in module.env-spoke-projects : lower(k) => v.id }
+  )
+  host_project_numbers = merge(
+    { hub = module.hub-project.number },
+    { for k, v in module.env-spoke-projects : lower(k) => v.number }
+  )
   psc_google_apis_endpoints = !var.psc_google_apis.enabled ? {} : merge(
     {
       hub = {

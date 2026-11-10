@@ -54,6 +54,9 @@ class TestStage2Networking(unittest.TestCase):
 
         self.assertIn('module "hub-project"', net_hub)
         self.assertIn('name                    = "net-hub-host"', net_hub)
+        self.assertIn("parent                  = module.folder.id", net_hub)
+        self.assertNotIn("shared_vpc_host_config", net_hub)
+        self.assertIn("shared_vpc_host                   = true", net_hub)
         self.assertIn('default_service_account = "deprivilege"', net_hub)
         self.assertIn("compute_metadata = {", net_hub)
         self.assertNotIn("google_compute_project_metadata", net_hub)
@@ -73,14 +76,12 @@ class TestStage2Networking(unittest.TestCase):
         self.assertNotIn("vdss", net_hub)
         self.assertIn("export_psc      = true", net_hub)
         self.assertIn('preset_topology = "STAR"', net_hub)
-        self.assertIn(
-            'group                 = "$ncc_groups:main/center"', net_hub
-        )
-        self.assertIn(
-            'group                 = "$ncc_groups:main/edge"', net_hub
-        )
+        self.assertIn('group       = "$ncc_groups:main/center"', net_hub)
+        self.assertIn('group       = "$ncc_groups:main/edge"', net_hub)
 
         self.assertIn('default_service_account = "deprivilege"', branch_tf)
+        self.assertIn("parent                  = module.folder.id", branch_tf)
+        self.assertNotIn("shared_vpc_host_config", branch_tf)
         self.assertIn('module "env-spoke-firewall-policy"', branch_tf)
         self.assertIn('module "env-spoke-nat"', branch_tf)
         self.assertIn('logging_filter = "ALL"', branch_tf)
@@ -96,18 +97,23 @@ class TestStage2Networking(unittest.TestCase):
         self.assertIn('module "hub-psc-addresses"', psc_tf)
         self.assertIn('module "env-psc-addresses"', psc_tf)
         self.assertIn("service_directory_registration = (", psc_tf)
-        self.assertIn('domain = "p.googleapis.com."', psc_tf)
+        self.assertNotIn('domain = "p.googleapis.com."', psc_tf)
         self.assertIn('module "env-dns-policy-googleapis"', psc_tf)
+        self.assertIn("rules = local._dns_policy_rules_file", psc_tf)
+        self.assertTrue(
+            (_FEDRAMP_NET_DIR / "data/dns-policy-rules.yaml").is_file()
+        )
+        self.assertNotIn("resolvers", vars_tf)
 
         self.assertIn('module "hub-test-addresses"', conn_tf)
         self.assertIn('module "env-test-addresses"', conn_tf)
+        self.assertIn("_hub_test_regions", conn_tf)
+        self.assertNotIn("hub-default", conn_tf)
         self.assertNotIn('resource "google_compute_address"', conn_tf)
 
         self.assertIn('module "egress-vpc"', egress_tf)
         self.assertIn('module "egress-firewall-policy"', egress_tf)
-        self.assertIn('module "egress-nat"', egress_tf)
-        self.assertIn('endpoint_types = ["ENDPOINT_TYPE_SWG"]', egress_tf)
-        self.assertIn('logging_filter = "ALL"', egress_tf)
+        self.assertNotIn('module "egress-nat"', egress_tf)
         self.assertIn("flow_logs_config = {", egress_tf)
         self.assertIn('module "egress-dns-peer-hub-root"', egress_tf)
         self.assertIn('module "egress-swp"', egress_tf)
@@ -117,9 +123,11 @@ class TestStage2Networking(unittest.TestCase):
             egress_tf,
         )
         self.assertIn("next_hop_routing_mode = true", egress_tf)
+        self.assertIn("next_hop_ilb = var.centralized_egress.swp_ip", egress_tf)
+        self.assertIn("google_network_connectivity_spoke.vpcs", egress_tf)
         self.assertIn('module "egress-psc-addresses"', egress_tf)
+        self.assertNotIn('domain = "p.googleapis.com."', egress_tf)
         self.assertIn("_fw_policy_context = {", main_tf)
-        self.assertIn("next_hop      = var.centralized_egress.swp_ip", main_tf)
 
         self.assertIn('variable "centralized_egress"', vars_tf)
         self.assertIn('variable "enable_cloud_nat"', vars_tf)
@@ -132,6 +140,11 @@ class TestStage2Networking(unittest.TestCase):
         self.assertNotIn('variable "enable_hub_and_spoke_peering"', vars_tf)
         self.assertIn('output "hub"', outputs_tf)
         self.assertIn('output "psc_google_apis_endpoints"', outputs_tf)
+        self.assertNotIn("host_project_ids = module.env-spoke-vpc", outputs_tf)
+        self.assertIn(
+            "{ for k, v in module.env-spoke-projects : lower(k) => v.id }",
+            outputs_tf,
+        )
 
     def test_firewall_policy_name_defaults_to_prefixed_name(self):
         for stage_dir in (_FEDRAMP_NET_DIR, _IL5_NET_DIR):

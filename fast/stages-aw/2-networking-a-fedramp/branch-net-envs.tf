@@ -59,7 +59,7 @@ module "env-spoke-projects" {
   name                    = lower("${each.key}-net-host")
   default_service_account = "deprivilege"
   lien_reason             = "Protected by default as a core project."
-  parent                  = var.folder_ids.networking
+  parent                  = module.folder.id
   prefix                  = var.prefix
   services = concat([
     "container.googleapis.com",
@@ -73,9 +73,6 @@ module "env-spoke-projects" {
     "stackdriver.googleapis.com",
     "vpcaccess.googleapis.com"
   ], local._ncc_enabled ? ["networkconnectivity.googleapis.com"] : [])
-  shared_vpc_host_config = {
-    enabled = true
-  }
   compute_metadata = {
     block-project-ssh-keys = "true" # CIS Compliance Benchmark 4.3
     enable-oslogin         = "true" # CIS Compliance Benchmark 4.4

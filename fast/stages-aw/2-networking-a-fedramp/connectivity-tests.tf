@@ -17,12 +17,16 @@
 # tfdoc:file:description Network Management connectivity tests and addresses.
 
 locals {
+  _hub_test_regions = !local._has_internet_egress ? {} : {
+    for k, r in var.regions : k => r
+    if length([for s in try(var.subnets.hub, []) : s.name if s.region == r]) > 0
+  }
   _hub_test_internal_addrs = {
-    for k, r in var.regions : "hub-test-addr-${r}" => {
+    for k, r in local._hub_test_regions : "hub-test-addr-${r}" => {
       region = r
-      subnetwork = try(
-        module.hub-vpc.subnet_self_links["${r}/hub-default"], null
-      )
+      subnetwork = module.hub-vpc.subnet_self_links[
+        "${r}/${[for s in var.subnets.hub : s.name if s.region == r][0]}"
+      ]
     }
   }
   _env_test_subnet_links = {
@@ -36,14 +40,14 @@ locals {
 }
 
 module "hub-test-addresses" {
-  count              = local._has_internet_egress ? 1 : 0
+  count              = length(local._hub_test_internal_addrs) > 0 ? 1 : 0
   source             = "../../../modules/net-address"
   project_id         = module.hub-project.project_id
   internal_addresses = local._hub_test_internal_addrs
 }
 
 resource "google_network_management_connectivity_test" "hub_test" {
-  for_each = local._has_internet_egress ? var.regions : {}
+  for_each = local._hub_test_regions
 
   name    = "hub-subnet-test-${each.key}"
   project = module.hub-project.project_id

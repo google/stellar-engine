@@ -68,6 +68,7 @@ variable "centralized_egress" {
     proxy_subnet_cidr = optional(string, "10.64.251.0/24")
     swp_ip            = optional(string, "10.64.250.10")
     ports             = optional(list(number), [80, 443])
+    route_tags        = optional(list(string))
     certificates      = optional(list(string), [])
     policy_rules = optional(map(object({
       priority            = number
@@ -130,7 +131,6 @@ variable "dns" {
   description = "DNS configuration."
   type = object({
     enable_logging = optional(bool, true) # CIS Compliance Benchmark 2.12
-    resolvers      = optional(list(string), [])
   })
   default  = {}
   nullable = false
@@ -189,7 +189,7 @@ variable "factories_config" {
   description = "Configuration for network resource factories."
   type = object({
     data_dir              = optional(string, "data")
-    dns_policy_rules_file = optional(string, "data/dns-policy-rules.yaml")
+    dns_policy_rules_file = optional(string)
     firewall_policy_name  = optional(string)
     ncc_hubs              = optional(string)
   })
@@ -369,13 +369,13 @@ variable "ncc_hubs" {
   description = "Network Connectivity Center hubs, groups, and spokes in hub_name => config format, merged with YAML definitions from factories_config.ncc_hubs."
   type = map(object({
     project_id      = optional(string)
-    description     = optional(string, "Terraform-managed.")
-    export_psc      = optional(bool, true)
+    description     = optional(string)
+    export_psc      = optional(bool)
     policy_mode     = optional(string)
     preset_topology = optional(string)
     labels          = optional(map(string), {})
     groups = optional(map(object({
-      description = optional(string, "Terraform-managed.")
+      description = optional(string)
       labels      = optional(map(string), {})
       auto_accept = optional(list(string), [])
     })), {})
@@ -398,7 +398,7 @@ variable "ncc_hubs" {
         group                      = optional(string)
         description                = optional(string, "Terraform-managed.")
         labels                     = optional(map(string), {})
-        site_to_site_data_transfer = optional(bool, true)
+        site_to_site_data_transfer = optional(bool, false)
         include_import_ranges      = optional(list(string), ["ALL_IPV4_RANGES"])
       })), {})
       vlan_attachments = optional(map(object({
@@ -409,7 +409,7 @@ variable "ncc_hubs" {
         group                      = optional(string)
         description                = optional(string, "Terraform-managed.")
         labels                     = optional(map(string), {})
-        site_to_site_data_transfer = optional(bool, true)
+        site_to_site_data_transfer = optional(bool, false)
         include_import_ranges      = optional(list(string), ["ALL_IPV4_RANGES"])
       })), {})
       router_appliances = optional(map(object({
@@ -423,7 +423,7 @@ variable "ncc_hubs" {
         group                      = optional(string)
         description                = optional(string, "Terraform-managed.")
         labels                     = optional(map(string), {})
-        site_to_site_data_transfer = optional(bool, true)
+        site_to_site_data_transfer = optional(bool, false)
         include_import_ranges      = optional(list(string), ["ALL_IPV4_RANGES"])
       })), {})
     }), {})

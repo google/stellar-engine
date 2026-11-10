@@ -39,27 +39,16 @@ locals {
     var.centralized_egress.enabled || var.enable_cloud_nat
   )
   _default_egress_routes = (
-    var.centralized_egress.enabled
+    var.enable_cloud_nat && !var.centralized_egress.enabled
     ? {
       default = {
         dest_range    = "0.0.0.0/0"
-        next_hop      = var.centralized_egress.swp_ip
-        next_hop_type = "ip"
+        next_hop      = "default-internet-gateway"
+        next_hop_type = "gateway"
         priority      = 1000
       }
     }
-    : (
-      var.enable_cloud_nat
-      ? {
-        default = {
-          dest_range    = "0.0.0.0/0"
-          next_hop      = "default-internet-gateway"
-          next_hop_type = "gateway"
-          priority      = 1000
-        }
-      }
-      : {}
-    )
+    : {}
   )
   _fw_policy_context = {
     cidr_ranges             = var.gcp_ranges
@@ -169,8 +158,12 @@ locals {
 }
 
 module "folder" {
-  source        = "../../../modules/folder"
-  parent        = "organizations/${var.organization.id}"
+  source = "../../../modules/folder"
+  parent = coalesce(
+    var.common_services_folder,
+    var.assured_workloads.folder,
+    "organizations/${var.organization.id}"
+  )
   name          = "Networking"
   folder_create = var.folder_ids.networking == null
   id            = var.folder_ids.networking

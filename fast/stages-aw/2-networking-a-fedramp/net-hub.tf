@@ -36,38 +36,29 @@ locals {
   _default_ncc_spokes_vpcs = merge(
     {
       hub = {
-        vpc                   = "$vpcs:hub"
-        name                  = "hub-0"
-        project_id            = "$project_ids:hub"
-        group                 = "$ncc_groups:main/center"
-        description           = "Central hub VPC spoke."
-        labels                = tomap({})
-        exclude_export_ranges = tolist(null)
-        include_export_ranges = tolist(null)
+        vpc         = "$vpcs:hub"
+        name        = "hub-0"
+        project_id  = "$project_ids:hub"
+        group       = "$ncc_groups:main/center"
+        description = "Central hub VPC spoke."
       }
     },
     !var.centralized_egress.enabled ? {} : {
       egress = {
-        vpc                   = "$vpcs:egress"
-        name                  = "egress-0"
-        project_id            = "$project_ids:hub"
-        group                 = "$ncc_groups:main/center"
-        description           = "Centralized SWP Internet Egress VPC spoke."
-        labels                = tomap({})
-        exclude_export_ranges = tolist(null)
-        include_export_ranges = tolist(null)
+        vpc         = "$vpcs:egress"
+        name        = "egress-0"
+        project_id  = "$project_ids:hub"
+        group       = "$ncc_groups:main/center"
+        description = "Centralized SWP Internet Egress VPC spoke."
       }
     },
     {
       for k, _ in var.envs_folders : lower(k) => {
-        vpc                   = "$vpcs:${lower(k)}"
-        name                  = "${lower(k)}-spoke-0"
-        project_id            = "$project_ids:${lower(k)}"
-        group                 = "$ncc_groups:main/edge"
-        description           = "${k} environment spoke VPC."
-        labels                = tomap({})
-        exclude_export_ranges = tolist(null)
-        include_export_ranges = tolist(null)
+        vpc         = "$vpcs:${lower(k)}"
+        name        = "${lower(k)}-spoke-0"
+        project_id  = "$project_ids:${lower(k)}"
+        group       = "$ncc_groups:main/edge"
+        description = "${k} environment spoke VPC."
       }
     }
   )
@@ -78,16 +69,13 @@ locals {
       export_psc      = true
       policy_mode     = "PRESET"
       preset_topology = "STAR"
-      labels          = tomap({})
       groups = {
         center = {
           description = "Central hub and hybrid connectivity spokes."
-          labels      = tomap({})
           auto_accept = ["$project_ids:hub"]
         }
         edge = {
           description = "Environment workload spoke VPCs."
-          labels      = tomap({})
           auto_accept = [
             for k in sort(keys(var.envs_folders)) :
             "$project_ids:${lower(k)}"
@@ -95,10 +83,7 @@ locals {
         }
       }
       spokes = {
-        vpcs              = local._default_ncc_spokes_vpcs
-        tunnels           = {}
-        vlan_attachments  = {}
-        router_appliances = {}
+        vpcs = local._default_ncc_spokes_vpcs
       }
     }
   }
@@ -114,7 +99,7 @@ module "hub-project" {
   name                    = "net-hub-host"
   default_service_account = "deprivilege"
   lien_reason             = "Protected by default as a core project."
-  parent                  = var.folder_ids.networking
+  parent                  = module.folder.id
   prefix                  = var.prefix
   services = concat([
     "compute.googleapis.com",
@@ -128,9 +113,6 @@ module "hub-project" {
     "stackdriver.googleapis.com",
     "cloudkms.googleapis.com"
   ], local._ncc_enabled ? ["networkconnectivity.googleapis.com"] : [])
-  shared_vpc_host_config = {
-    enabled = true
-  }
   compute_metadata = {
     block-project-ssh-keys = "true" # CIS Compliance Benchmark 4.3
     enable-oslogin         = "true" # CIS Compliance Benchmark 4.4
@@ -152,6 +134,7 @@ module "hub-vpc" {
   delete_default_routes_on_create   = true
   firewall_policy_enforcement_order = "BEFORE_CLASSIC_FIREWALL"
   mtu                               = 1500
+  shared_vpc_host                   = true
   subnets                           = try(var.subnets.hub, [])
   dns_policy = {
     inbound = true
@@ -237,7 +220,11 @@ module "hub-dns-policy-googleapis" {
   source     = "../../../modules/dns-response-policy"
   project_id = module.hub-project.project_id
   name       = "googleapis"
-  rules      = local._psc_hub_dns_rules
+  context    = local._dns_policy_context
+  factories_config = {
+    rules = local._dns_policy_rules_file
+  }
+  rules = local._psc_hub_dns_rules
   networks = {
     hub = module.hub-vpc.self_link
   }

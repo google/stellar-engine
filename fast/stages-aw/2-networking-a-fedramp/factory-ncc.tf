@@ -31,300 +31,28 @@ locals {
       )
     )
   ]
+  _ncc_yaml = {
+    for v in local._ncc_yaml_raw : tostring(v.name) => v
+  }
   _ncc_enabled = (
     length(local._default_ncc_hubs) > 0 ||
-    length(local._ncc_yaml_raw) > 0 ||
+    length(local._ncc_yaml) > 0 ||
     length(var.ncc_hubs) > 0
   )
-
-  _ncc_yaml_configs = {
-    for v in local._ncc_yaml_raw : tostring(v.name) => {
-      project_id = (
-        try(v.project_id, null) != null
-        ? tostring(v.project_id)
-        : tostring(null)
-      )
-      description = (
-        try(v.description, null) != null
-        ? tostring(v.description)
-        : "Terraform-managed."
-      )
-      export_psc = tobool(
-        try(v.export_psc, null) != null ? v.export_psc : true
-      )
-      policy_mode = (
-        try(v.policy_mode, null) != null
-        ? tostring(v.policy_mode)
-        : tostring(null)
-      )
-      preset_topology = (
-        try(v.preset_topology, null) != null
-        ? tostring(v.preset_topology)
-        : tostring(null)
-      )
-      labels = tomap(try({
-        for lk, lv in v.labels : tostring(lk) => tostring(lv)
-      }, {}))
-      groups = tomap(try({
-        for gk, gv in v.groups : tostring(gk) => {
-          description = (
-            try(gv.description, null) != null
-            ? tostring(gv.description)
-            : "Terraform-managed."
-          )
-          labels = tomap(try({
-            for lk, lv in gv.labels : tostring(lk) => tostring(lv)
-          }, {}))
-          auto_accept = tolist(try([
-            for p in gv.auto_accept : tostring(p)
-          ], []))
-        }
-      }, {}))
-      spokes = {
-        vpcs = tomap(try({
-          for sk, sv in v.spokes.vpcs : tostring(sk) => {
-            vpc = (
-              try(sv.vpc, null) != null ? tostring(sv.vpc) : tostring(null)
-            )
-            name = (
-              try(sv.name, null) != null ? tostring(sv.name) : tostring(null)
-            )
-            project_id = (
-              try(sv.project_id, null) != null
-              ? tostring(sv.project_id)
-              : tostring(null)
-            )
-            group = (
-              try(sv.group, null) != null ? tostring(sv.group) : tostring(null)
-            )
-            description = (
-              try(sv.description, null) != null
-              ? tostring(sv.description)
-              : "Terraform-managed."
-            )
-            labels = tomap(try({
-              for lk, lv in sv.labels : tostring(lk) => tostring(lv)
-            }, {}))
-            exclude_export_ranges = (
-              try(sv.exclude_export_ranges, null) != null
-              ? tolist([for r in sv.exclude_export_ranges : tostring(r)])
-              : tolist(null)
-            )
-            include_export_ranges = (
-              try(sv.include_export_ranges, null) != null
-              ? tolist([for r in sv.include_export_ranges : tostring(r)])
-              : tolist(null)
-            )
-          }
-        }, {}))
-        tunnels = tomap(try({
-          for sk, sv in v.spokes.tunnels : tostring(sk) => {
-            uris = tolist([for u in sv.uris : tostring(u)])
-            name = (
-              try(sv.name, null) != null ? tostring(sv.name) : tostring(null)
-            )
-            location = (
-              try(sv.location, null) != null
-              ? tostring(sv.location)
-              : tostring(null)
-            )
-            project_id = (
-              try(sv.project_id, null) != null
-              ? tostring(sv.project_id)
-              : tostring(null)
-            )
-            group = (
-              try(sv.group, null) != null ? tostring(sv.group) : tostring(null)
-            )
-            description = (
-              try(sv.description, null) != null
-              ? tostring(sv.description)
-              : "Terraform-managed."
-            )
-            labels = tomap(try({
-              for lk, lv in sv.labels : tostring(lk) => tostring(lv)
-            }, {}))
-            site_to_site_data_transfer = tobool(
-              try(sv.site_to_site_data_transfer, null) != null
-              ? sv.site_to_site_data_transfer
-              : true
-            )
-            include_import_ranges = (
-              try(sv.include_import_ranges, null) != null
-              ? tolist([for r in sv.include_import_ranges : tostring(r)])
-              : tolist(["ALL_IPV4_RANGES"])
-            )
-          }
-        }, {}))
-        vlan_attachments = tomap(try({
-          for sk, sv in v.spokes.vlan_attachments : tostring(sk) => {
-            uris = tolist([for u in sv.uris : tostring(u)])
-            name = (
-              try(sv.name, null) != null ? tostring(sv.name) : tostring(null)
-            )
-            location = (
-              try(sv.location, null) != null
-              ? tostring(sv.location)
-              : tostring(null)
-            )
-            project_id = (
-              try(sv.project_id, null) != null
-              ? tostring(sv.project_id)
-              : tostring(null)
-            )
-            group = (
-              try(sv.group, null) != null ? tostring(sv.group) : tostring(null)
-            )
-            description = (
-              try(sv.description, null) != null
-              ? tostring(sv.description)
-              : "Terraform-managed."
-            )
-            labels = tomap(try({
-              for lk, lv in sv.labels : tostring(lk) => tostring(lv)
-            }, {}))
-            site_to_site_data_transfer = tobool(
-              try(sv.site_to_site_data_transfer, null) != null
-              ? sv.site_to_site_data_transfer
-              : true
-            )
-            include_import_ranges = (
-              try(sv.include_import_ranges, null) != null
-              ? tolist([for r in sv.include_import_ranges : tostring(r)])
-              : tolist(["ALL_IPV4_RANGES"])
-            )
-          }
-        }, {}))
-        router_appliances = tomap(try({
-          for sk, sv in v.spokes.router_appliances : tostring(sk) => {
-            instances = tolist([
-              for inst in sv.instances : {
-                ip_address      = tostring(inst.ip_address)
-                virtual_machine = tostring(inst.virtual_machine)
-              }
-            ])
-            name = (
-              try(sv.name, null) != null ? tostring(sv.name) : tostring(null)
-            )
-            location = (
-              try(sv.location, null) != null
-              ? tostring(sv.location)
-              : tostring(null)
-            )
-            project_id = (
-              try(sv.project_id, null) != null
-              ? tostring(sv.project_id)
-              : tostring(null)
-            )
-            group = (
-              try(sv.group, null) != null ? tostring(sv.group) : tostring(null)
-            )
-            description = (
-              try(sv.description, null) != null
-              ? tostring(sv.description)
-              : "Terraform-managed."
-            )
-            labels = tomap(try({
-              for lk, lv in sv.labels : tostring(lk) => tostring(lv)
-            }, {}))
-            site_to_site_data_transfer = tobool(
-              try(sv.site_to_site_data_transfer, null) != null
-              ? sv.site_to_site_data_transfer
-              : true
-            )
-            include_import_ranges = (
-              try(sv.include_import_ranges, null) != null
-              ? tolist([for r in sv.include_import_ranges : tostring(r)])
-              : tolist(["ALL_IPV4_RANGES"])
-            )
-          }
-        }, {}))
-      }
-    }
-  }
-
-  _user_ncc_configs = merge(local._ncc_yaml_configs, var.ncc_hubs)
   _all_ncc_hub_keys = toset(concat(
     keys(local._default_ncc_hubs),
-    keys(local._user_ncc_configs)
+    keys(local._ncc_yaml),
+    keys(var.ncc_hubs)
   ))
-  _ncc_configs = {
-    for hk in local._all_ncc_hub_keys : hk => {
-      project_id = (
-        try(local._user_ncc_configs[hk].project_id, null) != null
-        ? local._user_ncc_configs[hk].project_id
-        : try(local._default_ncc_hubs[hk].project_id, null)
-      )
-      description = (
-        try(local._user_ncc_configs[hk].description, null) != null
-        ? local._user_ncc_configs[hk].description
-        : try(
-          local._default_ncc_hubs[hk].description,
-          "Terraform-managed."
-        )
-      )
-      export_psc = (
-        try(local._user_ncc_configs[hk].export_psc, null) != null
-        ? local._user_ncc_configs[hk].export_psc
-        : try(local._default_ncc_hubs[hk].export_psc, true)
-      )
-      policy_mode = (
-        try(local._user_ncc_configs[hk].policy_mode, null) != null
-        ? local._user_ncc_configs[hk].policy_mode
-        : try(local._default_ncc_hubs[hk].policy_mode, null)
-      )
-      preset_topology = (
-        try(local._user_ncc_configs[hk].policy_mode, null) == "CUSTOM"
-        ? try(local._user_ncc_configs[hk].preset_topology, null)
-        : (
-          try(local._user_ncc_configs[hk].preset_topology, null) != null
-          ? local._user_ncc_configs[hk].preset_topology
-          : try(local._default_ncc_hubs[hk].preset_topology, null)
-        )
-      )
-      labels = merge(
-        try(local._default_ncc_hubs[hk].labels, {}),
-        try(local._user_ncc_configs[hk].labels, {})
-      )
-      groups = merge(
-        try(local._default_ncc_hubs[hk].groups, {}),
-        try(local._user_ncc_configs[hk].groups, {})
-      )
-      spokes = {
-        vpcs = merge(
-          try(local._default_ncc_hubs[hk].spokes.vpcs, {}),
-          try(local._user_ncc_configs[hk].spokes.vpcs, {})
-        )
-        tunnels = merge(
-          try(local._default_ncc_hubs[hk].spokes.tunnels, {}),
-          try(local._user_ncc_configs[hk].spokes.tunnels, {})
-        )
-        vlan_attachments = merge(
-          try(local._default_ncc_hubs[hk].spokes.vlan_attachments, {}),
-          try(local._user_ncc_configs[hk].spokes.vlan_attachments, {})
-        )
-        router_appliances = merge(
-          try(local._default_ncc_hubs[hk].spokes.router_appliances, {}),
-          try(local._user_ncc_configs[hk].spokes.router_appliances, {})
-        )
-      }
-    }
-  }
 
   # Stage 2 context lookup maps for symbolic $namespace:key references.
   _ctx_locations = {
     for k, v in var.regions : k => v
   }
   _ctx_projects = merge(
-    {
-      for k, v in var.tenant_accounts : k => v.main_project
-    },
-    {
-      for k, v in module.env-spoke-projects : k => v.project_id
-    },
-    {
-      for k, v in module.env-spoke-projects : lower(k) => v.project_id
-    },
+    { for k, v in var.tenant_accounts : k => v.main_project },
+    { for k, v in module.env-spoke-projects : k => v.project_id },
+    { for k, v in module.env-spoke-projects : lower(k) => v.project_id },
     {
       for k, v in module.env-spoke-projects :
       "${lower(k)}-net-host" => v.project_id
@@ -337,9 +65,7 @@ locals {
     { for k, v in module.env-spoke-vpc : lower(k) => v.self_link }
   )
   _ctx_vpc_projects = merge(
-    {
-      for k, _ in local._hub_vpcs : k => local._hub_project_id
-    },
+    { for k, _ in local._hub_vpcs : k => local._hub_project_id },
     { for k, v in module.env-spoke-projects : k => v.project_id },
     { for k, v in module.env-spoke-projects : lower(k) => v.project_id }
   )
@@ -352,222 +78,295 @@ locals {
     for k, v in google_network_connectivity_group.default : k => v.id
   }
 
+  _ncc_hub_raw_projects = {
+    for hk in local._all_ncc_hub_keys : hk => try(
+      coalesce(
+        try(var.ncc_hubs[hk].project_id, null),
+        try(tostring(local._ncc_yaml[hk].project_id), null),
+        try(local._default_ncc_hubs[hk].project_id, null)
+      ),
+      null
+    )
+  }
   _ncc_hub_projects = {
-    for k, v in local._ncc_configs : k => (
-      v.project_id == null
+    for hk, pid in local._ncc_hub_raw_projects : hk => (
+      pid == null
       ? local._hub_project_id
-      : lookup(
-        local._ctx_projects,
-        trimprefix(v.project_id, "$project_ids:"),
-        v.project_id
-      )
+      : lookup(local._ctx_projects, trimprefix(pid, "$project_ids:"), pid)
+    )
+  }
+  _ncc_hub_policy_modes = {
+    for hk in local._all_ncc_hub_keys : hk => try(
+      coalesce(
+        try(var.ncc_hubs[hk].policy_mode, null),
+        try(tostring(local._ncc_yaml[hk].policy_mode), null),
+        try(local._default_ncc_hubs[hk].policy_mode, null)
+      ),
+      tostring(null)
     )
   }
 
   ncc_hubs = {
-    for k, v in local._ncc_configs : k => {
-      project_id  = local._ncc_hub_projects[k]
-      description = v.description
-      export_psc  = v.export_psc
-      policy_mode = v.policy_mode
-      preset_topology = (
-        v.policy_mode == "CUSTOM"
-        ? v.preset_topology
-        : coalesce(v.preset_topology, "MESH")
+    for hk in local._all_ncc_hub_keys : hk => {
+      project_id = local._ncc_hub_projects[hk]
+      description = coalesce(
+        try(var.ncc_hubs[hk].description, null),
+        try(tostring(local._ncc_yaml[hk].description), null),
+        try(local._default_ncc_hubs[hk].description, null),
+        "Terraform-managed."
       )
-      labels = v.labels
+      export_psc = coalesce(
+        try(var.ncc_hubs[hk].export_psc, null),
+        try(tobool(local._ncc_yaml[hk].export_psc), null),
+        try(local._default_ncc_hubs[hk].export_psc, null),
+        true
+      )
+      policy_mode = local._ncc_hub_policy_modes[hk]
+      preset_topology = (
+        local._ncc_hub_policy_modes[hk] == "CUSTOM"
+        ? try(
+          coalesce(
+            try(var.ncc_hubs[hk].preset_topology, null),
+            try(tostring(local._ncc_yaml[hk].preset_topology), null)
+          ),
+          tostring(null)
+        )
+        : coalesce(
+          try(var.ncc_hubs[hk].preset_topology, null),
+          try(tostring(local._ncc_yaml[hk].preset_topology), null),
+          try(local._default_ncc_hubs[hk].preset_topology, null),
+          "MESH"
+        )
+      )
+      labels = merge(
+        try(local._default_ncc_hubs[hk].labels, {}),
+        try({
+          for k, v in local._ncc_yaml[hk].labels : tostring(k) => tostring(v)
+        }, {}),
+        try(var.ncc_hubs[hk].labels, {})
+      )
     }
   }
 
   ncc_groups = merge([
-    for hk, hv in local._ncc_configs : {
-      for gk, gv in hv.groups : "${hk}/${gk}" => {
-        name        = gk
-        project_id  = local._ncc_hub_projects[hk]
-        hub         = hk
-        description = gv.description
-        labels      = gv.labels
+    for hk in local._all_ncc_hub_keys : {
+      for gk in toset(concat(
+        keys(try(local._default_ncc_hubs[hk].groups, {})),
+        keys(try(local._ncc_yaml[hk].groups, {})),
+        keys(try(var.ncc_hubs[hk].groups, {}))
+        )) : "${hk}/${gk}" => {
+        name       = gk
+        project_id = local._ncc_hub_projects[hk]
+        hub_id     = lookup(local._ctx_ncc_hubs, hk, hk)
+        description = coalesce(
+          try(var.ncc_hubs[hk].groups[gk].description, null),
+          try(tostring(local._ncc_yaml[hk].groups[gk].description), null),
+          try(local._default_ncc_hubs[hk].groups[gk].description, null),
+          "Terraform-managed."
+        )
+        labels = merge(
+          try(local._default_ncc_hubs[hk].groups[gk].labels, {}),
+          try({
+            for k, v in local._ncc_yaml[hk].groups[gk].labels :
+            tostring(k) => tostring(v)
+          }, {}),
+          try(var.ncc_hubs[hk].groups[gk].labels, {})
+        )
         auto_accept = distinct([
-          for p in gv.auto_accept : lookup(
-            local._ctx_projects,
-            trimprefix(p, "$project_ids:"),
-            p
-          )
+          for p in concat(
+            try(local._default_ncc_hubs[hk].groups[gk].auto_accept, []),
+            try([
+              for x in local._ncc_yaml[hk].groups[gk].auto_accept : tostring(x)
+            ], []),
+            try(var.ncc_hubs[hk].groups[gk].auto_accept, [])
+          ) : lookup(local._ctx_projects, trimprefix(p, "$project_ids:"), p)
         ])
       }
     }
   ]...)
 
-  ncc_vpc_spokes = merge([
-    for hk, hv in local._ncc_configs : {
-      for sk, sv in hv.spokes.vpcs : "${hk}/${sk}" => {
-        name = coalesce(sv.name, replace("${hk}-${sk}", "/", "-"))
-        hub  = hk
-        vpc_key = trimprefix(
-          trimprefix(coalesce(sv.vpc, sk), "$vpcs:"),
-          "$networks:"
-        )
-        project_id = (
-          sv.project_id != null
-          ? lookup(
-            local._ctx_projects,
-            trimprefix(sv.project_id, "$project_ids:"),
-            sv.project_id
+  # Common spoke metadata resolved once across all four spoke types.
+  _ncc_spoke_types = [
+    "vpcs", "tunnels", "vlan_attachments", "router_appliances"
+  ]
+  _ncc_spokes_common = {
+    for st in local._ncc_spoke_types : st => merge([
+      for hk in local._all_ncc_hub_keys : {
+        for sk, sv in merge(
+          try(local._default_ncc_hubs[hk].spokes[st], {}),
+          try(local._ncc_yaml[hk].spokes[st], {}),
+          try(var.ncc_hubs[hk].spokes[st], {})
+          ) : "${hk}/${sk}" => {
+          name = coalesce(
+            try(tostring(sv.name), null), replace("${hk}-${sk}", "/", "-")
           )
-          : lookup(
-            local._ctx_vpc_projects,
-            trimprefix(
-              trimprefix(coalesce(sv.vpc, sk), "$vpcs:"),
-              "$networks:"
-            ),
-            try(
-              regex("projects/([^/]+)/", coalesce(sv.vpc, sk))[0],
+          hub_id = lookup(local._ctx_ncc_hubs, hk, hk)
+          group_id = (
+            try(sv.group, null) == null
+            ? tostring(null)
+            : lookup(
+              local._ctx_ncc_groups,
+              "${hk}/${trimprefix(tostring(sv.group), "$ncc_groups:")}",
+              lookup(
+                local._ctx_ncc_groups,
+                trimprefix(tostring(sv.group), "$ncc_groups:"),
+                trimprefix(tostring(sv.group), "$ncc_groups:")
+              )
+            )
+          )
+          description = coalesce(
+            try(tostring(sv.description), null), "Terraform-managed."
+          )
+          labels = try(
+            { for k, v in sv.labels : tostring(k) => tostring(v) }, {}
+          )
+        }
+      }
+    ]...)
+  }
+
+  ncc_vpc_spokes = merge([
+    for hk in local._all_ncc_hub_keys : {
+      for sk, sv in merge(
+        try(local._default_ncc_hubs[hk].spokes.vpcs, {}),
+        try(local._ncc_yaml[hk].spokes.vpcs, {}),
+        try(var.ncc_hubs[hk].spokes.vpcs, {})
+        ) : "${hk}/${sk}" => merge(local._ncc_spokes_common.vpcs["${hk}/${sk}"], {
+          vpc_key = trimprefix(
+            trimprefix(coalesce(try(tostring(sv.vpc), null), sk), "$vpcs:"),
+            "$networks:"
+          )
+          project_id = (
+            try(sv.project_id, null) != null
+            ? lookup(
+              local._ctx_projects,
+              trimprefix(tostring(sv.project_id), "$project_ids:"),
+              tostring(sv.project_id)
+            )
+            : lookup(
+              local._ctx_vpc_projects,
+              trimprefix(
+                trimprefix(coalesce(try(tostring(sv.vpc), null), sk), "$vpcs:"),
+                "$networks:"
+              ),
+              try(
+                regex(
+                  "projects/([^/]+)/", coalesce(try(tostring(sv.vpc), null), sk)
+                )[0],
+                local._ncc_hub_projects[hk]
+              )
+            )
+          )
+          exclude_export_ranges = try(
+            [for r in sv.exclude_export_ranges : tostring(r)], tolist(null)
+          )
+          include_export_ranges = try(
+            [for r in sv.include_export_ranges : tostring(r)], tolist(null)
+          )
+      })
+    }
+  ]...)
+
+  _ncc_uri_spokes = {
+    for st in ["tunnels", "vlan_attachments"] : st => merge([
+      for hk in local._all_ncc_hub_keys : {
+        for sk, sv in merge(
+          try(local._default_ncc_hubs[hk].spokes[st], {}),
+          try(local._ncc_yaml[hk].spokes[st], {}),
+          try(var.ncc_hubs[hk].spokes[st], {})
+          ) : "${hk}/${sk}" => merge(local._ncc_spokes_common[st]["${hk}/${sk}"], {
+            project_id = (
+              try(sv.project_id, null) != null
+              ? lookup(
+                local._ctx_projects,
+                trimprefix(tostring(sv.project_id), "$project_ids:"),
+                tostring(sv.project_id)
+              )
+              : try(
+                regex("projects/([^/]+)/", tostring(sv.uris[0]))[0],
+                local._ncc_hub_projects[hk]
+              )
+            )
+            location = (
+              try(sv.location, null) != null
+              ? lookup(
+                local._ctx_locations,
+                trimprefix(tostring(sv.location), "$locations:"),
+                tostring(sv.location)
+              )
+              : try(
+                regex("regions/([^/]+)/", tostring(sv.uris[0]))[0],
+                var.regions.primary
+              )
+            )
+            uris = [for u in sv.uris : tostring(u)]
+            site_to_site_data_transfer = coalesce(
+              try(tobool(sv.site_to_site_data_transfer), null), false
+            )
+            include_import_ranges = try(
+              [for r in sv.include_import_ranges : tostring(r)],
+              ["ALL_IPV4_RANGES"]
+            )
+        })
+      }
+    ]...)
+  }
+  ncc_vpn_spokes             = local._ncc_uri_spokes["tunnels"]
+  ncc_vlan_attachment_spokes = local._ncc_uri_spokes["vlan_attachments"]
+
+  ncc_ra_spokes = merge([
+    for hk in local._all_ncc_hub_keys : {
+      for sk, sv in merge(
+        try(local._default_ncc_hubs[hk].spokes.router_appliances, {}),
+        try(local._ncc_yaml[hk].spokes.router_appliances, {}),
+        try(var.ncc_hubs[hk].spokes.router_appliances, {})
+        ) : "${hk}/${sk}" => merge(
+        local._ncc_spokes_common.router_appliances["${hk}/${sk}"],
+        {
+          project_id = (
+            try(sv.project_id, null) != null
+            ? lookup(
+              local._ctx_projects,
+              trimprefix(tostring(sv.project_id), "$project_ids:"),
+              tostring(sv.project_id)
+            )
+            : try(
+              regex(
+                "projects/([^/]+)/", tostring(sv.instances[0].virtual_machine)
+              )[0],
               local._ncc_hub_projects[hk]
             )
           )
-        )
-        group = (
-          sv.group == null
-          ? null
-          : trimprefix(sv.group, "$ncc_groups:")
-        )
-        description           = sv.description
-        labels                = sv.labels
-        exclude_export_ranges = sv.exclude_export_ranges
-        include_export_ranges = sv.include_export_ranges
-      }
-    }
-  ]...)
-
-  ncc_vpn_spokes = merge([
-    for hk, hv in local._ncc_configs : {
-      for sk, sv in hv.spokes.tunnels : "${hk}/${sk}" => {
-        name = coalesce(sv.name, replace("${hk}-${sk}", "/", "-"))
-        hub  = hk
-        project_id = (
-          sv.project_id != null
-          ? lookup(
-            local._ctx_projects,
-            trimprefix(sv.project_id, "$project_ids:"),
-            sv.project_id
+          location = (
+            try(sv.location, null) != null
+            ? lookup(
+              local._ctx_locations,
+              trimprefix(tostring(sv.location), "$locations:"),
+              tostring(sv.location)
+            )
+            : try(
+              regex(
+                "zones/([a-z]+-[a-z0-9]+)-[a-z]/",
+                tostring(sv.instances[0].virtual_machine)
+              )[0],
+              var.regions.primary
+            )
           )
-          : try(
-            regex("projects/([^/]+)/", sv.uris[0])[0],
-            local._ncc_hub_projects[hk]
+          instances = [
+            for inst in sv.instances : {
+              ip_address      = tostring(inst.ip_address)
+              virtual_machine = tostring(inst.virtual_machine)
+            }
+          ]
+          site_to_site_data_transfer = coalesce(
+            try(tobool(sv.site_to_site_data_transfer), null), false
           )
-        )
-        location = (
-          sv.location != null
-          ? lookup(
-            local._ctx_locations,
-            trimprefix(sv.location, "$locations:"),
-            sv.location
+          include_import_ranges = try(
+            [for r in sv.include_import_ranges : tostring(r)],
+            ["ALL_IPV4_RANGES"]
           )
-          : try(
-            regex("regions/([^/]+)/", sv.uris[0])[0],
-            var.regions.primary
-          )
-        )
-        group = (
-          sv.group == null
-          ? null
-          : trimprefix(sv.group, "$ncc_groups:")
-        )
-        description                = sv.description
-        labels                     = sv.labels
-        uris                       = sv.uris
-        site_to_site_data_transfer = sv.site_to_site_data_transfer
-        include_import_ranges      = sv.include_import_ranges
-      }
-    }
-  ]...)
-
-  ncc_vlan_attachment_spokes = merge([
-    for hk, hv in local._ncc_configs : {
-      for sk, sv in hv.spokes.vlan_attachments : "${hk}/${sk}" => {
-        name = coalesce(sv.name, replace("${hk}-${sk}", "/", "-"))
-        hub  = hk
-        project_id = (
-          sv.project_id != null
-          ? lookup(
-            local._ctx_projects,
-            trimprefix(sv.project_id, "$project_ids:"),
-            sv.project_id
-          )
-          : try(
-            regex("projects/([^/]+)/", sv.uris[0])[0],
-            local._ncc_hub_projects[hk]
-          )
-        )
-        location = (
-          sv.location != null
-          ? lookup(
-            local._ctx_locations,
-            trimprefix(sv.location, "$locations:"),
-            sv.location
-          )
-          : try(
-            regex("regions/([^/]+)/", sv.uris[0])[0],
-            var.regions.primary
-          )
-        )
-        group = (
-          sv.group == null
-          ? null
-          : trimprefix(sv.group, "$ncc_groups:")
-        )
-        description                = sv.description
-        labels                     = sv.labels
-        uris                       = sv.uris
-        site_to_site_data_transfer = sv.site_to_site_data_transfer
-        include_import_ranges      = sv.include_import_ranges
-      }
-    }
-  ]...)
-
-  ncc_ra_spokes = merge([
-    for hk, hv in local._ncc_configs : {
-      for sk, sv in hv.spokes.router_appliances : "${hk}/${sk}" => {
-        name = coalesce(sv.name, replace("${hk}-${sk}", "/", "-"))
-        hub  = hk
-        project_id = (
-          sv.project_id != null
-          ? lookup(
-            local._ctx_projects,
-            trimprefix(sv.project_id, "$project_ids:"),
-            sv.project_id
-          )
-          : try(
-            regex("projects/([^/]+)/", sv.instances[0].virtual_machine)[0],
-            local._ncc_hub_projects[hk]
-          )
-        )
-        location = (
-          sv.location != null
-          ? lookup(
-            local._ctx_locations,
-            trimprefix(sv.location, "$locations:"),
-            sv.location
-          )
-          : try(
-            regex(
-              "zones/([a-z]+-[a-z0-9]+)-[a-z]/",
-              sv.instances[0].virtual_machine
-            )[0],
-            var.regions.primary
-          )
-        )
-        group = (
-          sv.group == null
-          ? null
-          : trimprefix(sv.group, "$ncc_groups:")
-        )
-        description                = sv.description
-        labels                     = sv.labels
-        instances                  = sv.instances
-        site_to_site_data_transfer = sv.site_to_site_data_transfer
-        include_import_ranges      = sv.include_import_ranges
-      }
+        }
+      )
     }
   ]...)
 }
@@ -604,16 +403,14 @@ resource "google_network_connectivity_hub" "default" {
     }
   }
 
-  depends_on = [
-    module.env-spoke-projects,
-  ]
+  depends_on = [module.env-spoke-projects]
 }
 
 resource "google_network_connectivity_group" "default" {
   for_each    = local.ncc_groups
   project     = each.value.project_id
   name        = each.value.name
-  hub         = lookup(local._ctx_ncc_hubs, each.value.hub, each.value.hub)
+  hub         = each.value.hub_id
   labels      = each.value.labels
   description = each.value.description
 
@@ -641,22 +438,12 @@ resource "google_network_connectivity_spoke" "vpcs" {
   location    = "global"
   description = each.value.description
   labels      = each.value.labels
-  hub         = lookup(local._ctx_ncc_hubs, each.value.hub, each.value.hub)
-  group = (
-    each.value.group == null
-    ? null
-    : lookup(
-      local._ctx_ncc_groups,
-      "${each.value.hub}/${each.value.group}",
-      lookup(local._ctx_ncc_groups, each.value.group, each.value.group)
-    )
-  )
+  hub         = each.value.hub_id
+  group       = each.value.group_id
 
   linked_vpc_network {
     uri = lookup(
-      local._ctx_vpcs,
-      each.value.vpc_key,
-      each.value.vpc_key
+      local._ctx_vpcs, each.value.vpc_key, each.value.vpc_key
     )
     exclude_export_ranges = each.value.exclude_export_ranges
     include_export_ranges = each.value.include_export_ranges
@@ -675,16 +462,8 @@ resource "google_network_connectivity_spoke" "tunnels" {
   location    = each.value.location
   description = each.value.description
   labels      = each.value.labels
-  hub         = lookup(local._ctx_ncc_hubs, each.value.hub, each.value.hub)
-  group = (
-    each.value.group == null
-    ? null
-    : lookup(
-      local._ctx_ncc_groups,
-      "${each.value.hub}/${each.value.group}",
-      lookup(local._ctx_ncc_groups, each.value.group, each.value.group)
-    )
-  )
+  hub         = each.value.hub_id
+  group       = each.value.group_id
 
   linked_vpn_tunnels {
     uris                       = each.value.uris
@@ -705,16 +484,8 @@ resource "google_network_connectivity_spoke" "vlan_attachments" {
   location    = each.value.location
   description = each.value.description
   labels      = each.value.labels
-  hub         = lookup(local._ctx_ncc_hubs, each.value.hub, each.value.hub)
-  group = (
-    each.value.group == null
-    ? null
-    : lookup(
-      local._ctx_ncc_groups,
-      "${each.value.hub}/${each.value.group}",
-      lookup(local._ctx_ncc_groups, each.value.group, each.value.group)
-    )
-  )
+  hub         = each.value.hub_id
+  group       = each.value.group_id
 
   linked_interconnect_attachments {
     uris                       = each.value.uris
@@ -743,16 +514,8 @@ resource "google_network_connectivity_spoke" "router_appliances" {
   location    = each.value.location
   description = each.value.description
   labels      = each.value.labels
-  hub         = lookup(local._ctx_ncc_hubs, each.value.hub, each.value.hub)
-  group = (
-    each.value.group == null
-    ? null
-    : lookup(
-      local._ctx_ncc_groups,
-      "${each.value.hub}/${each.value.group}",
-      lookup(local._ctx_ncc_groups, each.value.group, each.value.group)
-    )
-  )
+  hub         = each.value.hub_id
+  group       = each.value.group_id
 
   linked_router_appliance_instances {
     dynamic "instances" {

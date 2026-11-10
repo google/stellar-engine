@@ -138,19 +138,6 @@ module "egress-firewall-policy" {
   )
 }
 
-module "egress-nat" {
-  count          = var.centralized_egress.enabled ? 1 : 0
-  source         = "../../../modules/net-cloudnat"
-  project_id     = module.hub-project.project_id
-  region         = var.regions.primary
-  name           = "egress-swp-nat-${var.regions.primary}"
-  endpoint_types = ["ENDPOINT_TYPE_SWG"]
-  logging_filter = "ALL"
-  router_create  = true
-  router_name    = "egress-swp-nat-${var.regions.primary}"
-  router_network = module.egress-vpc[0].name
-}
-
 module "egress-swp" {
   count                 = var.centralized_egress.enabled ? 1 : 0
   source                = "../../../modules/net-swp"
@@ -174,6 +161,38 @@ module "egress-swp" {
   url_lists    = var.centralized_egress.url_lists
 }
 
+resource "google_compute_route" "hub_swp_egress" {
+  count        = var.centralized_egress.enabled ? 1 : 0
+  project      = module.hub-project.project_id
+  network      = module.hub-vpc.name
+  name         = "hub-0-swp-egress"
+  description  = "Default internet egress route to centralized SWP next-hop ILB."
+  dest_range   = "0.0.0.0/0"
+  next_hop_ilb = var.centralized_egress.swp_ip
+  priority     = 900
+  tags         = var.centralized_egress.route_tags
+  depends_on = [
+    module.egress-swp,
+    google_network_connectivity_spoke.vpcs
+  ]
+}
+
+resource "google_compute_route" "spoke_swp_egress" {
+  for_each     = var.centralized_egress.enabled ? var.envs_folders : {}
+  project      = module.env-spoke-projects[each.key].project_id
+  network      = module.env-spoke-vpc[each.key].name
+  name         = lower("${each.key}-spoke-0-swp-egress")
+  description  = "Default internet egress route to centralized SWP next-hop ILB."
+  dest_range   = "0.0.0.0/0"
+  next_hop_ilb = var.centralized_egress.swp_ip
+  priority     = 900
+  tags         = var.centralized_egress.route_tags
+  depends_on = [
+    module.egress-swp,
+    google_network_connectivity_spoke.vpcs
+  ]
+}
+
 module "egress-psc-addresses" {
   count      = local._egress_psc_enabled ? 1 : 0
   source     = "../../../modules/net-address"
@@ -192,28 +211,16 @@ module "egress-psc-addresses" {
   }
 }
 
-module "egress-dns-priv-psc" {
-  count      = local._egress_psc_enabled ? 1 : 0
-  source     = "../../../modules/dns"
-  project_id = module.hub-project.project_id
-  name       = "egress-psc-googleapis"
-  zone_config = {
-    domain = "p.googleapis.com."
-    private = {
-      client_networks = [module.egress-vpc[0].self_link]
-    }
-  }
-  recordsets = {
-    "A *" = { records = [var.psc_google_apis.egress_ip] }
-  }
-}
-
 module "egress-dns-policy-googleapis" {
   count      = var.centralized_egress.enabled ? 1 : 0
   source     = "../../../modules/dns-response-policy"
   project_id = module.hub-project.project_id
   name       = "egress-googleapis"
-  rules      = local._psc_egress_dns_rules
+  context    = local._dns_policy_context
+  factories_config = {
+    rules = local._dns_policy_rules_file
+  }
+  rules = local._psc_egress_dns_rules
   networks = {
     egress = module.egress-vpc[0].self_link
   }

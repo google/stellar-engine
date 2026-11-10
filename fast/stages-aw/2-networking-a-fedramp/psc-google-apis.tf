@@ -36,83 +36,61 @@ locals {
       20
     )
   }
-  _psc_hub_dns_rules = merge(
-    var.dns_policy_rules,
-    !var.psc_google_apis.enabled ? {} : {
-      googleapis-private = {
-        dns_name = "private.googleapis.com."
-        behavior = "bypassResponsePolicy"
-        local_data = {
-          A = {
-            ttl     = tonumber(null)
-            rrdatas = [var.psc_google_apis.hub_ip]
-          }
-        }
-      }
-      googleapis-restricted = {
-        dns_name = "restricted.googleapis.com."
-        behavior = "bypassResponsePolicy"
-        local_data = {
-          A = {
-            ttl     = tonumber(null)
-            rrdatas = [var.psc_google_apis.hub_ip]
-          }
-        }
-      }
-    }
+  _dns_rules_file_candidate = coalesce(
+    var.factories_config.dns_policy_rules_file,
+    "${var.factories_config.data_dir}/dns-policy-rules.yaml"
   )
-  _psc_spoke_dns_rules = {
-    for k, ip in local._psc_spoke_ips : k => merge(
+  _dns_policy_rules_file = (
+    fileexists(pathexpand(local._dns_rules_file_candidate))
+    ? local._dns_rules_file_candidate
+    : (
+      fileexists("${path.module}/data/dns-policy-rules.yaml")
+      ? "${path.module}/data/dns-policy-rules.yaml"
+      : null
+    )
+  )
+  _dns_policy_context = {
+    addresses = {
+      googleapis_cname = (
+        var.psc_google_apis.enabled && var.psc_google_apis.bundle == "vpc-sc"
+        ? "restricted.googleapis.com."
+        : "private.googleapis.com."
+      )
+    }
+  }
+  _psc_ips_by_vpc = !var.psc_google_apis.enabled ? {} : merge(
+    { hub = var.psc_google_apis.hub_ip },
+    local._egress_psc_enabled ? { egress = var.psc_google_apis.egress_ip } : {},
+    local._psc_spoke_ips
+  )
+  _psc_dns_rules_by_vpc = {
+    for vpc_key, ip in local._psc_ips_by_vpc : vpc_key => merge(
       var.dns_policy_rules,
       {
         googleapis-private = {
-          dns_name = "private.googleapis.com."
-          behavior = "bypassResponsePolicy"
-          local_data = {
-            A = {
-              ttl     = tonumber(null)
-              rrdatas = [ip]
-            }
-          }
+          dns_name   = "private.googleapis.com."
+          behavior   = "bypassResponsePolicy"
+          local_data = { A = { ttl = tonumber(null), rrdatas = [ip] } }
         }
         googleapis-restricted = {
-          dns_name = "restricted.googleapis.com."
-          behavior = "bypassResponsePolicy"
-          local_data = {
-            A = {
-              ttl     = tonumber(null)
-              rrdatas = [ip]
-            }
-          }
+          dns_name   = "restricted.googleapis.com."
+          behavior   = "bypassResponsePolicy"
+          local_data = { A = { ttl = tonumber(null), rrdatas = [ip] } }
         }
       }
     )
   }
-  _psc_egress_dns_rules = merge(
-    var.dns_policy_rules,
-    !var.psc_google_apis.enabled ? {} : {
-      googleapis-private = {
-        dns_name = "private.googleapis.com."
-        behavior = "bypassResponsePolicy"
-        local_data = {
-          A = {
-            ttl     = tonumber(null)
-            rrdatas = [var.psc_google_apis.egress_ip]
-          }
-        }
-      }
-      googleapis-restricted = {
-        dns_name = "restricted.googleapis.com."
-        behavior = "bypassResponsePolicy"
-        local_data = {
-          A = {
-            ttl     = tonumber(null)
-            rrdatas = [var.psc_google_apis.egress_ip]
-          }
-        }
-      }
-    }
+  _psc_hub_dns_rules = lookup(
+    local._psc_dns_rules_by_vpc, "hub", var.dns_policy_rules
   )
+  _psc_egress_dns_rules = lookup(
+    local._psc_dns_rules_by_vpc, "egress", var.dns_policy_rules
+  )
+  _psc_spoke_dns_rules = {
+    for k in keys(var.envs_folders) : k => lookup(
+      local._psc_dns_rules_by_vpc, k, var.dns_policy_rules
+    )
+  }
 }
 
 # Central Hub VPC PSC Endpoint for Google APIs (also serves on-prem via inbound
@@ -133,22 +111,6 @@ module "hub-psc-addresses" {
         )
       }
     }
-  }
-}
-
-module "hub-dns-priv-psc" {
-  count      = var.psc_google_apis.enabled ? 1 : 0
-  source     = "../../../modules/dns"
-  project_id = module.hub-project.project_id
-  name       = "hub-psc-googleapis"
-  zone_config = {
-    domain = "p.googleapis.com."
-    private = {
-      client_networks = [module.hub-vpc.self_link]
-    }
-  }
-  recordsets = {
-    "A *" = { records = [var.psc_google_apis.hub_ip] }
   }
 }
 
@@ -173,28 +135,16 @@ module "env-psc-addresses" {
   }
 }
 
-module "env-dns-priv-psc" {
-  for_each   = var.psc_google_apis.enabled ? var.envs_folders : {}
-  source     = "../../../modules/dns"
-  project_id = module.env-spoke-projects[each.key].project_id
-  name       = lower("${each.key}-psc-googleapis")
-  zone_config = {
-    domain = "p.googleapis.com."
-    private = {
-      client_networks = [module.env-spoke-vpc[each.key].self_link]
-    }
-  }
-  recordsets = {
-    "A *" = { records = [local._psc_spoke_ips[each.key]] }
-  }
-}
-
 module "env-dns-policy-googleapis" {
   for_each   = var.psc_google_apis.enabled ? var.envs_folders : {}
   source     = "../../../modules/dns-response-policy"
   project_id = module.env-spoke-projects[each.key].project_id
   name       = lower("${each.key}-googleapis")
-  rules      = local._psc_spoke_dns_rules[each.key]
+  context    = local._dns_policy_context
+  factories_config = {
+    rules = local._dns_policy_rules_file
+  }
+  rules = local._psc_spoke_dns_rules[each.key]
   networks = {
     (lower(each.key)) = module.env-spoke-vpc[each.key].self_link
   }

@@ -25,7 +25,7 @@ Stage 2 combines a folder-level hierarchical firewall policy (`module.firewall-p
 
 When `psc_google_apis.enabled` is `true`, which is the default, the stage provisions a dedicated Private Service Connect endpoint (`modules/net-address`) targeting `all-apis` or `vpc-sc` inside `hub-0`, each `<env>-spoke-0` VPC, and the optional `egress-0` VPC.
 
-- Private Service Connect endpoints for Google APIs are not transitive across Network Connectivity Center, so each spoke VPC receives its own internal endpoint IP (`10.255.255.10` and above by default), private `p.googleapis.com.` DNS zone, and `googleapis` Cloud DNS response policy (`private.googleapis.com.` and `restricted.googleapis.com.`) while peering `${organization.domain}.` to `hub-0`.
+- Private Service Connect endpoints for Google APIs are not transitive across Network Connectivity Center, so each spoke VPC receives its own internal endpoint IP (`10.255.255.10` and above by default), Service Directory-backed `p.googleapis.com.` private DNS zone (`goog-psc-*`), and `googleapis` Cloud DNS response policy (`private.googleapis.com.` and `restricted.googleapis.com.`) while peering `${organization.domain}.` to `hub-0`.
 - Inbound DNS forwarding on `hub-0` resolves Google API domains to `psc_google_apis.hub_ip` (`10.255.255.1` by default) so on-premises networks connected through Cloud VPN or Cloud Interconnect can reach Google APIs privately when Cloud Router advertises that `/32` address.
 - Setting `export_psc = true` on the `main` Network Connectivity Center hub propagates Private Service Connect endpoints for published producer services across spoke VPCs without requiring Private Services Access VPC peering; configure `psa_ranges` only for legacy services that do not use Private Service Connect.
 - Set `psc_google_apis.enabled = false` only if you require legacy `199.36.153.8/30` and `199.36.153.4/30` Private Google Access routes and root `.` DNS peering to `hub-0`.
@@ -34,8 +34,8 @@ When `psc_google_apis.enabled` is `true`, which is the default, the stage provis
 
 Outbound internet egress defaults to distributed per-VPC Cloud NAT gateways (`enable_cloud_nat = true`, `centralized_egress.enabled = false`) because Network Connectivity Center VPC spokes exchange subnet routes only and do not transit `0.0.0.0/0` default routes.
 
-- Set `centralized_egress.enabled = true` to deploy a dedicated `egress-0` VPC spoke in the `main` hub `center` group running Secure Web Proxy (`modules/net-swp`) in `NEXT_HOP_ROUTING_MODE` paired with a Cloud NAT gateway configured with `endpoint_types = ["ENDPOINT_TYPE_SWG"]`.
-- Enabling `centralized_egress` replaces per-VPC Cloud NAT on `hub-0` and `<env>-spoke-0` with static `0.0.0.0/0` next-hop IP routes pointing to `centralized_egress.swp_ip` so outbound HTTP and HTTPS traffic traverses centralized URL lists and Layer 7 proxy rules.
+- Set `centralized_egress.enabled = true` to deploy a dedicated `egress-0` VPC spoke in the `main` hub `center` group running Secure Web Proxy (`modules/net-swp`) in `NEXT_HOP_ROUTING_MODE`, which automatically provisions its managed `swg-autogen-nat` Cloud NAT gateway.
+- Enabling `centralized_egress` replaces per-VPC Cloud NAT on `hub-0` and `<env>-spoke-0` with static `0.0.0.0/0` `next_hop_ilb` routes pointing to `centralized_egress.swp_ip` so outbound HTTP and HTTPS traffic traverses centralized URL lists and Layer 7 proxy rules.
 - Define Secure Web Proxy URL lists, policy rules, and optional TLS inspection (`centralized_egress.tls_inspection_config`) inline or in YAML files under `data/swp-url-lists/` and `data/swp-policy-rules/`.
 
 ## 5 NCC hub factory
@@ -91,10 +91,10 @@ spokes:
 | [assured_workloads](variables.tf#L22) | Configuration for Assured Workloads. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [billing_override](variables.tf#L54) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [centralized_egress](variables.tf#L63) | Optional centralized Internet Egress VPC spoke running Secure Web Proxy in next-hop routing mode with Cloud NAT. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [cidrs](variables.tf#L108) | Named CIDR ranges to use in firewall policy rules. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [common_services_folder](variables.tf#L115) | Common services folder ID. | <code>string</code> |  | <code>null</code> |
-| [custom_roles](variables.tf#L121) | Custom roles defined at the org level, in key => id format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [dns](variables.tf#L129) | DNS configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [cidrs](variables.tf#L109) | Named CIDR ranges to use in firewall policy rules. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [common_services_folder](variables.tf#L116) | Common services folder ID. | <code>string</code> |  | <code>null</code> |
+| [custom_roles](variables.tf#L122) | Custom roles defined at the org level, in key => id format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [dns](variables.tf#L130) | DNS configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [dns_policy_rules](variables.tf#L139) | DNS response policy rules in name => rule format. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [enable_cloud_nat](variables.tf#L153) | Enable per-VPC Cloud NAT and default internet gateway routes on the central hub VPC and environment spoke VPCs when centralized_egress.enabled is false. | <code>bool</code> |  | <code>true</code> |
 | [enable_default_ncc_hub](variables.tf#L160) | Provision the default STAR-topology Network Connectivity Center hub connecting the central hub VPC (center group) and environment spoke VPCs (edge group). | <code>bool</code> |  | <code>true</code> |
@@ -121,12 +121,12 @@ spokes:
 
 | name | description | sensitive |
 |---|---|:---:|
-| [host_project_ids](outputs.tf#L126) | Network project ids. |  |
-| [host_project_numbers](outputs.tf#L131) | Network project numbers. |  |
-| [hub](outputs.tf#L136) | Central hub host project, VPC, and optional SWP egress identifiers. |  |
-| [ncc_groups](outputs.tf#L141) | Network Connectivity Center group IDs keyed by hub/group. |  |
-| [ncc_hubs](outputs.tf#L146) | Network Connectivity Center hub IDs keyed by hub name. |  |
-| [ncc_spokes](outputs.tf#L151) | Network Connectivity Center spoke IDs grouped by spoke type. |  |
-| [psc_google_apis_endpoints](outputs.tf#L156) | Per-VPC Private Service Connect Google APIs endpoint addresses and forwarding rules. |  |
-| [tfvars](outputs.tf#L161) | Terraform variables file for the following stages. | ✓ |
+| [host_project_ids](outputs.tf#L130) | Network project ids. |  |
+| [host_project_numbers](outputs.tf#L135) | Network project numbers. |  |
+| [hub](outputs.tf#L140) | Central hub host project, VPC, and optional SWP egress identifiers. |  |
+| [ncc_groups](outputs.tf#L145) | Network Connectivity Center group IDs keyed by hub/group. |  |
+| [ncc_hubs](outputs.tf#L150) | Network Connectivity Center hub IDs keyed by hub name. |  |
+| [ncc_spokes](outputs.tf#L155) | Network Connectivity Center spoke IDs grouped by spoke type. |  |
+| [psc_google_apis_endpoints](outputs.tf#L160) | Per-VPC Private Service Connect Google APIs endpoint addresses and forwarding rules. |  |
+| [tfvars](outputs.tf#L165) | Terraform variables file for the following stages. | ✓ |
 <!-- END TFDOC -->
