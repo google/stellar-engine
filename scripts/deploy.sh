@@ -94,34 +94,41 @@ deploy_networking() {
 
   handle_prompt "Would you like to perform the terraform init?" "terraform init" || true
 
+  local host_project_id="${PREFIX}-net-vdss-host"
+  local host_project_module="module.vdss-host-project"
+  local -a stage_vpcs=("vdss-dmz-0:module.dmz-vpc" "vdss-landing-0:module.vdss-vpc")
+  if [[ "$(basename "$PWD")" == "2-networking-a-fedramp" ]]; then
+    host_project_id="${PREFIX}-net-hub-host"
+    host_project_module="module.hub-project"
+    stage_vpcs=("hub-0:module.hub-vpc" "egress-0:module.egress-vpc[0]")
+  fi
+
   # Check for existing projects to import
-  if gcloud projects describe "${PREFIX}-net-vdss-host" >/dev/null 2>&1; then
-    log_info "Project ${PREFIX}-net-vdss-host already exists."
+  if gcloud projects describe "${host_project_id}" >/dev/null 2>&1; then
+    log_info "Project ${host_project_id} already exists."
     if handle_prompt_if "Would you like to import it into Terraform state?"; then
-      if terraform state list | grep -q "module.vdss-host-project.google_project.project\[0\]"; then
-          log_info "Removing module.vdss-host-project.google_project.project[0] from state to force re-import..."
-          terraform state rm module.vdss-host-project.google_project.project[0] || true
+      if terraform state list | grep -Fq "${host_project_module}.google_project.project[0]"; then
+        log_info "Removing ${host_project_module}.google_project.project[0] from state to force re-import..."
+        terraform state rm "${host_project_module}.google_project.project[0]" || true
       fi
-      log_info "Importing ${PREFIX}-net-vdss-host..."
-      terraform import module.vdss-host-project.google_project.project[0] "${PREFIX}-net-vdss-host" || true
+      log_info "Importing ${host_project_id}..."
+      terraform import "${host_project_module}.google_project.project[0]" "${host_project_id}" || true
     fi
   fi
 
   # Check for existing VPCs
-  for vpc in "vdss-dmz-0" "vdss-landing-0"; do
-    if gcloud compute networks describe "$vpc" --project="${PREFIX}-net-vdss-host" >/dev/null 2>&1; then
-        log_info "VPC $vpc already exists."
-        if handle_prompt_if "Would you like to import $vpc?"; then
-          # Map VPC name to module name
-          module_name="dmz-vpc"
-          if [[ "$vpc" == "vdss-landing-0" ]]; then module_name="vdss-vpc"; fi
-          
-          if terraform state list | grep -q "module.${module_name}.google_compute_network.network\[0\]"; then
-              log_info "Removing module.${module_name}.google_compute_network.network[0] from state to force re-import..."
-              terraform state rm "module.${module_name}.google_compute_network.network[0]" || true
-          fi
-          terraform import module.${module_name}.google_compute_network.network[0] "${PREFIX}-net-vdss-host/${vpc}" || true
+  for vpc_entry in "${stage_vpcs[@]}"; do
+    local vpc="${vpc_entry%%:*}"
+    local module_addr="${vpc_entry#*:}"
+    if gcloud compute networks describe "$vpc" --project="${host_project_id}" >/dev/null 2>&1; then
+      log_info "VPC $vpc already exists."
+      if handle_prompt_if "Would you like to import $vpc?"; then
+        if terraform state list | grep -Fq "${module_addr}.google_compute_network.network[0]"; then
+          log_info "Removing ${module_addr}.google_compute_network.network[0] from state to force re-import..."
+          terraform state rm "${module_addr}.google_compute_network.network[0]" || true
         fi
+        terraform import "${module_addr}.google_compute_network.network[0]" "${host_project_id}/${vpc}" || true
+      fi
     fi
   done
 
@@ -1053,7 +1060,9 @@ if promptUser "Stage 2 - Networking -"; then
 
   ########### IL2 ###########
   if [ "$choice" == 1 ]; then
-    echo "This stage is still under development. Goodbye!"
+    echo "You have selected IL2 (2-networking-a-fedramp)"
+    cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-a-fedramp || exit
+    deploy_networking
 
   ########### FedRAMP High/Moderate ###########
   elif [ "$choice" == 2 ]; then

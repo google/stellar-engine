@@ -1,34 +1,65 @@
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+# tfdoc:file:description Network Management connectivity tests and addresses.
 
 locals {
-}
-moved {
-  from = google_network_management_connectivity_test.landing-test
-  to   = google_network_management_connectivity_test.landing_test
+  _hub_test_regions = !local._has_internet_egress ? {} : {
+    for k, r in var.regions : k => r
+    if length([for s in try(var.subnets.hub, []) : s.name if s.region == r]) > 0
+  }
+  _hub_test_internal_addrs = {
+    for k, r in local._hub_test_regions : "hub-test-addr-${r}" => {
+      region = r
+      subnetwork = module.hub-vpc.subnet_self_links[
+        "${r}/${[for s in var.subnets.hub : s.name if s.region == r][0]}"
+      ]
+    }
+  }
+  _env_test_subnet_links = {
+    for k in keys(var.envs_folders) : k => module.env-spoke-vpc[k].subnets[
+      "${var.regions.primary}/${[
+        for s in try(var.subnets[lower(k)], []) :
+        s.name if s.tenant != null
+      ][0]}"
+    ].self_link
+  }
 }
 
-resource "google_network_management_connectivity_test" "landing_test" {
-  for_each = var.regions
+module "hub-test-addresses" {
+  count              = length(local._hub_test_internal_addrs) > 0 ? 1 : 0
+  source             = "../../../modules/net-address"
+  project_id         = module.hub-project.project_id
+  internal_addresses = local._hub_test_internal_addrs
+}
 
-  name    = "landing-subnet-test-${each.key}"
-  project = module.vdss-host-project.project_id
+resource "google_network_management_connectivity_test" "hub_test" {
+  for_each = local._hub_test_regions
+
+  name    = "hub-subnet-test-${each.key}"
+  project = module.hub-project.project_id
 
   source {
-    ip_address   = google_compute_address.source_addr[each.key].address
-    project_id   = module.vdss-host-project.project_id
-    network      = module.vdss-vpc.id
+    ip_address = (
+      module.hub-test-addresses[0]
+      .internal_addresses["hub-test-addr-${each.value}"]
+      .address
+    )
+    project_id   = module.hub-project.project_id
+    network      = module.hub-vpc.id
     network_type = "GCP_NETWORK"
   }
   destination {
@@ -38,39 +69,35 @@ resource "google_network_management_connectivity_test" "landing_test" {
 
   protocol = "TCP"
   labels = {
-    env = "vdss"
+    env = "hub"
   }
 }
 
-moved {
-  from = google_compute_address.source-addr
-  to   = google_compute_address.source_addr
-}
-
-resource "google_compute_address" "source_addr" {
-  project = module.vdss-host-project.project_id
-
-  for_each     = var.regions
-  name         = "landing-test-addr-${each.value}"
-  subnetwork   = try(module.vdss-vpc.subnet_self_links["${each.value}/landing-default"], null)
-  address_type = "INTERNAL"
-  region       = each.value
-}
-
-
-moved {
-  from = google_network_management_connectivity_test.env-tests
-  to   = google_network_management_connectivity_test.env_tests
+module "env-test-addresses" {
+  for_each   = local._has_internet_egress ? var.envs_folders : {}
+  source     = "../../../modules/net-address"
+  project_id = module.env-spoke-projects[each.key].project_id
+  internal_addresses = {
+    (lower("${each.key}-test-addr")) = {
+      region     = var.regions.primary
+      subnetwork = local._env_test_subnet_links[each.key]
+    }
+  }
+  depends_on = [module.env-spoke-vpc]
 }
 
 resource "google_network_management_connectivity_test" "env_tests" {
-  for_each = var.envs_folders
+  for_each = local._has_internet_egress ? var.envs_folders : {}
 
   name    = lower("${each.key}-host-project-test")
   project = module.env-spoke-projects[each.key].project_id
 
   source {
-    ip_address   = google_compute_address.env_source_addrs[each.key].address
+    ip_address = (
+      module.env-test-addresses[each.key]
+      .internal_addresses[lower("${each.key}-test-addr")]
+      .address
+    )
     project_id   = module.env-spoke-projects[each.key].project_id
     network      = module.env-spoke-vpc[each.key].id
     network_type = "GCP_NETWORK"
@@ -85,46 +112,3 @@ resource "google_network_management_connectivity_test" "env_tests" {
     env = lower(each.key)
   }
 }
-moved {
-  from = google_compute_address.env-source-addrs
-  to   = google_compute_address.env_source_addrs
-}
-
-resource "google_compute_address" "env_source_addrs" {
-  for_each = var.envs_folders
-
-  project = module.env-spoke-projects[each.key].project_id
-
-  name         = lower("${each.key}-test-addr")
-  subnetwork   = module.env-spoke-vpc[each.key].subnets["${var.regions.primary}/${[for s in try(var.subnets[lower(each.key)], []) : s.name if s.tenant != null][0]}"].self_link
-  address_type = "INTERNAL"
-  region       = var.regions.primary
-  depends_on   = [module.env-spoke-vpc]
-}
-
-
-# # These tests should fail
-## This isn't doing what I want it to, but I really like the idea of having something like this to test for route leaking between the envs
-
-# resource "google_network_management_connectivity_test" "fail-env-tests" {
-#   for_each = var.envs_folders
-
-#   name    = lower("must-fail-${each.key}-prod")
-#   project = module.env-spoke-projects[each.key].project_id
-
-#   source {
-#     ip_address   = google_compute_address.env_source_addrs[each.key].address
-#     project_id   = module.env-spoke-projects[each.key].project_id
-#     network      = module.env-spoke-vpc[each.key].id
-#     network_type = "GCP_NETWORK"
-#   }
-#   destination {
-#     ip_address = google_compute_address.env_source_addrs["Prod"].address
-#     project_id = module.env-spoke-projects["Prod"].project_id
-#     network    = module.env-spoke-vpc["Prod"].id
-#     port       = 443
-#   }
-
-#   protocol = "TCP"
-
-# }

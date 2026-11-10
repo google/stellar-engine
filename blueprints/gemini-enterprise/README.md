@@ -160,18 +160,20 @@ Designed for access from on-premise networks or other VPCs via private IP.
 - **Security:** Protected by **Identity-Aware Proxy (IAP)** to enforce zero-trust access.
 - **Deployment Variants:**
 
-  - **Brownfield (Stellar Engine):** Leverages the **Stellar Engine VDSS & Hub-Spoke** architecture.
+  - **Brownfield (Stellar Engine):** Integrates with either Stellar Engine Stage 2 Hub-and-Spoke pattern:
 
-    - **VDSS Layer (`net-vdss-host`):** Acts as the secure entry point. Traffic enters the **DMZ VPC** (`vdss-dmz-0`) and is routed via **Network Virtual Appliances (NVAs)** to the **Landing VPC** (`vdss-landing-0`).
-      - **NVAs:** Managed Instance Groups fronted by Internal L3 Load Balancers (`nva-dmz-primary`, `nva-vdss-primary`) handle inspection and routing between DMZ and Landing zones.
-    - **Net Host Layer (`*-net-host`):** The Landing VPC connects downstream to environment-specific Net Host projects (e.g., `*-test-net-host`, `*-int-net-host`, `*-prod-net-host`).
-    - **Spoke Layer:** These Net Host projects host the Shared VPC networks (e.g., `test-spoke-0`, `int-spoke-0`, `prod-spoke-0`).
+    - **FedRAMP Moderate, FedRAMP High, and IL2 (`2-networking-a-fedramp`):** Connects the central Hub Shared VPC (`hub-0` in `*-net-hub-host`) to environment spoke Shared VPCs (`test-spoke-0`, `int-spoke-0`, `prod-spoke-0`) through a `STAR`-topology Network Connectivity Center hub (`main`), enforced by hierarchical and global network firewall policies.
+    - **IL4 and IL5 (`2-networking-b-il5-ngfw`):** Routes traffic into the **DMZ VPC** (`vdss-dmz-0` in `*-net-vdss-host`), through Palo Alto VM-Series **Next-Generation Firewalls (NGFWs)**, and into the **Landing VPC** (`vdss-landing-0`), which peers with the environment spoke Shared VPCs.
+    - **Net Host Layer (`*-net-host`):** Environment-specific host projects (`*-test-net-host`, `*-int-net-host`, `*-prod-net-host`) own the spoke Shared VPC networks (`test-spoke-0`, `int-spoke-0`, `prod-spoke-0`).
     - **Tenant Attachment:** The Tenant Project attaches as a **Service Project** to the target Net Host Shared VPC. The Internal Load Balancer consumes subnets from this shared network (e.g., `prod-spoke-0`).
 
-    > **Note:** For **Stellar Engine (Brownfield)** deployments, the Cloud VPN or Cloud Interconnect is already established in the **Host Project**. You do not need to provision new connectivity; the Tenant Project inherits this access via the Shared VPC.
+    > **Note:** For **Stellar Engine (Brownfield)** deployments, the Cloud VPN or Cloud Interconnect is already established in the central hub or VDSS host project. You do not need to provision new connectivity; the Tenant Project inherits this access via the Shared VPC.
 
-    **Traffic Flow:**
-    `User -> VPN -> VDSS (DMZ -> NVA -> Landing) -> Net Host (Spoke) -> Tenant (ILB)`
+    **Traffic Flow (FedRAMP / IL2):**
+    `User -> VPN/Interconnect -> Hub VPC (hub-0) -> NCC STAR Hub -> Net Host (Spoke) -> Tenant (ILB)`
+
+    **Traffic Flow (IL4 / IL5):**
+    `User -> VPN/Interconnect -> VDSS (DMZ -> NGFW -> Landing) -> Net Host (Spoke) -> Tenant (ILB)`
 
   - **Greenfield:** The blueprint creates a **dedicated VPC** and subnets (`gemini-enterprise-vpc`). The ILB is deployed into this new network.
 
@@ -647,45 +649,34 @@ Suitable if only specific services need to be accessed.
 
 **Recommendation:** For connecting an on-premise hosted domain to an internal Google Cloud resource where a VPC has a conflicting IP, the standard enterprise solution is **#2: Implement NAT using a Network Virtual Appliance (NVA) in a dedicated hub VPC**.
 
-### Stellar Engine Network Architecture & NAT
+### Stellar Engine Network Architecture and Hybrid NAT
 
-Stellar Engine implements **Solution 2 (NAT)** through its **VDSS (Virtual Data Center Security Stack)** architecture, specifically designed to handle complex networking requirements like overlapping IP ranges.
+How Stellar Engine implements **Solution 2 (NAT)** depends on the deployed Stage 2 networking pattern:
 
-**Components:**
-
-- **VDSS Host Project (`net-vdss-host`):** Acts as the central hub for network security and connectivity.
-- **DMZ VPC (`vdss-dmz-0`):** An "untrusted" network zone intended for external connectivity (e.g., Internet, On-Prem VPN).
-- **Landing VPC (`vdss-landing-0`):** A "trusted" network zone where spoke projects (like the one hosting Gemini Enterprise) attach via Shared VPC or Peering.
-- **Network Virtual Appliance (NVA):** A highly available cluster of VMs (e.g., `nva-template`, `nva-mig`) deployed in the VDSS project. These NVAs have network interfaces in both the DMZ and Landing VPCs.
-
-**How it Works:**
-
-1.  **Connectivity:** Your on-premise network connects to the **DMZ VPC** (via VPN/Interconnect).
-2.  **NAT/Routing:** The **NVA** intercepts traffic. It performs NAT (Network Address Translation) to translate overlapping on-premise IPs to non-conflicting "proxy" IPs within the Google Cloud environment.
-3.  **Forwarding:** The NVA forwards the translated traffic to the **Landing VPC**.
-4.  **Spoke Access:** Resources in the Gemini Enterprise project (attached to the Landing VPC or peered) receive the traffic.
-
-**Configuration:**
-
-The Stellar Engine `2-networking-a-fedramp` and `2-networking-b-il5-ngfw` stages automatically provision these components (defined in `nva.tf` and `net-vdss.tf`). You simply need to configure the specific NAT rules and routes on the NVA to match your on-premise addressing requirements. This pre-built architecture ensures that you can deploy Gemini Enterprise into a Brownfield environment with overlapping IPs without needing to re-architect your entire network.
+- **FedRAMP Moderate, FedRAMP High, and IL2 (`2-networking-a-fedramp`):**
+  - **Central Hub Project (`*-net-hub-host`):** Hosts `hub-0` (and optional `egress-0` with Secure Web Proxy) attached to the `center` group of the `main` `STAR` Network Connectivity Center hub, while environment spoke Shared VPCs (`*-spoke-0`) attach to the `edge` group.
+  - **Overlapping IP Translation:** Configure Google Cloud **Hybrid NAT** (`Private NAT`) on the hub or spoke Cloud Router, or attach a custom NAT router appliance to the `main` hub `center` group via `ncc_hubs.main.spokes.router_appliances` (`factory-ncc.tf`).
+- **IL4 and IL5 (`2-networking-b-il5-ngfw`):**
+  - **VDSS Host Project (`*-net-vdss-host`):** Hosts the **DMZ VPC** (`vdss-dmz-0`), **Landing VPC** (`vdss-landing-0`), and **Mgmt VPC** (`vdss-mgmt-0`) defined in `net-vdss.tf` and `ngfw.tf`.
+  - **Palo Alto VM-Series NGFWs:** Multi-NIC firewall appliances bridging `vdss-dmz-0` and `vdss-landing-0` can apply source/destination NAT rules to translate overlapping on-premise CIDRs before forwarding traffic to peered spoke Shared VPCs.
 
 ### Stellar Engine Spoke Architecture
 
-In the Stellar Engine model, tenant projects (like the one hosting Gemini Enterprise) are deployed as **Service Projects** (Spokes) attached to the central **Host Project** (`net-vdss-host`).
+In the Stellar Engine model, tenant projects (like the one hosting Gemini Enterprise) are deployed as **Service Projects** attached to their environment spoke **Shared VPC Host Project** (`*-test-net-host`, `*-int-net-host`, or `*-prod-net-host`).
 
 **How Spokes Consume Network Resources:**
 
-1.  **No Local VPC:** The Gemini Enterprise project does **not** have its own VPC network. Instead, it leverages the **Shared VPC** owned by the Host Project.
+1.  **No Local VPC:** The Gemini Enterprise project does **not** have its own VPC network. Instead, it leverages the **Shared VPC** (`*-spoke-0`) owned by the environment Net Host project.
 2.  **Subnet Sharing:**
-    - The Host Project explicitly shares specific subnets (e.g., `default-us-east4`) with the Tenant Project.
+    - The Net Host Project explicitly shares specific subnets (e.g., `prod-default`) with the Tenant Project.
     - This is achieved by granting the `roles/compute.networkUser` IAM role to the Tenant Project's Service Accounts (e.g., the Cloud Run Service Agent, the deployment user) on those specific subnets.
-3.  **Resource Attachment:** When you deploy resources (like the Internal Load Balancer) in the Tenant project, you specify the **Host Project's VPC** and the **Shared Subnet**. The resource lives in the Tenant project but is network-attached to the Host Project's infrastructure.
+3.  **Resource Attachment:** When you deploy resources (like the Internal Load Balancer) in the Tenant project, you specify the **Shared VPC** and **Shared Subnet**. The resource lives in the Tenant project but is network-attached to the Shared VPC infrastructure.
 
 **Communication Flow:**
 
-- **Spoke-to-On-Prem:** Traffic originates from the Gemini ILB (in the Shared Subnet), flows through the Host Project's Landing VPC, is routed to the NVA (if NAT is used) or directly to the Cloud VPN/Interconnect, and reaches the on-premise network.
-- **Spoke-to-Internet:** Traffic flows from the Gemini project through the Host Project's Cloud NAT (configured in `net-vdss.tf`) to reach the internet (e.g., for API calls to Google services).
-- **Spoke-to-Spoke:** If multiple tenant projects are attached to the same Shared VPC, they can communicate with each other via internal IP addresses, subject to Firewall Rules defined in the Host Project.
+- **Spoke-to-On-Prem:** Traffic originates from the Gemini ILB (in the Shared Subnet) and traverses either the `STAR` Network Connectivity Center hub to `hub-0` (`2-networking-a-fedramp`) or VPC peering through the VDSS Landing/NGFW/DMZ path (`2-networking-b-il5-ngfw`) to reach Cloud VPN or Cloud Interconnect.
+- **Spoke-to-Internet and Google APIs:** In `2-networking-a-fedramp`, Google APIs resolve locally via per-VPC Private Service Connect endpoints (`psc-google-apis.tf`), while internet egress uses per-VPC Cloud NAT (`branch-net-envs.tf`) or centralized Secure Web Proxy (`egress.tf`). In `2-networking-b-il5-ngfw`, internet egress traverses the VDSS NGFW and DMZ Cloud NAT (`net-vdss.tf`).
+- **Spoke-to-Spoke:** Tenant projects within the same environment Shared VPC can communicate over internal IP addresses subject to host-project firewall policies, while cross-environment spoke-to-spoke traffic is isolated by the NCC `edge` group (`2-networking-a-fedramp`) or VDSS NGFW policies (`2-networking-b-il5-ngfw`).
 
 ---
 
