@@ -6,24 +6,27 @@
 
 ### Breaking Changes
 
-* **networking:** modernize FedRAMP stage 2 with NCC hub, NGFW policies, PSC APIs, and SWP egress ([#404](https://github.com/google/stellar-engine/issues/404))
-* **modules:** sync Cloud Foundation Fabric modules to v60.0.0 and add sync tooling ([#311](https://github.com/google/stellar-engine/issues/311))
+* **networking:** modernize FedRAMP stage 2 with NCC hub, NGFW policies, PSC APIs, and SWP egress ([#404](https://github.com/google/stellar-engine/issues/404)) ([d87fdc3](https://github.com/google/stellar-engine/commit/d87fdc39fef5b865012ac7e905ea824d105e7e83))
+  * Replaces the legacy VDSS two-VPC topology in `net-vdss.tf`, `simple-nva` instances in `nva.tf`, VPC peering, the `psc.tf` symlink, and classic VPC firewall rules in `fast/stages-aw/2-networking-a-fedramp` with a central `hub-0` VPC, a default `STAR` Network Connectivity Center hub, and Global Network Firewall Policies, requiring existing Stage 2 FedRAMP deployments to update `terraform.tfvars` inputs and recreate networking state.
+* **modules:** sync Cloud Foundation Fabric modules to v60.0.0 and add sync tooling ([#311](https://github.com/google/stellar-engine/issues/311)) ([162c7fe](https://github.com/google/stellar-engine/commit/162c7feb644d3bc95a300f371f85221ee185d16a))
+  * Raises the minimum Terraform and OpenTofu baseline to `>= 1.12.2`, upgrades `hashicorp/google` and `hashicorp/google-beta` provider constraints to `>= 8.6.0, < 9.0.0` in `default-versions.tf` and `>= 8.10.0, < 9.0.0` across vendored modules, and updates stage and blueprint module inputs for Cloud Foundation Fabric `v60.0.0` compatibility.
 
 ### Features
 
 * **modules:** sync Cloud Foundation Fabric modules to v60.0.0 and add sync tooling ([#311](https://github.com/google/stellar-engine/issues/311)) ([162c7fe](https://github.com/google/stellar-engine/commit/162c7feb644d3bc95a300f371f85221ee185d16a))
+  * Syncs vendored modules under `modules/` and documentation tooling under `tools/` to Cloud Foundation Fabric `v60.0.0`, vendors `modules/dataplex-aspect-types`, and adds `tools/sync-from-cff.sh`, `tools/cff-sync-pr.sh`, `docs/upstream-sync.md`, and the weekly `.github/workflows/cff-sync.yml` workflow for automated three-way upstream synchronization, closing [#308](https://github.com/google/stellar-engine/issues/308) and [#319](https://github.com/google/stellar-engine/issues/319).
 * **networking:** modernize FedRAMP stage 2 with NCC hub, NGFW policies, PSC APIs, and SWP egress ([#404](https://github.com/google/stellar-engine/issues/404)) ([d87fdc3](https://github.com/google/stellar-engine/commit/d87fdc39fef5b865012ac7e905ea824d105e7e83))
-  * **Central Hub + Default `STAR` NCC Hub (`net-hub.tf`, `factory-ncc.tf`, `schemas/ncc-hub.schema.json`)**: Replaces the DoD VDSS two-VPC + `simple-nva` layout (`net-vdss.tf`, `nva.tf`, `module.peering-envs`) with `module.hub-project` (`<prefix>-net-hub-host`), `module.hub-vpc` (`hub-0`), and a default `STAR`-topology Network Connectivity Center hub (`main`, `enable_default_ncc_hub = true`, `export_psc = true`) placing `hub-0` in `center` and `<env>-spoke-0` VPCs in `edge`, extensible via `data/ncc-hubs/*.yaml` and `var.ncc_hubs` for `vpcs`, `tunnels`, `vlan_attachments`, and `router_appliances` spokes.
+  * Adds a dedicated hub project and `hub-0` VPC, a default `STAR` Network Connectivity Center hub extensible via `var.ncc_hubs` and `data/ncc-hubs/`, per-VPC Cloud NGFW Global Network Firewall Policies, non-transitive Private Service Connect Google APIs endpoints with Cloud DNS response policies, and distributed Cloud NAT or opt-in centralized Secure Web Proxy egress in `fast/stages-aw/2-networking-a-fedramp`.
 
 
 ### Bug Fixes
 
 * **cli:** map REST Forbidden and Unauthorized errors to access denied ([#383](https://github.com/google/stellar-engine/issues/383)) ([74a2d0d](https://github.com/google/stellar-engine/commit/74a2d0ddcd0ab0566663c76292f181085089341b))
-  * The preflight facade in the `cli/src/stellar_engine/gcp/live.py` module translated only the gRPC `PermissionDenied` and `Unauthenticated` classes into its access denied error.
+  * Catches `google.api_core.exceptions.Forbidden` and `Unauthorized` parent classes alongside gRPC subclasses in `cli/src/stellar_engine/gcp/live.py` so HTTP 403 and 401 failures over REST transports report actionable access-denied guidance during preflight checks.
 * **gitlab:** store gitlab.rb and TLS key in Secret Manager and validate hostname ([#295](https://github.com/google/stellar-engine/issues/295)) ([8ee6ffe](https://github.com/google/stellar-engine/commit/8ee6ffe069820973187492ac122312c6c54b73fa))
-  * Provision `google_secret_manager_secret.gitlab_rb` and `google_secret_manager_secret.gitlab_ssl_key` with secret versions and `roles/secretmanager.secretAccessor` IAM bindings in `blueprints/third-party-solutions/gitlab/gitlab.tf`, and fetch `gitlab.rb` and the TLS private key via `gcloud secrets versions access latest` in `blueprints/third-party-solutions/gitlab/assets/cloud-config.yaml` rather than storing sensitive values in cleartext GCE instance metadata.
+  * Provisions `google_secret_manager_secret` resources and `roles/secretmanager.secretAccessor` IAM bindings for `gitlab.rb` and the TLS private key in `blueprints/third-party-solutions/gitlab`, fetches both secrets via `gcloud` at boot instead of cleartext GCE instance metadata, wires Redis authentication, validates RFC 1123 hostnames, and marks `output "instance"` sensitive.
 * **networking:** remove unsupported route_tags on cross-spoke SWP egress routes ([#412](https://github.com/google/stellar-engine/issues/412)) ([6b51712](https://github.com/google/stellar-engine/commit/6b51712bcf3529a6c7d4d158ffecc4d6f91ee6be))
-  * Follows up on the [#404](https://github.com/google/stellar-engine/pull/404) with @Calvin-Cheng1 to remove `centralized_egress.route_tags` and its `tags` bindings on `google_compute_route.hub_swp_egress` and `google_compute_route.spoke_swp_egress` in `fast/stages-aw/2-networking-a-fedramp`.
+  * Removes `centralized_egress.route_tags` and `tags` bindings from `google_compute_route.hub_swp_egress` and `google_compute_route.spoke_swp_egress` in `fast/stages-aw/2-networking-a-fedramp` so cross-spoke `0.0.0.0/0` static routes targeting the Secure Web Proxy internal passthrough load balancer resolve across Network Connectivity Center, following up on [#404](https://github.com/google/stellar-engine/pull/404).
 
 ## [5.2.0](https://github.com/google/stellar-engine/compare/v5.1.1...v5.2.0) (2026-10-31)
 
