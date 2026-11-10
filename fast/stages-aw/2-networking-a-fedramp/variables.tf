@@ -68,7 +68,6 @@ variable "centralized_egress" {
     proxy_subnet_cidr = optional(string, "10.64.251.0/24")
     swp_ip            = optional(string, "10.64.250.10")
     ports             = optional(list(number), [80, 443])
-    route_tags        = optional(list(string))
     certificates      = optional(list(string), [])
     policy_rules = optional(map(object({
       priority            = number

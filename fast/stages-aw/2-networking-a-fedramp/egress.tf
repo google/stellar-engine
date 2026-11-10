@@ -170,7 +170,6 @@ resource "google_compute_route" "hub_swp_egress" {
   dest_range   = "0.0.0.0/0"
   next_hop_ilb = var.centralized_egress.swp_ip
   priority     = 900
-  tags         = var.centralized_egress.route_tags
   depends_on = [
     module.egress-swp,
     google_network_connectivity_spoke.vpcs
@@ -186,7 +185,6 @@ resource "google_compute_route" "spoke_swp_egress" {
   dest_range   = "0.0.0.0/0"
   next_hop_ilb = var.centralized_egress.swp_ip
   priority     = 900
-  tags         = var.centralized_egress.route_tags
   depends_on = [
     module.egress-swp,
     google_network_connectivity_spoke.vpcs
