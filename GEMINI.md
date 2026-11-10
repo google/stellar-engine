@@ -71,4 +71,4 @@ Follow these steps when you generate or modify code in this repository.
 ## 6 Changelog and release notes
 
 * Follow every top-level `* ` entry in `CHANGELOG.md`, release pull requests, GitHub Releases, and annotated Git tags with an indented `  * ...` sub-bullet sentence in plain English that summarizes what changed and how it affects deployments, rather than leaving bare one-line commit titles.
-* When preparing a release pull request on `release-please--branches--main`, add the `  * ...` sub-bullets to `CHANGELOG.md` and the release pull request body (`RELEASES.md`).
+* When preparing a release pull request on `release-please-branches-main`, add the `  * ...` sub-bullets to `CHANGELOG.md` and the release pull request body (`RELEASES.md`).
