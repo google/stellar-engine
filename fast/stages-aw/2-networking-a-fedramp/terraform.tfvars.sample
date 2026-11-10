@@ -1,30 +1,30 @@
-# Sample terraform.tfvars file for Stage 2 (Networking - FedRAMP High)
+# Sample terraform.tfvars file for Stage 2 (Networking - FedRAMP)
 # Replace values with your desired network topologies.
 # Replace every <region> with the regions.primary value from the Stage 0
 # terraform.tfvars file. The stage validates that the first tenant subnet of
 # each environment uses that region.
 
+# Default STAR-Topology NCC Hub and Outbound Internet Egress
+enable_default_ncc_hub = true
+enable_cloud_nat       = true
+
+# Per-VPC Private Service Connect (PSC) Endpoints for Google APIs
+# Each VPC receives its own non-transitive PSC endpoint and googleapis response
+# policy; set bundle = "vpc-sc" when enforcing VPC Service Controls perimeters.
+psc_google_apis = {
+  enabled = true
+  bundle  = "all-apis"
+  hub_ip  = "10.255.255.1"
+}
+
 # VPC Subnetwork Configurations
 subnets = {
-  landing = [
+  hub = [
     {
-      name          = "landing-default"
+      name          = "hub-default"
       ip_cidr_range = "10.64.0.0/24"
       region        = "<region>"
-      description   = "Default subnet for vdss in primary region"
-      flow_logs_config = {
-        aggregation_interval = "INTERVAL_5_SEC"
-        flow_sampling        = 1
-        metadata             = "INCLUDE_ALL_METADATA"
-      }
-    }
-  ]
-  dmz = [
-    {
-      name          = "dmz-default"
-      ip_cidr_range = "10.64.128.0/24"
-      region        = "<region>"
-      description   = "Default subnet for landing dmz in primary region"
+      description   = "Default subnet for central hub VPC in primary region"
       flow_logs_config = {
         aggregation_interval = "INTERVAL_5_SEC"
         flow_sampling        = 1
@@ -43,7 +43,7 @@ subnets = {
         flow_sampling        = 1
         metadata             = "INCLUDE_ALL_METADATA"
       }
-      tenant        = "ten-1" # Links this subnet to tenant-1 project sharing
+      tenant = "ten-1" # Links this subnet to tenant-1 project sharing
     },
     {
       name          = "prod-tenant-2-subnet"
@@ -55,7 +55,7 @@ subnets = {
         flow_sampling        = 1
         metadata             = "INCLUDE_ALL_METADATA"
       }
-      tenant        = "ten-2" # Links this subnet to tenant-2 project sharing
+      tenant = "ten-2" # Links this subnet to tenant-2 project sharing
     }
   ]
   int = [
@@ -69,7 +69,7 @@ subnets = {
         flow_sampling        = 1
         metadata             = "INCLUDE_ALL_METADATA"
       }
-      tenant        = "ten-1"
+      tenant = "ten-1"
     },
     {
       name          = "int-tenant-2-subnet"
@@ -81,7 +81,7 @@ subnets = {
         flow_sampling        = 1
         metadata             = "INCLUDE_ALL_METADATA"
       }
-      tenant        = "ten-2"
+      tenant = "ten-2"
     }
   ]
   test = [
@@ -95,7 +95,7 @@ subnets = {
         flow_sampling        = 1
         metadata             = "INCLUDE_ALL_METADATA"
       }
-      tenant        = "ten-1"
+      tenant = "ten-1"
     },
     {
       name          = "test-tenant-2-subnet"
@@ -107,19 +107,28 @@ subnets = {
         flow_sampling        = 1
         metadata             = "INCLUDE_ALL_METADATA"
       }
-      tenant        = "ten-2"
+      tenant = "ten-2"
     }
   ]
 }
 
-# Proxy-only Subnet CIDRs (used for regional load balancers)
+# Proxy-only Subnet CIDRs (used for distributed regional load balancers + WAF)
 proxy_subnets = {
   Prod = "10.1.1.0/24"
   Int  = "10.1.2.0/24"
   Test = "10.1.3.0/24"
 }
 
-# Named IP Ranges to reference in Firewall Rules
+# Optional Private Services Access (PSA) IP Ranges per Environment
+# Prefer Private Service Connect (PSC) endpoints for managed services (propagated
+# via NCC export_psc = true). Uncomment only for workloads that still require PSA.
+# psa_ranges = {
+#   prod = [{ ranges = { default = "10.202.252.0/22" } }]
+#   int  = [{ ranges = { default = "10.30.252.0/22" } }]
+#   test = [{ ranges = { default = "10.203.252.0/22" } }]
+# }
+
+# Named IP Ranges to reference in Network Firewall Policy Rules
 cidrs = {
   healthchecks = [
     "35.191.0.0/16",
@@ -140,144 +149,140 @@ cidrs = {
   ]
 }
 
-# Custom Firewall Rules for each VPC / Spoke Spoke
-firewall_rules = {
-  vdss = {
+# Global Network Firewall Policy Rules per VPC (Cloud NGFW Essentials, Standard,
+# and Enterprise ready: supports fqdns, region_codes, threat_intelligences, and
+# apply_security_profile_group)
+firewall_policy_rules = {
+  hub = {
     ingress = {
-      allow-iap-ssh-landing = {
-        description   = "Allow traffic from Google IAP over SSH"
-        source_ranges = ["iap"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
-      }
-      allow-hc-nva-ssh-landing = {
-        description   = "Allow traffic from Google healthchecks to NVA appliances"
-        source_ranges = ["healthchecks"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
-      }
-      allow-traffic-internal = {
-        description   = "Allow traffic from inside the the networks"
-        targets       = ["nva"]
-        source_ranges = ["10.0.0.0/8"]
-      }
-    }
-  }
-  dmz = {
-    ingress = {
-      allow-iap-ssh-dmz = {
-        description   = "Allow traffic from Google IAP over SSH"
-        source_ranges = ["iap"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
-      }
-      allow-hc-nva-ssh-dmz = {
-        description   = "Allow traffic from Google healthchecks to NVA appliances"
-        source_ranges = ["healthchecks"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
+      allow-iap-ssh-hub = {
+        priority       = 1000
+        action         = "allow"
+        description    = "Allow traffic from Google IAP over SSH"
+        enable_logging = true
+        match = {
+          source_ranges = ["iap"]
+          layer4_configs = [
+            {
+              protocol = "tcp"
+              ports    = ["22"]
+            }
+          ]
+        }
       }
     }
   }
   prod = {
     ingress = {
       allow-iap-ssh = {
-        description   = "Allow traffic from Google IAP over SSH"
-        source_ranges = ["iap"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
+        priority       = 1000
+        action         = "allow"
+        description    = "Allow traffic from Google IAP over SSH"
+        enable_logging = true
+        match = {
+          source_ranges = ["iap"]
+          layer4_configs = [
+            {
+              protocol = "tcp"
+              ports    = ["22"]
+            }
+          ]
+        }
       }
     }
   }
   int = {
     ingress = {
       allow-iap-ssh = {
-        description   = "Allow traffic from Google IAP over SSH"
-        source_ranges = ["iap"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
+        priority       = 1000
+        action         = "allow"
+        description    = "Allow traffic from Google IAP over SSH"
+        enable_logging = true
+        match = {
+          source_ranges = ["iap"]
+          layer4_configs = [
+            {
+              protocol = "tcp"
+              ports    = ["22"]
+            }
+          ]
+        }
       }
     }
   }
   test = {
     ingress = {
       allow-iap-ssh = {
-        description   = "Allow traffic from Google IAP over SSH"
-        source_ranges = ["iap"]
-        rules = [
-          {
-            protocol = "tcp"
-            ports    = ["22"]
-          }
-        ]
+        priority       = 1000
+        action         = "allow"
+        description    = "Allow traffic from Google IAP over SSH"
+        enable_logging = true
+        match = {
+          source_ranges = ["iap"]
+          layer4_configs = [
+            {
+              protocol = "tcp"
+              ports    = ["22"]
+            }
+          ]
+        }
       }
     }
   }
 }
 
-# Private DNS Zone Response Policy Rules
-dns_policy_rules = {
-  accounts                      = { dns_name = "accounts.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  aiplatform-notebook-cloud-all = { dns_name = "*.aiplatform-notebook.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  aiplatform-notebook-gu-all    = { dns_name = "*.aiplatform-notebook.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  backupdr-cloud                = { dns_name = "backupdr.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  backupdr-cloud-all            = { dns_name = "*.backupdr.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  backupdr-gu                   = { dns_name = "backupdr.googleusercontent.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  backupdr-gu-all               = { dns_name = "*.backupdr.googleusercontent.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  cloudfunctions                = { dns_name = "*.cloudfunctions.net.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  cloudproxy                    = { dns_name = "*.cloudproxy.app.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  composer-cloud-all            = { dns_name = "*.composer.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  composer-gu-all               = { dns_name = "*.composer.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  datafusion-all                = { dns_name = "*.datafusion.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  datafusion-gu-all             = { dns_name = "*.datafusion.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  dataproc                      = { dns_name = "dataproc.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  dataproc-all                  = { dns_name = "*.dataproc.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  dataproc-gu                   = { dns_name = "dataproc.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  dataproc-gu-all               = { dns_name = "*.dataproc.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  dl                            = { dns_name = "dl.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  gcr                           = { dns_name = "gcr.io.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  gcr-all                       = { dns_name = "*.gcr.io.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  gke-all                       = { dns_name = "*.gke.goog.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  googleapis-all                = { dns_name = "*.googleapis.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  googleapis-private            = { dns_name = "private.googleapis.com.", local_data = { A = { rrdatas = ["199.36.153.8", "199.36.153.9", "199.36.153.10", "199.36.153.11"] } } }
-  googleapis-restricted         = { dns_name = "restricted.googleapis.com.", local_data = { A = { rrdatas = ["199.36.153.4", "199.36.153.5", "199.36.153.6", "199.36.153.7"] } } }
-  gstatic-all                   = { dns_name = "*.gstatic.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  kernels-gu                    = { dns_name = "kernels.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  kernels-gu-all                = { dns_name = "*.kernels.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  ltsapis-all                   = { dns_name = "*.ltsapis.goog.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  notebooks-all                 = { dns_name = "*.notebooks.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  notebooks-gu-all              = { dns_name = "*.notebooks.googleusercontent.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  packages-cloud                = { dns_name = "packages.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  packages-cloud-all            = { dns_name = "*.packages.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  pkgdev                        = { dns_name = "pkg.dev.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  pkgdev-all                    = { dns_name = "*.pkg.dev.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  pkigoog                       = { dns_name = "pki.goog.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  pkigoog-all                   = { dns_name = "*.pki.goog.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  run-all                       = { dns_name = "*.run.app.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  source                        = { dns_name = "source.developers.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-  storage                       = { dns_name = "storage.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
-}
+# Optional DNS Response Policy Rule Overrides
+# Built-in Google APIs rules load automatically from data/dns-policy-rules.yaml
+# and resolve to each VPC's local PSC endpoint IP when psc_google_apis.enabled
+# is true (or Private Google Access VIPs when false). Add entries here only to
+# override or supplement those defaults.
+# dns_policy_rules = {
+#   custom-bypass = {
+#     dns_name = "public-api.googleapis.com."
+#     behavior = "bypassResponsePolicy"
+#   }
+# }
+
+# Optional Centralized Internet Egress VPC Spoke with Secure Web Proxy Next-Hop
+# Enabling this replaces per-VPC Cloud NAT with a dedicated egress-0 VPC spoke
+# in the NCC center group and routes 0.0.0.0/0 from spoke VPCs to swp_ip.
+# centralized_egress = {
+#   enabled           = true
+#   subnet_cidr       = "10.64.250.0/24"
+#   proxy_subnet_cidr = "10.64.251.0/24"
+#   swp_ip            = "10.64.250.10"
+#   ports             = [80, 443]
+#   url_lists = {
+#     allowed-package-repos = {
+#       values = ["*.ubuntu.com", "*.debian.org", "*.pypi.org"]
+#     }
+#   }
+#   policy_rules = {
+#     allow-package-repos = {
+#       priority        = 1000
+#       allow           = true
+#       session_matcher = "inUrlList(host(), '%s')"
+#       matcher_args = {
+#         session = ["url_list:allowed-package-repos"]
+#       }
+#     }
+#   }
+# }
+
+# Optional Additional NCC Spokes or Hubs (merged with the default "main" STAR hub)
+# ncc_hubs = {
+#   main = {
+#     spokes = {
+#       tunnels = {
+#         onprem-primary = {
+#           location = "$locations:primary"
+#           group    = "$ncc_groups:main/center"
+#           uris = [
+#             "projects/my-hub-project/regions/<region>/vpnTunnels/onprem-0",
+#             "projects/my-hub-project/regions/<region>/vpnTunnels/onprem-1",
+#           ]
+#         }
+#       }
+#     }
+#   }
+# }
