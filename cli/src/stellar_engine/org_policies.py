@@ -20,7 +20,9 @@ that Stage 0 declares, and `stellar render` writes an import block that
 adopts them on the final Stage 0 apply.
 """
 
+from collections.abc import Callable
 import pathlib
+from typing import Any
 
 from stellar_engine import paths
 from stellar_engine import repo as repo_lib
@@ -52,6 +54,29 @@ def scan(
     return repo.scan_org_policies(existing, answers.compliance.regime)
 
 
+def keep_scanned(
+    scanned: repo_lib.OrgPolicyScan,
+) -> Callable[[dict[str, Any]], None]:
+    """Returns the answers change that records the policies Stage 0 imports.
+
+    The kept policies of the scan replace `existing_org_policies`, so a
+    policy that is gone from the organization or that Stage 0 no longer
+    declares drops out of the list.
+
+    Args:
+        scanned: The result of `scan`.
+
+    Returns:
+        A change for `answers.update`, which edits the answer data in
+        place.
+    """
+
+    def change(data: dict[str, Any]) -> None:
+        data["existing_org_policies"] = list(scanned.kept)
+
+    return change
+
+
 def record(
     env: paths.EnvPaths,
     scanned: repo_lib.OrgPolicyScan,
@@ -60,13 +85,9 @@ def record(
 ) -> bool:
     """Saves the policies that Stage 0 imports to the answers.
 
-    The kept policies of the scan replace `existing_org_policies`, so a
-    policy that is gone from the organization or that Stage 0 no longer
-    declares drops out of the list.
-
     Args:
         env: The environment whose `answers.yaml` holds the list.
-        scanned: The result of `scan`.
+        scanned: The result of `scan`, which `keep_scanned` records.
         repo: The engine checkout that validates the updated answers.
         home: The home folder that holds the environment, which the
             answers must not point into.
@@ -79,11 +100,7 @@ def record(
         answers_lib.AnswersError: If the answers file cannot be read, or
             the updated answers have problems or cannot be saved.
     """
-
-    def keep_scanned(data):
-        data["existing_org_policies"] = list(scanned.kept)
-
     outcome = answers_lib.update(
-        env.answers, keep_scanned, repo=repo, home=home
+        env.answers, keep_scanned(scanned), repo=repo, home=home
     )
     return outcome.changed

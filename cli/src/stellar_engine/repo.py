@@ -26,6 +26,7 @@ import functools
 import json
 import pathlib
 import re
+import subprocess
 
 import hcl2
 from packaging import version
@@ -105,6 +106,9 @@ WORKLOAD_RESOURCE = "google_assured_workloads_workload"
 _WORKLOAD_COUNT_RE = re.compile(
     r'var\.assured_workloads\.regime\s*!=\s*\\?"(?P<regime>[A-Z0-9_]+)\\?"'
 )
+# The Stage 0 folder that stands in for the workload when the regime is the
+# one the workload `count` skips.
+_NO_COMPLIANCE_FOLDER_MODULE = "no-compliance-folder"
 # Workload arguments that the Assured Workloads API never returns, so an
 # imported workload reads them as unset. The provider marks them ForceNew and
 # its import tests ignore them, so an import plans a replacement unless the
@@ -125,8 +129,24 @@ _DELETION_POLICY_REF_RE = re.compile(
 )
 
 
+_GIT_TIMEOUT_SECONDS = 30
+
+
 class RepoError(Exception):
     """Raised when the repository layout does not match expectations."""
+
+
+@dataclasses.dataclass(frozen=True)
+class Provenance:
+    """The git commit of an engine checkout.
+
+    Attributes:
+        commit: The full commit hash of `HEAD`.
+        dirty: Whether the checkout has uncommitted or untracked changes.
+    """
+
+    commit: str
+    dirty: bool
 
 
 @dataclasses.dataclass(frozen=True)
@@ -795,6 +815,27 @@ class Repo:
         """
         return self._assured_workload
 
+    def no_compliance_folder_address(self):
+        """Returns the address of the folder Stage 0 creates without a regime.
+
+        Stage 0 creates `module.no-compliance-folder` instead of the
+        workload when the regime is the one the workload `count` skips.
+
+        Returns:
+            The module address, such as `module.no-compliance-folder[0]`.
+
+        Raises:
+            RepoError: If `0-bootstrap/organization.tf` declares no such
+                module.
+        """
+        for label, body in _modules(self.bootstrap_dir / _WORKLOAD_FILE):
+            if label == _NO_COMPLIANCE_FOLDER_MODULE:
+                return f"module.{label}{_counted(body)}"
+        raise RepoError(
+            f"Expected module {_NO_COMPLIANCE_FOLDER_MODULE} in 0-bootstrap/"
+            f"{_WORKLOAD_FILE}"
+        )
+
     def billing_resources(
         self,
         *,
@@ -1015,6 +1056,33 @@ class Repo:
             bindings[hcl.unquote(role)] = set()
         return bindings
 
+    def audit_log_configs(self):
+        """Returns the audit log configs Stage 0 sets on the organization.
+
+        Each `google_organization_iam_audit_config` in `audit-logging.tf`
+        replaces the live config of its service.
+
+        Returns:
+            A dict of service to a list of `(log_type, exempted_members)`
+            tuples, in file order.
+        """
+        path = self.bootstrap_dir / "audit-logging.tf"
+        return {
+            hcl.unquote(body["service"]): [
+                (
+                    hcl.unquote(config["log_type"]),
+                    tuple(
+                        hcl.unquote(member)
+                        for member in config.get("exempted_members") or []
+                    ),
+                )
+                for config in body.get("audit_log_config") or []
+            ]
+            for _, body in _resources(
+                path, "google_organization_iam_audit_config"
+            )
+        }
+
     @staticmethod
     def _holder(key, accounts):
         """Returns the Holder for an `organization-iam.tf` binding key."""
@@ -1083,3 +1151,31 @@ class Repo:
         if not floors:
             raise RepoError("No module declares a required_version floor")
         return str(max(floors))
+
+    def provenance(self):
+        """Returns the commit of the checkout, or None outside a git checkout.
+
+        Runs `git rev-parse HEAD` and `git status --porcelain` in the root,
+        so a deploy can record which engine version planned and applied.
+
+        Returns:
+            A `Provenance`, or None when git is missing or the root is not
+            in a git checkout.
+        """
+        try:
+            head = self._git("rev-parse", "HEAD")
+            # A status refresh may rewrite `.git/index`; `stellar status`
+            # must not change the checkout it reads.
+            status = self._git("--no-optional-locks", "status", "--porcelain")
+        except OSError, subprocess.SubprocessError:
+            return None
+        return Provenance(head.strip(), bool(status.strip()))
+
+    def _git(self, *args):
+        return subprocess.run(
+            ["git", "-C", str(self.root), *args],
+            capture_output=True,
+            check=True,
+            text=True,
+            timeout=_GIT_TIMEOUT_SECONDS,
+        ).stdout

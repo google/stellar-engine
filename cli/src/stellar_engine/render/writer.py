@@ -80,6 +80,15 @@ def _digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def stamp(now: datetime.datetime) -> str:
+    """Returns the UTC time stamp that names backups, logs, plans and snapshots.
+
+    Args:
+        now: The time to format.
+    """
+    return now.astimezone(datetime.UTC).strftime(BACKUP_TIME_FORMAT)
+
+
 def _backup(
     target: pathlib.Path, data: bytes, now: datetime.datetime
 ) -> pathlib.Path:
@@ -88,8 +97,7 @@ def _backup(
     The name carries the UTC time, plus a counter when two backups land in
     the same second, so an earlier backup is never overwritten.
     """
-    stamp = now.astimezone(datetime.UTC).strftime(BACKUP_TIME_FORMAT)
-    base = f"{target.name}.backup.{stamp}"
+    base = f"{target.name}.backup.{stamp(now)}"
     counter = 0
     while True:
         name = base if counter == 0 else f"{base}.{counter}"

@@ -177,6 +177,22 @@ def test_answers_fill_unset_fields(answers):
     assert resolved.compliance_location is None
 
 
+def test_answers_pass_the_stage0_iam_overrides(answers):
+    overridden = answers.model_copy(
+        update={
+            "overrides": {
+                "0-bootstrap": {
+                    "iam": {"roles/browser": ["user:a@example.com"]}
+                }
+            }
+        }
+    )
+    resolved = inputs.resolve({}, None, answers_lib.to_preflight(overridden))
+    assert resolved.stage0_iam_overrides == {
+        "iam": {"roles/browser": ("user:a@example.com",)}
+    }
+
+
 def test_answers_pass_an_explicit_compliance_location(answers):
     located = answers.model_copy(
         update={"compliance": models.Compliance(regime="IL4", location="us")}
@@ -218,6 +234,7 @@ def test_project_id_fields_default_empty():
     assert resolved.tenant_project_ids == ()
     assert resolved.imported_project_ids == ()
     assert resolved.imported_addresses == ()
+    assert resolved.stage0_iam_overrides == {}
 
 
 def test_preflight_inputs_do_not_import_the_config_package():

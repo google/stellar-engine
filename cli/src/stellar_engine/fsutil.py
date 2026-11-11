@@ -14,9 +14,30 @@
 
 """File helpers shared by every module that writes environment files."""
 
+import json
 import os
 import pathlib
 import tempfile
+from typing import Any
+
+from stellar_engine import paths
+
+# The mode of the files that `stellar deploy` and `stellar iam` write, which
+# can hold identifiers or state: run-state, the deploy lock, logs, plans,
+# state backups, fetched stage outputs and IAM snapshots.
+PRIVATE_FILE_MODE = 0o600
+
+
+def read_bytes_or_none(path: pathlib.Path) -> bytes | None:
+    """Returns the bytes of a file, or None when no file is there.
+
+    Args:
+        path: File to read; a directory in its place also returns None.
+    """
+    try:
+        return pathlib.Path(path).read_bytes()
+    except FileNotFoundError, IsADirectoryError:
+        return None
 
 
 def read_text_or_none(path: pathlib.Path) -> str | None:
@@ -59,3 +80,27 @@ def atomic_write(path: pathlib.Path, data: bytes | str, mode: int) -> None:
     except BaseException:
         pathlib.Path(temp_name).unlink(missing_ok=True)
         raise
+
+
+def write_private(path: pathlib.Path, data: bytes | str) -> None:
+    """Writes a file with mode 0600 and creates missing directories 0700.
+
+    An existing directory keeps its mode.
+
+    Args:
+        path: File to write; its directory is created when missing.
+        data: New content; text is encoded as UTF-8.
+    """
+    path = pathlib.Path(path)
+    paths.make_private_dir(path.parent)
+    atomic_write(path, data, PRIVATE_FILE_MODE)
+
+
+def write_private_json(path: pathlib.Path, doc: Any) -> None:
+    """Writes a JSON document, indented, as `write_private` does.
+
+    Args:
+        path: File to write.
+        doc: JSON-serializable data.
+    """
+    write_private(path, json.dumps(doc, indent=2) + "\n")

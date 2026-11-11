@@ -50,7 +50,8 @@
   
   import {
     for_each = (
-      var.bootstrap_user == null
+      var.deploy_org_resources.org_policies
+      && var.bootstrap_user == null
       ? local.stellar_org_policy_imports
       : toset([])
     )
