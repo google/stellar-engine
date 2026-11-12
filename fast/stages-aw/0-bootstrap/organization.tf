@@ -363,8 +363,21 @@ module "organization" {
       }
     }
   )
-  contacts     = !var.deploy_org_resources.iam || var.bootstrap_user != null ? {} : local.essential_contacts
-  custom_roles = var.deploy_org_resources.custom_roles ? var.custom_roles : {}
+  contacts = (
+    !var.deploy_org_resources.iam || var.bootstrap_user != null
+    ? {}
+    : local.essential_contacts
+  )
+  context = {
+    condition_vars = {
+      root_node = var.organization.id
+    }
+  }
+  custom_roles = (
+    var.deploy_org_resources.custom_roles
+    ? { for k, v in var.custom_roles : k => { permissions = v } }
+    : {}
+  )
   factories_config = {
     custom_roles = var.deploy_org_resources.custom_roles ? var.factories_config.custom_roles : null
     org_policies = (
@@ -377,11 +390,6 @@ module "organization" {
       ? "./data/custom-constraint-policies/"
       : null
     )
-    context = {
-      org_policies = {
-        root_node = var.organization.id
-      }
-    }
   }
   logging_sinks = !var.deploy_org_resources.logging_sinks ? {} : {
     for name, attrs in var.log_sinks : name => {

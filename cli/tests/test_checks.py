@@ -52,11 +52,14 @@ class TestTools:
         }
 
     @pytest.mark.parametrize("installed", [None, "1.8.1"])
-    def test_terraform_missing_or_old(self, make_ctx, local_tools, installed):
+    def test_terraform_missing_or_old(
+        self, make_ctx, local_tools, repo, installed
+    ):
         local_tools.terraform = installed
         found = by_id(checks.check_tools(make_ctx()))
         assert found["tools.terraform"].status == Status.FAIL
-        assert "1.10.2" in remedy(found["tools.terraform"])
+        minimum = repo.min_terraform_version()
+        assert minimum in remedy(found["tools.terraform"])
 
     def test_gcloud_missing(self, make_ctx, local_tools):
         local_tools.gcloud = None

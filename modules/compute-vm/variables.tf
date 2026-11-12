@@ -1,5 +1,5 @@
 /**
- * Copyright 2023 Google LLC
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,103 +14,99 @@
  * limitations under the License.
  */
 
-variable "attached_disk_defaults" {
-  description = "Defaults for attached disks options."
-  type = object({
-    auto_delete  = optional(bool, false)
-    mode         = string
-    replica_zone = string
-    type         = string
-  })
-  default = {
-    auto_delete  = true
-    mode         = "READ_WRITE"
-    replica_zone = null
-    type         = "pd-balanced"
-  }
-  validation {
-    condition     = var.attached_disk_defaults.mode == "READ_WRITE" || !var.attached_disk_defaults.auto_delete
-    error_message = "auto_delete can only be specified on READ_WRITE disks."
-  }
-}
-
 variable "attached_disks" {
-  description = "Additional disks, if options is null defaults will be used in its place. Source type is one of 'image' (zonal disks in vms and template), 'snapshot' (vm), 'existing', and null."
-  type = list(object({
-    name        = string
-    device_name = optional(string)
-    # TODO: size can be null when source_type is attach
-    size              = string
+  description = "Additional disks. Source type is one of 'image' (zonal disks in vms and template), 'snapshot' (vm), 'existing', and null."
+  type = map(object({
+    auto_delete  = optional(bool, true) # applies only to vm templates
+    device_name  = optional(string)
+    force_attach = optional(bool)
+    position     = optional(string)
+    # auto_delete can only be specified for READ_WRITE, force null otherwise
+    mode = optional(string, "READ_WRITE")
+    name = optional(string)
+    initialize_params = optional(object({
+      replica_zone = optional(string)
+      size         = optional(number, 10)
+      type         = optional(string, "pd-balanced")
+      hyperdisk = optional(object({
+        provisioned_iops       = optional(number)
+        provisioned_throughput = optional(number) # in MiB/s
+        storage_pool           = optional(string)
+      }), {})
+    }), {})
     snapshot_schedule = optional(list(string))
-    source            = optional(string)
-    source_type       = optional(string)
-    options = optional(
-      object({
-        auto_delete  = optional(bool, false)
-        mode         = optional(string, "READ_WRITE")
-        replica_zone = optional(string)
-        type         = optional(string, "pd-balanced")
-      }),
-      {
-        auto_delete  = true
-        mode         = "READ_WRITE"
-        replica_zone = null
-        type         = "pd-balanced"
-      }
-    )
+    source = optional(object({
+      attach = optional(string)
+      # disk             = optional(string)
+      image = optional(string) # not supported yet for repd
+      # instant_snapshot = optional(string)
+      snapshot = optional(string)
+    }), {})
   }))
-  default = []
+  nullable = false
+  default  = {}
   validation {
-    condition = length([
-      for d in var.attached_disks : d if(
-        d.source_type == null
-        ||
-        contains(["image", "snapshot", "attach"], coalesce(d.source_type, "1"))
-      )
-    ]) == length(var.attached_disks)
-    error_message = "Source type must be one of 'image', 'snapshot', 'attach', null."
-  }
-
-  validation {
-    condition = length([
-      for d in var.attached_disks : d if d.options == null ||
-      d.options.mode == "READ_WRITE" || !d.options.auto_delete
-    ]) == length(var.attached_disks)
-    error_message = "auto_delete can only be specified on READ_WRITE disks."
+    condition = alltrue([
+      for k, v in var.attached_disks :
+      contains(["READ_WRITE", "READ_ONLY"], v.mode)
+    ])
+    error_message = "Allowed values for 'mode' are 'READ_WRITE', 'READ_ONLY'."
   }
 }
 
 variable "boot_disk" {
   description = "Boot disk properties."
   type = object({
+    architecture      = optional(string)
     auto_delete       = optional(bool, true)
+    force_attach      = optional(bool)
     snapshot_schedule = optional(list(string))
-    source            = optional(string)
     initialize_params = optional(object({
-      image = optional(string, "projects/debian-cloud/global/images/family/debian-11")
-      size  = optional(number, 10)
-      type  = optional(string, "pd-balanced")
+      size = optional(number, 10)
+      type = optional(string, "pd-balanced")
+      hyperdisk = optional(object({
+        provisioned_iops       = optional(number)
+        provisioned_throughput = optional(number) # in MiB/s
+        storage_pool           = optional(string)
+      }), {})
+    }), {})
+    source = optional(object({
+      attach = optional(string)
+      disk   = optional(string)
+      image  = optional(string)
+      # instant_snapshot = optional(string)
+      snapshot = optional(string)
+    }), { image = "debian-cloud/debian-13" })
+    use_independent_disk = optional(object({
+      name = optional(string)
     }))
-    use_independent_disk = optional(bool, false)
   })
-  default = {
-    initialize_params = {}
-  }
+  default  = {}
   nullable = false
   validation {
     condition = (
-      (var.boot_disk.source == null ? 0 : 1) +
-      (var.boot_disk.initialize_params == null ? 0 : 1) < 2
+      var.tpu_config != null ||
+      var.boot_disk.initialize_params != null ||
+      var.boot_disk.source.attach != null ||
+      var.boot_disk.source.snapshot != null ||
+      var.boot_disk.source.disk != null
     )
-    error_message = "You can only have one of boot disk source or initialize params."
+    error_message = "Either initialize params or one of attach, snapshot, source disk should be specified."
   }
   validation {
     condition = (
-      var.boot_disk.use_independent_disk != true
+      var.boot_disk.use_independent_disk == null
       ||
       var.boot_disk.initialize_params != null
     )
     error_message = "Using an independent disk for boot requires initialize params."
+  }
+  validation {
+    condition = (
+      var.boot_disk.architecture == null ||
+      contains(["ARM64", "X86_64"], var.boot_disk.architecture)
+    )
+    error_message = "Architecture can be null, 'X86_64' or 'ARM64'."
   }
 }
 
@@ -121,16 +117,46 @@ variable "can_ip_forward" {
 }
 
 variable "confidential_compute" {
-  description = "Enable Confidential Compute for these instances."
-  type        = bool
-  default     = false
+  description = "Confidential Compute configuration. Set to 'SEV' or 'SEV_SNP' to enable."
+  type        = string
+  default     = null
+  validation {
+    condition     = var.confidential_compute == null || contains(["SEV", "SEV_SNP"], var.confidential_compute)
+    error_message = "Allowed values are 'SEV' or 'SEV_SNP'."
+  }
+}
+
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    addresses      = optional(map(string), {})
+    condition_vars = optional(map(map(string)), {})
+    custom_roles   = optional(map(string), {})
+    kms_keys       = optional(map(string), {})
+    iam_principals = optional(map(string), {})
+    locations      = optional(map(string), {})
+    networks       = optional(map(string), {})
+    project_ids    = optional(map(string), {})
+    subnets        = optional(map(string), {})
+    tag_values     = optional(map(string), {})
+    tag_vars = optional(object({
+      projects     = optional(map(map(string)), {})
+      organization = optional(map(string), {})
+    }), {})
+  })
+  default  = {}
+  nullable = false
 }
 
 variable "create_template" {
-  description = "Create instance template instead of instances."
-  type        = bool
-  default     = false
+  description = "Create instance template instead of instances. Defaults to a global template."
+  type = object({
+    regional = optional(bool, false)
+  })
+  nullable = true
+  default  = null
 }
+
 variable "description" {
   description = "Description of a Compute Instance."
   type        = string
@@ -145,6 +171,7 @@ variable "enable_display" {
 
 variable "encryption" {
   description = "Encryption options. Only one of kms_key_self_link and disk_encryption_key_raw may be set. If needed, you can specify to encrypt or not the boot disk."
+  # TODO: Add validation to enforce exclusivity of kms_key_self_link and disk_encryption_key_raw
   type = object({
     encrypt_boot            = optional(bool, false)
     disk_encryption_key_raw = optional(string)
@@ -168,24 +195,31 @@ variable "gpu" {
         [
           "nvidia-tesla-a100",
           "nvidia-tesla-p100",
+          "nvidia-tesla-p100-vws",
           "nvidia-tesla-v100",
-          "nvidia-tesla-k80",
           "nvidia-tesla-p4",
+          "nvidia-tesla-p4-vws",
           "nvidia-tesla-t4",
+          "nvidia-tesla-t4-vws",
           "nvidia-l4",
-          "nvidia-a2"
+          "nvidia-l4-vws",
+          "nvidia-a100-80gb",
+          "nvidia-h100-80gb",
+          "nvidia-h100-mega-80gb",
+          "nvidia-h200-141gb"
         ],
         try(var.gpu.type, "-")
       )
     )
-    error_message = "GPU type must be one of the allowed values: nvidia-tesla-a100, nvidia-tesla-p100, nvidia-tesla-v100, nvidia-tesla-k80, nvidia-tesla-p4, nvidia-tesla-t4, nvidia-l4, nvidia-a2."
+    error_message = "GPU type must be one of the allowed values: nvidia-tesla-a100, nvidia-tesla-p100, nvidia-tesla-p100-vws, nvidia-tesla-v100, nvidia-tesla-p4, nvidia-tesla-p4-vws, nvidia-tesla-t4, nvidia-tesla-t4-vws, nvidia-l4, nvidia-l4-vws,  nvidia-a100-80gb, nvidia-h100-80gb, nvidia-h100-mega-80gb, nvidia-h200-141gb."
   }
 }
 
 variable "group" {
-  description = "Define this variable to create an instance group for instances. Disabled for template use."
+  description = "Instance group configuration. Set 'named_ports' to create a new unmanaged instance group, or provide an existing group self_link/id in 'membership' to join one."
   type = object({
-    named_ports = map(number)
+    membership  = optional(string) # ID of an existing unmanaged group to join
+    named_ports = optional(map(number), {})
   })
   default = null
 }
@@ -202,45 +236,83 @@ variable "iam" {
   default     = {}
 }
 
-variable "instance_schedule" {
-  description = "Assign or create and assign an instance schedule policy. Either resource policy id or create_config must be specified if not null. Set active to null to dtach a policy from vm before destroying."
-  type = object({
-    resource_policy_id = optional(string)
-    create_config = optional(object({
-      active          = optional(bool, true)
-      description     = optional(string)
-      expiration_time = optional(string)
-      start_time      = optional(string)
-      timezone        = optional(string, "UTC")
-      vm_start        = optional(string)
-      vm_stop         = optional(string)
+variable "iap_tunnel_iam" {
+  description = "IAP tunnel IAM bindings in {ROLE => [MEMBERS]} format."
+  type        = map(list(string))
+  default     = {}
+  nullable    = false
+}
+
+variable "iap_tunnel_iam_bindings" {
+  description = "Authoritative IAP tunnel IAM bindings in {KEY => {role = ROLE, members = [], condition = {}}}. Keys are arbitrary."
+  type = map(object({
+    members = list(string)
+    role    = string
+    condition = optional(object({
+      expression  = string
+      title       = string
+      description = optional(string)
     }))
+  }))
+  default  = {}
+  nullable = false
+}
+
+variable "iap_tunnel_iam_bindings_additive" {
+  description = "Individual additive IAP tunnel IAM bindings. Keys are arbitrary."
+  type = map(object({
+    member = string
+    role   = string
+    condition = optional(object({
+      expression  = string
+      title       = string
+      description = optional(string)
+    }))
+  }))
+  default  = {}
+  nullable = false
+}
+
+variable "instance_schedule" {
+  description = "Assign or create and assign an instance schedule policy. Set active to null to detach a policy from vm before destroying."
+  type = object({
+    active          = optional(bool, true)
+    description     = optional(string)
+    expiration_time = optional(string)
+    start_time      = optional(string)
+    timezone        = optional(string, "UTC")
+    vm_start        = optional(string)
+    vm_stop         = optional(string)
   })
   default = null
   validation {
     condition = (
       var.instance_schedule == null ||
-      try(var.instance_schedule.resource_policy_id, null) != null ||
-      try(var.instance_schedule.create_config, null) != null
-    )
-    error_message = "A resource policy name or configuration must be specified when not null."
-  }
-  validation {
-    condition = (
-      try(var.instance_schedule.create_config, null) == null ||
       length(compact([
-        try(var.instance_schedule.create_config.vm_start, null),
-        try(var.instance_schedule.create_config.vm_stop, null)
+        try(var.instance_schedule.vm_start, null),
+        try(var.instance_schedule.vm_stop, null)
       ])) > 0
     )
-    error_message = "A resource policy configuration must contain at least one schedule."
+    error_message = "An instance schedule must contain at least one schedule."
   }
 }
 
-variable "instance_type" {
-  description = "Instance type."
-  type        = string
-  default     = "f1-micro"
+variable "kms_autokeys" {
+  description = "KMS Autokey key handles. If location is not specified it will be inferred from the zone. Key handle names will be added to the kms_keys context with an `autokeys/` prefix."
+  type = map(object({
+    location               = optional(string)
+    resource_type_selector = optional(string, "compute.googleapis.com/Disk")
+  }))
+  nullable = false
+  default  = {}
+  validation {
+    condition = alltrue([
+      for k, v in var.kms_autokeys : k == try(regex(
+        "^[a-z][a-z0-9-]+[a-z0-9]$", k
+      ), null)
+    ])
+    error_message = "Autokey keys need to be valid GCP resource names."
+  }
 }
 
 variable "labels" {
@@ -249,10 +321,69 @@ variable "labels" {
   default     = {}
 }
 
+variable "lifecycle_config" {
+  description = "Instance lifecycle and operational configurations."
+  type = object({
+    allow_stopping_for_update  = optional(bool, true)
+    deletion_protection        = optional(bool, false)
+    key_revocation_action_type = optional(string)
+    graceful_shutdown = optional(object({
+      enabled           = optional(bool, false)
+      max_duration_secs = optional(number)
+    }))
+  })
+  default = {}
+  validation {
+    condition = (
+      var.lifecycle_config.key_revocation_action_type == null || contains(
+        ["NONE", "STOP"], var.lifecycle_config.key_revocation_action_type
+      )
+    )
+    error_message = "Allowed values for key_revocation_action_type are 'NONE' or 'STOP'."
+  }
+}
+
+variable "machine_features_config" {
+  description = "Machine-level configuration."
+  type = object({
+    enable_nested_virtualization = optional(bool)
+    enable_turbo_mode            = optional(bool)
+    enable_uefi_networking       = optional(bool)
+    performance_monitoring_unit  = optional(string)
+    threads_per_core             = optional(number)
+    visible_core_count           = optional(number)
+  })
+  nullable = false
+  default  = {}
+  validation {
+    condition = (
+      try(var.machine_features_config.performance_monitoring_unit, null) == null ||
+      contains(
+        ["ARCHITECTURAL", "ENHANCED", "STANDARD"],
+        coalesce(try(var.machine_features_config.performance_monitoring_unit, null), "-")
+      )
+    )
+    error_message = "Allowed values for performance_monitoring_unit are ARCHITECTURAL', 'ENHANCED', 'STANDARD' and null."
+  }
+}
+
+variable "machine_type" {
+  description = "Machine type."
+  type        = string
+  default     = "e2-micro"
+}
+
 variable "metadata" {
   description = "Instance metadata."
   type        = map(string)
   default     = {}
+}
+
+variable "metadata_startup_script" {
+  description = "Instance startup script. Will trigger recreation on change, even after importing."
+  type        = string
+  nullable    = true
+  default     = null
 }
 
 variable "min_cpu_platform" {
@@ -276,32 +407,75 @@ variable "network_attached_interfaces" {
 variable "network_interfaces" {
   description = "Network interfaces configuration. Use self links for Shared VPC, set addresses to null if not needed."
   type = list(object({
-    network    = string
-    subnetwork = string
-    alias_ips  = optional(map(string), {})
-    nat        = optional(bool, false)
-    nic_type   = optional(string)
-    stack_type = optional(string)
+    network                     = string
+    subnetwork                  = string
+    alias_ips                   = optional(map(string), {})
+    nat                         = optional(bool, false)
+    network_tier                = optional(string)
+    nic_type                    = optional(string)
+    stack_type                  = optional(string)
+    queue_count                 = optional(number) # NEW
+    internal_ipv6_prefix_length = optional(number) # NEW
+    external_ipv6               = optional(bool, false)
     addresses = optional(object({
       internal = optional(string)
       external = optional(string)
     }), null)
   }))
+  validation {
+    condition     = alltrue([for v in var.network_interfaces : contains(["STANDARD", "PREMIUM"], coalesce(v.network_tier, "PREMIUM"))])
+    error_message = "Allowed values for network tier are: 'STANDARD' or 'PREMIUM'"
+  }
 }
 
-variable "options" {
-  description = "Instance options."
+variable "network_performance_tier" {
+  description = "Network performance total egress bandwidth tier."
+  type        = string
+  default     = null
+  validation {
+    condition     = var.network_performance_tier == null || contains(["DEFAULT", "TIER_1"], coalesce(var.network_performance_tier, "-"))
+    error_message = "Allowed values are 'DEFAULT' or 'TIER_1'."
+  }
+}
+
+variable "network_tag_bindings" {
+  description = "Resource manager tag bindings in arbitrary key => tag key or value id format. Set on both the instance only for networking purposes, and modifiable without impacting the main resource lifecycle."
+  type        = map(string)
+  nullable    = false
+  default     = {}
+}
+
+variable "project_id" {
+  description = "Project id."
+  type        = string
+}
+
+variable "project_number" {
+  description = "Project number. Used in tag bindings to avoid a permadiff."
+  type        = string
+  default     = null
+}
+
+variable "resource_policies" {
+  description = "Resource policies to attach to the instance or template."
+  type        = list(string)
+  nullable    = true
+  default     = null
+}
+
+variable "scheduling_config" {
+  description = "Scheduling configuration for the instance."
   type = object({
-    advanced_machine_features = optional(object({
-      enable_nested_virtualization = optional(bool)
-      enable_turbo_mode            = optional(bool)
-      enable_uefi_networking       = optional(bool)
-      performance_monitoring_unit  = optional(string)
-      threads_per_core             = optional(number)
-      visible_core_count           = optional(number)
+    automatic_restart    = optional(bool)   # Defaults to !spot
+    maintenance_interval = optional(string) # NEW
+    min_node_cpus        = optional(number) # NEW
+    on_host_maintenance  = optional(string) # Defaults to MIGRATE or TERMINATE based on GPU/Spot
+    provisioning_model   = optional(string) # "SPOT" or "STANDARD"
+    termination_action   = optional(string)
+    local_ssd_recovery_timeout = optional(object({ # NEW
+      nanos   = optional(number)
+      seconds = number
     }))
-    allow_stopping_for_update = optional(bool, true)
-    deletion_protection       = optional(bool, false)
     max_run_duration = optional(object({
       nanos   = optional(number)
       seconds = number
@@ -310,54 +484,37 @@ variable "options" {
       values = list(string)
       in     = optional(bool, true)
     })), {})
-    spot               = optional(bool, false)
-    termination_action = optional(string)
   })
-  default = {
-    allow_stopping_for_update = true
-    deletion_protection       = false
-    spot                      = false
-    termination_action        = null
-  }
+  nullable = false
+  default  = {}
   validation {
     condition = (
-      var.options.termination_action == null
-      ||
-      contains(["STOP", "DELETE"], coalesce(var.options.termination_action, "1"))
-    )
-    error_message = "Allowed values for options.termination_action are 'STOP', 'DELETE' and null."
-  }
-  validation {
-    condition = (
-      try(var.options.advanced_machine_features.performance_monitoring_unit, null) == null
-      ||
-      contains(["ARCHITECTURAL", "ENHANCED", "STANDARD"], coalesce(
-        try(
-          var.options.advanced_machine_features.performance_monitoring_unit, null
-        ), "-"
+      var.scheduling_config.termination_action == null || contains(
+        ["STOP", "DELETE"], coalesce(var.scheduling_config.termination_action, "1"
         )
       )
     )
-    error_message = "Allowed values for options.advanced_machine_features.performance_monitoring_unit are ARCHITECTURAL', 'ENHANCED', 'STANDARD' and null."
+    error_message = "Allowed values for termination_action are 'STOP', 'DELETE' and null."
   }
-}
-
-variable "project_id" {
-  description = "Project id."
-  type        = string
 }
 
 variable "scratch_disks" {
   description = "Scratch disks configuration."
   type = object({
     count     = number
-    interface = string
+    interface = optional(string, "NVME")
+    size      = optional(number, 375)
   })
+  nullable = false
   default = {
-    count     = 0
-    interface = "NVME"
+    count = 0
+  }
+  validation {
+    condition     = contains(["NVME", "SCSI"], var.scratch_disks.interface)
+    error_message = "Interface must be 'NVME' or 'SCSI'."
   }
 }
+
 
 variable "service_account" {
   description = "Service account email and scopes. If email is null, the default Compute service account will be used unless auto_create is true, in which case a service account will be created. Set the variable to null to avoid attaching a service account."
@@ -369,12 +526,13 @@ variable "service_account" {
   default = {}
 }
 
+
 variable "shielded_config" {
   description = "Shielded VM configuration of the instances."
   type = object({
-    enable_secure_boot          = bool
-    enable_vtpm                 = bool
-    enable_integrity_monitoring = bool
+    enable_secure_boot          = optional(bool, true)
+    enable_vtpm                 = optional(bool, true)
+    enable_integrity_monitoring = optional(bool, true)
   })
   default = null
 }
@@ -423,15 +581,24 @@ variable "snapshot_schedules" {
 }
 
 variable "tag_bindings" {
-  description = "Resource manager tag bindings for this instance, in tag key => tag value format."
+  description = "Resource manager tag bindings in arbitrary key => tag key or value id format. Set on both the instance and zonal disks, and modifiable without impacting the main resource lifecycle."
   type        = map(string)
-  default     = null
+  nullable    = false
+  default     = {}
 }
 
-variable "tag_bindings_firewall" {
-  description = "Firewall (network scoped) tag bindings for this instance, in tag key => tag value format."
+variable "tag_bindings_immutable" {
+  description = "Immutable resource manager tag bindings, in tagKeys/id => tagValues/id format. These are set on the instance or instance template at creation time, and trigger recreation if changed."
   type        = map(string)
+  nullable    = true
   default     = null
+  validation {
+    condition = alltrue([
+      for k, v in coalesce(var.tag_bindings_immutable, {}) :
+      startswith(k, "tagKeys/") && startswith(v, "tagValues/")
+    ])
+    error_message = "Incorrect format for immutable tag bindings."
+  }
 }
 
 variable "tags" {
@@ -440,9 +607,30 @@ variable "tags" {
   default     = []
 }
 
+variable "tpu_config" {
+  description = "TPU configuration. If null, a standard VM is created."
+  type = object({
+    runtime_version = optional(string)
+    queued          = optional(bool, true)
+  })
+  default = null
+  validation {
+    condition = (
+      var.tpu_config == null ||
+      var.create_template != null ||
+      var.tpu_config.runtime_version != null
+    )
+    error_message = "TPU runtime version must be specified when creating a TPU VM."
+  }
+  validation {
+    condition = try(var.tpu_config.runtime_version, null) == null || (
+      try(regex("^(?:ct|v)([0-9])", var.machine_type)[0], "---") == try(coalesce(regex("(?:tpuv([0-9])|\\-v([0-9])\\-)", var.tpu_config.runtime_version)...), "---")
+    )
+    error_message = "TPU machine type and runtime version compatibility check failed. Please ensure both are of the same generation (v5 or v6)."
+  }
+}
+
 variable "zone" {
   description = "Compute zone."
   type        = string
 }
-
-

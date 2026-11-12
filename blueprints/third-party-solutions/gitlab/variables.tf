@@ -65,6 +65,10 @@ variable "gitlab_config" {
   default   = {}
   nullable  = false
   sensitive = true
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$", var.gitlab_config.hostname))
+    error_message = "gitlab_config.hostname must be a valid RFC 1123 hostname containing only alphanumeric characters, dots, and hyphens."
+  }
 }
 
 variable "gitlab_instance_config" {

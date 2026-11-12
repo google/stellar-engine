@@ -30,7 +30,12 @@ output "group" {
 
 output "id" {
   description = "Fully qualified instance id."
-  value       = try(google_compute_instance.default[0].id, null)
+  value = try(
+    google_compute_instance.default[0].id,
+    google_tpu_v2_vm.default[0].id,
+    google_tpu_v2_queued_resource.default[0].id,
+    null
+  )
 }
 
 output "instance" {
@@ -43,21 +48,28 @@ output "internal_ip" {
   description = "Instance main interface internal IP address."
   value = try(
     google_compute_instance.default[0].network_interface[0].network_ip,
+    google_tpu_v2_vm.default[0].network_endpoints[0].ip_address,
     null
   )
 }
 
 output "internal_ips" {
   description = "Instance interfaces internal IP addresses."
-  value = [
-    for nic in try(google_compute_instance.default[0].network_interface, [])
-    : nic.network_ip
-  ]
+  value = concat(
+    [
+      for nic in try(google_compute_instance.default[0].network_interface, [])
+      : nic.network_ip
+    ],
+    [
+      for ep in try(google_tpu_v2_vm.default[0].network_endpoints, [])
+      : ep.ip_address
+    ]
+  )
 }
 
 output "login_command" {
   description = "Command to SSH into the machine."
-  value       = "gcloud compute ssh --project ${var.project_id} --zone ${var.zone} ${var.name}"
+  value       = "gcloud compute ssh --project ${local.project_id} --zone ${local.zone} ${var.name}"
 }
 
 output "self_link" {
@@ -86,10 +98,18 @@ output "service_account_iam_email" {
 
 output "template" {
   description = "Template resource."
-  value       = try(google_compute_instance_template.default[0], null)
+  value = (
+    local.template_regional
+    ? try(google_compute_region_instance_template.default[0], null)
+    : try(google_compute_instance_template.default[0], null)
+  )
 }
 
 output "template_name" {
   description = "Template name."
-  value       = try(google_compute_instance_template.default[0].name, null)
+  value = (
+    local.template_regional
+    ? try(google_compute_region_instance_template.default[0].name, null)
+    : try(google_compute_instance_template.default[0].name, null)
+  )
 }

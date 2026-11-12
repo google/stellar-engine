@@ -30,6 +30,7 @@ output "gitlab_ilb_ip" {
 
 output "instance" {
   description = "Gitlab compute engine instance."
+  sensitive   = true
   value       = module.gitlab-instance.instance
 }
 

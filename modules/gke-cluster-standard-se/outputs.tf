@@ -14,16 +14,45 @@
  * limitations under the License.
  */
 
+output "backup_channel_ids" {
+  description = "GKE backup channel ids."
+  value = {
+    for k, v in google_gke_backup_backup_channel.backup_channel : k => v.id
+  }
+}
+
+output "backup_plan_ids" {
+  description = "GKE backup plan ids."
+  value = {
+    for k, v in google_gke_backup_backup_plan.backup_plan : k => v.id
+  }
+  # Ensure cross-project restore plans referencing backup_plan_ids are created
+  # after and destroyed before any restore channels in the source project.
+  depends_on = [
+    google_gke_backup_restore_channel.restore_channel
+  ]
+}
+
 output "ca_certificate" {
   description = "Public certificate of the cluster (base64-encoded)."
-  value       = google_container_cluster.cluster.master_auth[0].cluster_ca_certificate
-  sensitive   = true
+  value = (
+    google_container_cluster.cluster.master_auth[0].cluster_ca_certificate
+  )
+  sensitive = true
 }
 
 output "cluster" {
   description = "Cluster resource."
   sensitive   = true
   value       = google_container_cluster.cluster
+}
+
+output "dns_endpoint" {
+  description = "Control plane DNS endpoint."
+  value = try(
+    google_container_cluster.cluster.control_plane_endpoints_config[0].dns_endpoint_config[0].endpoint,
+    null
+  )
 }
 
 output "endpoint" {
@@ -37,7 +66,7 @@ output "fleet" {
 }
 
 output "id" {
-  description = "FUlly qualified cluster id."
+  description = "Fully qualified cluster ID."
   value       = google_container_cluster.cluster.id
 }
 
@@ -57,8 +86,22 @@ output "name" {
 }
 
 output "notifications" {
-  description = "GKE PubSub notifications topic."
+  description = "GKE Pub/Sub notifications topic."
   value       = try(google_pubsub_topic.notifications[0].id, null)
+}
+
+output "restore_channel_ids" {
+  description = "GKE restore channel ids."
+  value = {
+    for k, v in google_gke_backup_restore_channel.restore_channel : k => v.id
+  }
+}
+
+output "restore_plan_ids" {
+  description = "GKE restore plan ids."
+  value = {
+    for k, v in google_gke_backup_restore_plan.restore_plan : k => v.id
+  }
 }
 
 output "self_link" {
@@ -69,7 +112,7 @@ output "self_link" {
 
 output "workload_identity_pool" {
   description = "Workload identity pool."
-  value       = "${var.project_id}.svc.id.goog"
+  value       = "${local.project_id}.svc.id.goog"
   depends_on = [
     google_container_cluster.cluster
   ]

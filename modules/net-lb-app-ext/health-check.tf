@@ -21,10 +21,10 @@ resource "google_compute_health_check" "default" {
   for_each = var.health_check_configs
   project = (
     each.value.project_id == null
-    ? var.project_id
+    ? local.project_id
     : each.value.project_id
   )
-  name                = "${var.name}-${each.key}"
+  name                = coalesce(each.value.name, "${var.name}-${each.key}")
   description         = each.value.description
   check_interval_sec  = each.value.check_interval_sec
   healthy_threshold   = each.value.healthy_threshold

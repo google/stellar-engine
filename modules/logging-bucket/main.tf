@@ -21,32 +21,63 @@ locals {
     google_logging_organization_bucket_config.bucket[0],
     google_logging_billing_account_bucket_config.bucket[0],
   )
+  ctx = {
+    for k, v in var.context : k => {
+      for kk, vv in v : "${local.ctx_p}${k}:${kk}" => vv
+    } if !endswith(k, "_vars")
+  }
+  ctx_p = "$"
+  _tag_bindings = {
+    for k, v in var.tag_bindings : k => lookup(local.ctx.tag_values, v, v)
+  }
+  location = lookup(
+    local.ctx.locations, var.location, var.location
+  )
+  parent_id = (
+    var.parent_type == "project"
+    ? lookup(local.ctx.project_ids, var.parent, var.parent)
+    : lookup(local.ctx.folder_ids, var.parent, var.parent)
+  )
+  views = {
+    for k, v in var.views : k => merge(v, {
+      location = coalesce(v.location, var.location)
+    })
+  }
 }
+
 
 resource "google_logging_project_bucket_config" "bucket" {
   count            = var.parent_type == "project" ? 1 : 0
-  project          = var.parent
-  location         = var.location
+  project          = local.parent_id
+  location         = local.location
   retention_days   = var.retention
-  bucket_id        = var.id
+  bucket_id        = var.name
   description      = var.description
   enable_analytics = var.log_analytics.enable
-
+  locked           = var.locked
   dynamic "cmek_settings" {
     for_each = var.kms_key_name == null ? [] : [""]
     content {
-      kms_key_name = var.kms_key_name
+      kms_key_name = lookup(local.ctx.kms_keys, var.kms_key_name, var.kms_key_name)
     }
   }
 }
 
 resource "google_logging_folder_bucket_config" "bucket" {
   count          = var.parent_type == "folder" ? 1 : 0
-  folder         = var.parent
-  location       = var.location
+  folder         = local.parent_id
+  location       = local.location
   retention_days = var.retention
-  bucket_id      = var.id
+  bucket_id      = var.name
   description    = var.description
+  dynamic "cmek_settings" {
+    for_each = var.kms_key_name == null ? [] : [""]
+    content {
+      kms_key_name = lookup(
+        local.ctx.kms_keys, var.kms_key_name, var.kms_key_name
+      )
+    }
+  }
 }
 
 resource "google_logging_linked_dataset" "dataset" {
@@ -54,39 +85,57 @@ resource "google_logging_linked_dataset" "dataset" {
   link_id     = var.log_analytics.dataset_link_id
   parent      = "projects/${google_logging_project_bucket_config.bucket[0].project}"
   bucket      = google_logging_project_bucket_config.bucket[0].id
-  location    = var.location
+  location    = local.location
   description = var.log_analytics.description
 }
 
 resource "google_logging_organization_bucket_config" "bucket" {
   count          = var.parent_type == "organization" ? 1 : 0
-  organization   = var.parent
-  location       = var.location
+  organization   = local.parent_id
+  location       = local.location
   retention_days = var.retention
-  bucket_id      = var.id
+  bucket_id      = var.name
   description    = var.description
+  dynamic "cmek_settings" {
+    for_each = var.kms_key_name == null ? [] : [""]
+    content {
+      kms_key_name = lookup(
+        local.ctx.kms_keys, var.kms_key_name, var.kms_key_name
+      )
+    }
+  }
 }
 
 resource "google_logging_billing_account_bucket_config" "bucket" {
   count           = var.parent_type == "billing_account" ? 1 : 0
-  billing_account = var.parent
-  location        = var.location
+  billing_account = local.parent_id
+  location        = local.location
   retention_days  = var.retention
-  bucket_id       = var.id
+  bucket_id       = var.name
   description     = var.description
+  dynamic "cmek_settings" {
+    for_each = var.kms_key_name == null ? [] : [""]
+    content {
+      kms_key_name = lookup(
+        local.ctx.kms_keys, var.kms_key_name, var.kms_key_name
+      )
+    }
+  }
 }
 
 resource "google_logging_log_view" "views" {
-  for_each    = var.views
+  for_each    = local.views
   name        = each.key
   bucket      = local.bucket.id
   description = each.value.description
-  location    = coalesce(each.value.location, var.location)
-  filter      = each.value.filter
+  location = lookup(
+    local.ctx.locations, each.value.location, each.value.location
+  )
+  filter = each.value.filter
 }
 
 resource "google_tags_tag_binding" "binding" {
   for_each  = var.tag_bindings
   parent    = "//logging.googleapis.com/${local.bucket.id}"
-  tag_value = each.value
+  tag_value = templatestring(local._tag_bindings[each.key], var.context.tag_vars)
 }

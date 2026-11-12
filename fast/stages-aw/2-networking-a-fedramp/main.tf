@@ -35,11 +35,135 @@ locals {
     for k, v in coalesce(var.service_accounts, {}) :
     k => "serviceAccount:${v}" if v != null
   }
+  _has_internet_egress = (
+    var.centralized_egress.enabled || var.enable_cloud_nat
+  )
+  _default_egress_routes = (
+    var.enable_cloud_nat && !var.centralized_egress.enabled
+    ? {
+      default = {
+        dest_range    = "0.0.0.0/0"
+        next_hop      = "default-internet-gateway"
+        next_hop_type = "gateway"
+        priority      = 1000
+      }
+    }
+    : {}
+  )
+  _fw_policy_context = {
+    cidr_ranges             = var.gcp_ranges
+    cidr_ranges_sets        = var.cidrs
+    iam_principals          = local.service_accounts
+    locations               = var.regions
+    networks                = local._ctx_vpcs
+    project_ids             = local._ctx_projects
+    security_profile_groups = var.security_profile_group_ids
+  }
+  _expanded_fw_ingress = {
+    for net, pol in var.firewall_policy_rules : lower(net) => {
+      for rk, rv in pol.ingress : rk => merge(rv, {
+        match = merge(rv.match, {
+          destination_ranges = (
+            rv.match.destination_ranges == null
+            ? null
+            : flatten([
+              for r in rv.match.destination_ranges :
+              lookup(var.cidrs, r, [r])
+            ])
+          )
+          source_ranges = (
+            rv.match.source_ranges == null
+            ? null
+            : flatten([
+              for r in rv.match.source_ranges :
+              lookup(var.cidrs, r, [r])
+            ])
+          )
+        })
+      })
+    }
+  }
+  _expanded_fw_egress = {
+    for net, pol in var.firewall_policy_rules : lower(net) => {
+      for rk, rv in pol.egress : rk => merge(rv, {
+        match = merge(rv.match, {
+          destination_ranges = (
+            rv.match.destination_ranges == null
+            ? null
+            : flatten([
+              for r in rv.match.destination_ranges :
+              lookup(var.cidrs, r, [r])
+            ])
+          )
+          source_ranges = (
+            rv.match.source_ranges == null
+            ? null
+            : flatten([
+              for r in rv.match.source_ranges :
+              lookup(var.cidrs, r, [r])
+            ])
+          )
+        })
+      })
+    }
+  }
+  _expanded_fw_ingress_mirroring = {
+    for net, pol in var.firewall_policy_rules : lower(net) => {
+      for rk, rv in pol.ingress_mirroring : rk => merge(rv, {
+        match = merge(rv.match, {
+          destination_ranges = (
+            rv.match.destination_ranges == null
+            ? null
+            : flatten([
+              for r in rv.match.destination_ranges :
+              lookup(var.cidrs, r, [r])
+            ])
+          )
+          source_ranges = (
+            rv.match.source_ranges == null
+            ? null
+            : flatten([
+              for r in rv.match.source_ranges :
+              lookup(var.cidrs, r, [r])
+            ])
+          )
+        })
+      })
+    }
+  }
+  _expanded_fw_egress_mirroring = {
+    for net, pol in var.firewall_policy_rules : lower(net) => {
+      for rk, rv in pol.egress_mirroring : rk => merge(rv, {
+        match = merge(rv.match, {
+          destination_ranges = (
+            rv.match.destination_ranges == null
+            ? null
+            : flatten([
+              for r in rv.match.destination_ranges :
+              lookup(var.cidrs, r, [r])
+            ])
+          )
+          source_ranges = (
+            rv.match.source_ranges == null
+            ? null
+            : flatten([
+              for r in rv.match.source_ranges :
+              lookup(var.cidrs, r, [r])
+            ])
+          )
+        })
+      })
+    }
+  }
 }
 
 module "folder" {
-  source        = "../../../modules/folder"
-  parent        = "organizations/${var.organization.id}"
+  source = "../../../modules/folder"
+  parent = coalesce(
+    var.common_services_folder,
+    var.assured_workloads.folder,
+    "organizations/${var.organization.id}"
+  )
   name          = "Networking"
   folder_create = var.folder_ids.networking == null
   id            = var.folder_ids.networking
@@ -54,6 +178,7 @@ module "firewall-policy-default" {
   source    = "../../../modules/net-firewall-policy"
   name      = coalesce(var.factories_config.firewall_policy_name, "${var.prefix}-net-default")
   parent_id = module.folder.id
+  context   = local._fw_policy_context
   factories_config = {
     cidr_file_path          = "${var.factories_config.data_dir}/cidrs.yaml"
     ingress_rules_file_path = "${var.factories_config.data_dir}/hierarchical-ingress-rules.yaml"

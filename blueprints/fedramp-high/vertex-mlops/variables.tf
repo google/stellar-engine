@@ -55,23 +55,17 @@ variable "network_config" {
 }
 
 variable "notebooks" {
-  description = "Vertex AI workbenches to be deployed. Service Account runtime/instances deployed."
+  description = "Vertex AI Workbench instances to be deployed, keyed by name."
   type = map(object({
-    type             = string
+    type             = optional(string, "USER_MANAGED")
     machine_type     = optional(string, "n1-standard-4")
     internal_ip_only = optional(bool, true)
-    idle_shutdown    = optional(bool, true)
     owner            = optional(string)
   }))
   validation {
     condition = alltrue([
-    for k, v in var.notebooks : contains(["USER_MANAGED", "MANAGED"], v.type)])
-    error_message = "All `type` must be one of `USER_MANAGED` or `MANAGED`."
-  }
-  validation {
-    condition = alltrue([
-    for k, v in var.notebooks : (v.type == "MANAGED" && try(v.owner != null, false) || v.type == "USER_MANAGED")])
-    error_message = "`owner` must be set for `MANAGED` instances."
+    for k, v in var.notebooks : v.type == "USER_MANAGED"])
+    error_message = "All `type` must be `USER_MANAGED`. Google-managed notebooks reached end of life and provider 8 removed `google_notebooks_runtime`."
   }
   validation {
     condition = alltrue([

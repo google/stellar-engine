@@ -66,8 +66,8 @@ module "shielded-vm" {
     block-project-ssh-keys = true # CIS Compliance Benchmark 4.3
   }
 
-  instance_type        = var.instance_type
-  confidential_compute = true # CIS Compliance Benchmark 4.11 - Must use compliant instance type
+  machine_type         = var.instance_type
+  confidential_compute = "SEV" # CIS Compliance Benchmark 4.11 - Must use compliant instance type
 
   network_interfaces = [{
     network    = data.google_compute_network.network.self_link
@@ -96,19 +96,19 @@ module "shielded-vm" {
     }
   }
 
-  attached_disks = [
-    {
+  attached_disks = {
+    data-disk = {
       auto_delete       = true
-      size              = var.disksize
-      name              = "data-disk"
       snapshot_schedule = ["daily-backup"]
-      kms_key_self_link = data.google_kms_crypto_key.default.id
+      initialize_params = {
+        size = var.disksize
+      }
     }
-  ]
+  }
 
   boot_disk = {
     snapshot_schedule = ["daily-backup"]
-    initialize_params = {
+    source = {
       image = "cos-cloud/cos-stable" #Required for Confidential Compute
     }
   }

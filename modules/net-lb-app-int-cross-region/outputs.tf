@@ -19,6 +19,13 @@ output "addresses" {
   value       = { for k, v in google_compute_global_forwarding_rule.forwarding_rules : k => v.ip_address }
 }
 
+output "backend_service_generated_ids" {
+  description = "Generated Ids for backend service resources."
+  value = {
+    for k, v in google_compute_backend_service.default : k => v.generated_id
+  }
+}
+
 output "backend_service_ids" {
   description = "Backend service resources."
   value = {
@@ -77,4 +84,9 @@ output "regional_neg_ids" {
   value = {
     for k, v in google_compute_region_network_endpoint_group.default : k => v.id
   }
+}
+
+output "url_map_id" {
+  description = "Fully qualified URL map ID (resource path) for use in IAM conditions and API calls."
+  value       = google_compute_url_map.default.id
 }

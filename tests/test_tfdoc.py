@@ -20,20 +20,46 @@ import tfdoc
 
 
 class TestTfDoc(unittest.TestCase):
-    def test_count_test_re(self):
-        test_line = "# tftest modules=3 resources=12"
-        m = tfdoc.COUNT_TEST_RE.search(test_line)
-        self.assertIsNotNone(m)
-        self.assertEqual(m.group("modules"), "3")
-        self.assertEqual(m.group("resources"), "12")
+    def test_tftest_directive(self):
+        directive = tfdoc.get_tftest_directive(
+            "module {}\n# tftest modules=3 resources=12 inventory=a.yaml\n"
+        )
+        self.assertIsNotNone(directive)
+        self.assertEqual(directive.name, "tftest")
+        self.assertEqual(directive.kwargs["modules"], "3")
+        self.assertEqual(directive.kwargs["resources"], "12")
+        self.assertEqual(directive.kwargs["inventory"], "a.yaml")
 
-    def test_count_test_re_with_files(self):
-        test_line = "# tftest modules=1 resources=4 files=file1,file2"
-        m = tfdoc.COUNT_TEST_RE.search(test_line)
-        self.assertIsNotNone(m)
-        self.assertEqual(m.group("modules"), "1")
-        self.assertEqual(m.group("resources"), "4")
-        self.assertEqual(m.group("files"), "file1,file2")
+    def test_tftest_directive_with_files_and_fixtures(self):
+        directive = tfdoc.get_tftest_directive(
+            "# tftest fixtures=fixtures/gcs.tf files=f1,f2 modules=1 e2e\n"
+        )
+        self.assertEqual(directive.kwargs["files"], "f1,f2")
+        self.assertEqual(directive.kwargs["fixtures"], "fixtures/gcs.tf")
+        self.assertEqual(directive.args, ["e2e"])
+        self.assertIsNone(tfdoc.get_tftest_directive("# no directive\n"))
+
+    def test_parse_fixtures_links_vendored_fixtures(self):
+        module = os.path.join(tfdoc.REPO_ROOT, "modules", "pubsub")
+        readme = (
+            "```hcl\nmodule {}\n"
+            "# tftest modules=1 resources=1 fixtures=fixtures/gcs.tf\n```\n"
+        )
+        fixtures = list(tfdoc.parse_fixtures(module, readme))
+        self.assertEqual(fixtures, ["../../tests/fixtures/gcs.tf"])
+        self.assertIn(
+            "- [gcs.tf](../../tests/fixtures/gcs.tf)",
+            list(tfdoc.format_tfref_fixtures(fixtures)),
+        )
+
+    def test_parse_fixtures_rejects_unknown_fixtures(self):
+        readme = (
+            "```hcl\nmodule {}\n"
+            "# tftest modules=1 resources=1 fixtures=fixtures/missing.tf\n"
+            "```\n"
+        )
+        with self.assertRaises(SystemExit):
+            list(tfdoc.parse_fixtures(tfdoc.REPO_ROOT, readme))
 
     def test_tag_re(self):
         tag_line = "# tfdoc:variable:source fast/stages-aw/0-bootstrap"

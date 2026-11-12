@@ -65,7 +65,7 @@ module "bastion-vm" {
   zone       = var.zone
   name       = var.instance_name
 
-  confidential_compute = true # CIS Compliance Benchmark 4.11 - Must use compliant instance and image types
+  confidential_compute = "SEV" # CIS Compliance Benchmark 4.11 - Must use compliant instance and image types
 
   metadata = {
     block-project-ssh-keys = true   # CIS Compliance Benchmark 4.3
@@ -77,7 +77,7 @@ module "bastion-vm" {
     enable_vtpm                 = true
     enable_integrity_monitoring = true
   }
-  instance_type = var.instance_type
+  machine_type = var.instance_type
   network_interfaces = [{
     network    = data.google_compute_network.network.self_link
     subnetwork = data.google_compute_subnetwork.subnetwork.self_link
@@ -105,22 +105,19 @@ module "bastion-vm" {
     }
   }
 
-  attached_disks = [
-    {
+  attached_disks = {
+    (var.disk_name) = {
       auto_delete       = true
-      size              = 10
-      name              = var.disk_name
       snapshot_schedule = ["daily-backup"]
       initialize_params = {
-        image = var.image
+        size = 10
       }
-      kms_key_self_link = data.google_kms_crypto_key.default.id
     }
-  ]
+  }
 
   boot_disk = {
     snapshot_schedule = ["daily-backup"]
-    initialize_params = {
+    source = {
       image = var.image
     }
   }

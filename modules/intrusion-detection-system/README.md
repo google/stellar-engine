@@ -41,15 +41,15 @@ module "intrusion-detection-system" {
 
 | Name                                                                           | Version            |
 | ------------------------------------------------------------------------------ | ------------------ |
-| <a name="requirement_terraform"></a> [terraform](#requirement_terraform)       | >= 1.7.4           |
-| <a name="requirement_google"></a> [google](#requirement_google)                | >= 6.21.0, < 7.0.0 |
-| <a name="requirement_google-beta"></a> [google-beta](#requirement_google-beta) | >= 6.21.0, < 7.0.0 |
+| <a name="requirement_terraform"></a> [terraform](#requirement_terraform)       | >= 1.12.2          |
+| <a name="requirement_google"></a> [google](#requirement_google)                | >= 8.6.0, < 9.0.0  |
+| <a name="requirement_google-beta"></a> [google-beta](#requirement_google-beta) | >= 8.6.0, < 9.0.0  |
 
 ## Providers
 
 | Name                                                      | Version            |
 | --------------------------------------------------------- | ------------------ |
-| <a name="provider_google"></a> [google](#provider_google) | >= 6.21.0, < 7.0.0 |
+| <a name="provider_google"></a> [google](#provider_google) | >= 8.6.0, < 9.0.0  |
 
 ## Modules
 

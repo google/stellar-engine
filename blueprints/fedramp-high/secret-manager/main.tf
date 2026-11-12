@@ -24,10 +24,18 @@ locals {
   secrets = {
     for secret_id, secret_data in var.secrets :
     secret_id => {
-      locations           = [secret_data.location]                       # Convert single string to list of strings
-      keys                = { (secret_data.location) = secret_data.key } # Convert single string to map of strings
-      expire_time         = try(secret_data.expire_time, null)
-      version_destroy_ttl = try(secret_data.version_destroy_ttl, null)
+      # A user-managed replica in the configured location, encrypted with the
+      # configured key.
+      global_replica_locations = { (secret_data.location) = secret_data.key }
+      expiration_config = (
+        try(secret_data.expire_time, null) == null
+        ? null
+        : { time = secret_data.expire_time }
+      )
+      version_config = {
+        destroy_ttl = try(secret_data.version_destroy_ttl, null)
+      }
+      iam = lookup(var.iam, secret_id, {})
     }
   }
 }
@@ -62,12 +70,18 @@ resource "google_kms_crypto_key_iam_member" "secretmanager" {
   depends_on = [google_project_service_identity.secretmanager]
 }
 
+# The secret-manager module rewrite in Cloud Foundation Fabric v44.2.0
+# renamed the IAM binding resource, so the move keeps the existing bindings.
+moved {
+  from = module.secret-manager.google_secret_manager_secret_iam_binding.default
+  to   = module.secret-manager.google_secret_manager_secret_iam_binding.authoritative
+}
+
 # Use the secret manager module to create the secrets
 module "secret-manager" {
   source     = "../../../modules/secret-manager"
   project_id = var.main_project_id
   secrets    = local.secrets
-  iam        = var.iam
   depends_on = [
     google_project_service.secretmanager,
     google_project_service_identity.secretmanager,

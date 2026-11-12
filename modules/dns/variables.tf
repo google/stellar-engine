@@ -14,6 +14,18 @@
  * limitations under the License.
  */
 
+variable "context" {
+  description = "Context-specific interpolations."
+  type = object({
+    custom_roles   = optional(map(string), {})
+    iam_principals = optional(map(string), {})
+    networks       = optional(map(string), {})
+    project_ids    = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
+}
+
 variable "description" {
   description = "Domain description."
   type        = string
@@ -30,6 +42,12 @@ variable "iam" {
   description = "IAM bindings in {ROLE => [MEMBERS]} format."
   type        = map(list(string))
   default     = null
+}
+
+variable "labels" {
+  description = "Labels to be assigned to the zone."
+  type        = map(string)
+  default     = {}
 }
 
 variable "name" {
@@ -87,11 +105,13 @@ variable "recordsets" {
   validation {
     condition = alltrue(flatten([
       for k, v in coalesce(var.recordsets, {}) : [
-        for r in try(v.geo_routing.health_checked_targets, []) : [
-          contains(
-            ["regionalL4ilb", "regionalL7ilb", "globalL7ilb", null],
-            try(r.load_balancer_type, null)
-          )
+        for g in coalesce(v.geo_routing, []) : [
+          for r in coalesce(g.health_checked_targets, []) : [
+            contains(
+              ["regionalL4ilb", "regionalL7ilb", "globalL7ilb", null],
+              try(r.load_balancer_type, null)
+            )
+          ]
         ]
       ]
     ]))

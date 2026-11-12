@@ -38,7 +38,7 @@ jobs:
           persist-credentials: false
 
       - name: Run Trivy vulnerability scanner in repo mode
-        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87
+        uses: aquasecurity/trivy-action@38b337fff0a2f984d5be173c99e3f633438167ec
         with:
           scan-type: 'fs'
           scanners: 'vuln,secret,misconfig'
@@ -49,11 +49,12 @@ jobs:
           limit-severities-for-sarif: true
           exit-code: '1'
           trivyignores: '.trivyignore.yaml'
-          skip-dirs: 'modules/net-lb-int/recipe-ilb-next-hop,modules/net-lb-app-int-cross-region/recipe-cross-reg-int-app-lb-vm-dns'
+          # The vendored Fabric fixtures only feed README examples.
+          skip-dirs: 'modules/net-lb-int/recipe-ilb-next-hop,modules/net-lb-app-int-cross-region/recipe-cross-reg-int-app-lb-vm-dns,tests/fixtures'
 
       - name: Upload Trivy scan results to GitHub Security tab
         if: always()
-        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -115,7 +116,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
 
       - name: Install dependencies
         run: uv sync --locked
@@ -148,7 +149,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
 
       - name: Install dependencies
         run: uv sync --locked
@@ -182,7 +183,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
 
       - name: Install dependencies
         run: uv sync --locked
