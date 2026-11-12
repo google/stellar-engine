@@ -90,9 +90,12 @@ locals {
         google_iam_workload_identity_pool.default[0].name, null
       )
       federated_identity_providers = local.cicd_providers
-      outputs_bucket               = module.automation-tf-output-gcs.name
-      project_id                   = module.automation-project.project_id
-      project_number               = module.automation-project.number
+      kms_keys = {
+        gcs = module.gcs-kms.keys.gcs.id
+      }
+      outputs_bucket = module.automation-tf-output-gcs.name
+      project_id     = module.automation-project.project_id
+      project_number = module.automation-project.number
       service_accounts = {
         bootstrap   = module.automation-tf-bootstrap-sa.email
         bootstrap-r = module.automation-tf-bootstrap-r-sa.email

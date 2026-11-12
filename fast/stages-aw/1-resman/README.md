@@ -228,44 +228,44 @@ Due to its simplicity, this stage lends itself easily to customizations: adding 
 |---|---|:---:|:---:|:---:|
 | [alert_email](variables.tf#L19) | Email to receive log alerts. | <code>string</code> | ✓ |  |
 | [automation](variables.tf#L35) | Automation resources created by the bootstrap stage. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [billing_account](variables.tf#L58) | Billing account id. If billing account is not part of the same org set `is_org_level` to `false`. To disable handling of billing IAM roles set `no_iam` to `true`. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [common_services_folder](variables.tf#L172) | Common services folder where non-tenant related resources should be kept. | <code>string</code> | ✓ |  |
-| [envs_folders](variables.tf#L205) | List of environments to be created for projects to go into. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [organization](variables.tf#L284) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [prefix](variables.tf#L300) | Prefix used for resources that need unique names. Use 7 characters or less. | <code>string</code> | ✓ |  |
-| [regime_mapping](variables.tf#L311) | Mapping of compliance regime names to short codes. | <code>map&#40;string&#41;</code> | ✓ |  |
-| [regions](variables.tf#L316) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [billing_account](variables.tf#L61) | Billing account id. If billing account is not part of the same org set `is_org_level` to `false`. To disable handling of billing IAM roles set `no_iam` to `true`. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [common_services_folder](variables.tf#L175) | Common services folder where non-tenant related resources should be kept. | <code>string</code> | ✓ |  |
+| [envs_folders](variables.tf#L208) | List of environments to be created for projects to go into. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [organization](variables.tf#L287) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [prefix](variables.tf#L303) | Prefix used for resources that need unique names. Use 7 characters or less. | <code>string</code> | ✓ |  |
+| [regime_mapping](variables.tf#L314) | Mapping of compliance regime names to short codes. | <code>map&#40;string&#41;</code> | ✓ |  |
+| [regions](variables.tf#L319) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [assured_workloads](variables.tf#L24) | Configuration for Assured Workloads. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [billing_override](variables.tf#L69) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [cicd_repositories](variables.tf#L78) | CI/CD repository configuration. Identity providers reference keys in the `automation.federated_identity_providers` variable. Set to null to disable, or set individual repositories to null if not needed. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [custom_roles](variables.tf#L177) | Custom roles defined at the org level, in key => id format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [deploy_org_resources](variables.tf#L189) | Granular control over the deployment of organization-level resources. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [factories_config](variables.tf#L212) | Configuration for the resource factories or external data. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [fast_features](variables.tf#L222) | Selective control for top-level FAST features. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [folder_iam](variables.tf#L238) | Authoritative IAM for top-level folders. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [force_destroy](variables.tf#L255) | Toggles force_destroy for GCS buckets. | <code>bool</code> |  | <code>false</code> |
-| [groups](variables.tf#L261) | Group names or IAM-format principals to grant organization-level permissions. If just the name is provided, the 'group:' principal and organization domain are interpolated. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [kms_protection_level](variables.tf#L276) | KMS protection level. | <code>string</code> |  | <code>null</code> |
-| [outputs_location](variables.tf#L294) | Enable writing provider, tfvars and CI/CD workflow files to local filesystem. Leave null to disable. | <code>string</code> |  | <code>null</code> |
-| [team_folders](variables.tf#L325) | Team folders to be created. Format is described in a code comment. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>null</code> |
-| [tenants](variables.tf#L341) | Lightweight tenant definitions. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [tenants_config](variables.tf#L370) | Lightweight tenants shared configuration. Roles will be assigned to tenant admin group and service accounts. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [billing_override](variables.tf#L72) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [cicd_repositories](variables.tf#L81) | CI/CD repository configuration. Identity providers reference keys in the `automation.federated_identity_providers` variable. Set to null to disable, or set individual repositories to null if not needed. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [custom_roles](variables.tf#L180) | Custom roles defined at the org level, in key => id format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [deploy_org_resources](variables.tf#L192) | Granular control over the deployment of organization-level resources. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [factories_config](variables.tf#L215) | Configuration for the resource factories or external data. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [fast_features](variables.tf#L225) | Selective control for top-level FAST features. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [folder_iam](variables.tf#L241) | Authoritative IAM for top-level folders. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [force_destroy](variables.tf#L258) | Toggles force_destroy for GCS buckets. | <code>bool</code> |  | <code>false</code> |
+| [groups](variables.tf#L264) | Group names or IAM-format principals to grant organization-level permissions. If just the name is provided, the 'group:' principal and organization domain are interpolated. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [kms_protection_level](variables.tf#L279) | KMS protection level. | <code>string</code> |  | <code>null</code> |
+| [outputs_location](variables.tf#L297) | Enable writing provider, tfvars and CI/CD workflow files to local filesystem. Leave null to disable. | <code>string</code> |  | <code>null</code> |
+| [team_folders](variables.tf#L328) | Team folders to be created. Format is described in a code comment. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>null</code> |
+| [tenants](variables.tf#L344) | Lightweight tenant definitions. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [tenants_config](variables.tf#L373) | Lightweight tenants shared configuration. Roles will be assigned to tenant admin group and service accounts. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [cicd_repositories](outputs.tf#L386) | WIF configuration for CI/CD repositories. |  |
-| [dataplatform](outputs.tf#L400) | Data for the Data Platform stage. |  |
-| [envs](outputs.tf#L416) | Environments folders created for the tenants. |  |
-| [gcve](outputs.tf#L421) | Data for the GCVE stage. |  |
-| [gke_multitenant](outputs.tf#L442) | Data for the GKE multitenant stage. |  |
-| [networking](outputs.tf#L463) | Data for the networking stage. |  |
-| [project_factories](outputs.tf#L472) | Data for the project factories stage. |  |
-| [providers](outputs.tf#L487) | Terraform provider files for this stage and dependent stages. | ✓ |
-| [sandbox](outputs.tf#L494) | Data for the sandbox stage. |  |
-| [security](outputs.tf#L508) | Data for the networking stage. |  |
-| [team_cicd_repositories](outputs.tf#L518) | WIF configuration for Team CI/CD repositories. |  |
-| [teams](outputs.tf#L532) | Data for the teams stage. |  |
-| [tfvars](outputs.tf#L544) | Terraform variable files for the following stages. | ✓ |
+| [cicd_repositories](outputs.tf#L395) | WIF configuration for CI/CD repositories. |  |
+| [dataplatform](outputs.tf#L409) | Data for the Data Platform stage. |  |
+| [envs](outputs.tf#L425) | Environments folders created for the tenants. |  |
+| [gcve](outputs.tf#L430) | Data for the GCVE stage. |  |
+| [gke_multitenant](outputs.tf#L451) | Data for the GKE multitenant stage. |  |
+| [networking](outputs.tf#L472) | Data for the networking stage. |  |
+| [project_factories](outputs.tf#L481) | Data for the project factories stage. |  |
+| [providers](outputs.tf#L496) | Terraform provider files for this stage and dependent stages. | ✓ |
+| [sandbox](outputs.tf#L503) | Data for the sandbox stage. |  |
+| [security](outputs.tf#L517) | Data for the networking stage. |  |
+| [team_cicd_repositories](outputs.tf#L527) | WIF configuration for Team CI/CD repositories. |  |
+| [teams](outputs.tf#L541) | Data for the teams stage. |  |
+| [tfvars](outputs.tf#L553) | Terraform variable files for the following stages. | ✓ |
 <!-- END TFDOC -->

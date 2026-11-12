@@ -52,8 +52,8 @@ module "tenant-project-keys" {
 }
 
 resource "google_kms_crypto_key_iam_member" "resman_bootstrap_kms" {
-  for_each      = local.tenant_envs
-  crypto_key_id = "projects/${var.automation.project_id}/locations/${var.regions.primary}/keyRings/gcs/cryptoKeys/gcs"
+  for_each      = var.automation.kms_keys.gcs != null ? local.tenant_envs : {}
+  crypto_key_id = var.automation.kms_keys.gcs
   member        = "serviceAccount:service-${module.tenant-self-iac-projects[each.key].number}@gs-project-accounts.iam.gserviceaccount.com"
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
 }
