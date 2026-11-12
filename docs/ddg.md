@@ -2,11 +2,11 @@
 
 Cloud Foundation Fabric Detailed Deployment Guide
 
-| <strong>Created:</strong>             | June 04, 2023 |
-| :------------------------------------ | :------------ |
-| <strong>Updated:</strong>             | October 31, 2026 |
-| <strong>Version:</strong>             | v5.2.0        |
-| <strong>Most recent changes:</strong> | [CHANGELOG.md](../CHANGELOG.md) |
+| **Created:**             | June 04, 2023 |
+| :----------------------- | :------------ |
+| **Updated:**             | October 31, 2026 |
+| **Version:**             | v5.2.0        |
+| **Most recent changes:** | [CHANGELOG.md](../CHANGELOG.md) |
 
 ##
 
@@ -41,7 +41,7 @@ it easy to copy and paste.
 
 The deployment process is broken up into stages. During each stage, certain
 variables are required to be added to the **`terraform.tfvars`** file. Upon
-completion of a stage, the Terraform code will write out a **``<stage-name>`-tfvar.auto.tfvars.json`** file to the Google Cloud Storage
+completion of a stage, the Terraform code will write out a **`<stage-name>.auto.tfvars.json`** file to the Google Cloud Storage
 (GCS) bucket created in the initial **0-bootstrap stage**. Subsequent stages
 will use the **gcloud** command line interface (CLI) to copy the files into the
 new stage folder, as well as a provider file that impersonates a stage-specific
@@ -63,19 +63,19 @@ To make using this deployment guide easier, the variables described below need t
 
 **Most of these variables are configured in the Stage 0 Bootstrap `terraform.tfvars` file (a sample can be found at [`fast/stages-aw/0-bootstrap/terraform.tfvars.sample`](../fast/stages-aw/0-bootstrap/terraform.tfvars.sample)), except for the Tenant names, which are configured in Stage 1 (a sample can be found at [`fast/stages-aw/1-resman/terraform.tfvars.sample`](../fast/stages-aw/1-resman/terraform.tfvars.sample)).**
 
-| <strong>VARIABLE</strong>             | <strong>TFVARS LOCATION</strong> | <strong>DESCRIPTION</strong>                                                                                                                                                                                                                                                                                   |
-| :------------------------------------ | :------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <strong>Billing Account</strong>      | `billing_account.id`             | The billing account to use for the deployment of the environments. <a href='https://console.cloud.google.com/billing'>Console Link</a>                                                                                                                                                                         |
-| <strong>Bootstrap Project ID</strong> | `bootstrap_project`              | The bootstrap project id (created below)                                                                                                                                                                                                                                                                       |
-| <strong>Compliance Regime</strong>    | `assured_workloads.regime`       | The <a href='https://assuredworkloads.googleapis.com/$discovery/rest?version=v1'>compliance regime</a> for this environment, (confirmed working in IL4, IL5, FEDRAMP_MODERATE, FEDRAMP_HIGH, and COMPLIANCE_REGIME_UNSPECIFIED)                                                                                                  |
-| <strong>Customer ID</strong>          | `organization.customer_id`       | The Google Workspace Directory Customer ID. <br/>Run <strong>gcloud organizations list</strong> to view.                                                                                                                                                                                                       |
-| <strong>Domain Name</strong>          | `organization.domain`            | The primary Fully Qualified Domain Name (FQDN). Run <strong>gcloud organizations list</strong> to view (make sure you have authorized as per prerequisites below)                                                                                                                                              |
-| <strong>Alert Email</strong>          | `alert_email`                    | The email address used for logging alerts notifications.                                                                                                                                                                                                                                                       |
-| <strong>Organization ID</strong>      | `organization.id`                | The Organization ID for the GCP Organization. Run <strong>gcloud organizations list</strong> to view.                                                                                                                                                                                                          |
-| <strong>Prefix</strong>               | `prefix`                         | This is the prefix appended to the beginning of projects and resources deployed selected by your or your organization. <strong>Full project names must be globally unique and the prefix must use a maximum of 7 characters</strong>. A 409 error will occur if a globally unique project name is not created. |
-| <strong>Region</strong>               | `assured_workloads.location`     | This is the (US) based region that we are deploying resources into (Dual regions like “NAM9” or continents are currently not supported)                                                                                                                                                                        |
-| <strong>Tenant Name</strong>          | `tenants` (Stage 1)              | The name for the first tenant that will be deployed via this document. <strong>Full project names must be globally unique and the tenant-name must use a maximum of 6 characters</strong>.                                                                                                                     |
-| <strong>KMS Protection Level</strong> | `kms_protection_level`           | The Cloud KMS protection level required across every FAST stage (`0-bootstrap`, `1-resman`, `2-networking-a-fedramp`, `3-security`). Use `"HSM"` for FedRAMP High and IL5 compliance; `"SOFTWARE"` is permitted for FedRAMP Moderate.                                                                    |
+| **VARIABLE**             | **TFVARS LOCATION**          | **DESCRIPTION**                                                                                                                                                                                                                                                                             |
+| :----------------------- | :--------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Billing Account**      | `billing_account.id`         | The billing account to use for the deployment of the environments. [Console Link](https://console.cloud.google.com/billing)                                                                                                                                                                 |
+| **Bootstrap Project ID** | `bootstrap_project`          | The bootstrap project id (created below)                                                                                                                                                                                                                                                    |
+| **Compliance Regime**    | `assured_workloads.regime`   | The [compliance regime](https://assuredworkloads.googleapis.com/$discovery/rest?version=v1) for this environment, (confirmed working in IL4, IL5, FEDRAMP_MODERATE, FEDRAMP_HIGH, and COMPLIANCE_REGIME_UNSPECIFIED)                                                                        |
+| **Customer ID**          | `organization.customer_id`   | The Google Workspace Directory Customer ID. Run **gcloud organizations list** to view.                                                                                                                                                                                                      |
+| **Domain Name**          | `organization.domain`        | The primary Fully Qualified Domain Name (FQDN). Run **gcloud organizations list** to view (make sure you have authorized as per prerequisites below)                                                                                                                                        |
+| **Alert Email**          | `alert_email`                | The email address used for logging alerts notifications.                                                                                                                                                                                                                                    |
+| **Organization ID**      | `organization.id`            | The Organization ID for the GCP Organization. Run **gcloud organizations list** to view.                                                                                                                                                                                                    |
+| **Prefix**               | `prefix`                     | This is the prefix appended to the beginning of projects and resources deployed selected by your or your organization. **Full project names must be globally unique and the prefix must use a maximum of 7 characters**. A 409 error will occur if a globally unique project name is not created. |
+| **Region**               | `assured_workloads.location` | This is the (US) based region that we are deploying resources into (Dual regions like “NAM9” or continents are currently not supported)                                                                                                                                                     |
+| **Tenant Name**          | `tenants` (Stage 1)          | The name for the first tenant that will be deployed via this document. **Full project names must be globally unique and the tenant-name must use a maximum of 6 characters**.                                                                                                               |
+| **KMS Protection Level** | `kms_protection_level`       | The Cloud KMS protection level required across every FAST stage (`0-bootstrap`, `1-resman`, `2-networking-a-fedramp`, `3-security`). Use `"HSM"` for FedRAMP High and IL5 compliance; `"SOFTWARE"` is permitted for FedRAMP Moderate.                                                      |
 
 
 ## Prerequisites
