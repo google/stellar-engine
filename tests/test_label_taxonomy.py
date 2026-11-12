@@ -16,11 +16,10 @@ import json
 import os
 import pathlib
 import re
-import shutil
 import subprocess
-import tempfile
 import unittest
 
+import release_please
 import yaml
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -116,234 +115,23 @@ class TestLabelTaxonomy(unittest.TestCase):
         for rel_path in ("RELEASES.md", "CHANGELOG.md"):
             content = (_REPO_ROOT / rel_path).read_text(encoding="utf-8")
             self.assertNotIn("\u26a0", content)
-        workflow = (_REPO_ROOT / ".github/workflows/release.yml").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("s/### \u26a0 {{title}}/### {{title}}/g", workflow)
-        self.assertIn(
-            "s/note.title = 'BREAKING CHANGES'/"
-            "note.title = 'Breaking Changes'/g",
-            workflow,
-        )
-        self.assertIn(
-            "s/const NOTES_DELIMITER = '---'/"
-            "const NOTES_DELIMITER = '<!-- release-please-notes -->'/g",
-            workflow,
-        )
-        self.assertIn(
-            "s/await this.github.commentOnIssue(comment, pullRequest.number);/"
-            "void 0;/g",
-            workflow,
-        )
-        self.assertIn("/tmp/release_sub_bullets.json", workflow)
-        self.assertIn("Ensure Curated Release PR Labels", workflow)
-        self.assertIn("def normalize_gh_refs(text):", workflow)
-        self.assertIn(
-            "Format any GitHub issue or pull request reference strictly",
-            workflow,
-        )
 
-    def test_release_workflow_normalizes_issue_and_pr_links_to_numbers(self):
-        workflow = (_REPO_ROOT / ".github/workflows/release.yml").read_text(
-            encoding="utf-8"
-        )
-        py_block = workflow.split("python3 - << 'PY'\n", 1)[1].split(
-            "\n          PY", 1
-        )[0]
-        py_lines = [line[10:] for line in py_block.splitlines()]
-        ns = {"re": re, "repo": "google/stellar-engine"}
-        fn_src = "\n".join(py_lines).split("def extract_existing", 1)[0]
-        fn_src = (
-            "def normalize_gh_refs"
-            + fn_src.split("def normalize_gh_refs", 1)[1]
-        )
-        exec(fn_src, ns)  # noqa: S102
-        sample = (
-            "Moves OS Login, fixing #197 and "
-            "https://github.com/google/stellar-engine/pull/352#r1 and "
-            "[Full Title (#14)]"
-            "(https://github.com/google/stellar-engine/issues/14) "
-            "plus aquasecurity/tfsec#99 while keeping `#42`."
-        )
-        expected_sub = (
-            "Moves OS Login, fixing "
-            "[#197](https://github.com/google/stellar-engine/issues/197) and "
-            "[#352](https://github.com/google/stellar-engine/pull/352) and "
-            "[#14](https://github.com/google/stellar-engine/issues/14) plus "
-            "[aquasecurity/tfsec#99]"
-            "(https://github.com/aquasecurity/tfsec/issues/99) "
-            "while keeping `#42`."
-        )
-        self.assertEqual(ns["normalize_gh_refs"](sample), expected_sub)
-
-        if not shutil.which("node"):
-            return
-        node_block = workflow.split(
-            "node - \"${dir}/index.js\" << 'NODE'\n", 1
-        )[1].split("\n          NODE", 1)[0]
-        base_line = (
-            "* **0-bootstrap:** gate "
-            "([#293](https://github.com/google/stellar-engine/issues/293)) "
-            "([936a692]"
-            "(https://github.com/google/stellar-engine/commit/936a6925b2))"
-        )
-        with tempfile.TemporaryDirectory() as tmpdir:
-            index_js = pathlib.Path(tmpdir) / "index.js"
-            index_js.write_text(
-                "const fs = require('fs');\n"
-                "const RELEASE_PLEASE = 'release-please';\n"
-                "const RELEASE_PLEASE_BRANCH_PREFIX = "
-                "'release-please--branches';\n"
-                "const AUTORELEASE_PATTERN = "
-                "/^release-?(?<component>[\\w-.]*)?-v(?<version>[0-9].*)$/;\n"
-                "class BranchName {\n"
-                "    static ofTargetBranch(targetBranch) {\n"
-                "        return new DefaultBranchName("
-                "`${RELEASE_PLEASE}--branches--${targetBranch}`);\n"
-                "    }\n"
-                "    getTargetBranch() { return this.targetBranch; }\n"
-                "    getComponent() { return this.component; }\n"
-                "}\n"
-                "class AutoreleaseBranchName extends BranchName {\n"
-                "    static matches(branchName) {\n"
-                "        if (branchName.startsWith("
-                "RELEASE_PLEASE_BRANCH_PREFIX)) {\n"
-                "            return false;\n"
-                "        }\n"
-                "        return !!branchName.match(AUTORELEASE_PATTERN);\n"
-                "    }\n"
-                "}\n"
-                "const DEFAULT_PATTERN = "
-                "`^${RELEASE_PLEASE}--branches--(?<branch>.+)$`;\n"
-                "class DefaultBranchName extends BranchName {\n"
-                "    static matches(branchName) {\n"
-                "        return !!branchName.match(DEFAULT_PATTERN);\n"
-                "    }\n"
-                "    constructor(branchName) {\n"
-                "        super(branchName);\n"
-                "        const match = branchName.match(DEFAULT_PATTERN);\n"
-                "        if (match === null || match === void 0 "
-                "? void 0 : match.groups) {\n"
-                "            this.targetBranch = match.groups['branch'];\n"
-                "        }\n"
-                "    }\n"
-                "    toString() {\n"
-                "        return "
-                "`${RELEASE_PLEASE}--branches--${this.targetBranch}`;\n"
-                "    }\n"
-                "}\n"
-                "class ManifestStub {\n"
-                "    constructor() { this.alwaysUpdate = false; }\n"
-                "    async updateExistingPullRequest(existing, pr) {\n"
-                "        return {mode: 'force', number: existing.number, "
-                "headRefName: pr.headRefName};\n"
-                "    }\n"
-                "    async maybeUpdateExistingPullRequest(existing, pr) {\n"
-                "        return {mode: 'maybe', number: existing.number, "
-                "headRefName: pr.headRefName, "
-                "title: pr.title.toString()};\n"
-                "    }\n"
-                "    async createOrUpdatePullRequest("
-                "pullRequest, openPullRequests) {\n"
-                "        const existing = openPullRequests.find("
-                "openPullRequest => openPullRequest.headBranchName "
-                "=== pullRequest.headRefName);\n"
-                "        if (existing) {\n"
-                "            return this.alwaysUpdate\n"
-                "                ? await this.updateExistingPullRequest("
-                "existing, pullRequest)\n"
-                "                : await this.maybeUpdateExistingPullRequest("
-                "existing, pullRequest);\n"
-                "        }\n"
-                "        return {mode: 'create', "
-                "headRefName: pullRequest.headRefName};\n"
-                "    }\n"
-                "}\n"
-                "const commits = [{sha: '936a6925b2', pullRequest: {body: "
-                f"{json.dumps('## Description\n' + sample)}}}}}"
-                "];\n"
-                "const options = {commits: []};\n"
-                "const preset = {writerOpts: {}};\n"
-                "const context = {};\n"
-                "const changelogCommits = [];\n"
-                "const writer = {parseArray: () => "
-                f"{json.dumps(base_line)}}};\n"
-                "const out = writer\n"
-                "            .parseArray("
-                "changelogCommits, context, preset.writerOpts)\n"
-                "            .trim();\n"
-                "(async () => {\n"
-                "  const m = new ManifestStub();\n"
-                "  const cand = {\n"
-                "    headRefName: BranchName.ofTargetBranch('main')"
-                ".toString(),\n"
-                "    title: {toString: () => 'release: v6.0.0'},\n"
-                "  };\n"
-                "  const legacyRes = await m.createOrUpdatePullRequest(\n"
-                "    cand,\n"
-                "    [{number: 394, headBranchName: "
-                "'release-please--branches--main'}],\n"
-                "  );\n"
-                "  const freshRes = await m.createOrUpdatePullRequest("
-                "cand, []);\n"
-                "  console.log(JSON.stringify({\n"
-                "    out,\n"
-                "    generated: cand.headRefName,\n"
-                "    matchesNew: DefaultBranchName.matches("
-                "'release-please-branches-main'),\n"
-                "    matchesLegacy: DefaultBranchName.matches("
-                "'release-please--branches--main'),\n"
-                "    parsedLegacy: new DefaultBranchName("
-                "'release-please--branches--main').getTargetBranch(),\n"
-                "    parsedNew: new DefaultBranchName("
-                "'release-please-branches-main').getTargetBranch(),\n"
-                "    autoreleaseHijack: AutoreleaseBranchName.matches("
-                "'release-please-branches-v6.0'),\n"
-                "    legacyRes,\n"
-                "    freshRes,\n"
-                "  }));\n"
-                "})();\n",
-                encoding="utf-8",
-            )
-            subprocess.run(
-                ["node", "-", str(index_js)],
-                input=node_block,
-                text=True,
-                check=True,
-            )
-            payload = json.loads(
-                subprocess.check_output(
-                    ["node", str(index_js)],
-                    text=True,
-                    env={
-                        **os.environ,
-                        "GITHUB_REPOSITORY": "google/stellar-engine",
-                    },
-                ).strip()
-            )
-        self.assertEqual(payload["out"], f"{base_line}\n  * {expected_sub}")
-        self.assertEqual(payload["generated"], "release-please-branches-main")
-        self.assertTrue(payload["matchesNew"])
-        self.assertTrue(payload["matchesLegacy"])
-        self.assertEqual(payload["parsedLegacy"], "main")
-        self.assertEqual(payload["parsedNew"], "main")
-        self.assertFalse(payload["autoreleaseHijack"])
-        self.assertEqual(
-            payload["legacyRes"],
-            {
-                "mode": "maybe",
-                "number": 394,
-                "headRefName": "release-please--branches--main",
-                "title": "release: v6.0.0",
-            },
-        )
-        self.assertEqual(
-            payload["freshRes"],
-            {"mode": "create", "headRefName": "release-please-branches-main"},
-        )
         gemini_md = (_REPO_ROOT / "GEMINI.md").read_text(encoding="utf-8")
         self.assertIn("`release-please-branches-main`", gemini_md)
         self.assertNotIn("`release-please--branches--main`", gemini_md)
+
+        self.assertTrue(
+            set(release_please.RELEASE_PR_LABELS).issubset(_CURATED_LABELS)
+        )
+
+        workflow_path = _REPO_ROOT / ".github/workflows/release.yml"
+        workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+        steps = workflow["jobs"]["release-please"]["steps"]
+        run_commands = [step["run"] for step in steps if "run" in step]
+        for cmd in run_commands:
+            self.assertNotIn("${{", cmd)
+        self.assertIn("python3 tools/release_please.py prepare", run_commands)
+        self.assertIn("python3 tools/release_please.py label-pr", run_commands)
 
     def test_dependabot_uses_only_curated_labels(self):
         dependabot_path = _REPO_ROOT / ".github/dependabot.yml"
