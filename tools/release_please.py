@@ -231,7 +231,7 @@ def gemini_sub_bullet(
     )
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-2.5-flash:generateContent?key={gemini_key}"
+        f"gemini-3.8-flash:generateContent?key={gemini_key}"
     )
     payload = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode(
         "utf-8"

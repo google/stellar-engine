@@ -266,6 +266,67 @@ class TestReleasePlease(unittest.TestCase):
             "Returns an empty list when no data stores exist",
         )
 
+    def test_gemini_sub_bullet_calls_gemini_3_8_flash_and_normalizes_output(
+        self,
+    ):
+        captured = {}
+
+        class _FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self):
+                return json.dumps(
+                    {
+                        "candidates": [
+                            {
+                                "content": {
+                                    "parts": [
+                                        {
+                                            "text": (
+                                                "- Updates Stage 2 routing "
+                                                "with @Calvin-Cheng1, "
+                                                "fixing #404\n"
+                                            )
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ).encode("utf-8")
+
+        def fake_urlopen(req, timeout=0):
+            captured["url"] = req.full_url
+            captured["timeout"] = timeout
+            captured["body"] = json.loads(req.data.decode("utf-8"))
+            return _FakeResponse()
+
+        with unittest.mock.patch(
+            "urllib.request.urlopen", side_effect=fake_urlopen
+        ):
+            summary = release_please.gemini_sub_bullet(
+                "feat(networking)!: modernize stage 2 (#404)",
+                "## Description\nModernizes Stage 2.",
+                ["fast/stages-aw/2-networking-a-fedramp/main.tf"],
+                gemini_key="test-gemini-key",
+                breaking=True,
+            )
+
+        self.assertEqual(
+            captured["url"],
+            "https://generativelanguage.googleapis.com/v1beta/models/"
+            "gemini-3.8-flash:generateContent?key=test-gemini-key",
+        )
+        self.assertEqual(
+            summary,
+            "Updates Stage 2 routing with Calvin-Cheng1, fixing "
+            "[#404](https://github.com/google/stellar-engine/issues/404).",
+        )
+
     def test_collect_sub_bullets_resolves_pr_from_commit_subject(self):
         manifest_b64 = base64.b64encode(b'{".": "6.0.0"}').decode("ascii")
         calls = []
