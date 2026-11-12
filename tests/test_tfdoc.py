@@ -68,6 +68,22 @@ class TestTfDoc(unittest.TestCase):
         self.assertEqual(m.group(1), "variable:source")
         self.assertEqual(m.group(2), "fast/stages-aw/0-bootstrap")
 
+    def test_get_tfref_opts(self):
+        self.assertEqual(
+            tfdoc.get_tfref_opts("<!-- TFDOC OPTS files:1 -->"),
+            {"files": True},
+        )
+        self.assertEqual(
+            tfdoc.get_tfref_opts(
+                "<!-- TFDOC OPTS files:1 show_extra:0 exclude:outputs.tf -->"
+            ),
+            {"files": True, "show_extra": False, "exclude": "outputs.tf"},
+        )
+        self.assertEqual(
+            tfdoc.get_tfref_opts("<!-- TFDOC OPTS _:" + "!_:" * 500),
+            {},
+        )
+
     def test_file_desc_defaults(self):
         self.assertIn("main.tf", tfdoc.FILE_DESC_DEFAULTS)
         self.assertIn("variables.tf", tfdoc.FILE_DESC_DEFAULTS)
