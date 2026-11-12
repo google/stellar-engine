@@ -1,0 +1,122 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Stage E2E Baseline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "cli/**"
+      - "fast/stages-aw/**"
+      - "modules/**"
+      - "!**/*.md"
+  workflow_dispatch:
+    inputs:
+      regime:
+        description: "Compliance regime baseline to bootstrap or sync"
+        required: true
+        default: "FEDRAMP_MODERATE"
+        type: choice
+        options:
+          - FEDRAMP_MODERATE
+          - FEDRAMP_HIGH
+          - IL5
+          - all
+
+permissions:
+  contents: read
+
+jobs:
+  sync-e2e-baseline:
+    name: Sync Stage E2E Baseline
+    if: github.repository == 'google/stellar-engine'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: multiorg-cicd
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: workspace
+          persist-credentials: false
+
+      - name: Authenticate to GCP via WIF
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Submit Cloud Build & Monitor Status
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_REGIME: ${{ inputs.regime }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          CLOUDBUILD_WORKER_SA: ${{ secrets.CLOUDBUILD_WORKER_SA }}
+        run: |
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" && "${INPUT_REGIME}" != "all" ]]; then
+            TARGET_REGIMES="${INPUT_REGIME}"
+          else
+            TARGET_REGIMES="FEDRAMP_MODERATE:FEDRAMP_HIGH:IL5"
+          fi
+          echo "Target regimes: ${TARGET_REGIMES}"
+
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+
+          WORKER_SA="${CLOUDBUILD_WORKER_SA}"
+          if [[ "${WORKER_SA}" != projects/* ]]; then
+            WORKER_SA="projects/${GCP_PROJECT_ID}/serviceAccounts/${WORKER_SA}"
+          fi
+
+          SUBMIT_ERR="$(mktemp)"
+          if ! BUILD_ID=$(gcloud builds submit workspace \
+            --quiet \
+            --project="${GCP_PROJECT_ID}" \
+            --config=workspace/.github/e2e/cloudbuild.yaml \
+            --service-account="${WORKER_SA}" \
+            --gcs-source-staging-dir="gs://${GCP_PROJECT_ID}-locks/cloudbuild-source" \
+            --default-buckets-behavior=regional-user-owned-bucket \
+            --substitutions="_TRIGGER=${EVENT_NAME},_REGIMES=${TARGET_REGIMES},_CI_PROJECT_ID=${GCP_PROJECT_ID},_SHORT_SHA=${SHORT_SHA}" \
+            --async \
+            --format="value(id)" 2>"${SUBMIT_ERR}"); then
+            cat "${SUBMIT_ERR}" >&2
+            rm -f "${SUBMIT_ERR}"
+            echo "::error::Failed to submit Cloud Build job."
+            exit 1
+          fi
+          rm -f "${SUBMIT_ERR}"
+
+          if [[ -z "${BUILD_ID}" ]]; then
+            echo "::error::Cloud Build submission returned an empty build ID."
+            exit 1
+          fi
+
+          echo "Submitted Cloud Build ID: ${BUILD_ID}"
+          while true; do
+            STATUS=$(gcloud builds describe "${BUILD_ID}" --quiet --project="${GCP_PROJECT_ID}" --format="value(status)" 2>/dev/null)
+            echo "Cloud Build ${BUILD_ID} status: ${STATUS}"
+            if [[ "${STATUS}" == "SUCCESS" ]]; then
+              exit 0
+            elif [[ "${STATUS}" =~ ^(FAILURE|INTERNAL_ERROR|TIMEOUT|CANCELLED|EXPIRED)$ ]]; then
+              exit 1
+            fi
+            sleep 30
+          done
