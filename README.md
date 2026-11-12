@@ -92,6 +92,10 @@ Accompanied by the SBPG, the document incorporates recommendations from penetrat
 
 For more information, please look at the [Security Best Practices Guide](docs/security-best-practices.md).
 
+## Upgrade Guide
+
+For upgrading existing landing zone stages and blueprints across Stellar Engine releases using declarative Terraform `moved`, `import`, and `removed` blocks or adopting brownfield resources with the Stellar CLI, see the [Upgrade Guide](./docs/upgrade.md).
+
 ## Contributing
 
 We welcome contributions to Stellar Engine! Since this is an open-source project, you can contribute by forking the repository, making your changes, and submitting a pull request. 
