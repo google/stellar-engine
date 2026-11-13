@@ -57,7 +57,7 @@ resource "google_compute_region_security_policy" "gemini_enterprise_policy" {
       preview  = alltrue([for r in values(local.waf.basic_rules) : r.preview])
       match {
         expr {
-          expression = "int(request.headers['content-length']) > 8192"
+          expression = "int(request.headers['content-length']) > ${parseint(trimsuffix(var.cloud_armor_request_body_limit, "KB"), 10) * 1024}"
         }
       }
       description = "Deny request bodies larger than ${var.cloud_armor_request_body_limit}"
