@@ -94,6 +94,16 @@ variable "allowed_ip_ranges" {
   default     = []
 }
 
+variable "cloud_armor_request_body_limit" {
+  description = "Maximum request body size, based on the Content-Length header, allowed through the Cloud Armor policy. Regional policies only inspect the first 8KB of the body with preconfigured WAF rules, so larger requests are denied to prevent WAF bypass via oversized payloads. The rule runs in preview while every WAF rule in data/cloudarmor.yaml is in preview. Set to null to disable."
+  type        = string
+  default     = "8KB"
+  validation {
+    condition     = var.cloud_armor_request_body_limit == null || var.cloud_armor_request_body_limit == "8KB"
+    error_message = "Request body limit must be null or 8KB, regional policies do not support larger request body inspection sizes."
+  }
+}
+
 variable "access_start_hour" {
   description = "The hour (0-23) in the configured access_time_zone (default America/New_York) when access starts."
   type        = number
