@@ -1,6 +1,20 @@
 # Changelog
 
 
+## [6.1.0](https://github.com/google/stellar-engine/compare/v6.0.0...v6.1.0) (2026-11-13)
+
+
+### Features
+
+* **blueprints:** block request bodies over WAF inspection size ([#418](https://github.com/google/stellar-engine/issues/418)) ([417ebea](https://github.com/google/stellar-engine/commit/417ebeafe4c047f0a86a2b406ad29fe061fb5dc3))
+  * Preconfigured Cloud Armor WAF rules only inspect the first 8KB of a request body on regional security policies.
+
+
+### Bug Fixes
+
+* **tools:** eliminate ReDoS backtracking in tfdoc MARK_OPTS_RE ([#414](https://github.com/google/stellar-engine/issues/414)) ([c398f11](https://github.com/google/stellar-engine/commit/c398f11fe0099e72d1729fcc689be92c55032167))
+  * Replaces the nested repetition in `MARK_OPTS_RE` inside `tools/tfdoc.py` with an explicit whitespace-delimited `key:value` sequence so unterminated `<!-- TFDOC OPTS` markers cannot trigger exponential regular-expression backtracking.
+
 ## [6.0.0](https://github.com/google/stellar-engine/compare/v5.2.0...v6.0.0) (2026-11-10)
 
 
