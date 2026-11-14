@@ -57,6 +57,7 @@ resource "google_compute_firewall" "default" {
     metadata = "INCLUDE_ALL_METADATA"
   }
   source_ranges = var.allowed_source_ranges
+  target_tags   = ["bastion"]
 }
 
 module "bastion-vm" {
@@ -71,6 +72,8 @@ module "bastion-vm" {
     block-project-ssh-keys = true   # CIS Compliance Benchmark 4.3
     enable-oslogin         = "TRUE" # CIS Compliance Benchmark 4.4
   }
+
+  tags = ["bastion"]
 
   shielded_config = {
     enable_secure_boot          = true
