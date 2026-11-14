@@ -223,7 +223,7 @@ resource "google_compute_region_instance_template" "ngfw_template" {
   description = "This template is used to create and configure Palo Alto NGFW instances."
 
   tags           = ["nva"]
-  region         = var.regions["primary"]
+  region         = each.value
   machine_type   = "n2d-standard-4"
   can_ip_forward = true
 
@@ -265,8 +265,9 @@ resource "google_compute_region_instance_template" "ngfw_template" {
     dhcp-accept-server-domain            = "yes"
     dhcp-accept-server-hostname          = "yes"
     ssh-keys                             = "admin:${tls_private_key.ngfw_ssh.public_key_openssh}"
-    serial-port-enable                   = true
+    serial-port-enable                   = false
     serial-port-logging-enable           = true
+    block-project-ssh-keys               = "true"
     vmseries-bootstrap-gce-storagebucket = module.ngfw-bootstrap-bucket[each.key].name
     bootstrap-xml-md5                    = google_storage_bucket_object.bootstrap_xml[each.key].md5hash # Roll out a new template when our bootstrap.xml file changes
   }
