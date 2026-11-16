@@ -90,20 +90,21 @@ Run `terraform apply -target google_org_policy_policy.allow_external_lb` after c
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
 | [access_policy_number](variables.tf#L17) | There can only be one Access Policy per GCP Org. Use gcloud access-context-manager policies list --organization <org-number> to list it. | <code>number</code> | ✓ |  |
-| [default_backend](variables.tf#L22) | The default backend for traffic at the load-balancer. Must match the key of one of the backends in the data/apps.yaml file. | <code>string</code> | ✓ |  |
-| [domain](variables.tf#L27) | FQDN for the load-balancer hosted apps, where the subdomain will be prepended to. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L60) | The GCP Project name. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L72) | Host network for IDS and GCE instance deployment. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L77) | The Landing Project ID. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L94) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
-| [iap_oauth2_client](variables.tf#L32) | Optional custom OAuth client for IAP, created in the console. IAP uses a Google-managed OAuth client when this is null, which only admits users of the same organization. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [ids_name](variables.tf#L42) | Name of IDS. | <code>string</code> |  | <code>&#34;cnap-ids&#34;</code> |
-| [ids_private_ip_prefix_length](variables.tf#L48) | The length of the IDS Private IP Prefix. | <code>number</code> |  | <code>24</code> |
-| [machine_type](variables.tf#L54) | The type of machine to use. | <code>string</code> |  | <code>&#34;n2d-highcpu-2&#34;</code> |
-| [net_project](variables.tf#L65) | GCP Project to the VPC belongs to. (Defaults to the variable project if not defined). | <code>string</code> |  | <code>null</code> |
-| [packet_mirroring_policy_name](variables.tf#L82) | Name of packet mirror policy. | <code>string</code> |  | <code>&#34;cnap-packet-mirror&#34;</code> |
-| [prefix](variables.tf#L88) | Prefix for naming resources in this blueprint. | <code>string</code> |  | <code>&#34;cnap&#34;</code> |
-| [severity](variables.tf#L99) | Display name of the service account to create. | <code>string</code> |  | <code>&#34;MEDIUM&#34;</code> |
-| [subnetwork_list](variables.tf#L105) | Subnet list to monitor with Cloud IDS. | <code>list&#40;any&#41;</code> |  | <code>null</code> |
-| [subnetwork_name](variables.tf#L111) | Subnet for deploying the instances. | <code>string</code> |  | <code>&#34;default-us-east4&#34;</code> |
+| [default_backend](variables.tf#L32) | The default backend for traffic at the load-balancer. Must match the key of one of the backends in the data/apps.yaml file. | <code>string</code> | ✓ |  |
+| [domain](variables.tf#L37) | FQDN for the load-balancer hosted apps, where the subdomain will be prepended to. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L70) | The GCP Project name. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L82) | Host network for IDS and GCE instance deployment. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L87) | The Landing Project ID. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L104) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
+| [cloud_armor_request_body_limit](variables.tf#L22) | Maximum request body size, based on the Content-Length header, allowed through the Cloud Armor policy. Regional policies only inspect the first 8KB of the body with preconfigured WAF rules, so larger requests are denied to prevent WAF bypass via oversized payloads. Set to null to disable. | <code>string</code> |  | <code>&#34;8KB&#34;</code> |
+| [iap_oauth2_client](variables.tf#L42) | Optional custom OAuth client for IAP, created in the console. IAP uses a Google-managed OAuth client when this is null, which only admits users of the same organization. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [ids_name](variables.tf#L52) | Name of IDS. | <code>string</code> |  | <code>&#34;cnap-ids&#34;</code> |
+| [ids_private_ip_prefix_length](variables.tf#L58) | The length of the IDS Private IP Prefix. | <code>number</code> |  | <code>24</code> |
+| [machine_type](variables.tf#L64) | The type of machine to use. | <code>string</code> |  | <code>&#34;n2d-highcpu-2&#34;</code> |
+| [net_project](variables.tf#L75) | GCP Project to the VPC belongs to. (Defaults to the variable project if not defined). | <code>string</code> |  | <code>null</code> |
+| [packet_mirroring_policy_name](variables.tf#L92) | Name of packet mirror policy. | <code>string</code> |  | <code>&#34;cnap-packet-mirror&#34;</code> |
+| [prefix](variables.tf#L98) | Prefix for naming resources in this blueprint. | <code>string</code> |  | <code>&#34;cnap&#34;</code> |
+| [severity](variables.tf#L109) | Display name of the service account to create. | <code>string</code> |  | <code>&#34;MEDIUM&#34;</code> |
+| [subnetwork_list](variables.tf#L115) | Subnet list to monitor with Cloud IDS. | <code>list&#40;any&#41;</code> |  | <code>null</code> |
+| [subnetwork_name](variables.tf#L121) | Subnet for deploying the instances. | <code>string</code> |  | <code>&#34;default-us-east4&#34;</code> |
 <!-- END TFDOC -->

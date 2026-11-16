@@ -43,6 +43,27 @@ resource "google_compute_region_security_policy" "gemini_enterprise_policy" {
     }
   }
 
+  # Preconfigured WAF rules on regional policies only inspect the first 8KB of
+  # the request body, so a payload padded past 8KB is never matched against WAF
+  # signatures. Deny requests whose Content-Length declares a larger body,
+  # ahead of the WAF (100+) and allow (1000+) rules. The rule follows the WAF
+  # rules' mode: preview while all of them are in preview, enforced otherwise.
+  # https://cloud.google.com/armor/docs/configure-waf#request-body
+  dynamic "rules" {
+    for_each = var.cloud_armor_request_body_limit == null ? [] : [1]
+    content {
+      action   = "deny(403)"
+      priority = 90
+      preview  = alltrue([for r in values(local.waf.basic_rules) : r.preview])
+      match {
+        expr {
+          expression = "int(request.headers['content-length']) > ${parseint(trimsuffix(var.cloud_armor_request_body_limit, "KB"), 10) * 1024}"
+        }
+      }
+      description = "Deny request bodies larger than ${var.cloud_armor_request_body_limit}"
+    }
+  }
+
   dynamic "rules" {
     for_each = length(var.allowed_ip_ranges) > 0 ? [1] : []
     content {

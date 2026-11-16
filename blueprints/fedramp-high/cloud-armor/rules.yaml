@@ -17,6 +17,19 @@ gitlab-waf-policy: #Policy name
   rules: #List of rules in order of priority
     #possible actions: allow, deny(STATUS), rate_based_ban, throttle
     #possible STATUS: 403, 404, 502
+    # Request body limit (Custom CEL Rule)
+    # Preconfigured WAF rules on regional policies only inspect the first 8KB of
+    # the request body, so a payload padded past 8KB is never matched against
+    # WAF signatures. Deny requests whose Content-Length declares a larger body.
+    # Keep this rule above any throttle or allow rule: traffic matching those is
+    # not evaluated further. Remove it only if the backend must accept larger
+    # bodies, and accept that the excess is not inspected.
+    # https://cloud.google.com/armor/docs/configure-waf#request-body
+    - expression: int(request.headers['content-length']) > 8192
+      is_custom_expr: true
+      action: deny(403)
+      description: Deny request bodies over the 8KB WAF inspection size to prevent WAF bypass via oversized payloads (NIST SP 800-53 SC-7, SI-10).
+
     - expression: xss-v33-stable #Optional - if expression isn't selected, defaults to affect all incoming traffic
       is_custom_expr: false
       #possible expressions: xss-v33-stable, lfi-v33-stable, rfi-v33-stable, rce-v33-stable, methodenforcement-v33-stable
@@ -56,12 +69,6 @@ gitlab-waf-policy: #Policy name
           interval_sec: 60
       description: Throttle login attempts to prevent brute-force and credential stuffing attacks (NIST SP 800-53 AC-7, SC-5).
     
-    # Blocking Unusually Large Requests (Custom CEL Rule)
-    - expression: request.headers["Content-Length"] != "" && int(request.headers["Content-Length"]) > 5242880 # Example: 5MB limit
-      is_custom_expr: true
-      action: deny(403) # Changed from 413 to a supported code
-      description: Block requests with excessively large body sizes (e.g., >5MB) to prevent resource exhaustion and payload attacks (NIST SP 800-53 SC-5, SC-7).
-
     - action: throttle
       rate_limit_options: #Only set this if action is throttle or rate_based_ban
         rate_limit_threshold: #Must set this if you make a rate_limit_options block
@@ -76,6 +83,11 @@ gitlab-waf-policy: #Policy name
 
 policy-two:
   rules:
+  # Request body limit: must precede the throttle rule below (see above).
+  - expression: int(request.headers['content-length']) > 8192
+    is_custom_expr: true
+    action: deny(403)
+    description: Deny request bodies over the 8KB WAF inspection size to prevent WAF bypass via oversized payloads (NIST SP 800-53 SC-7, SI-10).
   - action: throttle
     rate_limit_options: #Only set this if action is throttle or rate_based_ban
       rate_limit_threshold: #Must set this if you make a rate_limit_options block

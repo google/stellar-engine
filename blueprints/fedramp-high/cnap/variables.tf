@@ -19,6 +19,16 @@ variable "access_policy_number" {
   type        = number
 }
 
+variable "cloud_armor_request_body_limit" {
+  description = "Maximum request body size, based on the Content-Length header, allowed through the Cloud Armor policy. Regional policies only inspect the first 8KB of the body with preconfigured WAF rules, so larger requests are denied to prevent WAF bypass via oversized payloads. Set to null to disable."
+  type        = string
+  default     = "8KB"
+  validation {
+    condition     = var.cloud_armor_request_body_limit == null || var.cloud_armor_request_body_limit == "8KB"
+    error_message = "Request body limit must be null or 8KB, regional policies do not support larger request body inspection sizes."
+  }
+}
+
 variable "default_backend" {
   description = "The default backend for traffic at the load-balancer. Must match the key of one of the backends in the data/apps.yaml file."
   type        = string
