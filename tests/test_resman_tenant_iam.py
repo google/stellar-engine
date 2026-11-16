@@ -31,11 +31,15 @@ class TestResmanTenantIamLookup(unittest.TestCase):
         self.assertNotIn("each.value.tenant.name", self.text)
 
     def test_top_folder_roles_uses_each_key(self):
-        self.assertRegex(
-            self.text,
-            r"for\s+k\s+in\s+var\.tenants_config\.top_folder_roles\s*:\s*"
-            r"k\s*=>\s*local\.tenant_iam\[each\.key\]",
-        )
+        self.assertIn("var.tenants_config.top_folder_roles", self.text)
+        self.assertIn("local.tenant_iam[each.key]", self.text)
+
+    def test_single_consolidated_tenant_folder_iam_module(self):
+        self.assertIn('module "tenant-top-folders-iam"', self.text)
+        self.assertNotIn('module "tenant-core-folders-iam"', self.text)
+        self.assertNotIn('module "tenant-self-folders-iam"', self.text)
+        self.assertIn("var.tenants_config.core_folder_roles", self.text)
+        self.assertIn("var.tenants_config.tenant_folder_roles", self.text)
 
 
 if __name__ == "__main__":
