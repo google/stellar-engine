@@ -266,9 +266,7 @@ class TestReleasePlease(unittest.TestCase):
             "Returns an empty list when no data stores exist",
         )
 
-    def test_gemini_sub_bullet_calls_gemini_3_8_flash_and_normalizes_output(
-        self,
-    ):
+    def test_gemini_sub_bullet_calls_vertex_ai_and_normalizes_output(self):
         captured = {}
 
         class _FakeResponse:
@@ -301,6 +299,7 @@ class TestReleasePlease(unittest.TestCase):
 
         def fake_urlopen(req, timeout=0):
             captured["url"] = req.full_url
+            captured["auth"] = req.get_header("Authorization")
             captured["timeout"] = timeout
             captured["body"] = json.loads(req.data.decode("utf-8"))
             return _FakeResponse()
@@ -312,20 +311,45 @@ class TestReleasePlease(unittest.TestCase):
                 "feat(networking)!: modernize stage 2 (#404)",
                 "## Description\nModernizes Stage 2.",
                 ["fast/stages-aw/2-networking-a-fedramp/main.tf"],
-                gemini_key="test-gemini-key",
+                gemini_token="test-wif-access-token",
+                gemini_project="example-project",
                 breaking=True,
             )
 
         self.assertEqual(
             captured["url"],
-            "https://generativelanguage.googleapis.com/v1beta/models/"
-            "gemini-3.8-flash:generateContent?key=test-gemini-key",
+            "https://us-central1-aiplatform.googleapis.com/v1/"
+            "projects/example-project/locations/us-central1/"
+            "publishers/google/models/gemini-3.8-flash:generateContent",
         )
+        self.assertEqual(captured["auth"], "Bearer test-wif-access-token")
+        self.assertEqual(captured["body"]["contents"][0]["role"], "user")
         self.assertEqual(
             summary,
             "Updates Stage 2 routing with Calvin-Cheng1, fixing "
             "[#404](https://github.com/google/stellar-engine/issues/404).",
         )
+
+    def test_gemini_sub_bullet_skips_request_when_credentials_incomplete(self):
+        cases = (
+            ("missing_token", "", "example-project"),
+            ("missing_project", "test-wif-access-token", ""),
+        )
+
+        for name, token, project in cases:
+            with (
+                self.subTest(case=name),
+                unittest.mock.patch("urllib.request.urlopen") as mock_urlopen,
+            ):
+                result = release_please.gemini_sub_bullet(
+                    "feat: add widget",
+                    "Adds widget.",
+                    ["main.tf"],
+                    gemini_token=token,
+                    gemini_project=project,
+                )
+                self.assertEqual(result, "")
+                mock_urlopen.assert_not_called()
 
     def test_collect_sub_bullets_resolves_pr_from_commit_subject(self):
         manifest_b64 = base64.b64encode(b'{".": "6.0.0"}').decode("ascii")

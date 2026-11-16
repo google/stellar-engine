@@ -24,6 +24,8 @@ import sys
 import urllib.request
 
 DEFAULT_REPO = "google/stellar-engine"
+DEFAULT_GEMINI_LOCATION = "us-central1"
+DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
 RELEASE_BRANCH = "release-please-branches-main"
 RELEASE_PR_LABELS = (
     "Documentation",
@@ -210,10 +212,18 @@ def fallback_sub_bullet(pr_body, message, breaking=False):
 
 
 def gemini_sub_bullet(
-    title, pr_body, files, repo=DEFAULT_REPO, gemini_key="", breaking=False
+    title,
+    pr_body,
+    files,
+    repo=DEFAULT_REPO,
+    gemini_token="",
+    gemini_project="",
+    gemini_location=DEFAULT_GEMINI_LOCATION,
+    gemini_model=DEFAULT_GEMINI_MODEL,
+    breaking=False,
 ):
-    """Generates a single-line summary via Gemini when GEMINI_API_KEY is set."""
-    if not gemini_key:
+    """Generates a single-line summary via Vertex AI Gemini using WIF OAuth."""
+    if not gemini_token or not gemini_project:
         return ""
     kind = "breaking-change migration" if breaking else "release note"
     prompt = (
@@ -230,16 +240,20 @@ def gemini_sub_bullet(
         f"PR Description:\n{(pr_body or '')[:3000]}"
     )
     url = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-3.8-flash:generateContent?key={gemini_key}"
+        f"https://{gemini_location}-aiplatform.googleapis.com/v1/"
+        f"projects/{gemini_project}/locations/{gemini_location}/"
+        f"publishers/google/models/{gemini_model}:generateContent"
     )
-    payload = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode(
-        "utf-8"
-    )
+    payload = json.dumps(
+        {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}
+    ).encode("utf-8")
     req = urllib.request.Request(
         url,
         data=payload,
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {gemini_token}",
+            "Content-Type": "application/json",
+        },
         method="POST",
     )
     try:
@@ -257,7 +271,11 @@ def gemini_sub_bullet(
 
 
 def collect_sub_bullets(
-    repo=DEFAULT_REPO, token="", gemini_key="", fetcher=None
+    repo=DEFAULT_REPO,
+    token="",
+    gemini_token="",
+    gemini_project="",
+    fetcher=None,
 ):
     """Preserves curated sub-bullets and synthesizes missing summaries."""
     fetch = fetcher or (lambda path: gh_get(path, repo=repo, token=token))
@@ -318,7 +336,7 @@ def collect_sub_bullets(
                 f.get("filename", "")
                 for f in (fetch(f"commits/{sha}") or {}).get("files", [])
             ]
-            if gemini_key
+            if gemini_token and gemini_project
             else []
         )
 
@@ -329,7 +347,8 @@ def collect_sub_bullets(
                 pr_body,
                 files,
                 repo=repo,
-                gemini_key=gemini_key,
+                gemini_token=gemini_token,
+                gemini_project=gemini_project,
                 breaking=is_breaking,
             ) or fallback_sub_bullet(pr_body, message, breaking=is_breaking)
             if summary:
@@ -479,13 +498,17 @@ def label_release_pr(release_pr_json, repo=DEFAULT_REPO, token=""):
 def _cmd_prepare():
     repo = os.environ.get("GITHUB_REPOSITORY", DEFAULT_REPO)
     token = os.environ.get("GH_TOKEN", "")
-    gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    gemini_token = os.environ.get("GEMINI_ACCESS_TOKEN", "").strip()
+    gemini_project = os.environ.get("GEMINI_PROJECT_ID", "").strip()
     out_path = pathlib.Path(
         os.environ.get("RELEASE_SUB_BULLETS_PATH", str(SUB_BULLETS_PATH))
     )
     try:
         sub_bullets = collect_sub_bullets(
-            repo=repo, token=token, gemini_key=gemini_key
+            repo=repo,
+            token=token,
+            gemini_token=gemini_token,
+            gemini_project=gemini_project,
         )
     except Exception as exc:
         print(f"Warning: sub-bullet collection failed: {exc}", file=sys.stderr)

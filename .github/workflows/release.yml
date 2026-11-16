@@ -22,6 +22,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
   pull-requests: write
 
 jobs:
@@ -34,10 +35,24 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Authenticate to GCP via WIF for Gemini
+        id: gcp-auth
+        if: ${{ github.ref == 'refs/heads/main' && secrets.WIF_PROVIDER != '' && secrets.GEMINI_WIF_SERVICE_ACCOUNT != '' && secrets.GEMINI_PROJECT_ID != '' }}
+        continue-on-error: true
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GEMINI_WIF_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_lifetime: 300s
+          create_credentials_file: false
+          export_environment_variables: false
+
       - name: Configure Release Please
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_ACCESS_TOKEN: ${{ steps.gcp-auth.outputs.access_token }}
+          GEMINI_PROJECT_ID: ${{ secrets.GEMINI_PROJECT_ID }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: python3 tools/release_please.py prepare
 
