@@ -29,6 +29,8 @@ jobs:
   release-please:
     if: github.repository == 'google/stellar-engine'
     runs-on: ubuntu-latest
+    env:
+      GEMINI_WIF_ENABLED: ${{ secrets.WIF_PROVIDER != '' && secrets.GEMINI_WIF_SERVICE_ACCOUNT != '' && secrets.GEMINI_PROJECT_ID != '' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -37,7 +39,7 @@ jobs:
 
       - name: Authenticate to GCP via WIF for Gemini
         id: gcp-auth
-        if: ${{ github.ref == 'refs/heads/main' && secrets.WIF_PROVIDER != '' && secrets.GEMINI_WIF_SERVICE_ACCOUNT != '' && secrets.GEMINI_PROJECT_ID != '' }}
+        if: github.ref == 'refs/heads/main' && env.GEMINI_WIF_ENABLED == 'true'
         continue-on-error: true
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
