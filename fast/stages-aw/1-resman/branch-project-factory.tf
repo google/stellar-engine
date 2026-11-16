@@ -112,7 +112,7 @@ module "branch-pf-dev-gcs" {
   storage_class  = local.gcs_storage_class
   versioning     = true
   force_destroy  = var.force_destroy
-  encryption_key = var.automation.kms_keys.gcs
+  encryption_key = local.gcs_kms_key
   iam = {
     "roles/storage.objectAdmin"  = [module.branch-pf-dev-sa[0].iam_email]
     "roles/storage.objectViewer" = [module.branch-pf-dev-r-sa[0].iam_email]
@@ -129,7 +129,7 @@ module "branch-pf-prod-gcs" {
   storage_class  = local.gcs_storage_class
   versioning     = true
   force_destroy  = var.force_destroy
-  encryption_key = var.automation.kms_keys.gcs
+  encryption_key = local.gcs_kms_key
   iam = {
     "roles/storage.objectAdmin"  = [module.branch-pf-prod-sa[0].iam_email]
     "roles/storage.objectViewer" = [module.branch-pf-prod-r-sa[0].iam_email]

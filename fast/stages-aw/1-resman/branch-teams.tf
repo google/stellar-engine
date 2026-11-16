@@ -69,7 +69,7 @@ module "branch-teams-gcs" {
   storage_class  = local.gcs_storage_class
   versioning     = true
   force_destroy  = var.force_destroy
-  encryption_key = var.automation.kms_keys.gcs
+  encryption_key = local.gcs_kms_key
   iam = {
     "roles/storage.objectAdmin" = [module.branch-teams-sa[0].iam_email]
   }
@@ -121,7 +121,7 @@ module "branch-teams-team-gcs" {
   storage_class  = local.gcs_storage_class
   versioning     = true
   force_destroy  = var.force_destroy
-  encryption_key = var.automation.kms_keys.gcs
+  encryption_key = local.gcs_kms_key
   iam = {
     "roles/storage.objectAdmin" = [module.branch-teams-team-sa[each.key].iam_email]
   }

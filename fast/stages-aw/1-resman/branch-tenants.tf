@@ -86,6 +86,20 @@ module "tenant-top-folders-iam" {
   iam           = local._tenant_folder_iam[each.key]
 }
 
+removed {
+  from = module.tenant-core-folders-iam
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = module.tenant-self-folders-iam
+  lifecycle {
+    destroy = false
+  }
+}
+
 # Tenant IaC resources (core)
 
 module "tenant-core-sa" {

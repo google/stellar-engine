@@ -16,9 +16,65 @@ import pathlib
 import re
 import unittest
 
+import yaml
+
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 _BOOTSTRAP_DIR = _REPO_ROOT / "fast/stages-aw/0-bootstrap"
 _RESMAN_DIR = _REPO_ROOT / "fast/stages-aw/1-resman"
+_TEMPLATE_DIRS = (
+    _BOOTSTRAP_DIR / "templates",
+    _RESMAN_DIR / "templates",
+    _REPO_ROOT / "fast/assets/templates",
+)
+
+
+def _render_workflow_template(content: str) -> str:
+    """Simulates Terraform templatefile() rendering for FAST CI/CD templates."""
+    rendered = content
+    rendered = re.sub(
+        r"[ \t]*%\{\s*~?\s*if tf_var_files != \[\]\s*~?\s*\}\n"
+        r"([\s\S]*?)"
+        r"[ \t]*%\{\s*~?\s*endif\s*~?\s*\}\n?",
+        r"\1",
+        rendered,
+    )
+    rendered = re.sub(
+        r"[ \t]*%\{\s*~?\s*for f in tf_var_files\s*~?\s*\}\n"
+        r"([\s\S]*?)"
+        r"[ \t]*%\{\s*~?\s*endfor\s*~?\s*\}\n?",
+        lambda m: (
+            m.group(1).replace("${f}", "0-bootstrap.auto.tfvars.json")
+            + m.group(1).replace("${f}", "1-resman.auto.tfvars.json")
+        ),
+        rendered,
+    )
+    rendered = re.sub(
+        r"[ \t]*%\{\s*~?\s*for aud in audiences\s*~?\s*\}\n"
+        r"([\s\S]*?)"
+        r"[ \t]*%\{\s*~?\s*endfor\s*~?\s*\}\n?",
+        lambda m: m.group(1).replace("${aud}", "https://gitlab.example.com"),
+        rendered,
+    )
+    replacements = {
+        "${stage_name}": "1-resman",
+        "${service_accounts.apply}": "resman@example.iam.gserviceaccount.com",
+        "${service_accounts.plan}": "resman-r@example.iam.gserviceaccount.com",
+        "${identity_provider}": (
+            "projects/123/locations/global/workloadIdentityPools/p/providers/w"
+        ),
+        "${outputs_bucket}": "prefix-prod-iac-core-outputs-0",
+        "${tf_providers_files.apply}": "1-resman-providers.tf",
+        "${tf_providers_files.plan}": "1-resman-r-providers.tf",
+        '${join("\\n    ", tf_var_files)}': (
+            "0-bootstrap.auto.tfvars.json\n    1-resman.auto.tfvars.json"
+        ),
+        '${tf_var_files == [] ? "\'\'" : join("\\n    ", tf_var_files)}': (
+            "0-bootstrap.auto.tfvars.json\n    1-resman.auto.tfvars.json"
+        ),
+    }
+    for key, val in replacements.items():
+        rendered = rendered.replace(key, val)
+    return rendered.replace("$$", "$")
 
 
 class TestBootstrapResmanFixes(unittest.TestCase):
@@ -63,7 +119,12 @@ class TestBootstrapResmanFixes(unittest.TestCase):
         self.assertIn("kms_keys = optional(object({", resman_vars)
 
         resman_kms = (_RESMAN_DIR / "kms.tf").read_text(encoding="utf-8")
-        self.assertIn("crypto_key_id = var.automation.kms_keys.gcs", resman_kms)
+        self.assertIn("gcs_kms_key = coalesce(", resman_kms)
+        self.assertIn("var.automation.kms_keys.gcs,", resman_kms)
+        self.assertIn(
+            "crypto_key_id = local.gcs_kms_key",
+            resman_kms,
+        )
 
         bucket_checks = (
             (
@@ -105,6 +166,26 @@ class TestBootstrapResmanFixes(unittest.TestCase):
                 self.assertIn("force_destroy  = var.force_destroy", block)
                 self.assertIn("encryption_key =", block)
 
+        for tf_path, header in (
+            (
+                _RESMAN_DIR / "branch-networking.tf",
+                'module "branch-network-gcs"',
+            ),
+            (
+                _RESMAN_DIR / "branch-security.tf",
+                'module "branch-security-gcs"',
+            ),
+        ):
+            with self.subTest(file=tf_path.name, module=header):
+                content = tf_path.read_text(encoding="utf-8")
+                match = re.search(
+                    re.escape(header) + r"\s*\{[\s\S]*?\n\}", content
+                )
+                self.assertIsNotNone(match, f"Block not found: {header}")
+                block = match.group(0)
+                self.assertIn("encryption_key =", block)
+                self.assertNotIn("resman_bootstrap_kms", block)
+
     def test_branch_tenants_consolidates_folder_iam_and_keys_by_env_tenant(
         self,
     ):
@@ -114,7 +195,9 @@ class TestBootstrapResmanFixes(unittest.TestCase):
         self.assertNotIn("each.value.tenant.name", branch_tenants)
         self.assertNotIn('module "tenant-core-folders-iam"', branch_tenants)
         self.assertNotIn('module "tenant-self-folders-iam"', branch_tenants)
-        self.assertNotIn("removed {", branch_tenants)
+        self.assertIn("from = module.tenant-core-folders-iam", branch_tenants)
+        self.assertIn("from = module.tenant-self-folders-iam", branch_tenants)
+        self.assertIn("destroy = false", branch_tenants)
         self.assertIn('module "tenant-top-folders-iam"', branch_tenants)
         self.assertIn("local.tenant_iam[k]", branch_tenants)
         for base_role in (
@@ -170,6 +253,32 @@ class TestBootstrapResmanFixes(unittest.TestCase):
             "local.team_cicd_workflow_attrs[k].service_accounts",
             outputs_tf,
         )
+
+        unrendered_var_re = re.compile(r"(?<!\$)\$\{[^{}]+\}")
+        for tpl_dir in _TEMPLATE_DIRS:
+            for wf_type in ("github", "gitlab", "sourcerepo"):
+                tpl_path = tpl_dir / f"workflow-{wf_type}.yaml"
+                with self.subTest(
+                    rendered_template=str(tpl_path.relative_to(_REPO_ROOT))
+                ):
+                    raw = tpl_path.read_text(encoding="utf-8")
+                    # Ensure no unescaped single-$ template placeholders remain
+                    # after substituting the standard stage context variables.
+                    unsubstituted = unrendered_var_re.findall(
+                        _render_workflow_template(
+                            raw.replace("$$", "__ESCAPED_DOLLAR__")
+                        )
+                    )
+                    self.assertEqual(
+                        unsubstituted,
+                        [],
+                        f"Unresolved template placeholders in {tpl_path}: "
+                        f"{unsubstituted}",
+                    )
+                    rendered = _render_workflow_template(raw)
+                    parsed = yaml.safe_load(rendered)
+                    self.assertIsInstance(parsed, dict)
+                    self.assertTrue(parsed)
 
 
 if __name__ == "__main__":

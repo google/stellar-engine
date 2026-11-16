@@ -164,7 +164,7 @@ module "branch-dp-dev-gcs" {
   storage_class  = local.gcs_storage_class
   versioning     = true
   force_destroy  = var.force_destroy
-  encryption_key = var.automation.kms_keys.gcs
+  encryption_key = local.gcs_kms_key
   iam = {
     "roles/storage.objectAdmin"  = [module.branch-dp-dev-sa[0].iam_email]
     "roles/storage.objectViewer" = [module.branch-dp-dev-r-sa[0].iam_email]
@@ -181,7 +181,7 @@ module "branch-dp-prod-gcs" {
   storage_class  = local.gcs_storage_class
   versioning     = true
   force_destroy  = var.force_destroy
-  encryption_key = var.automation.kms_keys.gcs
+  encryption_key = local.gcs_kms_key
   iam = {
     "roles/storage.objectAdmin"  = [module.branch-dp-prod-sa[0].iam_email]
     "roles/storage.objectViewer" = [module.branch-dp-prod-r-sa[0].iam_email]
