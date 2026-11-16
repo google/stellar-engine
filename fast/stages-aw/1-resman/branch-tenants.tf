@@ -63,7 +63,7 @@ module "tenant-top-folders-iam" {
     },
     {
       for k in var.tenants_config.top_folder_roles :
-      k => local.tenant_iam[each.value.tenant.name]
+      k => local.tenant_iam[each.key]
     }
   )
 }
