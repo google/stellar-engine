@@ -32,13 +32,13 @@ module "tenant-project-keys" {
   }
   keyring = {
     name     = "${each.key}-keyring"
-    location = try(each.value.locations.kms != "", false) ? each.value.locations.kms : var.regions.primary
+    location = try(each.value.tenant_info.locations.kms != "", false) ? each.value.tenant_info.locations.kms : var.regions.primary
   }
   keys = {
     gcs = {
       purpose         = "ENCRYPT_DECRYPT"
       labels          = { service = "gcs" }
-      locations       = try(each.value.locations.kms != "", false) ? each.value.locations.kms : var.regions.primary
+      locations       = try(each.value.tenant_info.locations.kms != "", false) ? each.value.tenant_info.locations.kms : var.regions.primary
       rotation_period = "7776000s" # CIS Compliance Benchmark 1.10
       version_template = {
         algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
@@ -48,7 +48,7 @@ module "tenant-project-keys" {
     default = {
       purpose         = "ENCRYPT_DECRYPT"
       labels          = { service = "iac-core" }
-      locations       = try(each.value.locations.kms != "", false) ? each.value.locations.kms : var.regions.primary
+      locations       = try(each.value.tenant_info.locations.kms != "", false) ? each.value.tenant_info.locations.kms : var.regions.primary
       rotation_period = "7776000s"
       version_template = {
         algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
