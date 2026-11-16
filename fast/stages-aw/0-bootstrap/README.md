@@ -442,19 +442,19 @@ The `fast_features` variable consists of 4 toggles
 
 | name | description | sensitive |
 |---|---|:---:|
-| [alert_email](outputs.tf#L130) | Email to receive log alerts. |  |
-| [assured_workload](outputs.tf#L135) | Assured Workload folder for the deployment. |  |
-| [automation](outputs.tf#L140) | Automation resources. |  |
-| [billing_dataset](outputs.tf#L145) | BigQuery dataset prepared for billing export. |  |
-| [cicd_repositories](outputs.tf#L150) | CI/CD repository configurations. |  |
-| [common_services_folder](outputs.tf#L162) | Common services folder where non-tenant related resources should be kept. |  |
-| [custom_roles](outputs.tf#L167) | Organization-level custom roles. |  |
-| [kms_protection_level](outputs.tf#L172) | KMS protection level. |  |
-| [outputs_bucket](outputs.tf#L177) | GCS bucket where generated output files are stored. |  |
-| [project_ids](outputs.tf#L182) | Projects created by this stage. |  |
-| [providers](outputs.tf#L192) | Terraform provider files for this stage and dependent stages. | ✓ |
-| [service_accounts](outputs.tf#L199) | Automation service accounts created by this stage. |  |
-| [tfvars](outputs.tf#L217) | Terraform variable files for the following stages. | ✓ |
-| [workforce_identity_pool](outputs.tf#L223) | Workforce Identity Federation pool. |  |
-| [workload_identity_pool](outputs.tf#L232) | Workload Identity Federation pool and providers. |  |
+| [alert_email](outputs.tf#L133) | Email to receive log alerts. |  |
+| [assured_workload](outputs.tf#L138) | Assured Workload folder for the deployment. |  |
+| [automation](outputs.tf#L143) | Automation resources. |  |
+| [billing_dataset](outputs.tf#L148) | BigQuery dataset prepared for billing export. |  |
+| [cicd_repositories](outputs.tf#L153) | CI/CD repository configurations. |  |
+| [common_services_folder](outputs.tf#L165) | Common services folder where non-tenant related resources should be kept. |  |
+| [custom_roles](outputs.tf#L170) | Organization-level custom roles. |  |
+| [kms_protection_level](outputs.tf#L175) | KMS protection level. |  |
+| [outputs_bucket](outputs.tf#L180) | GCS bucket where generated output files are stored. |  |
+| [project_ids](outputs.tf#L185) | Projects created by this stage. |  |
+| [providers](outputs.tf#L195) | Terraform provider files for this stage and dependent stages. | ✓ |
+| [service_accounts](outputs.tf#L202) | Automation service accounts created by this stage. |  |
+| [tfvars](outputs.tf#L220) | Terraform variable files for the following stages. | ✓ |
+| [workforce_identity_pool](outputs.tf#L226) | Workforce Identity Federation pool. |  |
+| [workload_identity_pool](outputs.tf#L235) | Workload Identity Federation pool and providers. |  |
 <!-- END TFDOC -->

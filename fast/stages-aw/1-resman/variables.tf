@@ -48,6 +48,9 @@ variable "automation" {
       principal_branch = string
       principal_repo   = string
     }))
+    kms_keys = optional(object({
+      gcs = optional(string)
+    }), {})
     service_accounts = object({
       resman   = string
       resman-r = string

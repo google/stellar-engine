@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This prevents users from creating firewall rules that allow traffic from 0.0.0.0/0
+# This prevents users from creating firewall rules that allow traffic from 0.0.0.0/0 or ::/0
 # Rules must explicitly allow smaller subnets, or preferably tags
 # COULD HAVE
 
 custom.restrictFirewallRanges:
-  name: Restrict Firewall rules using the source-range 0.0.0.0/0
-  display_name: Restrict Firewall rules using the source-range 0.0.0.0/0
+  name: Restrict Firewall rules using source-range 0.0.0.0/0 or ::/0
+  display_name: Restrict Firewall rules using source-range 0.0.0.0/0 or ::/0
   action_type: DENY
   resource_types:
     - compute.googleapis.com/Firewall
   method_types:
     - CREATE
     - UPDATE
-  condition: "resource.direction.matches('INGRESS') && resource.sourceRanges.all(range, range == '0.0.0.0/0') && resource.allowed.exists(entry, entry != null)"
-  description: Firewall rules must be more specific than 0.0.0.0/0.
+  condition: "resource.direction.matches('INGRESS') && resource.sourceRanges.exists(range, range == '0.0.0.0/0' || range == '::/0') && resource.allowed.exists(entry, entry != null)"
+  description: Firewall rules must be more specific than 0.0.0.0/0 or ::/0.

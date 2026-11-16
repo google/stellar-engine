@@ -353,6 +353,9 @@ locals {
     for k, v in local.team_cicd_repositories : k => templatefile(
       "${path.module}/templates/workflow-${v.cicd.type}.yaml",
       merge(local.team_cicd_workflow_attrs[k], {
+        audiences = try(
+          local.identity_providers[v.cicd.identity_provider].audiences, null
+        )
         identity_provider = try(
           local.identity_providers[v.cicd.identity_provider].name, null
         )
@@ -363,9 +366,15 @@ locals {
   }
   team_cicd_workflow_attrs = {
     for k, v in local.team_cicd_repositories : k => {
-      service_account   = try(module.branch-teams-team-sa-cicd[k].email, null)
-      tf_providers_file = "3-teams-${k}-providers.tf"
-      tf_var_files      = local.cicd_workflow_var_files.stage_3
+      service_accounts = {
+        apply = try(module.branch-teams-team-sa-cicd[k].email, null)
+        plan  = try(module.branch-teams-team-sa-cicd[k].email, null)
+      }
+      tf_providers_files = {
+        apply = "3-teams-${k}-providers.tf"
+        plan  = "3-teams-${k}-providers.tf"
+      }
+      tf_var_files = local.cicd_workflow_var_files.stage_3
     }
   }
   tenant_accounts = { for k, v in local.tenant_envs : k => {
@@ -524,7 +533,7 @@ output "team_cicd_repositories" {
       provider = try(
         local.identity_providers[v.cicd.identity_provider].name, null
       )
-      service_account = local.team_cicd_workflow_attrs[k].service_account
+      service_account = local.team_cicd_workflow_attrs[k].service_accounts
     } if v.cicd != null
   }
 }

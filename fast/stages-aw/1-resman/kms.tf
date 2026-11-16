@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+locals {
+  gcs_kms_key = coalesce(
+    var.automation.kms_keys.gcs,
+    "projects/${var.automation.project_id}/locations/${var.regions.primary}/keyRings/gcs/cryptoKeys/gcs"
+  )
+}
+
 module "tenant-project-keys" {
   source     = "../../../modules/kms"
   project_id = module.tenant-self-iac-projects[each.key].project_id
@@ -53,7 +60,7 @@ module "tenant-project-keys" {
 
 resource "google_kms_crypto_key_iam_member" "resman_bootstrap_kms" {
   for_each      = local.tenant_envs
-  crypto_key_id = "projects/${var.automation.project_id}/locations/${var.regions.primary}/keyRings/gcs/cryptoKeys/gcs"
+  crypto_key_id = local.gcs_kms_key
   member        = "serviceAccount:service-${module.tenant-self-iac-projects[each.key].number}@gs-project-accounts.iam.gserviceaccount.com"
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
 }

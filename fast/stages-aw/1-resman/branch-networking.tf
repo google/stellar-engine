@@ -112,6 +112,5 @@ module "branch-network-gcs" {
     "roles/storage.objectViewer" = [module.branch-network-r-sa.iam_email]
   }
 
-  encryption_key = "projects/${var.automation.project_id}/locations/${var.regions.primary}/keyRings/gcs/cryptoKeys/gcs"
-  depends_on     = [google_kms_crypto_key_iam_member.resman_bootstrap_kms]
+  encryption_key = local.gcs_kms_key
 }
