@@ -255,7 +255,8 @@ locals {
   )
   deploy_root_folder_config = (
     !var.deploy_org_resources.iam ||
-    !var.deploy_org_resources.logging_sinks
+    !var.deploy_org_resources.logging_sinks ||
+    !var.deploy_org_resources.org_policies
   )
   org_only_roles = [
     "roles/assuredworkloads.admin",
@@ -413,6 +414,13 @@ module "root-folder-config" {
   folder_create = false
   id            = local.assured_workload_folder
   contacts      = var.deploy_org_resources.iam || var.bootstrap_user != null ? {} : local.essential_contacts
+  factories_config = {
+    org_policies = (
+      var.deploy_org_resources.org_policies || var.bootstrap_user != null
+      ? null
+      : var.factories_config.org_policy
+    )
+  }
   iam_by_principals = var.deploy_org_resources.iam ? {} : {
     for k in distinct(concat(keys(local.iam_principals), keys(var.iam_by_principals))) :
     k => [
@@ -492,4 +500,12 @@ module "root-folder-config" {
       type                 = attrs.type
     }
   }
+  org_policies = (
+    var.deploy_org_resources.org_policies || var.bootstrap_user != null
+    ? null
+    : {
+      for k, v in local.org_policies : k => v
+      if !startswith(k, "custom.")
+    }
+  )
 }
