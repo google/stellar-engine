@@ -16,6 +16,7 @@ import base64
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import tempfile
@@ -23,8 +24,61 @@ import unittest
 import unittest.mock
 
 import release_please
+import yaml
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+_WORKFLOWS_DIR = _REPO_ROOT / ".github/workflows"
+
+_JOB_IF_ALLOWED_CONTEXTS = frozenset({"github", "needs", "vars", "inputs"})
+_STEP_IF_ALLOWED_CONTEXTS = frozenset(
+    {
+        "github",
+        "needs",
+        "strategy",
+        "matrix",
+        "steps",
+        "runner",
+        "env",
+        "vars",
+        "job",
+        "inputs",
+    }
+)
+_CONTEXT_REF_RE = re.compile(
+    r"\b(github|needs|strategy|matrix|steps|runner|env|vars|job|inputs|secrets)\s*\."
+)
+
+
+def _find_disallowed_if_contexts(workflow: dict) -> list[str]:
+    """Returns context violations across job-level and step-level if blocks."""
+    violations = []
+    jobs = workflow.get("jobs") or {}
+    for job_id, job in jobs.items():
+        if not isinstance(job, dict):
+            continue
+        job_if = str(job.get("if") or "")
+        if job_if:
+            unquoted = re.sub(r"'(?:''|[^'])*'", "''", job_if)
+            for match in _CONTEXT_REF_RE.finditer(unquoted):
+                ctx = match.group(1)
+                if ctx not in _JOB_IF_ALLOWED_CONTEXTS:
+                    violations.append(f"jobs.{job_id}.if uses '{ctx}'")
+        for idx, step in enumerate(job.get("steps") or []):
+            if not isinstance(step, dict):
+                continue
+            step_if = str(step.get("if") or "")
+            if not step_if:
+                continue
+            unquoted = re.sub(r"'(?:''|[^'])*'", "''", step_if)
+            step_label = step.get("id") or step.get("name") or str(idx)
+            for match in _CONTEXT_REF_RE.finditer(unquoted):
+                ctx = match.group(1)
+                if ctx not in _STEP_IF_ALLOWED_CONTEXTS:
+                    violations.append(
+                        f"jobs.{job_id}.steps[{step_label}].if uses '{ctx}'"
+                    )
+    return violations
+
 
 _UPSTREAM_TEMPLATE_HBS = (
     "{{> header}}\n\n"
@@ -566,6 +620,223 @@ class TestReleasePlease(unittest.TestCase):
                 "\u26a0",
                 (dist_dir / "template1.hbs").read_text(encoding="utf-8"),
             )
+
+    def test_prepare_cli_forwards_wif_credentials_to_collect_sub_bullets(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = pathlib.Path(tmpdir)
+            runner_temp = root / "_temp"
+            runner_temp.mkdir()
+            dist_dir = (
+                root / "_actions/googleapis/release-please-action/v5/dist"
+            )
+            dist_dir.mkdir(parents=True)
+            (dist_dir / "template1.hbs").write_text(
+                _UPSTREAM_TEMPLATE_HBS, encoding="utf-8"
+            )
+            (dist_dir / "index.js").write_text(
+                _upstream_index_js("### Features"), encoding="utf-8"
+            )
+            sub_path = runner_temp / "sub_bullets.json"
+
+            with (
+                unittest.mock.patch.dict(
+                    os.environ,
+                    {
+                        "RUNNER_TEMP": str(runner_temp),
+                        "RELEASE_SUB_BULLETS_PATH": str(sub_path),
+                        "GITHUB_REPOSITORY": "google/stellar-engine",
+                        "GH_TOKEN": "test-release-pat",
+                        "GEMINI_ACCESS_TOKEN": "  test-wif-token \n",
+                        "GEMINI_PROJECT_ID": "  example-project \n",
+                    },
+                    clear=False,
+                ),
+                unittest.mock.patch.object(
+                    release_please,
+                    "collect_sub_bullets",
+                    return_value={"abc1234": "Synthesized summary."},
+                ) as mock_collect,
+            ):
+                release_please.main(["prepare"])
+
+            mock_collect.assert_called_once_with(
+                repo="google/stellar-engine",
+                token="test-release-pat",
+                gemini_token="test-wif-token",
+                gemini_project="example-project",
+            )
+            self.assertEqual(
+                json.loads(sub_path.read_text(encoding="utf-8")),
+                {"abc1234": "Synthesized summary."},
+            )
+
+    def test_label_pr_cli_applies_curated_labels_and_skips_missing_inputs(self):
+        captured = {}
+
+        class _FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self):
+                return b"[]"
+
+        def fake_urlopen(req, timeout=0):
+            captured["url"] = req.full_url
+            captured["auth"] = req.get_header("Authorization")
+            captured["body"] = json.loads(req.data.decode("utf-8"))
+            return _FakeResponse()
+
+        with (
+            unittest.mock.patch.dict(
+                os.environ,
+                {
+                    "RELEASE_PR": json.dumps({"number": 430}),
+                    "GITHUB_REPOSITORY": "google/stellar-engine",
+                    "GH_TOKEN": "test-release-pat",
+                },
+                clear=False,
+            ),
+            unittest.mock.patch(
+                "urllib.request.urlopen", side_effect=fake_urlopen
+            ),
+        ):
+            release_please.main(["label-pr"])
+
+        self.assertEqual(
+            captured["url"],
+            "https://api.github.com/repos/google/stellar-engine/issues/430/labels",
+        )
+        self.assertEqual(captured["auth"], "Bearer test-release-pat")
+        self.assertEqual(
+            captured["body"],
+            {"labels": list(release_please.RELEASE_PR_LABELS)},
+        )
+
+        with unittest.mock.patch("urllib.request.urlopen") as mock_urlopen:
+            release_please.label_release_pr("{}", token="test-release-pat")
+            release_please.label_release_pr(
+                json.dumps({"number": 430}), token=""
+            )
+            mock_urlopen.assert_not_called()
+
+    def test_github_workflows_only_use_allowed_if_contexts(self):
+        workflow_files = sorted(_WORKFLOWS_DIR.glob("*.yml"))
+        self.assertTrue(workflow_files)
+        for wf_path in workflow_files:
+            with self.subTest(workflow=wf_path.name):
+                parsed = yaml.safe_load(wf_path.read_text(encoding="utf-8"))
+                self.assertIsInstance(parsed, dict)
+                self.assertEqual(_find_disallowed_if_contexts(parsed), [])
+
+        invalid_workflow = {
+            "jobs": {
+                "release-please": {
+                    "if": "env.ENABLED == 'true' && secrets.TOKEN != ''",
+                    "steps": [
+                        {
+                            "id": "gcp-auth",
+                            "if": (
+                                "${{ github.ref == 'refs/heads/main' && "
+                                "secrets.WIF_PROVIDER != '' }}"
+                            ),
+                        },
+                        {
+                            "id": "quoted-literal",
+                            "if": (
+                                "github.event.head_commit.message != "
+                                "'secrets.FOO'"
+                            ),
+                        },
+                    ],
+                }
+            }
+        }
+        self.assertEqual(
+            _find_disallowed_if_contexts(invalid_workflow),
+            [
+                "jobs.release-please.if uses 'env'",
+                "jobs.release-please.if uses 'secrets'",
+                "jobs.release-please.steps[gcp-auth].if uses 'secrets'",
+            ],
+        )
+
+    def test_release_workflow_wif_and_cli_contract(self):
+        release_wf = yaml.safe_load(
+            (_WORKFLOWS_DIR / "release.yml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            release_wf.get("permissions"),
+            {
+                "contents": "write",
+                "id-token": "write",
+                "pull-requests": "write",
+            },
+        )
+
+        job = release_wf["jobs"]["release-please"]
+        job_env = job.get("env") or {}
+        self.assertEqual(set(job_env.keys()), {"GEMINI_WIF_ENABLED"})
+        for secret_name in (
+            "secrets.WIF_PROVIDER",
+            "secrets.GEMINI_WIF_SERVICE_ACCOUNT",
+            "secrets.GEMINI_PROJECT_ID",
+        ):
+            self.assertIn(secret_name, job_env["GEMINI_WIF_ENABLED"])
+
+        steps_by_name = {step["name"]: step for step in job["steps"]}
+        auth_step = steps_by_name["Authenticate to GCP via WIF for Gemini"]
+        self.assertEqual(auth_step.get("id"), "gcp-auth")
+        self.assertEqual(
+            auth_step.get("if"),
+            (
+                "github.ref == 'refs/heads/main' && "
+                "env.GEMINI_WIF_ENABLED == 'true'"
+            ),
+        )
+        self.assertIs(auth_step.get("continue-on-error"), True)
+        self.assertEqual(
+            auth_step.get("with"),
+            {
+                "workload_identity_provider": "${{ secrets.WIF_PROVIDER }}",
+                "service_account": "${{ secrets.GEMINI_WIF_SERVICE_ACCOUNT }}",
+                "token_format": "access_token",
+                "access_token_lifetime": "300s",
+                "create_credentials_file": False,
+                "export_environment_variables": False,
+            },
+        )
+
+        prepare_step = steps_by_name["Configure Release Please"]
+        self.assertEqual(
+            prepare_step.get("run"), "python3 tools/release_please.py prepare"
+        )
+        self.assertEqual(
+            prepare_step.get("env"),
+            {
+                "GH_TOKEN": "${{ secrets.RELEASE_PAT }}",
+                "GEMINI_ACCESS_TOKEN": (
+                    "${{ steps.gcp-auth.outputs.access_token }}"
+                ),
+                "GEMINI_PROJECT_ID": "${{ secrets.GEMINI_PROJECT_ID }}",
+                "GITHUB_REPOSITORY": "${{ github.repository }}",
+            },
+        )
+
+        label_step = steps_by_name["Ensure Curated Release PR Labels"]
+        self.assertEqual(
+            label_step.get("run"), "python3 tools/release_please.py label-pr"
+        )
+        self.assertEqual(
+            label_step.get("env"),
+            {
+                "GH_TOKEN": "${{ secrets.RELEASE_PAT }}",
+                "RELEASE_PR": "${{ steps.release.outputs.pr }}",
+                "GITHUB_REPOSITORY": "${{ github.repository }}",
+            },
+        )
 
 
 if __name__ == "__main__":
