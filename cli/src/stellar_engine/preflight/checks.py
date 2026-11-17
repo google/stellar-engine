@@ -24,6 +24,7 @@ import re
 
 from packaging import version
 
+from stellar_engine import iam_diff
 from stellar_engine import naming
 from stellar_engine import paths
 from stellar_engine import repo as repo_lib
@@ -32,6 +33,7 @@ from stellar_engine.gcp import api
 from stellar_engine.preflight import inputs as inputs_lib
 from stellar_engine.preflight import regions
 from stellar_engine.preflight import result
+from stellar_engine.terraform import env as env_lib
 
 Category = result.Category
 CheckResult = result.CheckResult
@@ -51,23 +53,28 @@ DDG_STAGE0 = "docs/ddg.md#stage-0---bootstrap"
 # DDG prerequisite that enableServices.sh does not cover yet.
 EXTRA_APIS = ("monitoring.googleapis.com",)
 BILLING_ADMIN_ROLE = "roles/billing.admin"
+# Linking projects needs only Billing Account User.
+BILLING_USER_ROLE = "roles/billing.user"
 # Lets Stage 0 create projects on a billing account whose IAM it does not
 # manage, which is what Billing Account User grants.
 BILLING_LINK_PERMISSION = "billing.resourceAssociations.create"
-BILLING_ADMIN = "Billing Account Administrator (roles/billing.admin)"
-BILLING_USER = "Billing Account User (roles/billing.user)"
+# Lets an identity grant roles on the billing account, as Billing Account
+# Administrator does.
+BILLING_ADMIN_PERMISSION = "billing.accounts.setIamPolicy"
+BILLING_ADMIN = f"Billing Account Administrator ({BILLING_ADMIN_ROLE})"
+BILLING_USER = f"Billing Account User ({BILLING_USER_ROLE})"
 BILLING_COSTS_MANAGER = (
     "Billing Account Costs Manager (roles/billing.costsManager)"
 )
+# The IAM row that reports an organization role test that could not run;
+# every other IAM row is `iam.<role>`.
+IAM_ROLES_CHECK = "iam.roles"
 PRECREATE_CHECK = "billing.precreate"
 # Points a billing FAIL at the check that lists what to pre-create instead.
 _PRECREATE_HINT = (
     f"or pre-create the resources that the {PRECREATE_CHECK} check lists"
 )
-IMPERSONATION_ENV_VARS = (
-    "GOOGLE_IMPERSONATE_SERVICE_ACCOUNT",
-    "CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT",
-)
+IMPERSONATION_ENV_VARS = env_lib.IMPERSONATION_ENV_VARS
 _REGION_RE = re.compile(r"^us-[a-z]+[0-9]+$")
 _MAX_LISTED = 10
 # Project lifecycle states that `CloudApi.project_state` and
@@ -523,13 +530,15 @@ def check_iam_roles(ctx):
     project linking instead.
     """
     if ctx.org is None:
-        return [_skip("iam.roles", Category.IAM, "Organization roles", "--org")]
+        return [
+            _skip(IAM_ROLES_CHECK, Category.IAM, "Organization roles", "--org")
+        ]
     try:
         return _role_results(ctx)
     except api.CloudError as error:
         return [
             CheckResult(
-                "iam.roles",
+                IAM_ROLES_CHECK,
                 Category.IAM,
                 "Organization roles",
                 Status.FAIL,
@@ -1062,6 +1071,28 @@ def _precreate_result(ctx, account_id):
     ), False
 
 
+def required_services(repository: repo_lib.Repo) -> list[str]:
+    """Returns the bootstrap project services that Stage 0 needs.
+
+    The services of `0-bootstrap/enableServices.sh` plus the DDG
+    prerequisites that the script lacks.
+
+    Args:
+        repository: The engine checkout.
+    """
+    return [*repository.required_apis(), *EXTRA_APIS]
+
+
+def enable_command(project: str, services: list[str]) -> str:
+    """Returns the gcloud command that enables services by hand.
+
+    Args:
+        project: The project ID.
+        services: The services, such as `iam.googleapis.com`.
+    """
+    return f"gcloud services enable {' '.join(services)} --project={project}"
+
+
 def check_project(ctx):
     """Checks that the bootstrap project exists and has the required APIs."""
     category = Category.PROJECT
@@ -1097,7 +1128,7 @@ def check_project(ctx):
             doc=DOC_BOOTSTRAP,
         )
     ]
-    required = [*ctx.repo.required_apis(), *EXTRA_APIS]
+    required = required_services(ctx.repo)
     try:
         enabled = ctx.cloud.enabled_services(project)
     except api.CloudError as error:
@@ -1122,10 +1153,7 @@ def check_project(ctx):
             f"Not enabled: {_listed(missing)}."
             if missing
             else f"All {len(required)} required APIs are enabled.",
-            remedy=(
-                f"Run `gcloud services enable {' '.join(missing)} "
-                f"--project={project}`."
-            ),
+            remedy=f"Run `{enable_command(project, missing)}`.",
             doc=DOC_APIS,
         )
     )
@@ -1546,69 +1574,87 @@ def _folder_result(ctx, prefix):
     )
 
 
-def holder_member(
-    holder: repo_lib.Holder,
-    *,
-    prefix: str | None,
-    groups: dict[str, str],
-    bootstrap_user: str | None,
-    domain: str | None,
-) -> str | None:
-    """Resolves a Stage 0 role holder to the IAM member it grants.
+def _iam_target(ctx):
+    """Returns what the first Stage 0 apply sets on organization IAM.
 
-    Args:
-        holder: A holder from `Repo.authoritative_bindings`.
-        prefix: The deployment prefix, which names the automation service
-            accounts.
-        groups: The group members by group key.
-        bootstrap_user: The user of the first Stage 0 apply.
-        domain: The organization domain.
-
-    Returns:
-        The member, or None when the inputs cannot name it.
+    Preflight cannot plan, so the target comes from the repository, the
+    inputs that name each holder, and the Stage 0 IAM overrides.
     """
-    match holder.kind:
-        case repo_lib.HolderKind.GROUP if holder.key:
-            return groups.get(holder.key)
-        case repo_lib.HolderKind.SERVICE_ACCOUNT if prefix and holder.key:
-            email = naming.automation_sa_email(prefix, holder.key)
-            return f"serviceAccount:{email}"
-        case repo_lib.HolderKind.BOOTSTRAP_USER if bootstrap_user:
-            return f"user:{bootstrap_user}"
-        case repo_lib.HolderKind.DOMAIN if domain:
-            return f"domain:{domain}"
-    return None
+    groups = _group_members(ctx)
+    user = bootstrap_user(ctx)
 
+    def resolve(holder):
+        return iam_diff.resolve_holder(
+            holder,
+            prefix=ctx.inputs.prefix,
+            groups=groups,
+            bootstrap_user=user,
+            domain=ctx.domain,
+        )
 
-def _holder_member(ctx, holder, groups):
-    """Resolves a holder with the inputs of a check context."""
-    return holder_member(
-        holder,
-        prefix=ctx.inputs.prefix,
-        groups=groups,
-        bootstrap_user=bootstrap_user(ctx),
-        domain=ctx.domain,
+    return iam_diff.target_from_repo(
+        ctx.repo,
+        resolve,
+        ctx.inputs.stage0_iam_overrides,
+        audit_configs=iam_diff.stage0_audit_configs(ctx.repo),
     )
 
 
-def _removed_grants(ctx, bindings):
-    """Lists existing grants that the first Stage 0 apply removes."""
-    authoritative = ctx.repo.authoritative_bindings()
-    groups = _group_members(ctx)
-    removed = []
-    for binding in bindings:
-        if binding.role not in authoritative:
-            continue
-        kept = {
-            _holder_member(ctx, holder, groups)
-            for holder in authoritative[binding.role]
-        }
-        removed.extend(
-            f"{binding.role} {member}"
-            for member in binding.members
-            if member not in kept and not member.startswith("deleted:")
+def _iam_detail(found):
+    """Describes the removed grants, kept grants and audit overwrites."""
+    removed = [str(grant) for grant in found.removed]
+    if removed:
+        detail = (
+            f"The first Stage 0 apply removes {len(removed)} existing "
+            f"grants from roles it manages authoritatively: "
+            f"{_listed(removed)}."
         )
-    return sorted(removed)
+    else:
+        detail = "No existing grants would be removed by Stage 0."
+    if found.kept_foreign:
+        detail += (
+            f" It keeps {len(found.kept_foreign)} existing grants on those "
+            "roles."
+        )
+    for overwrite in found.audit_overwrites:
+        detail += (
+            f" It replaces the existing {overwrite.service} audit log "
+            "configuration."
+        )
+    return detail
+
+
+def _iam_result(ctx, org_id):
+    """Checks which existing grants and audit configs Stage 0 replaces.
+
+    The grants that `overrides.0-bootstrap.iam` and `iam_by_principals`
+    list stay, so they count as kept, not removed.
+    """
+    check_id, title = "shared.iam", "Authoritative IAM roles"
+    try:
+        live = ctx.cloud.get_org_iam_policy(org_id)
+    except api.CloudError as error:
+        return CheckResult(
+            check_id,
+            Category.SHARED_ORG,
+            title,
+            Status.WARN,
+            f"Cannot read the organization IAM policy: {error}",
+        )
+    found = iam_diff.diff(live, _iam_target(ctx))
+    return CheckResult(
+        check_id,
+        Category.SHARED_ORG,
+        title,
+        Status.WARN if found.removed or found.audit_overwrites else Status.PASS,
+        _iam_detail(found),
+        remedy=(
+            "Review these grants with the organization administrators "
+            "before Stage 0, because Terraform removes them. List the "
+            f"grants to keep under overrides.{paths.BOOTSTRAP}.iam."
+        ),
+        doc=DOC_IAM,
+    )
 
 
 def check_shared_org(ctx):
@@ -1666,40 +1712,7 @@ def check_shared_org(ctx):
             )
         )
     results.append(_org_policy_result(ctx, org_id))
-    try:
-        bindings = ctx.cloud.org_iam_bindings(org_id)
-    except api.CloudError as error:
-        results.append(
-            CheckResult(
-                "shared.iam",
-                category,
-                "Authoritative IAM roles",
-                Status.WARN,
-                f"Cannot read the organization IAM policy: {error}",
-            )
-        )
-        return results
-    removed = _removed_grants(ctx, bindings)
-    results.append(
-        CheckResult(
-            "shared.iam",
-            category,
-            "Authoritative IAM roles",
-            Status.WARN if removed else Status.PASS,
-            (
-                f"The first Stage 0 apply removes {len(removed)} existing "
-                f"grants from roles it manages authoritatively: "
-                f"{_listed(removed)}."
-            )
-            if removed
-            else "No existing grants would be removed by Stage 0.",
-            remedy=(
-                "Review these grants with the organization administrators "
-                "before Stage 0, because Terraform removes them."
-            ),
-            doc=DOC_IAM,
-        )
-    )
+    results.append(_iam_result(ctx, org_id))
     return results
 
 

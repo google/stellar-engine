@@ -1,0 +1,94 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.13.3",
+  "variables": {
+    "bootstrap_project": {
+      "value": "my-project"
+    },
+    "bootstrap_user": {
+      "value": "user@example.com"
+    },
+    "prefix": {
+      "value": "abc"
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "module.organization-logging.google_logging_organization_settings.default[0]",
+      "module_address": "module.organization-logging",
+      "mode": "managed",
+      "type": "google_logging_organization_settings",
+      "name": "default",
+      "index": 0,
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "disable_default_sink": null,
+          "kms_key_name": null,
+          "organization": "123456789012",
+          "storage_location": "us-east4"
+        },
+        "after_unknown": {
+          "id": true,
+          "kms_service_account_id": true,
+          "logging_service_account_id": true
+        },
+        "before_sensitive": false,
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "google_assured_workloads_workload.primary[0]",
+      "mode": "managed",
+      "type": "google_assured_workloads_workload",
+      "name": "primary",
+      "index": 0,
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "billing_account": "billingAccounts/000000-AAAAAA-BBBBBB",
+          "compliance_regime": "IL5",
+          "display_name": "StellarEngine-abc",
+          "enable_sovereign_controls": false,
+          "labels": {
+            "goog-terraform-provisioned": "true"
+          },
+          "location": "us-east4",
+          "organization": "123456789012",
+          "partner": null,
+          "provisioned_resources_parent": null,
+          "resource_settings": [
+            {
+              "display_name": "StellarEngine-abc",
+              "resource_id": null,
+              "resource_type": "CONSUMER_FOLDER"
+            }
+          ],
+          "violation_notifications_enabled": true
+        },
+        "after_unknown": {
+          "compliant_but_disallowed_services": true,
+          "create_time": true,
+          "id": true,
+          "name": true,
+          "resources": true
+        },
+        "before_sensitive": false,
+        "after_sensitive": {}
+      }
+    }
+  ],
+  "output_changes": {},
+  "timestamp": "2026-01-01T00:00:00Z",
+  "applyable": true,
+  "complete": false,
+  "errored": false
+}

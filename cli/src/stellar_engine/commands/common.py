@@ -40,6 +40,14 @@ from stellar_engine.wizard import prompts
 EXIT_CLOUD = 1
 EXIT_USAGE = 2
 EXIT_OVERWRITE_REFUSED = 3
+# A deploy or an IAM command stopped for the operator: a manual step, a
+# handoff to another identity, a declined question, a pending check, an
+# engine or environment check that refused the run, a held lock, or a
+# prompt that `--non-interactive` forbids. A rerun resumes there.
+EXIT_STOPPED = 4
+# A deploy step failed: Terraform failed after the bounded remedies, a
+# plan guard refused the apply, or run-state is unreadable.
+EXIT_FAILED = 5
 
 HOME_SOURCES = {
     paths.HomeSource.FLAG: "from the --home flag",

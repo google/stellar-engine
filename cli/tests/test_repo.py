@@ -20,11 +20,13 @@ a way the CLI must follow, or the documentation drifted from the code.
 
 import json
 import re
+import shutil
 import subprocess
 
 import pytest
 
 import conftest
+import helpers
 from stellar_engine import naming
 from stellar_engine import paths
 from stellar_engine import repo as repo_lib
@@ -39,11 +41,6 @@ def _ddg_prerequisites(root):
     text = (root / "docs/ddg.md").read_text(encoding="utf-8")
     start = text.index("## Prerequisites")
     return text[start : text.index("\n## ", start + 1)]
-
-
-def _slug(heading):
-    slug = re.sub(r"[^\w\- ]", "", heading.strip().lower())
-    return slug.replace(" ", "-")
 
 
 def test_find_root_from_nested_directory(repo):
@@ -329,6 +326,16 @@ def test_conditional_bindings_keep_their_holders(repo):
     )
 
 
+def test_audit_log_configs_follow_the_file(repo):
+    assert repo.audit_log_configs() == {
+        "allServices": [
+            ("ADMIN_READ", ()),
+            ("DATA_WRITE", ()),
+            ("DATA_READ", ()),
+        ]
+    }
+
+
 def _write_stage0(root, organization_iam):
     bootstrap = paths.stage_dir(root, paths.BOOTSTRAP)
     bootstrap.mkdir(parents=True)
@@ -410,14 +417,7 @@ def test_regimes_exist_in_stage0_mapping(repo):
     ),
 )
 def test_doc_links_resolve(doc):
-    path, anchor = doc.split("#")
-    text = (conftest.REPO_ROOT / path).read_text(encoding="utf-8")
-    slugs = {
-        _slug(line.lstrip("#"))
-        for line in text.splitlines()
-        if line.startswith("#")
-    }
-    assert anchor in slugs, f"{doc} has no matching heading"
+    assert helpers.doc_resolves(doc), f"{doc} has no matching heading"
 
 
 def test_stage0_projects(repo):
@@ -500,6 +500,70 @@ def test_assured_workload_ignoring_input_only_arguments(tmp_path):
         tmp_path, f"lifecycle {{\n    ignore_changes = [{fields}]\n  }}"
     ).assured_workload()
     assert workload.replaced_on_import == ()
+
+
+def test_no_compliance_folder_address(repo):
+    address = repo.no_compliance_folder_address()
+    assert address == "module.no-compliance-folder[0]"
+
+
+def test_no_compliance_folder_address_requires_the_module(tmp_path):
+    repo = _write_workload(tmp_path, "")
+    with pytest.raises(repo_lib.RepoError, match="no-compliance-folder"):
+        repo.no_compliance_folder_address()
+
+
+def _git(root, *args):
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(root),
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "commit.gpgsign=false",
+            *args,
+        ],
+        capture_output=True,
+        check=True,
+    )
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git is missing")
+def test_provenance(tmp_path):
+    root = tmp_path / "engine"
+    root.mkdir()
+    _git(root, "init", "-q")
+    (root / "main.tf").write_text("# engine\n", encoding="utf-8")
+    _git(root, "add", "main.tf")
+    _git(root, "commit", "-q", "-m", "engine")
+    head = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"],
+        capture_output=True,
+        check=True,
+        text=True,
+    ).stdout.strip()
+    repo = repo_lib.Repo(root)
+    assert repo.provenance() == repo_lib.Provenance(head, dirty=False)
+    (root / "new.tf").write_text("# untracked\n", encoding="utf-8")
+    assert repo.provenance() == repo_lib.Provenance(head, dirty=True)
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git is missing")
+def test_provenance_outside_a_checkout(tmp_path, monkeypatch):
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
+    assert repo_lib.Repo(tmp_path).provenance() is None
+
+
+def test_provenance_without_git(tmp_path, monkeypatch):
+    def missing(*args, **kwargs):
+        raise FileNotFoundError("git")
+
+    monkeypatch.setattr(repo_lib.subprocess, "run", missing)
+    assert repo_lib.Repo(tmp_path).provenance() is None
 
 
 def test_assured_workload_matches_organization_tf(repo):

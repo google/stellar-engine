@@ -76,6 +76,23 @@ def render_table(console, results):
     )
 
 
+def iam_table(title, rows):
+    """Returns a table of organization IAM changes.
+
+    Args:
+        title: The table title.
+        rows: `(change, binding, detail)` rows, as `iam_diff.rows` returns
+            them; cells print as plain text, never as Rich markup.
+    """
+    table = rich_table.Table(title=title, title_justify="left", expand=True)
+    table.add_column("Change", no_wrap=True, width=10)
+    table.add_column("Binding", ratio=2, overflow="fold")
+    table.add_column("Detail", ratio=3, overflow="fold")
+    for row in rows:
+        table.add_row(*(rich_text.Text(cell) for cell in row))
+    return table
+
+
 def render_json(results, inputs):
     """Returns the results and the inputs used as a JSON document."""
     document = {

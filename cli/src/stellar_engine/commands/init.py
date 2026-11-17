@@ -27,6 +27,7 @@ from stellar_engine.commands import common
 from stellar_engine.config import answers as answers_lib
 from stellar_engine.config import seed as seed_lib
 from stellar_engine.config import validate as validate_lib
+from stellar_engine.deploy import run_state as run_state_lib
 from stellar_engine.gcp import live
 from stellar_engine.render import imports as imports_lib
 from stellar_engine.wizard import discovery
@@ -240,6 +241,8 @@ def _save_answers(session, data, base, origin=None):
             "to start a new environment from it."
         )
     found = validate_lib.problems(answers, session.repo)
+    if base.env is not None:
+        found += _phase_problems(base, answers)
     if found:
         common.fail(common.bullets("The answers have problems:", found))
     home_obj = session.home
@@ -262,6 +265,37 @@ def _save_answers(session, data, base, origin=None):
         )
     home_obj.set_current(env.prefix)
     return answers, env
+
+
+def _phase_problems(base, answers):
+    """Refuses `stage0_phase` from final back to bootstrap after a final apply.
+
+    The guard reads `stage0.final_applied` from the run-state of the
+    environment, which `stellar deploy` sets after the final Stage 0
+    apply, so a change before that apply stays possible.
+
+    The previous answers stay unparsed, so `init` can still repair a
+    file that fails the model.
+
+    Args:
+        base: Where `init` started from, an existing environment.
+        answers: The answers about to be saved.
+
+    Returns:
+        The problems, empty when the phase does not regress.
+    """
+    previous_phase = answers_lib.plain(base.previous).get("stage0_phase")
+    found = validate_lib.phase_change_problems(
+        previous_phase, answers.stage0_phase
+    )
+    if not found:
+        return []
+    try:
+        state = run_state_lib.load(base.env)
+    except run_state_lib.RunStateError as error:
+        # Without readable history, keep the deployed phase.
+        return [*found, str(error)]
+    return found if state.stage0.final_applied else []
 
 
 def _run_wizard(data, repository, offline, sections):

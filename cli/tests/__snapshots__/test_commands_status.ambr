@@ -1,0 +1,249 @@
+# serializer version: 1
+# name: test_status_json_snapshot
+  '''
+  {
+    "prefix": "tst",
+    "header": {
+      "environment": "tst in $STELLAR_HOME/envs/tst",
+      "phase": "bootstrap",
+      "backend": "not initialized",
+      "local_state": "absent",
+      "local_backup": "absent",
+      "remote_state": "absent",
+      "engine": "current $ENGINE at 0123456789abcdef0123456789abcdef01234567; none recorded",
+      "last_run": "none",
+      "last_plan": "none",
+      "iam_review": "none",
+      "manual": "pre.super_admin, pre.access_transparency, pre.project_quota",
+      "lock": "free",
+      "service_accounts": "enabled"
+    },
+    "summary": {
+      "pass": 6,
+      "warn": 0,
+      "fail": 13,
+      "manual": 3,
+      "skip": 2
+    },
+    "steps": [
+      {
+        "check_id": "pre.apis",
+        "category": "Deploy steps",
+        "title": "pre.apis\nPrerequisites: Enable the bootstrap project APIs",
+        "status": "pass",
+        "detail": "example-bootstrap has every required API enabled.",
+        "remedy": null,
+        "doc": "docs/prerequisites.md#required-apis"
+      },
+      {
+        "check_id": "pre.iam_roles",
+        "category": "Deploy steps",
+        "title": "pre.iam_roles\nPrerequisites: Grant the deployer the organization roles",
+        "status": "pass",
+        "detail": "The deploying identity holds every role of setIAM.yaml.sample.",
+        "remedy": null,
+        "doc": "docs/prerequisites.md#initial-iam-grants"
+      },
+      {
+        "check_id": "pre.org_policies",
+        "category": "Deploy steps",
+        "title": "pre.org_policies\nPrerequisites: Record the existing organization policies",
+        "status": "pass",
+        "detail": "existing_org_policies or the Stage 0 state holds each of the 0 existing policies that Stage 0 declares.",
+        "remedy": null,
+        "doc": "docs/ddg.md#stage-0---bootstrap"
+      },
+      {
+        "check_id": "pre.preflight",
+        "category": "Deploy steps",
+        "title": "pre.preflight\nPrerequisites: Preflight checks",
+        "status": "pass",
+        "detail": "No preflight check fails.",
+        "remedy": null,
+        "doc": "docs/ddg.md#prerequisites"
+      },
+      {
+        "check_id": "pre.super_admin",
+        "category": "Deploy steps",
+        "title": "pre.super_admin\nPrerequisites: Confirm Super Admin",
+        "status": "manual",
+        "detail": "Confirm that the deploying user is a Google Workspace or Cloud Identity Super Admin at https://admin.google.com/ac/roles.",
+        "remedy": null,
+        "doc": "docs/prerequisites.md#google-cloud-organization"
+      },
+      {
+        "check_id": "pre.access_transparency",
+        "category": "Deploy steps",
+        "title": "pre.access_transparency\nPrerequisites: Confirm Access Transparency",
+        "status": "manual",
+        "detail": "Confirm that Access Transparency is enabled at https://console.cloud.google.com/iam-admin/settings.",
+        "remedy": null,
+        "doc": "docs/prerequisites.md#organization-features-and-quotas"
+      },
+      {
+        "check_id": "pre.project_quota",
+        "category": "Deploy steps",
+        "title": "pre.project_quota\nPrerequisites: Confirm the project quota",
+        "status": "manual",
+        "detail": "Confirm that the project quota allows at least 13 new projects.",
+        "remedy": null,
+        "doc": "docs/prerequisites.md#organization-features-and-quotas"
+      },
+      {
+        "check_id": "s0.render",
+        "category": "Deploy steps",
+        "title": "s0.render\nStage 0 - Bootstrap: Render the Stage 0 workspace",
+        "status": "pass",
+        "detail": "The 0-bootstrap workspace matches the answers.",
+        "remedy": null,
+        "doc": "docs/ddg.md#stage-0---bootstrap"
+      },
+      {
+        "check_id": "s0.ready",
+        "category": "Deploy steps",
+        "title": "s0.ready\nStage 0 - Bootstrap: Check that Stage 0 can apply",
+        "status": "pass",
+        "detail": "The deployer can create the workload with billing.",
+        "remedy": null,
+        "doc": "docs/ddg.md#stage-0---bootstrap"
+      },
+      {
+        "check_id": "s0.apply_workload",
+        "category": "Deploy steps",
+        "title": "s0.apply_workload\nStage 0 - Bootstrap: Targeted Assured Workloads apply",
+        "status": "fail",
+        "detail": "pending: The Stage 0 state lacks google_assured_workloads_workload.primary[0].",
+        "remedy": null,
+        "doc": "docs/ddg.md#stage-0---bootstrap"
+      },
+      {
+        "check_id": "s0.allow_bq",
+        "category": "Deploy steps",
+        "title": "s0.allow_bq\nStage 0 - Bootstrap: Allow BigQuery on the workload folder",
+        "status": "fail",
+        "detail": "pending: Cannot find the workload folder.",
+        "remedy": "Open https://console.cloud.google.com/compliance/assuredworkloads\nClick the StellarEngine-tst workload, then Review Available Updates.\nUnder Allowed Services, allow the BigQuery family of services.\nWait about 2 minutes, then rerun stellar deploy.\nFallback: scripts/allow_bq.sh",
+        "doc": "docs/ddg.md#stage-0---bootstrap"
+      },
+      {
+        "check_id": "s0.apply_bootstrap",
+        "category": "Deploy steps",
+        "title": "s0.apply_bootstrap\nStage 0 - Bootstrap: First Stage 0 apply in the bootstrap phase",
+        "status": "fail",
+        "detail": "pending: The stage has no state yet.",
+        "remedy": null,
+        "doc": "docs/ddg.md#stage-0---bootstrap"
+      },
+      {
+        "check_id": "s0.remote_providers",
+        "category": "Deploy steps",
+        "title": "s0.remote_providers\nStage 0 - Bootstrap: Use the remote providers file",
+        "status": "fail",
+        "detail": "pending: $STELLAR_HOME/envs/tst/fast-config/providers/0-bootstrap-providers.tf does not exist yet.",
+        "remedy": "The first Stage 0 apply writes it; run stellar deploy --only s0.apply_bootstrap --prefix tst.",
+        "doc": "docs/ddg.md#stage-0---bootstrap"
+      },
+      {
+        "check_id": "s0.quota_project",
+        "category": "Deploy steps",
+        "title": "s0.quota_project\nStage 0 - Bootstrap: Quota project of the user credentials",
+        "status": "fail",
+        "detail": "pending: The quota project is example-bootstrap, not tst-prod-iac-core-0.",
+        "remedy": "gcloud auth application-default set-quota-project tst-prod-iac-core-0",
+        "doc": "docs/ddg.md#additional-notes"
+      },
+      {
+        "check_id": "s0.migrate_state",
+        "category": "Deploy steps",
+        "title": "s0.migrate_state\nStage 0 - Bootstrap: Move the Stage 0 state to the bootstrap bucket",
+        "status": "fail",
+        "detail": "pending: The workspace providers file declares no remote backend yet.",
+        "remedy": "Run stellar deploy --only s0.remote_providers --prefix tst.",
+        "doc": "docs/ddg.md#stage-0---bootstrap"
+      },
+      {
+        "check_id": "s0.phase_final",
+        "category": "Deploy steps",
+        "title": "s0.phase_final\nStage 0 - Bootstrap: Switch Stage 0 to the final phase",
+        "status": "fail",
+        "detail": "pending: stage0_phase is bootstrap.",
+        "remedy": null,
+        "doc": "docs/ddg.md#stage-0---bootstrap"
+      },
+      {
+        "check_id": "s0.apply_final",
+        "category": "Deploy steps",
+        "title": "s0.apply_final\nStage 0 - Bootstrap: Final Stage 0 apply",
+        "status": "fail",
+        "detail": "pending: The stage has no state yet.",
+        "remedy": null,
+        "doc": "docs/ddg.md#stage-0---bootstrap"
+      },
+      {
+        "check_id": "s0.verify",
+        "category": "Deploy steps",
+        "title": "s0.verify\nStage 0 - Bootstrap: Stage 0 outputs and remote state",
+        "status": "fail",
+        "detail": "pending: fast-config/ lacks providers/1-resman-providers.tf, tfvars/0-globals.auto.tfvars.json, tfvars/0-bootstrap.auto.tfvars.json.",
+        "remedy": "Run the final Stage 0 apply, which writes them.",
+        "doc": "docs/ddg.md#stage-0---bootstrap"
+      },
+      {
+        "check_id": "s1.outputs",
+        "category": "Deploy steps",
+        "title": "s1.outputs\nStage 1 - Resource Management: Copy the Stage 0 outputs",
+        "status": "fail",
+        "detail": "pending: fast-config/ lacks providers/1-resman-providers.tf, tfvars/0-globals.auto.tfvars.json, tfvars/0-bootstrap.auto.tfvars.json.",
+        "remedy": null,
+        "doc": "docs/ddg.md#stage-1---resource-management"
+      },
+      {
+        "check_id": "s1.render",
+        "category": "Deploy steps",
+        "title": "s1.render\nStage 1 - Resource Management: Render the Stage 1 workspace",
+        "status": "fail",
+        "detail": "pending: The render would change terraform.tfvars, billing.tf, branch-data-platform.tf, branch-envs.tf, branch-gcve.tf, and 29 more.",
+        "remedy": "Run stellar deploy, or stellar render --stage 1.",
+        "doc": "docs/ddg.md#stage-1---resource-management"
+      },
+      {
+        "check_id": "s1.billing_grant",
+        "category": "Deploy steps",
+        "title": "s1.billing_grant\nStage 1 - Resource Management: Grant the Stage 1 account billing access",
+        "status": "skip",
+        "detail": "Applies only when billing.no_iam and billing.external_grant are both true.",
+        "remedy": null,
+        "doc": "docs/ddg.md#stage-1---resource-management"
+      },
+      {
+        "check_id": "s1.precreate_tenants",
+        "category": "Deploy steps",
+        "title": "s1.precreate_tenants\nStage 1 - Resource Management: Pre-create the tenant projects",
+        "status": "skip",
+        "detail": "Applies only when billing.no_iam is true, Stage 1 has tenants, and neither billing_override nor billing.external_grant links their projects.",
+        "remedy": null,
+        "doc": "docs/ddg.md#stage-1---resource-management"
+      },
+      {
+        "check_id": "s1.apply",
+        "category": "Deploy steps",
+        "title": "s1.apply\nStage 1 - Resource Management: Stage 1 apply",
+        "status": "fail",
+        "detail": "pending: The stage has no state yet.",
+        "remedy": null,
+        "doc": "docs/ddg.md#stage-1---resource-management"
+      },
+      {
+        "check_id": "s1.verify",
+        "category": "Deploy steps",
+        "title": "s1.verify\nStage 1 - Resource Management: Inputs of Stages 2 and 3",
+        "status": "fail",
+        "detail": "pending: fast-config/ lacks providers/2-networking-providers.tf, providers/3-security-providers.tf, tfvars/1-resman.auto.tfvars.json.",
+        "remedy": "Run the Stage 1 apply, which writes them.",
+        "doc": "docs/ddg.md#stage-1---resource-management"
+      }
+    ]
+  }
+  
+  '''
+# ---

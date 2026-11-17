@@ -14,7 +14,6 @@
 
 """The `stellar render` command, which writes the stage workspaces."""
 
-import shlex
 from typing import Annotated
 
 import typer
@@ -24,8 +23,6 @@ from stellar_engine import tools as tools_lib
 from stellar_engine.commands import common
 from stellar_engine.config import models
 from stellar_engine.render import pipeline
-
-_STAGE0_PLAN = "s0.tfplan"
 
 
 def render(
@@ -93,8 +90,7 @@ def render(
     _print_rows(env, renders.values())
     if any(result.refused for result in renders.values()):
         raise typer.Exit(common.EXIT_OVERWRITE_REFUSED)
-    for name, result in renders.items():
-        _print_next_steps(name, env.workspace(name), answers, result.sync)
+    _print_next_steps(renders, answers)
 
 
 def _print_diff(selected, answers, session, env, local_tools):
@@ -138,26 +134,31 @@ def _print_rows(env, renders):
             typer.echo(line)
 
 
-def _print_next_steps(stage, workspace, answers, sync):
-    """Prints the Terraform commands that apply a rendered stage."""
-    if sync.pending:
-        typer.echo(
-            f"{stage} waits for Stage 0 outputs: {', '.join(sync.pending)}. "
-            "Apply Stage 0, then rerun stellar render."
-        )
+def _print_next_steps(renders, answers):
+    """Points at the deploy of the first rendered stage that can run.
+
+    A stage whose Stage 0 inputs are missing says so instead.
+    """
+    ready = []
+    for name, result in renders.items():
+        if result.sync.pending:
+            typer.echo(
+                f"{name} waits for Stage 0 outputs: "
+                f"{', '.join(result.sync.pending)}. Run stellar deploy "
+                "--stage 0 first; stellar deploy --stage 1 then fetches "
+                "them and renders the stage again."
+            )
+        else:
+            ready.append(name)
+    if not ready:
         return
-    chdir = f"terraform -chdir={shlex.quote(str(workspace))}"
-    typer.echo(f"Next steps for {stage}:")
-    typer.echo(f"  {chdir} init")
-    if stage != paths.BOOTSTRAP:
-        typer.echo(f"  {chdir} plan")
-        return
-    # The phase file sets bootstrap_user, so no command passes -var.
-    typer.echo(f"  {chdir} plan -out={_STAGE0_PLAN}")
-    typer.echo(f"  {chdir} apply {_STAGE0_PLAN}")
-    if answers.stage0_phase == models.STAGE0_BOOTSTRAP:
+    typer.echo(f"Next: stellar deploy --stage {paths.stage_alias(ready[0])}")
+    if ready[0] == paths.BOOTSTRAP and (
+        answers.stage0_phase == models.STAGE0_BOOTSTRAP
+    ):
         typer.echo(
-            "After this first apply and the state migration, run stellar "
-            f"init --set stage0_phase={models.STAGE0_FINAL} and stellar "
-            "render, then run the same commands for the final apply."
+            "stellar deploy runs the first apply in the bootstrap phase, "
+            "moves the state to the bootstrap bucket, switches "
+            f"stage0_phase to {models.STAGE0_FINAL} and runs the final "
+            "apply. stellar guide --stage 0 lists the manual commands."
         )

@@ -65,7 +65,9 @@ check it performs.
 
 Enable the Stage 0 prerequisite APIs in the bootstrap project before running
 Terraform. The repository provides
-`fast/stages-aw/0-bootstrap/enableServices.sh` for this step.
+`fast/stages-aw/0-bootstrap/enableServices.sh` for this step. The `pre.apis`
+step of the `stellar deploy` command enables the same APIs, and the script
+stays the manual fallback.
 
 The script enables these services:
 
@@ -85,8 +87,11 @@ The script enables these services:
 
 Grant the deploying user the organization-level roles required for the initial
 bootstrap. The DDG documents the manual console flow, and the repository
-provides `fast/stages-aw/0-bootstrap/setIam.sh` plus
-`fast/stages-aw/0-bootstrap/setIAM.yaml.sample` for the scripted flow.
+provides `fast/stages-aw/0-bootstrap/setIAM.sh` plus
+`fast/stages-aw/0-bootstrap/setIAM.yaml.sample` for the scripted flow. The
+`pre.iam_roles` step of the `stellar deploy` command grants the missing roles
+after it saves an IAM snapshot, and the `setIAM.sh` script stays the manual
+fallback.
 
 The current bootstrap checklist includes:
 

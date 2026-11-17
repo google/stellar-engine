@@ -82,6 +82,13 @@ def test_scan_follows_the_regime(env, home, repo, cloud, regime, kept):
     assert answers_lib.load(env.answers).existing_org_policies == list(kept)
 
 
+def test_keep_scanned_replaces_the_list(repo):
+    scanned = repo.scan_org_policies(_SCANNED, "IL5")
+    data = {"existing_org_policies": ["stale.constraint"]}
+    org_policies.keep_scanned(scanned)(data)
+    assert data["existing_org_policies"] == list(_KEPT)
+
+
 def test_record_saves_the_kept_policies(env, home, repo):
     _save(env)
     env.answers.write_text(

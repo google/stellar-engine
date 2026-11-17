@@ -76,6 +76,7 @@ def test_text_with_only_org_policies():
     block = parsed["import"][0]
     assert "google_org_policy_policy.default[each.key]" in block["to"]
     assert "var.bootstrap_user == null" in block["for_each"]
+    assert "var.deploy_org_resources.org_policies" in block["for_each"]
     names = parsed["locals"][0]["stellar_existing_org_policies"]
     assert [name.strip('"') for name in names] == sorted(_POLICIES)
     assert (

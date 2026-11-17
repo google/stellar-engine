@@ -240,33 +240,59 @@ def _stage0_import_id_problems(answers, repo):
     return found
 
 
-def _workload_import_id_problems(answers, repo):
-    """Checks the import ID of a pre-created Assured Workloads workload.
+def workload_name_pattern(answers):
+    """Returns the workload name Stage 0 manages, with `<workload_id>`.
 
-    The workload `organization` and `location` force a new workload, so an
-    ID from another organization or location would make Terraform replace
-    the adopted workload.
+    Args:
+        answers: The answers that name the organization and the regime,
+            whose Assured Workloads location the name carries.
     """
+    org = answers.organization.id
+    location = derive.compliance_location(answers)
+    return f"organizations/{org}/locations/{location}/workloads/<workload_id>"
+
+
+def workload_name_problem(name, answers):
+    """Checks that a workload name fits the organization and the location.
+
+    The workload `organization` and `location` force a new workload, so a
+    name from another organization or location would make Terraform
+    replace the adopted workload.
+
+    Args:
+        name: The workload name, which is its import ID.
+        answers: The answers that name the organization and the regime.
+
+    Returns:
+        None when the name fits, else what Stage 0 manages instead.
+    """
+    match = _WORKLOAD_ID_RE.fullmatch(name)
+    location = derive.compliance_location(answers)
+    if (
+        match
+        and match.group("org") == answers.organization.id
+        and match.group("location").lower() == location.lower()
+    ):
+        return None
+    return (
+        f"Stage 0 manages the workload as {workload_name_pattern(answers)} "
+        "for organization.id and the Assured Workloads location"
+    )
+
+
+def _workload_import_id_problems(answers, repo):
+    """Checks the import ID of a pre-created Assured Workloads workload."""
     address = repo.assured_workload().address
     import_id = answers.imports.get(paths.BOOTSTRAP, {}).get(address)
     if import_id is None:
         return []
-    org = answers.organization.id
-    location = derive.compliance_location(answers)
-    expected = f"organizations/{org}/locations/{location}/workloads/"
-    match = _WORKLOAD_ID_RE.fullmatch(import_id)
-    if (
-        match
-        and match.group("org") == org
-        and match.group("location").lower() == location.lower()
-    ):
+    problem = workload_name_problem(import_id, answers)
+    if problem is None:
         return []
     return [
         f"imports.{paths.BOOTSTRAP}: {address} imports {import_id}, but "
-        f"Stage 0 manages the workload as {expected}<workload_id> for "
-        "organization.id and the Assured Workloads location, so Terraform "
-        "would replace the imported workload; use the workload name that "
-        "the Assured Workloads API returns."
+        f"{problem}, so Terraform would replace the imported workload; use "
+        "the workload name that the Assured Workloads API returns."
     ]
 
 
@@ -322,6 +348,75 @@ def _phase_problems(answers):
         f"stage0_phase to {models.STAGE0_FINAL} once the state migration is "
         "done."
     ]
+
+
+def phase_change_problems(
+    previous_phase: object, updated_phase: object
+) -> list[str]:
+    """Refuses to return `stage0_phase` from final to bootstrap.
+
+    A bootstrap apply skips the organization policies, the essential
+    contacts and the policy factory, so after a final apply it would
+    delete what that apply created. Callers run this check only when the
+    run-state records a final Stage 0 apply.
+
+    The check compares raw values, so a caller can pass the phase of an
+    answers file that no longer passes the model, which `stellar init`
+    must still be able to repair.
+
+    Args:
+        previous_phase: The `stage0_phase` value before the change, None
+            when the answers did not set it.
+        updated_phase: The `stage0_phase` value after the change.
+
+    Returns:
+        One readable problem for the regression, else nothing.
+    """
+    if (
+        previous_phase != models.STAGE0_FINAL
+        or updated_phase != models.STAGE0_BOOTSTRAP
+    ):
+        return []
+    return [
+        f"stage0_phase cannot return from {models.STAGE0_FINAL} to "
+        f"{models.STAGE0_BOOTSTRAP}: the final Stage 0 apply already ran, "
+        "and a bootstrap apply would delete the organization policies and "
+        f"essential contacts it manages; keep stage0_phase "
+        f"{models.STAGE0_FINAL}."
+    ]
+
+
+def warnings(answers: models.Answers) -> list[str]:
+    """Returns non-fatal findings about how the answers fit together.
+
+    `billing.external_grant` only matters when Stage 0 manages no billing
+    IAM and no `billing_override` links projects with the credentials that
+    run Terraform.
+
+    Args:
+        answers: Answers that already passed model validation.
+
+    Returns:
+        Readable sentences, each naming the fields.
+    """
+    billing = answers.billing
+    if not billing.external_grant:
+        return []
+    found = []
+    if not billing.no_iam:
+        found.append(
+            "billing.external_grant is set while billing.no_iam is false, "
+            "so Stage 0 and Stage 1 grant the stage service accounts "
+            "billing access themselves and the external grant is redundant."
+        )
+    if answers.billing_override is not None:
+        found.append(
+            "billing.external_grant and billing_override are both set; "
+            "billing_override links the projects with the credentials that "
+            "run Terraform, so the stage service accounts never use the "
+            "external grant."
+        )
+    return found
 
 
 def _region_problems(answers):

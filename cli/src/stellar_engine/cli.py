@@ -14,10 +14,20 @@
 
 """Command line entry point for the `stellar` command.
 
-Every command uses the same exit codes: 0 on success, 1 when preflight
-checks fail or `imports scan` cannot read Google Cloud, 2 on usage or
-validation errors, and 3 when `render` refuses to overwrite a manually
-edited file.
+Every command uses the same exit codes:
+
+- 0 on success.
+- 1 when preflight checks fail, or `imports scan` or an `iam` command
+  cannot read or write Google Cloud.
+- 2 on usage or validation errors.
+- 3 when `render` refuses to overwrite a manually edited file.
+- 4 when `deploy`, `status` or `iam restore` stops for the operator: a
+  manual step, a handoff to another identity, a check that cannot tell, a
+  declined question, a pending check, an engine or environment check that
+  refuses the run, a held deploy lock, or a question that
+  `--non-interactive` forbids. A rerun resumes there.
+- 5 when a deploy step fails: Terraform fails after the bounded remedies,
+  a plan guard refuses the apply, or run-state cannot be read.
 """
 
 from typing import Annotated
@@ -25,7 +35,9 @@ from typing import Annotated
 import typer
 
 import stellar_engine
+from stellar_engine.commands import deploy as deploy_cmd
 from stellar_engine.commands import env as env_cmd
+from stellar_engine.commands import iam as iam_cmd
 from stellar_engine.commands import imports as imports_cmd
 from stellar_engine.commands import init as init_cmd
 from stellar_engine.commands import preflight as preflight_cmd
@@ -46,6 +58,14 @@ imports_app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(imports_app, name="imports")
+iam_app = typer.Typer(
+    help=(
+        "Snapshot, compare and restore the organization IAM policy that "
+        "Stage 0 manages."
+    ),
+    no_args_is_help=True,
+)
+app.add_typer(iam_app, name="iam")
 
 
 def _version_callback(value):
@@ -77,3 +97,9 @@ env_app.command("show")(env_cmd.env_show)
 imports_app.command("scan")(imports_cmd.imports_scan)
 app.command()(render_cmd.render)
 app.command()(preflight_cmd.preflight)
+app.command()(deploy_cmd.guide)
+app.command()(deploy_cmd.status)
+app.command()(deploy_cmd.deploy)
+iam_app.command("snapshot")(iam_cmd.iam_snapshot)
+iam_app.command("diff")(iam_cmd.iam_diff)
+iam_app.command("restore")(iam_cmd.iam_restore)

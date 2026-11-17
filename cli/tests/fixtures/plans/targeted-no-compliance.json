@@ -1,0 +1,78 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.13.3",
+  "variables": {
+    "bootstrap_project": {
+      "value": "my-project"
+    },
+    "bootstrap_user": {
+      "value": "user@example.com"
+    },
+    "prefix": {
+      "value": "abc"
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "module.organization-logging.google_logging_organization_settings.default[0]",
+      "module_address": "module.organization-logging",
+      "mode": "managed",
+      "type": "google_logging_organization_settings",
+      "name": "default",
+      "index": 0,
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "disable_default_sink": null,
+          "kms_key_name": null,
+          "organization": "123456789012",
+          "storage_location": "us-east4"
+        },
+        "after_unknown": {
+          "id": true,
+          "kms_service_account_id": true,
+          "logging_service_account_id": true
+        },
+        "before_sensitive": false,
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "module.no-compliance-folder[0].google_folder.folder[0]",
+      "module_address": "module.no-compliance-folder[0]",
+      "mode": "managed",
+      "type": "google_folder",
+      "name": "folder",
+      "index": 0,
+      "provider_name": "registry.terraform.io/hashicorp/google",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "before": null,
+        "after": {
+          "deletion_protection": true,
+          "display_name": "StellarEngine-abc",
+          "parent": "organizations/123456789012"
+        },
+        "after_unknown": {
+          "create_time": true,
+          "folder_id": true,
+          "id": true,
+          "name": true
+        },
+        "before_sensitive": false,
+        "after_sensitive": {}
+      }
+    }
+  ],
+  "output_changes": {},
+  "timestamp": "2026-01-01T00:00:00Z",
+  "applyable": true,
+  "complete": false,
+  "errored": false
+}

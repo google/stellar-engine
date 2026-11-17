@@ -118,3 +118,41 @@ def test_tenant_ids():
         "tst-tn-prod-ten1-prod-0",
         "tst-prod-ten1-iac-0",
     ]
+
+
+def test_tenant_project_imports():
+    assert naming.tenant_project_imports("tst", ["Prod"], "ten1") == [
+        (
+            'module.tenant-self-iac-projects["Prod-ten1"]'
+            ".google_project.project[0]",
+            "tst-prod-ten1-iac-core-0",
+        ),
+        (
+            'module.tenant-self-main-projects["Prod-ten1"]'
+            ".google_project.project[0]",
+            "tst-prod-ten1-main-0",
+        ),
+    ]
+
+
+def test_project_addresses_match_the_stage_code(repo):
+    # Every project module call ends its address in the same resource.
+    assert all(
+        project.address.endswith(naming.PROJECT_ADDRESS_SUFFIX)
+        for project in repo.stage0_projects()
+    )
+    tenants = (
+        repo.root / "fast/stages-aw/1-resman/branch-tenants.tf"
+    ).read_text(encoding="utf-8")
+    for module in naming.TENANT_PROJECT_MODULES:
+        assert f'module "{module}" {{' in tenants
+
+
+def test_principal():
+    assert (
+        naming.principal(naming.USER, "a@example.com") == "user:a@example.com"
+    )
+    assert (
+        naming.principal(naming.DOMAIN, "example.com") == "domain:example.com"
+    )
+    assert naming.automation_project_id("tst") == "tst-prod-iac-core-0"

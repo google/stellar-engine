@@ -34,6 +34,7 @@ from stellar_engine import repo as repo_lib
 from stellar_engine import tools as tools_lib
 from stellar_engine import workspace as workspace_lib
 from stellar_engine.config import models
+from stellar_engine.config import validate
 from stellar_engine.render import imports as imports_lib
 from stellar_engine.render import phase as phase_lib
 from stellar_engine.render import stages as stages_lib
@@ -131,6 +132,8 @@ def warnings(
     answers: models.Answers,
     repo: repo_lib.Repo,
     env: paths.EnvPaths,
+    *,
+    phase: bool = True,
 ) -> list[str]:
     """Returns the non-fatal findings about the stages to render.
 
@@ -139,10 +142,14 @@ def warnings(
         answers: The environment answers.
         repo: The engine checkout.
         env: The environment, whose Stage 0 workspace shows the phase.
+        phase: Whether to include `phase.warnings`. The deploy leaves it
+            out, because its own providers swap causes that warning.
 
     Returns:
         Readable sentences. For each stage, those of `imports.warnings`,
-        then `stages.warnings`, then `phase.warnings` for Stage 0.
+        then `stages.warnings`, then `phase.warnings` for Stage 0 or
+        `validate.warnings` for Stage 1, whose service accounts the
+        billing answers concern.
 
     Raises:
         ValueError: If a stage name is unknown.
@@ -152,7 +159,10 @@ def warnings(
         found += imports_lib.warnings(answers, stage, repo)
         found += stages_lib.warnings(answers, stage, repo)
         if stage == paths.BOOTSTRAP:
-            found += phase_lib.warnings(env.workspace(stage), answers)
+            if phase:
+                found += phase_lib.warnings(env.workspace(stage), answers)
+        elif stage == paths.RESMAN:
+            found += validate.warnings(answers)
     return found
 
 
@@ -194,7 +204,8 @@ def render_stage(
     An edited tfvars file that `options` does not allow to replace stays
     in place, `options.error` reports it, and the render still writes the
     import and phase files. `options.warn` reports each real file that
-    shadows an engine file right after the sync.
+    shadows an engine file and each module manifest that the sync moved
+    under `plans/`, right after the sync.
 
     Args:
         stage: Stage name or alias.
@@ -216,11 +227,17 @@ def render_stage(
         ValueError: If the stage name is unknown.
     """
     stage = paths.resolve_stage(stage)
-    sync = workspace_lib.sync(env, repo.root, stage)
+    sync = workspace_lib.sync(env, repo.root, stage, now=options.now)
     for conflict in sync.conflicts:
         options.warn(
             f"{sync.path / conflict} is a real file that shadows the "
             "engine's file of the same name."
+        )
+    for name, backup in zip(sync.reset, sync.backups, strict=True):
+        options.warn(
+            f"{sync.path / name} recorded the modules of another engine "
+            f"checkout, so the render moved it to {backup}. The next "
+            "terraform init records the modules of this engine."
         )
     if stage == paths.BOOTSTRAP:
         # Refuse a foreign phase file before any write, so a refused render
