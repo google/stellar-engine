@@ -384,6 +384,55 @@ CFF_SYNC_PY_FORMAT="bash ${TMP}/fake-format.sh" "${BASH}" \
   >/dev/null 2>&1 || status=$?
 assert_equals "refuses to run on an uncommitted tracked path" "1" "${status}"
 
+# 7. Rejects symlinked parent directories and symlinked versions.tf.
+FORK="${TMP}/fork-symlinks"
+new_fork "${FORK}"
+OUTSIDE="${TMP}/outside"
+mkdir -p "${OUTSIDE}"
+printf 'secret\n' >"${OUTSIDE}/target.txt"
+(
+  cd "${FORK}"
+  mkdir -p modules/alpha/sub
+  rm -rf modules/alpha/sub
+  ln -s "${OUTSIDE}" modules/alpha/sub
+  git add -A && git commit -q -m "symlink parent"
+)
+UP_SYM="${TMP}/up-sym"
+git clone -q "${UP}" "${UP_SYM}"
+(
+  cd "${UP_SYM}"
+  git checkout -q -B sym v1.0.0
+  mkdir -p modules/alpha/sub
+  printf 'escaped\n' >modules/alpha/sub/pwn.tf
+  versions_tf alpha v3.0.0 6 >modules/alpha/versions.tf
+  git add -A && git commit -q -m v3 && git tag v3.0.0
+)
+status=0
+"${BASH}" "${FORK}/tools/sync-from-cff.sh" --upstream "file://${UP_SYM}" \
+  --to v3.0.0 --modules alpha >"${TMP}/out-sym.txt" 2>&1 || status=$?
+assert_equals "rejects writing through a symlinked parent directory" \
+  "1" "${status}"
+assert_true "does not create files outside the repository" \
+  '[[ ! -e "${OUTSIDE}/pwn.tf" ]]'
+
+FORK="${TMP}/fork-sym-versions"
+new_fork "${FORK}"
+UP_VER="${TMP}/up-ver"
+git clone -q "${UP}" "${UP_VER}"
+(
+  cd "${UP_VER}"
+  git checkout -q -B ver v1.0.0
+  rm -f modules/alpha/versions.tf
+  ln -s "${OUTSIDE}/target.txt" modules/alpha/versions.tf
+  git add -A && git commit -q -m v3 && git tag v3.0.0
+)
+status=0
+"${BASH}" "${FORK}/tools/sync-from-cff.sh" --upstream "file://${UP_VER}" \
+  --to v3.0.0 --modules alpha >"${TMP}/out-ver.txt" 2>&1 || status=$?
+assert_equals "rejects editing a symlinked versions.tf" "1" "${status}"
+assert_true "keeps symlinked versions.tf from copying external content" \
+  '! grep -q "secret" "${FORK}/modules/alpha/versions.tf" || [[ -L "${FORK}/modules/alpha/versions.tf" ]]'
+
 echo ""
 echo "Summary: ${TEST_COUNT} tests run, ${FAIL_COUNT} failures."
 if [[ ${FAIL_COUNT} -gt 0 ]]; then

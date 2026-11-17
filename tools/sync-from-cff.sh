@@ -174,10 +174,30 @@ local_entry() {
   fi
 }
 
+# check_safe_path PATH rejects paths outside the repo root or under a symlinked
+# directory component so sync writes never traverse through a symlink.
+check_safe_path() {
+  local rel="$1" cur="" part
+  [[ -n "${rel}" && "${rel}" != /* && "/${rel}/" != *"/../"* ]] ||
+    die "unsafe sync path: ${rel}"
+  local dir="${rel%/*}"
+  if [[ "${dir}" != "${rel}" ]]; then
+    local parts=()
+    IFS='/' read -r -a parts <<<"${dir}"
+    for part in "${parts[@]}"; do
+      [[ -n "${part}" ]] || continue
+      cur="${cur:+${cur}/}${part}"
+      [[ ! -L "${cur}" ]] ||
+        die "refusing to traverse symlink directory: ${cur}"
+    done
+  fi
+}
+
 # write_entry ENTRY PATH replaces PATH with the blob of ENTRY, as a link or a
 # file. Removing PATH first avoids writing through an existing link.
 write_entry() {
   local kind="${1%%:*}" id="${1#*:}"
+  check_safe_path "$2"
   mkdir -p "$(dirname "$2")"
   rm -f "$2"
   if [[ "${kind}" == "L" ]]; then
@@ -299,7 +319,10 @@ sync_file() {
   if [[ "${o}" == "${b}" ]]; then
     if [[ -z "${t}" ]]; then
       record "${dir}" "deleted" "${local_path}"
-      [[ ${DRY_RUN} -eq 1 ]] || rm -f "${local_path}"
+      if [[ ${DRY_RUN} -eq 0 ]]; then
+        check_safe_path "${local_path}"
+        rm -f "${local_path}"
+      fi
     else
       if [[ -z "${b}" ]]; then
         record "${dir}" "added" "${local_path}"
@@ -324,13 +347,17 @@ sync_file() {
     status=$?
   if [[ ${status} -eq 0 ]]; then
     record "${dir}" "merged" "${local_path}"
-    [[ ${DRY_RUN} -eq 1 ]] || cp "${WORK}/ours" "${local_path}"
+    if [[ ${DRY_RUN} -eq 0 ]]; then
+      check_safe_path "${local_path}"
+      cp "${WORK}/ours" "${local_path}"
+    fi
   elif [[ ${status} -gt 127 ]]; then
     # git merge-file fails this way on binary files.
     record "${dir}" "conflict-kept" "${local_path}"
   else
     record "${dir}" "conflict" "${local_path}"
     if [[ ${DRY_RUN} -eq 0 && "${CONFLICT_STYLE}" == "markers" ]]; then
+      check_safe_path "${local_path}"
       cp "${WORK}/ours" "${local_path}"
     fi
   fi
@@ -374,6 +401,8 @@ while IFS=$'\t' read -r dir root up base source; do
     record "${dir}" "base-kept" "${root}"
     # An updated versions.tf already names the target, so restore the base.
     if [[ ${DRY_RUN} -eq 0 && "${source}" == "versions" ]]; then
+      [[ ! -L "${root}/versions.tf" ]] ||
+        die "refusing to edit symlinked ${root}/versions.tf"
       sed -E -i.bak "s#(cloud-foundation-fabric/modules/[A-Za-z0-9_.-]+:)v[0-9]+\.[0-9]+\.[0-9]+-tf#\1${base}-tf#" \
         "${root}/versions.tf"
       rm -f "${root}/versions.tf.bak"
@@ -382,6 +411,8 @@ while IFS=$'\t' read -r dir root up base source; do
     # Record the target release as the new base, also when the module kept a
     # locally modified versions.tf.
     if [[ "${source}" == "versions" ]]; then
+      [[ ! -L "${root}/versions.tf" ]] ||
+        die "refusing to edit symlinked ${root}/versions.tf"
       sed -E -i.bak "s#(cloud-foundation-fabric/modules/[A-Za-z0-9_.-]+:)v[0-9]+\.[0-9]+\.[0-9]+-tf#\1${TO}-tf#" \
         "${root}/versions.tf"
       rm -f "${root}/versions.tf.bak"
