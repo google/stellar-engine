@@ -96,7 +96,7 @@ module "automation-tf-cicd-repo" {
   }
 }
 
-resource "google_cloudbuild_trigger" "automation-tf-cicd-trigger" {
+resource "google_cloudbuild_trigger" "automation_tf_cicd_trigger" {
   for_each = {
     for k, v in local.cicd_repositories : k => v if v.type == "ssm"
   }
