@@ -4,8 +4,8 @@ Cloud Foundation Fabric Detailed Deployment Guide
 
 | **Created:**             | June 04, 2023 |
 | :----------------------- | :------------ |
-| **Updated:**             | October 31, 2026 |
-| **Version:**             | v5.2.0        |
+| **Updated:**             | November 10, 2026 |
+| **Version:**             | v6.0.0        |
 | **Most recent changes:** | [CHANGELOG.md](../CHANGELOG.md) |
 
 ##
@@ -75,7 +75,7 @@ To make using this deployment guide easier, the variables described below need t
 | **Prefix**               | `prefix`                     | This is the prefix appended to the beginning of projects and resources deployed selected by your or your organization. **Full project names must be globally unique and the prefix must use a maximum of 7 characters**. A 409 error will occur if a globally unique project name is not created. |
 | **Region**               | `assured_workloads.location` | This is the (US) based region that we are deploying resources into (Dual regions like “NAM9” or continents are currently not supported)                                                                                                                                                     |
 | **Tenant Name**          | `tenants` (Stage 1)          | The name for the first tenant that will be deployed via this document. **Full project names must be globally unique and the tenant-name must use a maximum of 6 characters**.                                                                                                               |
-| **KMS Protection Level** | `kms_protection_level`       | The Cloud KMS protection level required across every FAST stage (`0-bootstrap`, `1-resman`, `2-networking-a-fedramp`, `3-security`). Use `"HSM"` for FedRAMP High and IL5 compliance; `"SOFTWARE"` is permitted for FedRAMP Moderate.                                                      |
+| **KMS Protection Level** | `kms_protection_level`       | The Cloud KMS protection level for the keys the FAST stages create (`0-bootstrap`, `1-resman`, `3-security`). Use `"HSM"` for FedRAMP High and IL5 compliance; `"SOFTWARE"` is permitted for FedRAMP Moderate.                                                      |
 
 
 ## Prerequisites
@@ -222,7 +222,7 @@ billing_account = {
 regions = {
  primary = "`<region>`"
 }
-# KMS protection level: "HSM" for FedRAMP High and IL5 compliance; "SOFTWARE" permitted for FedRAMP Moderate. Required across all stages.
+# KMS protection level: "HSM" for FedRAMP High and IL5 compliance; "SOFTWARE" permitted for FedRAMP Moderate. Required by every stage that creates keys.
 kms_protection_level = "HSM"
 # use `gcloud organizations list`
 organization = {
