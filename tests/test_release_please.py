@@ -283,6 +283,29 @@ class TestReleasePlease(unittest.TestCase):
             "",
         )
 
+    def test_fallback_sub_bullet_handles_unclosed_comment_without_backtracking(
+        self,
+    ):
+        override = (
+            "<!-- release-note:    Hardens redirect checks.   -->\n"
+            "## Description\nBody."
+        )
+        trailer = "fix(tools): harden checks\n\nRelease-Note: Fixes #436."
+        unclosed = "<!-- release-note:" + (" " * 50000)
+
+        self.assertEqual(
+            release_please.fallback_sub_bullet(override, ""),
+            "Hardens redirect checks",
+        )
+        self.assertEqual(
+            release_please.fallback_sub_bullet("", trailer),
+            "Fixes #436",
+        )
+        self.assertEqual(
+            release_please.fallback_sub_bullet(unclosed, ""),
+            "",
+        )
+
     def test_fallback_sub_bullet_joins_wrapped_paragraphs_and_splits_acronyms(
         self,
     ):

@@ -163,6 +163,19 @@ assert_true "commits a new file of a tracked path" \
 assert_true "names modules and tooling in the title" \
   'grep "^pr create" "${GH_LOG}" | grep -q "modules and tooling to v2.0.0"'
 
+# 6. Qualifies --head with the repository owner when GITHUB_REPOSITORY is set.
+git -C "${WORK}" checkout -q -B main origin/main
+printf 'v4\n' >"${WORK}/modules/alpha/main.tf"
+: >"${GH_LOG}"
+(
+  cd "${WORK}"
+  GITHUB_REPOSITORY=google/stellar-engine SYNC_BRANCH=chore/cff-sync-owner \
+    TARGET=v2.0.0 CONFLICTS=0 PROVIDER_MAJOR_CHANGE=false \
+    REPORT="${TMP}/report.md" bash tools/cff-sync-pr.sh >/dev/null 2>&1
+)
+assert_true "prefixes --head with the repository owner" \
+  'grep "^pr list" "${GH_LOG}" | grep -q -- "--head google:chore/cff-sync-owner"'
+
 echo ""
 echo "Summary: ${TEST_COUNT} tests run, ${FAIL_COUNT} failures."
 if [[ ${FAIL_COUNT} -gt 0 ]]; then
