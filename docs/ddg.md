@@ -138,7 +138,7 @@ permissions.**
     - Note: If you are starting with a brand new organization, the above
       permissions (excluding billing account admin and super admin) can be
       automated by running the following script, which adds any of these roles
-            the user does not already hold and keeps every existing binding:
+      the user does not already hold and keeps every existing binding:
       - **./setIAM.sh \<your-email-address\> `<organization_id>`** from within the fast/stages-aw/0-bootstrap folder
 
 - Navigate to the [Super Admin](https://admin.google.com/ac/roles) roles
