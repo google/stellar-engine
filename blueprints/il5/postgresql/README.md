@@ -29,8 +29,8 @@ The service account or identity deploying this blueprint requires the following 
 - **KMS Key (`kms_key_name`):**
   - `roles/cloudkms.admin`, or a custom role with `cloudkms.cryptoKeys.getIamPolicy` and
     `cloudkms.cryptoKeys.setIamPolicy`, on the key only: the blueprint grants the Cloud SQL
-        service agent `roles/cloudkms.cryptoKeyEncrypterDecrypter` on it (`sql_sa` in `main.tf`).
-    
+    service agent `roles/cloudkms.cryptoKeyEncrypterDecrypter` on it (`sql_sa` in `main.tf`).
+
 ### Impersonated Deployment Configuration
 
 When deploying through service account impersonation, the Terraform `google` and `google-beta` providers must specify `user_project_override = true` and `billing_project` set to the workload project. Without this setting, provider-level quota and API enablement checks resolve against the deploying service account's project rather than the target workload project, leading to false `SERVICE_DISABLED` errors.
