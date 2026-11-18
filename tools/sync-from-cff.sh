@@ -96,7 +96,7 @@ TRACKED_PATHS=()
 if [[ -f "${BASES_FILE}" ]]; then
   while read -r path; do
     TRACKED_PATHS+=("${path}")
-  done < <(awk '!/^#/ && $1 ~ /\// { print $1 }' "${BASES_FILE}")
+  done < <(awk '!/^#/ && $1 ~ /\// && $1 !~ /^adrs(\/|$)/ && $2 !~ /^adrs(\/|$)/ { print $1 }' "${BASES_FILE}")
 fi
 
 if [[ ${DRY_RUN} -eq 0 && -n "$(git status --porcelain -- modules tools/cff-sync.bases ${TRACKED_PATHS[@]+"${TRACKED_PATHS[@]}"})" ]]; then
@@ -267,7 +267,7 @@ for path in modules/*/; do
   fi
 done
 if [[ -f "${BASES_FILE}" ]]; then
-  awk '!/^#/ && $1 ~ /\// { print $1 "\t" $1 "\t" $2 "\t" $3 "\tpaths" }' \
+  awk '!/^#/ && $1 ~ /\// && $1 !~ /^adrs(\/|$)/ && $2 !~ /^adrs(\/|$)/ { print $1 "\t" $1 "\t" $2 "\t" $3 "\tpaths" }' \
     "${BASES_FILE}" | while IFS=$'\t' read -r name rest; do
     if [[ -z "${ONLY_MODULES}" || ",${ONLY_MODULES}," == *",${name},"* ]]; then
       printf '%s\t%s\n' "${name}" "${rest}" >>"${MODULES}"
@@ -439,7 +439,7 @@ provider_major() {
 
 # Lists relative module sources under modules/ that point to a missing
 # directory, which happens when upstream starts calling a module that
-# Stellar Engine does not vendor yet.
+# Stellar Engine does not sync yet.
 MISSING="${WORK}/missing.txt"
 : >"${MISSING}"
 if [[ ${DRY_RUN} -eq 0 ]]; then
@@ -544,7 +544,7 @@ write_report() {
   echo
   up_names="$(awk -F '\t' '$5 != "paths" { sub(/^modules\//, "", $3); print $3 }' \
     "${MODULES}" | sort -u)"
-  echo "### Upstream modules not vendored"
+  echo "### Upstream modules not synced"
   echo
   git ls-tree --name-only "${TARGET}" modules/ | sed 's|^modules/||' |
     while read -r name; do
@@ -556,7 +556,7 @@ write_report() {
   if [[ -s "${MISSING}" ]]; then
     echo "### Missing module dependencies"
     echo
-    echo "These synced files call a module directory that does not exist. Vendor"
+    echo "These synced files call a module directory that does not exist. Add"
     echo "the upstream module or adapt the caller."
     echo
     sed "s|^|- |" "${MISSING}"
@@ -573,7 +573,7 @@ write_report() {
   echo "### Breaking upstream changes"
   echo
   echo "These entries come from the upstream CHANGELOG.md files for the releases"
-  echo "after ${OLDEST_BASE}, limited to the vendored modules and repository-wide"
+  echo "after ${OLDEST_BASE}, limited to the synced modules and repository-wide"
   echo "changes. Upstream comparison: ${COMPARE_URL}/${OLDEST_BASE}...${TO}"
   echo
   breaking_changes | while IFS=$'\t' read -r release entry; do

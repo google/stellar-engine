@@ -91,12 +91,14 @@ def check_link(link, readme_path, external):
                 link_valid = False
     # The link is private
     else:
+        resolved_base = BASEDIR.resolve()
         if url.path.startswith("/"):
             target = (BASEDIR / url.path.lstrip("/")).resolve()
         else:
             target = (readme_path.parent / url.path).resolve()
-        link_valid = (
-            target.is_relative_to(BASEDIR.resolve()) and target.exists()
+        adrs_dir = resolved_base / "adrs"
+        link_valid = target.is_relative_to(resolved_base) and (
+            target.is_relative_to(adrs_dir) or target.exists()
         )
     return LINK(link.dest, link_valid)
 
