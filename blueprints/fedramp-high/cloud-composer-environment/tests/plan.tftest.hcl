@@ -15,6 +15,16 @@
 mock_provider "google" {}
 mock_provider "google-beta" {}
 
+# The mock provider returns a random string for the service agent, which the
+# provider rejects as an IAM member, so the lookup gets a well-formed value.
+override_data {
+  target = data.google_storage_project_service_account.gcs
+  values = {
+    email_address = "service-123456789012@gs-project-accounts.iam.gserviceaccount.com"
+    member        = "serviceAccount:service-123456789012@gs-project-accounts.iam.gserviceaccount.com"
+  }
+}
+
 variables {
   main_project_id    = "test-composer-project"
   network_project_id = "test-net-host-project"
@@ -67,6 +77,11 @@ run "plan_with_cmek" {
     condition     = google_kms_crypto_key_iam_member.storage_agent_cmek[0].crypto_key_id == var.kms_key_name
     error_message = "Expected the Cloud Storage service agent grant on var.kms_key_name."
   }
+
+  assert {
+    condition     = google_kms_crypto_key_iam_member.storage_agent_cmek[0].member == "serviceAccount:service-123456789012@gs-project-accounts.iam.gserviceaccount.com"
+    error_message = "Expected the key grant to go to the Cloud Storage service agent."
+  }
 }
 
 run "plan_without_cmek" {
@@ -74,6 +89,11 @@ run "plan_without_cmek" {
 
   variables {
     kms_key_name = null
+  }
+
+  assert {
+    condition     = length(google_composer_environment.main.config[0].encryption_config) == 0
+    error_message = "Expected no encryption configuration when kms_key_name is null."
   }
 
   assert {
