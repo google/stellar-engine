@@ -40,6 +40,19 @@ variable "dataflow_name" {
   type        = string
 }
 
+variable "dataflow_worker_sa_id" {
+  description = "Optional account ID for the Dataflow worker service account (6 to 30 lowercase alphanumeric characters or hyphens). Defaults to main_project_id when unset."
+  type        = string
+  default     = null
+  validation {
+    condition = (
+      var.dataflow_worker_sa_id == null ||
+      can(regex("^[a-z]([-a-z0-9]{4,28}[a-z0-9])$", var.dataflow_worker_sa_id))
+    )
+    error_message = "dataflow_worker_sa_id must be 6 to 30 lowercase letters, digits, or hyphens, starting with a letter and ending with a letter or digit."
+  }
+}
+
 variable "firewall_name" {
   description = "The firewall name."
   type        = string
@@ -104,5 +117,5 @@ variable "template_gcs_path" {
 variable "zone" {
   description = "This is the name of the zone."
   type        = string
-  default     = "us-east4"
+  default     = "us-east4-a"
 }
