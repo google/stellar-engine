@@ -283,17 +283,18 @@ variable "tenant_accounts" {
 }
 
 variable "vpc_sc" {
-  description = "VPC SC configuration."
+  description = "VPC SC configuration. Setting `perimeter_default.dry_run_keep_enforced` to true enforces the perimeter while `perimeter_default.dry_run` is true."
   type = object({
     access_levels    = optional(map(any), {})
     egress_policies  = optional(map(any), {})
     ingress_policies = optional(map(any), {})
     perimeter_default = optional(object({
-      access_levels    = optional(list(string), [])
-      dry_run          = optional(bool, false)
-      egress_policies  = optional(list(string), [])
-      ingress_policies = optional(list(string), [])
-      resources        = optional(list(string), [])
+      access_levels         = optional(list(string), [])
+      dry_run               = optional(bool, false)
+      dry_run_keep_enforced = optional(bool, false)
+      egress_policies       = optional(list(string), [])
+      ingress_policies      = optional(list(string), [])
+      resources             = optional(list(string), [])
     }))
     resource_discovery = optional(object({
       enabled          = optional(bool, true)

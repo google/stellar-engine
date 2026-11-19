@@ -149,8 +149,13 @@ module "vpc-sc" {
       spec = (
         var.vpc_sc.perimeter_default.dry_run ? local.vpc_sc_perimeter : null
       )
+      # dry run drops the enforced configuration unless the operator opts in
+      # to keep it, so a dry run never starts enforcing by default
       status = (
-        !var.vpc_sc.perimeter_default.dry_run ? local.vpc_sc_perimeter : null
+        !var.vpc_sc.perimeter_default.dry_run ||
+        var.vpc_sc.perimeter_default.dry_run_keep_enforced
+        ? local.vpc_sc_perimeter
+        : null
       )
       use_explicit_dry_run_spec = var.vpc_sc.perimeter_default.dry_run
     }

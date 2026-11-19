@@ -268,6 +268,8 @@ A few things to note on the default perimeter
 
 - writer identities for sinks defined in the bootstrap stage are passed through via output files, and automatically included in an ingress policy
 - the perimeter is brought up in enforced mode by default
+- setting `dry_run` to `true` configures only the dry-run spec and removes the enforced configuration, so nothing is enforced
+- setting `dry_run_keep_enforced` to `true` together with `dry_run` enforces the perimeter, by applying the same configuration to both the enforced status and the dry-run spec, and the attribute has no effect when `dry_run` is `false`
 - Google Cloud Project discovery is turned on by default and includes all Google Cloud Projects in the Google Cloud Organization
 - the stage resolves access level names in `perimeter_default` and in policies defined through the `vpc_sc` variable, while ingress and egress policy YAML files reference access levels as `$access_levels:<name>`
 
@@ -332,7 +334,7 @@ Some references that might be useful in setting up this stage
 | [logging](variables.tf#L207) | Log writer identities for organization / folders. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [outputs_location](variables.tf#L227) | Path where providers, tfvars files, and lists for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
 | [regime_mapping](variables.tf#L243) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
-| [vpc_sc](variables.tf#L285) | VPC SC configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [vpc_sc](variables.tf#L285) | VPC SC configuration. Setting `perimeter_default.dry_run_keep_enforced` to true enforces the perimeter while `perimeter_default.dry_run` is true. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 
