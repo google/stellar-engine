@@ -150,22 +150,38 @@ def _first_sentence(text):
     return sentence.rstrip(" .")
 
 
+def _extract_comment_note(source, tag):
+    """Extracts <!-- <tag>: ... --> in linear time without backtracking."""
+    pattern = re.compile(rf"(?i)<!--\s*{tag}:")
+    pos = 0
+    while match := pattern.search(source, pos):
+        end = source.find("-->", match.end())
+        if end == -1:
+            return ""
+        note = " ".join(source[match.end() : end].split()).rstrip(" .")
+        if note:
+            return note
+        pos = end + 3
+    return ""
+
+
 def fallback_sub_bullet(pr_body, message, breaking=False):
     """Extracts a deterministic one-line release summary from PR or commit."""
-    note_patterns = [
-        r"(?im)(?:<!--\s*release-note:\s*(.*?)\s*-->|^Release-Note:\s*(.+)$)"
-    ]
+    sources = (pr_body or "", message or "")
     if breaking:
-        note_patterns.insert(0, r"(?is)<!--\s*breaking-note:\s*(.*?)\s*-->")
-    for pattern in note_patterns:
-        for source in (pr_body or "", message or ""):
-            match = re.search(pattern, source)
-            if match:
-                note = " ".join(
-                    next((g for g in match.groups() if g), "").split()
-                ).rstrip(" .")
-                if note:
-                    return note
+        for source in sources:
+            note = _extract_comment_note(source, "breaking-note")
+            if note:
+                return note
+    for source in sources:
+        note = _extract_comment_note(source, "release-note")
+        if note:
+            return note
+        match = re.search(r"(?im)^Release-Note:[ \t]*([^\r\n]+)$", source)
+        if match:
+            note = " ".join(match.group(1).split()).rstrip(" .")
+            if note:
+                return note
 
     desc = (pr_body or "").split("## Description", 1)[-1].split("\n## ", 1)[0]
     desc = re.sub(r"<!--[\s\S]*?-->", "", desc)

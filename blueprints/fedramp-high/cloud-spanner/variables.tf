@@ -58,6 +58,22 @@ variable "instance_name" {
   type        = string
 }
 
+variable "kms_key_name" {
+  description = "Cloud KMS crypto key that encrypts the Spanner database, in the format projects/../locations/../keyRings/../cryptoKeys/... The key location must match the location of the instance configuration, such as us-east4 for regional-us-east4. The blueprint passes a single key, so instance configurations that need one key per replica region are not supported. Leave null to use Google-managed encryption. Setting or changing the key on an existing database forces replacement of the database, which the database deletion protection blocks."
+  type        = string
+  default     = null
+  validation {
+    condition = (
+      var.kms_key_name == null ||
+      can(regex(
+        "^projects/[^/]+/locations/[^/]+/keyRings/[^/]+/cryptoKeys/[A-Za-z0-9_-]+$",
+        var.kms_key_name
+      ))
+    )
+    error_message = "kms_key_name must be null or use the format projects/../locations/../keyRings/../cryptoKeys/..."
+  }
+}
+
 variable "main_project_id" {
   description = "Project to deploy Cloud Spanner instance."
   type        = string

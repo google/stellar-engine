@@ -19,8 +19,6 @@
 #### You may still need to change the name of custom org policies in the yaml files for a succesful deployment
 #### Use this script at your own risk. The author assumes no responsibility for any damages or losses incurred through its use.
 
-terraform import "module.organization.google_org_policy_policy.default[\"{}\"]"
-
 HOST_PROJECT="${PREFIX}-net-hub-host"
 HOST_PROJECT_MODULE="module.hub-project"
 IS_IL5=false

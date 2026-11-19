@@ -52,7 +52,8 @@ _WORKLOAD_ID_RE = re.compile(
 )
 
 _IDENT = r"[A-Za-z_][A-Za-z0-9_-]*"
-_INDEX = r'\[(?:[0-9]+|"(?:[^"\\]|\\.)*")\]'
+_STRING_CHAR = r'(?:(?![$%]\{)[^"\\\x00-\x1f\x7f]|\\[\\"nrt])'
+_INDEX = rf'\[(?:[0-9]+|"{_STRING_CHAR}*")\]'
 _MODULE_SEGMENT_RE = re.compile(rf"module\.{_IDENT}(?:{_INDEX})?\.")
 _RESOURCE_RE = re.compile(
     rf"(?P<type>{_IDENT})\.(?P<name>{_IDENT})(?:{_INDEX})?"

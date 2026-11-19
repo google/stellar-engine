@@ -262,6 +262,10 @@ variable "service_accounts" {
   type = object({
     data-platform-dev    = string
     data-platform-prod   = string
+    gcve-dev             = optional(string)
+    gcve-prod            = optional(string)
+    gke-dev              = optional(string)
+    gke-prod             = optional(string)
     project-factory-dev  = string
     project-factory-prod = string
   })
@@ -279,14 +283,21 @@ variable "tenant_accounts" {
 }
 
 variable "vpc_sc" {
-  description = "VPC SC configuration."
+  description = "VPC SC configuration. Setting `perimeter_default.dry_run_spec` keeps the perimeter enforced and trials the overridden attributes in the dry-run spec."
   type = object({
     access_levels    = optional(map(any), {})
     egress_policies  = optional(map(any), {})
     ingress_policies = optional(map(any), {})
     perimeter_default = optional(object({
-      access_levels    = optional(list(string), [])
-      dry_run          = optional(bool, false)
+      access_levels = optional(list(string), [])
+      dry_run       = optional(bool, false)
+      dry_run_spec = optional(object({
+        access_levels       = optional(list(string))
+        egress_policies     = optional(list(string))
+        ingress_policies    = optional(list(string))
+        resources           = optional(list(string))
+        restricted_services = optional(list(string))
+      }))
       egress_policies  = optional(list(string), [])
       ingress_policies = optional(list(string), [])
       resources        = optional(list(string), [])
@@ -300,4 +311,21 @@ variable "vpc_sc" {
   })
   default  = {}
   nullable = false
+  validation {
+    condition = (
+      try(var.vpc_sc.perimeter_default.dry_run_spec, null) == null ||
+      try(var.vpc_sc.perimeter_default.dry_run, false) != true
+    )
+    error_message = "Set either `perimeter_default.dry_run` to true, which enforces nothing, or `perimeter_default.dry_run_spec`, which keeps the perimeter enforced, not both."
+  }
+  validation {
+    condition = (
+      try(var.vpc_sc.perimeter_default.dry_run_spec, null) == null ||
+      anytrue([
+        for v in try(values(var.vpc_sc.perimeter_default.dry_run_spec), []) :
+        v != null
+      ])
+    )
+    error_message = "Set at least one attribute in `perimeter_default.dry_run_spec`, or omit it."
+  }
 }

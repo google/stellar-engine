@@ -34,6 +34,7 @@ The following diagram illustrates the high-level design of created resources and
 - [Customizations](#customizations)
   - [KMS keys](#kms-keys)
   - [VPC Service Controls configuration](#vpc-service-controls-configuration)
+    - [Trial a candidate configuration](#trial-a-candidate-configuration)
 - [Notes](#notes)
 - [Variables](#variables)
 - [Outputs](#outputs)
@@ -175,7 +176,13 @@ Each stage of this deployment uses service accounts with admin roles. Once the d
 You can also run this script with the following flags
 
 - enable: enables the service accounts instead of disabling them (useful if you would like to rerun a stage or make customizations).
-- sa: comma-separated list of service account names if you don't want to enable/disable all of them (possible values are: bootstrap, resman, networking, security).
+- sa: comma-separated list of service account names if you don't want to enable/disable all of them. The possible values are the keys that the `0-bootstrap` and `1-resman` stages write under `service_accounts` in their tfvars files:
+  - bootstrap, resman, networking, security
+  - bootstrap-r, resman-r, networking-r, security-r for the read-only plan accounts
+  - data-platform-dev, data-platform-prod, gcve-dev, gcve-prod, gke-dev, gke-prod, project-factory-dev, project-factory-prod, each also with an `-r` suffix for its read-only plan account
+  - sandbox, teams, and one `team-<name>` value for each entry in `team_folders`
+
+Without the `sa` flag, the script covers every value in this list. It skips the accounts of branches that are not deployed. Re-enable the accounts of a branch before you run that branch again.
 
 ```bash
 ./sa_lockdown.sh --enable --sa "bootstrap,networking"
@@ -262,6 +269,8 @@ A few things to note on the default perimeter
 
 - writer identities for sinks defined in the bootstrap stage are passed through via output files, and automatically included in an ingress policy
 - the perimeter is brought up in enforced mode by default
+- setting `dry_run` to `true` configures only the dry-run spec and removes the enforced configuration, so nothing is enforced
+- setting `dry_run_spec` keeps the perimeter enforced and trials a candidate configuration in the dry-run spec, as the next section describes
 - Google Cloud Project discovery is turned on by default and includes all Google Cloud Projects in the Google Cloud Organization
 - the stage resolves access level names in `perimeter_default` and in policies defined through the `vpc_sc` variable, while ingress and egress policy YAML files reference access levels as `$access_levels:<name>`
 
@@ -290,6 +299,40 @@ vpc_sc = {
 }
 ```
 
+#### Trial a candidate configuration
+
+The `dry_run_spec` attribute of `perimeter_default` lets you trial a change to an enforced perimeter before you enforce it. The enforced status keeps the `perimeter_default` configuration, the dry-run spec receives the candidate, and VPC Service Controls logs the requests that the candidate would deny without blocking them.
+
+- each `dry_run_spec` attribute you set replaces the matching enforced value in the dry-run spec only, and an empty list clears that value
+- each attribute you omit or set to `null` inherits the enforced value
+- `access_levels`, `egress_policies`, `ingress_policies`, and `resources` override the `perimeter_default` attributes with the same names, and `restricted_services` overrides the list in the restricted services YAML file
+- the dry-run spec still receives the log sink ingress policy and the discovered Google Cloud Projects
+- the stage rejects `dry_run_spec` when `dry_run` is `true`, and rejects a `dry_run_spec` that sets no attribute
+
+The following example keeps the perimeter enforced and trials one more ingress policy and a shorter list of restricted services.
+
+```tfvars
+# terraform.tfvars
+
+vpc_sc = {
+  perimeter_default = {
+    access_levels    = ["geo-default"]
+    ingress_policies = ["partner-read"]
+    dry_run_spec = {
+      ingress_policies    = ["partner-read", "partner-write"]
+      restricted_services = ["bigquery.googleapis.com", "storage.googleapis.com"]
+    }
+  }
+}
+```
+
+To promote the candidate, copy the `dry_run_spec` values into `perimeter_default` or the restricted services YAML file, and remove `dry_run_spec`.
+
+The enforced status and the dry-run spec share the access level definitions, the ingress and egress policy definitions, and the discovered Google Cloud Projects, so only the `dry_run_spec` attributes are safe to change during a trial.
+
+- editing an access level or a policy that `perimeter_default` references changes the enforced perimeter on the same apply, so define the candidate under a new key and reference that key in `dry_run_spec`
+- a change to `resource_discovery` adds or removes Google Cloud Projects in both the enforced status and the dry-run spec, so to trial a new Google Cloud Project keep it in `resource_discovery.ignore_projects` and add `projects/<number>` to `dry_run_spec.resources` together with the enforced `perimeter_default.resources` values
+
 ## Notes
 
 Some references that might be useful in setting up this stage
@@ -312,7 +355,7 @@ Some references that might be useful in setting up this stage
 | [prefix](variables.tf#L233) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
 | [regions](variables.tf#L250) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [service_accounts](variables.tf#L259) | Automation service accounts that can assign the encrypt/decrypt roles on keys. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [tenant_accounts](variables.tf#L270) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [tenant_accounts](variables.tf#L274) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [assured_workloads](variables.tf#L23) | Configuration for Assured Workloads. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [billing_override](variables.tf#L56) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [custom_roles](variables.tf#L71) | Custom roles defined at the org level, in key => id format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
@@ -326,7 +369,7 @@ Some references that might be useful in setting up this stage
 | [logging](variables.tf#L207) | Log writer identities for organization / folders. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [outputs_location](variables.tf#L227) | Path where providers, tfvars files, and lists for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
 | [regime_mapping](variables.tf#L243) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
-| [vpc_sc](variables.tf#L281) | VPC SC configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [vpc_sc](variables.tf#L285) | VPC SC configuration. Setting `perimeter_default.dry_run_spec` keeps the perimeter enforced and trials the overridden attributes in the dry-run spec. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 

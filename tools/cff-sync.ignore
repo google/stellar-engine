@@ -7,3 +7,6 @@ versions.tofu
 
 # Upstream keeps broken recipes and examples here.
 __need_fixing/
+
+# Upstream architectural decision records are not mirrored in Stellar Engine.
+adrs/

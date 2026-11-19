@@ -14,6 +14,30 @@
  * limitations under the License.
  */
 
+locals {
+  # One entry per key, role and member in var.existing_kms_keys. The map key
+  # is "<key name>/<role>/<member>", so each state address stays stable when
+  # other members are added or removed. Every part of the map key must be
+  # known at plan time: pass literal member strings, not values computed
+  # from resources that the same apply creates. Null entries, null member
+  # lists and null members are type-valid input and yield no grant.
+  _existing_keys_iam_members = flatten([
+    for key_name, key in var.existing_kms_keys : [
+      for role, members in(key == null ? {} : key.iam_members) : [
+        for member in distinct(compact(members == null ? [] : members)) : {
+          key_name = key_name
+          member   = member
+          role     = role
+        }
+      ]
+    ]
+  ])
+  existing_keys_iam_members = {
+    for v in local._existing_keys_iam_members :
+    "${v.key_name}/${v.role}/${v.member}" => v
+  }
+}
+
 data "google_project" "current" {
   project_id = var.main_project_id
 }
@@ -50,3 +74,13 @@ resource "google_kms_crypto_key_iam_member" "default_group_encrypter_decrypter" 
   member        = "group:${var.group_email}"
 }
 
+# Additive grants from the iam_members attribute of each existing key. Member
+# resources leave bindings managed outside this blueprint untouched.
+resource "google_kms_crypto_key_iam_member" "existing_keys" {
+  for_each = local.existing_keys_iam_members
+  crypto_key_id = (
+    data.google_kms_crypto_key.existing_keys[each.value.key_name].id
+  )
+  role   = each.value.role
+  member = each.value.member
+}
