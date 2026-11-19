@@ -45,6 +45,77 @@ class TestDataflowNetwork(unittest.TestCase):
         # job project, which cannot address a Shared VPC host network.
         self.assertNotRegex(job, r"\n\s*network\s*=")
 
+    def test_apis_and_service_agents_wait_before_iam_grants(self):
+        main_tf = (_DATAFLOW_DIR / "main.tf").read_text(encoding="utf-8")
+        expected_apis = {
+            "compute_api": "compute.googleapis.com",
+            "dataflow_api": "dataflow.googleapis.com",
+            "storage_api": "storage.googleapis.com",
+        }
+        for res_name, service in expected_apis.items():
+            api = _top_block(
+                main_tf, f'resource "google_project_service" "{res_name}"'
+            )
+            self.assertRegex(api, rf'service\s*=\s*"{re.escape(service)}"')
+
+        expected_agents = {
+            "compute_agent": ("compute.googleapis.com", "compute_api"),
+            "dataflow_agent": ("dataflow.googleapis.com", "dataflow_api"),
+            "storage_agent": ("storage.googleapis.com", "storage_api"),
+        }
+        for agent_name, (service, api_name) in expected_agents.items():
+            agent = _top_block(
+                main_tf,
+                f'resource "google_project_service_identity" "{agent_name}"',
+            )
+            self.assertRegex(agent, rf'service\s*=\s*"{re.escape(service)}"')
+            self.assertRegex(
+                agent,
+                rf"depends_on\s*=\s*\[google_project_service\.{api_name}\]",
+            )
+
+        wait = _top_block(
+            main_tf, 'resource "time_sleep" "service_agent_propagation"'
+        )
+        self.assertRegex(wait, r'create_duration\s*=\s*"\d+[sm]"')
+        for agent_name in expected_agents:
+            self.assertIn(f"google_project_service_identity.{agent_name}", wait)
+
+        provider_tf = (_DATAFLOW_DIR / "provider.tf").read_text(
+            encoding="utf-8"
+        )
+        self.assertRegex(provider_tf, r'source\s*=\s*"hashicorp/time"')
+
+        iam_headers = (
+            'resource "google_compute_subnetwork_iam_member" '
+            '"dataflow_sa_compute_network_user"',
+            'resource "google_kms_crypto_key_iam_member" '
+            '"compute_system_sa_kms_access"',
+            'resource "google_kms_crypto_key_iam_member" '
+            '"dataflow_sa_kms_access"',
+            'resource "google_kms_crypto_key_iam_member" "gcs_sa_kms_access"',
+        )
+        for header in iam_headers:
+            grant = _top_block(main_tf, header)
+            self.assertRegex(
+                grant,
+                r"depends_on\s*=\s*\[time_sleep\.service_agent_propagation\]",
+                msg=header,
+            )
+
+    def test_worker_account_project_and_default_zone(self):
+        main_tf = (_DATAFLOW_DIR / "main.tf").read_text(encoding="utf-8")
+        worker = _top_block(
+            main_tf, 'resource "google_service_account" "dataflow_worker"'
+        )
+        self.assertRegex(worker, r"project\s*=\s*var\.main_project_id")
+
+        variables_tf = (_DATAFLOW_DIR / "variables.tf").read_text(
+            encoding="utf-8"
+        )
+        zone = _top_block(variables_tf, 'variable "zone"')
+        self.assertRegex(zone, r'default\s*=\s*"us-east4-a"')
+
 
 if __name__ == "__main__":
     unittest.main()

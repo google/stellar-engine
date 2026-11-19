@@ -104,5 +104,5 @@ variable "template_gcs_path" {
 variable "zone" {
   description = "This is the name of the zone."
   type        = string
-  default     = "us-east4"
+  default     = "us-east4-a"
 }

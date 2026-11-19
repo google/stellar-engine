@@ -112,7 +112,7 @@ The Apache Beam SDK for Java has a warning about a bug in the latest version as 
 | [template_gcs_path](variables.tf#L99) | This is the template path of the dataflow job. | <code>string</code> | ✓ |  |
 | [allowed_firewall_ports](variables.tf#L17) | The allowed ports for the firewall. Dataflow requires 12345 and 12346. | <code>list&#40;string&#41;</code> |  | <code>&#91;12345, 12346&#93;</code> |
 | [region](variables.tf#L83) | The region in which to provision resources. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [zone](variables.tf#L104) | This is the name of the zone. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [zone](variables.tf#L104) | This is the name of the zone. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
 
 ## Outputs
 
