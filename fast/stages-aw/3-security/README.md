@@ -312,7 +312,7 @@ Some references that might be useful in setting up this stage
 | [prefix](variables.tf#L233) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
 | [regions](variables.tf#L250) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [service_accounts](variables.tf#L259) | Automation service accounts that can assign the encrypt/decrypt roles on keys. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [tenant_accounts](variables.tf#L270) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [tenant_accounts](variables.tf#L274) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [assured_workloads](variables.tf#L23) | Configuration for Assured Workloads. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [billing_override](variables.tf#L56) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [custom_roles](variables.tf#L71) | Custom roles defined at the org level, in key => id format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
@@ -326,7 +326,7 @@ Some references that might be useful in setting up this stage
 | [logging](variables.tf#L207) | Log writer identities for organization / folders. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [outputs_location](variables.tf#L227) | Path where providers, tfvars files, and lists for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
 | [regime_mapping](variables.tf#L243) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
-| [vpc_sc](variables.tf#L281) | VPC SC configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [vpc_sc](variables.tf#L285) | VPC SC configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 
