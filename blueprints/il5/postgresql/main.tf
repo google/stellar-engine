@@ -36,10 +36,21 @@ resource "google_project_service_identity" "cloudsql_sa" {
   depends_on = [google_project_service.sqladmin]
 }
 
+# IAM does not recognize a new service agent right away, and a grant issued
+# too early fails with "Service account ... does not exist". A retry 30
+# seconds after that failure succeeds, so 60 seconds leaves a margin.
+resource "time_sleep" "cloudsql_sa_propagation" {
+  create_duration = "60s"
+
+  depends_on = [google_project_service_identity.cloudsql_sa]
+}
+
 resource "google_kms_crypto_key_iam_member" "sql_sa" {
   crypto_key_id = var.kms_key_name
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = google_project_service_identity.cloudsql_sa.member
+
+  depends_on = [time_sleep.cloudsql_sa_propagation]
 }
 
 resource "google_compute_firewall" "postgres" {
