@@ -6,4 +6,8 @@ edition       = "ENTERPRISE"
 database_name = "database-name-01"
 database_user = "group:<GROUP-EMAIL-ADDRESS>"
 
+# Optional. Uncomment to encrypt the database with a customer-managed key.
+# The key location must match the instance configuration location.
+# kms_key_name = "projects/my-project/locations/us-east4/keyRings/my-keyring/cryptoKeys/my-key"
+
 region = "us-east4"
