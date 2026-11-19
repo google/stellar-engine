@@ -45,7 +45,7 @@ To check service perimeters: Go to VPC Service Control and it should be listed i
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [access_levels](variables.tf#L15) | List of access levels to create. Each access level is a map containing 'name', 'description', and 'conditions'. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [access_levels](variables.tf#L15) | List of access levels to create. Each access level is a map containing 'name', 'description', and 'conditions'. A request must satisfy every condition, and 'device_policy' is optional in each condition. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [access_policy_title](variables.tf#L31) | The title for the Access Context Manager policy. | <code>string</code> | ✓ |  |
 | [domain](variables.tf#L36) | Domain for ACM. | <code>string</code> | ✓ |  |
 | [organization_id](variables.tf#L41) | The organization ID. | <code>string</code> | ✓ |  |
