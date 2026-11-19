@@ -22,7 +22,9 @@ locals {
   }
   key = "projects/${local.kms_project}/locations/${var.region}/keyRings/${var.kms_keyring_name}/cryptoKeys/${var.kms_key_name}"
 
-  compute_default_sa     = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+  # Without an image there is nothing to pull, so the repository is ignored.
+  image_repository = var.image == null ? null : var.image_repository
+
   workstation_default_sa = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-workstations.iam.gserviceaccount.com"
 
   workstations = {
@@ -75,6 +77,7 @@ module "workstations" {
       gce_instance = {
         machine_type                = var.machine_type
         disable_public_ip_addresses = true
+        service_account             = one(module.workstation-vm-sa[*].email)
         shielded_instance_config = {
           enable_secure_boot          = true
           enable_vtpm                 = true
@@ -86,7 +89,8 @@ module "workstations" {
   }
   depends_on = [
     google_kms_crypto_key_iam_member.workstations_sa_kms_permissions,
-    google_project_iam_member.artifact_registry_reader,
-    google_project_iam_member.network_user
+    google_artifact_registry_repository_iam_member.artifact_registry_reader,
+    google_compute_subnetwork_iam_member.network_user,
+    module.workstation-vm-sa
   ]
 }

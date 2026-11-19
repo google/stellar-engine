@@ -10,6 +10,13 @@ subnetwork_name = "default-us-east4"   # Must already exist
 
 region = "us-east4"
 
+# Optional custom image in a private Artifact Registry repository
+# image = "us-east4-docker.pkg.dev/xxxx-xxxx-main-0/xxxx-repository/xxxx-image:latest"
+# image_repository = {
+#   location = "us-east4"
+#   name     = "xxxx-repository"
+# }
+
 workstations = {
   "<WORKSTATION-NAME>" = {
     env = {
