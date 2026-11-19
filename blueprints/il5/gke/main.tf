@@ -75,8 +75,9 @@ resource "google_project_service" "gke_core_api_enablement" {
 
 # --- Service Accounts and Identities ---
 resource "google_service_account" "gke_cluster_sa" {
+  # The account_id value allows at most 30 characters and no trailing hyphen.
   project      = var.main_project_id
-  account_id   = "gke-sa-${var.gke_cluster_name}"
+  account_id   = replace(substr("gke-sa-${var.gke_cluster_name}", 0, 30), "/-+$/", "")
   display_name = "GKE Cluster Service Account for ${var.gke_cluster_name}"
 }
 
@@ -204,7 +205,8 @@ module "cluster" {
   }
 
   access_config = {
-    private_nodes = var.gke_cluster_enable_private_endpoint
+    # Nodes stay private even when the control plane endpoint is public.
+    private_nodes = true
     ip_access = {
       disable_public_endpoint = var.gke_cluster_enable_private_endpoint
       authorized_ranges       = { for k, v in var.master_authorized_ranges : k => v }
