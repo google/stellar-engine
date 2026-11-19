@@ -73,7 +73,7 @@ resource "google_composer_environment" "main" {
     google_project_service.cloud_composer_api,
     google_project_iam_member.composer_worker,
     google_project_iam_member.composer_service_agent,
-    google_project_iam_member.composer_network_user,
+    google_compute_subnetwork_iam_member.composer_network_user,
     google_project_iam_member.composer_vpc_agent
   ]
 }
