@@ -31,6 +31,27 @@ resource "google_project_iam_member" "gke_cluster_admin" {
   member  = "serviceAccount:${google_service_account.gitlab_sa.email}"
 }
 
+# GKE nodes run as their own account so they do not inherit the roles of the
+# GitLab VM account. The account needs no Shared VPC or KMS grant: the GKE and
+# Google APIs service agents use the subnet, and the Compute Engine service
+# agent uses the boot disk key.
+module "gke-node-sa" {
+  source = "../../../modules/iam-service-account"
+  # Service account IDs allow at most 30 characters.
+  name         = "${substr(var.gke_name, 0, 24)}-nodes"
+  project_id   = var.project_id
+  display_name = "GitLab GKE nodes."
+  iam_project_roles = {
+    (var.project_id) = [
+      "roles/artifactregistry.reader",
+      "roles/autoscaling.metricsWriter",
+      "roles/logging.logWriter",
+      "roles/monitoring.metricWriter",
+      "roles/monitoring.viewer",
+    ]
+  }
+}
+
 resource "google_project_service" "storagetransfer_api" {
   project = var.project_id
   service = "storagetransfer.googleapis.com"
@@ -242,6 +263,8 @@ module "cluster" {
   }
   node_config = {
     boot_disk_kms_key = var.kms_key
+    # The default pool exists until Terraform removes it after cluster creation.
+    service_account = module.gke-node-sa.email
   }
   access_config = {
     private_nodes = true
@@ -269,7 +292,7 @@ module "gke-node-pool" {
   location     = var.region
   cluster_name = var.gke_name
   service_account = {
-    email = google_service_account.gitlab_sa.email
+    email = module.gke-node-sa.email
   }
   name       = "nodes"
   node_count = var.nodepool_node_count
@@ -289,5 +312,6 @@ module "gke-node-pool" {
       enable_integrity_monitoring = true
     }
   }
-  depends_on = [module.cluster]
+  # The service account module outputs do not wait for its role grants.
+  depends_on = [module.cluster, module.gke-node-sa]
 }

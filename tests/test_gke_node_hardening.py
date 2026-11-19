@@ -76,6 +76,49 @@ class TestGkeNodeHardening(unittest.TestCase):
         self.assertGreater(int(disk.group(1)), 15)
         self.assertRegex(pool, r'block-project-ssh-keys\s*=\s*"true"')
 
+    def test_gitlab_nodes_run_as_a_dedicated_account(self):
+        main_tf = (_GITLAB_DIR / "main.tf").read_text(encoding="utf-8")
+        account = _top_block(main_tf, 'module "gke-node-sa"')
+        self.assertIn("modules/iam-service-account", account)
+        self.assertRegex(account, r"project_id\s*=\s*var\.project_id")
+        # Service account IDs allow at most 30 characters, so the name
+        # keeps 24 characters of the cluster name before the suffix.
+        name = re.search(
+            r'name\s*=\s*"\$\{substr\(var\.gke_name, 0, (\d+)\)\}([a-z-]+)"',
+            account,
+        )
+        self.assertIsNotNone(name)
+        self.assertLessEqual(int(name.group(1)) + len(name.group(2)), 30)
+        self.assertRegex(account, r"\(var\.project_id\)\s*=\s*\[")
+        self.assertEqual(
+            sorted(re.findall(r'"(roles/[^"]+)"', account)),
+            [
+                "roles/artifactregistry.reader",
+                "roles/autoscaling.metricsWriter",
+                "roles/logging.logWriter",
+                "roles/monitoring.metricWriter",
+                "roles/monitoring.viewer",
+            ],
+        )
+        # Both the node pool and the short-lived default pool of the
+        # cluster use the node account instead of the GitLab VM account.
+        for header in ('module "gke-node-pool"', 'module "cluster"'):
+            block = _top_block(main_tf, header)
+            self.assertRegex(
+                block, r"=\s*module\.gke-node-sa\.email", msg=header
+            )
+            self.assertNotIn("gitlab_sa.email", block, msg=header)
+        # Service agents hold the Shared VPC and KMS grants, so the node
+        # account appears in neither set of members.
+        for header in (
+            'resource "google_project_iam_member" "compute_agent_subnet_user"',
+            'resource "google_kms_crypto_key_iam_member" '
+            '"compute_service_agent_kms_permissions"',
+        ):
+            self.assertNotIn(
+                "gke-node-sa", _top_block(main_tf, header), msg=header
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
