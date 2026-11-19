@@ -73,3 +73,28 @@ variable "subscriber_name" {
   type        = string
   default     = "Pub/Sub Subscriber Service Account"
 }
+
+variable "subscriptions" {
+  description = "Pull subscriptions to create on the topic, keyed by subscription name. The subscriber service account is granted `roles/pubsub.subscriber` on each subscription."
+  type = map(object({
+    ack_deadline_seconds         = optional(number)
+    deletion_policy              = optional(string)
+    enable_exactly_once_delivery = optional(bool, false)
+    enable_message_ordering      = optional(bool, false)
+    expiration_policy_ttl        = optional(string)
+    filter                       = optional(string)
+    labels                       = optional(map(string))
+    message_retention_duration   = optional(string)
+    retain_acked_messages        = optional(bool, false)
+  }))
+  default  = {}
+  nullable = false
+  validation {
+    condition = alltrue([
+      for k, v in var.subscriptions : contains(
+        ["ABANDON", "DELETE", "PREVENT"], coalesce(v.deletion_policy, "DELETE")
+      )
+    ])
+    error_message = "Subscription deletion policy must be one of 'ABANDON', 'DELETE' or 'PREVENT'."
+  }
+}

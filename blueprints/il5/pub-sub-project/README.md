@@ -1,5 +1,5 @@
 # Google Cloud Pub/Sub Project Blueprint
-This blueprint creates a Google Cloud Pub/Sub topic and associated service accounts, configured for Customer-Managed Encryption Keys (CMEK) from an existing KMS key, and supports various subscription types.
+This blueprint creates a Google Cloud Pub/Sub topic and associated service accounts, configured for Customer-Managed Encryption Keys (CMEK) from an existing KMS key, and optionally creates pull subscriptions on the topic.
 
 <!-- BEGIN TOC -->
 - [Introduction](#introduction)
@@ -78,7 +78,8 @@ To verify a successful deployment:
     * Confirm that a new topic with the name specified in `var.pubsub_topic` has been created.
     * Click on the topic and check its "Encryption" section to confirm it is using "Customer-managed encryption key" with the correct KMS key.
     * Check **IAM & Admin** > **Service Accounts** for your `publisher_account_id` and `subscriber_account_id`.
-    * Check **IAM & Admin** > **IAM** for your `main_project_id` and the KMS key (`core_project_id`) to confirm `pubsub.publisher` and `pubsub.subscriber` roles (project level), and `cloudkms.cryptoKeyEncrypterDecrypter` (on KMS key) are granted to the correct service accounts/principals.
+    * Open the **Permissions** panel of the topic to confirm that `roles/pubsub.publisher` is granted to the publisher service account, and the **Permissions** panel of each subscription in `var.subscriptions` to confirm that `roles/pubsub.subscriber` is granted to the subscriber service account. Neither role is granted at project level.
+    * Check the KMS key in your `core_project_id` to confirm that `cloudkms.cryptoKeyEncrypterDecrypter` is granted to the correct service accounts/principals.
 
 2.  **`gcloud` CLI:**
     * **Describe the Topic:**
@@ -93,6 +94,10 @@ To verify a successful deployment:
         ```bash
         gcloud pubsub topics get-iam-policy <TOPIC_NAME> --project=<MAIN_PROJECT_ID>
         ```
+    * **Get Subscription IAM Policy:**
+        ```bash
+        gcloud pubsub subscriptions get-iam-policy <SUBSCRIPTION_NAME> --project=<MAIN_PROJECT_ID>
+        ```
     * **Get KMS Key IAM Policy:**
         ```bash
         gcloud kms keys get-iam-policy <KMS_KEY_NAME> --keyring=<KMS_KEYRING_NAME> --location=<REGION> --project=<CORE_PROJECT_ID>
@@ -102,6 +107,8 @@ To verify a successful deployment:
 -   This blueprint strictly **creates a Pub/Sub topic and its associated resources**; it does not consume an existing topic.
 -   Pub/Sub topics are **regional or global** resources depending on configuration. `var.gcp_region` will determine the topic's location (persistence region).
 -   The `kms_key_name` and `kms_keyring_name` inputs refer to **existing** Cloud KMS resources. This blueprint consumes these existing keys for CMEK on the topic.
+-   The publisher service account holds `roles/pubsub.publisher` on the topic only, and the subscriber service account holds `roles/pubsub.subscriber` only on the subscriptions in `var.subscriptions`. The blueprint grants neither role at project level.
+-   The subscriber service account holds no Pub/Sub role while `var.subscriptions` is empty. For a subscription that you manage outside this blueprint, grant `roles/pubsub.subscriber` on that subscription to the `subscriber_service_account_email` output.
 <!-- BEGIN TFDOC -->
 ## Variables
 
@@ -118,6 +125,7 @@ To verify a successful deployment:
 | [publisher_name](variables.tf#L54) | The display name for the custom Pub/Sub publisher service account. | <code>string</code> |  | <code>&#34;Pub&#47;Sub Publisher Service Account&#34;</code> |
 | [subscriber_account_id](variables.tf#L65) | The ID for the custom service account created for the Pub/Sub subscriber (e.g., 'my-subscriber-sa'). | <code>string</code> |  | <code>&#34;pubsub-subscriber-sa&#34;</code> |
 | [subscriber_name](variables.tf#L71) | The display name for the custom Pub/Sub subscriber service account. | <code>string</code> |  | <code>&#34;Pub&#47;Sub Subscriber Service Account&#34;</code> |
+| [subscriptions](variables.tf#L77) | Pull subscriptions to create on the topic, keyed by subscription name. The subscriber service account is granted `roles/pubsub.subscriber` on each subscription. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 

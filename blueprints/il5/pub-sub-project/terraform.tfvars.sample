@@ -19,4 +19,10 @@ publisher_name       = "Pub/Sub Publisher Service Account" # The display name fo
 subscriber_account_id = "subscriber-account-id" # The ID for the custom service account created for the Pub/Sub subscriber. (e.g., 'my-subscriber-sa')
 subscriber_name      = "Pub/Sub Subscriber Service Account" # The display name for the custom Pub/Sub subscriber service account.
 
-# You can manage IAM bindings on the topic/subscriptions via 'iam' variable in variables.tf
+# --- Subscriptions ---
+# Pull subscriptions to create on the topic, keyed by subscription name.
+# The subscriber service account is granted roles/pubsub.subscriber on each
+# subscription, and holds no Pub/Sub role when this map is empty.
+subscriptions = {
+  "subscription-name-00" = {}
+}
