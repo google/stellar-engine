@@ -262,3 +262,76 @@ class TestLintSh(unittest.TestCase):
             any("bash tools/lint.sh" in cmd for cmd in run_commands),
             "repo-lint job must execute bash tools/lint.sh",
         )
+
+    def test_ci_workflow_consolidates_jobs_without_duplicate_lints(self):
+        """CI workflow must consolidate jobs and cancel superseded PR runs."""
+        ci_workflow = yaml.safe_load(
+            (self.repo_root / ".github" / "workflows" / "ci.yml").read_text(
+                encoding="utf-8"
+            )
+        )
+        concurrency = ci_workflow.get("concurrency") or {}
+        self.assertIn(
+            "github.event.pull_request.number || github.ref",
+            str(concurrency.get("group", "")),
+        )
+        self.assertEqual(
+            concurrency.get("cancel-in-progress"),
+            "${{ github.event_name == 'pull_request' }}",
+        )
+
+        jobs = ci_workflow["jobs"]
+        self.assertEqual(
+            {job_id: job["name"] for job_id, job in jobs.items()},
+            {
+                "security-scan": "Security Scans",
+                "repo-lint": "Repository Lint",
+                "repo-tests": "Repository Tests",
+                "cli-tests": "Stellar CLI Tests",
+            },
+        )
+
+        repo_tests_steps = jobs["repo-tests"]["steps"]
+        repo_tests_uses = [step.get("uses", "") for step in repo_tests_steps]
+        repo_tests_runs = "\n".join(
+            step.get("run", "") for step in repo_tests_steps
+        )
+        self.assertTrue(
+            any(
+                u.startswith("hashicorp/setup-terraform@")
+                for u in repo_tests_uses
+            ),
+            "repo-tests must install Terraform for mock tests",
+        )
+        self.assertTrue(
+            any(
+                u.startswith("terraform-linters/setup-tflint@")
+                for u in repo_tests_uses
+            ),
+            "repo-tests must install TFLint so test_tflint.sh does not skip",
+        )
+        self.assertIn("uv run --locked pytest", repo_tests_runs)
+        self.assertIn("tests/test_*.sh", repo_tests_runs)
+        self.assertIn("bash tools/run_terraform_tests.sh", repo_tests_runs)
+        self.assertNotIn("ruff ", repo_tests_runs)
+        self.assertNotIn("check_boilerplate.py", repo_tests_runs)
+        self.assertNotIn("tools/tflint.sh", repo_tests_runs)
+
+        cli_tests_runs = "\n".join(
+            step.get("run", "") for step in jobs["cli-tests"]["steps"]
+        )
+        self.assertIn("uv run --locked pyright", cli_tests_runs)
+        self.assertIn("uv run --locked pytest", cli_tests_runs)
+        self.assertNotIn("ruff ", cli_tests_runs)
+        self.assertNotIn("check_boilerplate.py", cli_tests_runs)
+
+    def test_disabled_monthly_tag_workflow_removed(self):
+        """Superseded monthly-minor-tag-release.yml must remain deleted."""
+        self.assertFalse(
+            (
+                self.repo_root
+                / ".github"
+                / "workflows"
+                / "monthly-minor-tag-release.yml"
+            ).exists()
+        )
