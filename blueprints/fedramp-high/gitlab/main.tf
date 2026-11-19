@@ -22,6 +22,7 @@ moved {
 }
 
 resource "google_service_account" "gitlab_sa" {
+  project      = var.project_id
   account_id   = var.sa
   display_name = "gitlab-sa"
 }
@@ -31,44 +32,103 @@ resource "google_project_iam_member" "gke_cluster_admin" {
   member  = "serviceAccount:${google_service_account.gitlab_sa.email}"
 }
 
+# GKE nodes run as their own account so they do not inherit the roles of the
+# GitLab VM account. The account needs no Shared VPC or KMS grant: the GKE and
+# Google APIs service agents use the subnet, and the Compute Engine service
+# agent uses the boot disk key.
+module "gke-node-sa" {
+  source = "../../../modules/iam-service-account"
+  # Service account IDs allow at most 30 characters.
+  name         = "${substr(var.gke_name, 0, 24)}-nodes"
+  project_id   = var.project_id
+  display_name = "GitLab GKE nodes."
+  iam_project_roles = {
+    (var.project_id) = [
+      "roles/artifactregistry.reader",
+      "roles/autoscaling.metricsWriter",
+      "roles/logging.logWriter",
+      "roles/monitoring.metricWriter",
+      "roles/monitoring.viewer",
+    ]
+  }
+}
+
+resource "google_project_service" "compute_api" {
+  project            = var.project_id
+  service            = "compute.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "container_api" {
+  project            = var.project_id
+  service            = "container.googleapis.com"
+  disable_on_destroy = false
+}
+
 resource "google_project_service" "storagetransfer_api" {
-  project = var.project_id
-  service = "storagetransfer.googleapis.com"
+  project            = var.project_id
+  service            = "storagetransfer.googleapis.com"
+  disable_on_destroy = false
+}
+
+# Only container.googleapis.com exposes a primary service identity via
+# serviceusage.services.generateServiceIdentity; compute.googleapis.com returns
+# an empty identity from that API and provisions its agent on API enablement.
+resource "google_project_service_identity" "gke_agent" {
+  provider   = google-beta
+  project    = var.project_id
+  service    = "container.googleapis.com"
+  depends_on = [google_project_service.container_api]
+}
+
+# IAM does not recognize newly created service agents right away, so IAM
+# bindings added immediately can fail on first apply.
+resource "time_sleep" "service_agent_propagation" {
+  create_duration = "60s"
+
+  depends_on = [
+    google_project_service.compute_api,
+    google_project_service_identity.gke_agent,
+  ]
 }
 
 # Grant GKE Host Service Agent User Role
 resource "google_project_iam_member" "gke_host_agent_use" {
-  project = var.net_project # Project where the GKE cluster is being created
-  role    = "roles/container.hostServiceAgentUser"
-  member  = "serviceAccount:service-${data.google_project.project.number}@container-engine-robot.iam.gserviceaccount.com" # Use project where the GKE cluster is being created
+  project    = var.net_project # Project where the GKE cluster is being created
+  role       = "roles/container.hostServiceAgentUser"
+  member     = google_project_service_identity.gke_agent.member # Use project where the GKE cluster is being created
+  depends_on = [time_sleep.service_agent_propagation]
 }
 
 resource "google_project_iam_member" "compute_agent_subnet_user" {
   for_each = {
     compute_agent = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
-    gke_agent     = "serviceAccount:service-${data.google_project.project.number}@container-engine-robot.iam.gserviceaccount.com"
+    gke_agent     = google_project_service_identity.gke_agent.member
     cloudservices = "serviceAccount:${data.google_project.project.number}@cloudservices.gserviceaccount.com"
     gitlab_sa     = "serviceAccount:${google_service_account.gitlab_sa.email}"
   }
-  project = var.net_project
-  role    = "roles/compute.networkUser"
-  member  = each.value
+  project    = var.net_project
+  role       = "roles/compute.networkUser"
+  member     = each.value
+  depends_on = [time_sleep.service_agent_propagation]
 }
 
 resource "google_kms_crypto_key_iam_member" "compute_service_agent_kms_permissions" {
   for_each = {
     compute_agent = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
-    gke_agent     = "serviceAccount:service-${data.google_project.project.number}@container-engine-robot.iam.gserviceaccount.com"
+    gke_agent     = google_project_service_identity.gke_agent.member
     cloudservices = "serviceAccount:${data.google_project.project.number}@cloudservices.gserviceaccount.com"
     gitlab_sa     = "serviceAccount:${google_service_account.gitlab_sa.email}"
   }
   crypto_key_id = var.kms_key
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = each.value
+  depends_on    = [time_sleep.service_agent_propagation]
 }
 
 resource "google_compute_instance_group" "umig" {
-  name = var.instance_name
+  project = var.project_id
+  name    = var.instance_name
 
   instances = [
     module.compute-vm.id
@@ -84,7 +144,7 @@ resource "google_compute_instance_group" "umig" {
     port = "443"
   }
 
-  zone = "${var.zone}-a"
+  zone = var.zone
 
   depends_on = [module.compute-vm]
 }
@@ -108,9 +168,14 @@ module "compute-vm" {
   source       = "../../../modules/compute-vm"
   name         = var.vm_name
   project_id   = var.project_id
-  zone         = "${var.zone}-a"
+  zone         = var.zone
   machine_type = "n1-standard-8"
   tags         = ["gitlab"]
+  shielded_config = {
+    enable_secure_boot          = true
+    enable_vtpm                 = true
+    enable_integrity_monitoring = true
+  }
   snapshot_schedules = {
     daily-backup = {
       schedule = {
@@ -147,7 +212,9 @@ module "compute-vm" {
     email = google_service_account.gitlab_sa.email
   }
   metadata = {
-    startup-script = <<-EOT
+    block-project-ssh-keys = "true" # CIS Compliance Benchmark 4.3
+    enable-oslogin         = "TRUE" # CIS Compliance Benchmark 4.4
+    startup-script         = <<-EOT
 #!/bin/bash
 sudo apt update -y
 sudo apt upgrade -y
@@ -168,7 +235,10 @@ sudo EXTERNAL_URL="${var.gitlab_uri}" apt install gitlab-ee -y
       EOT
   }
 
-  depends_on = [google_kms_crypto_key_iam_member.compute_service_agent_kms_permissions]
+  depends_on = [
+    google_kms_crypto_key_iam_member.compute_service_agent_kms_permissions,
+    google_project_iam_member.compute_agent_subnet_user,
+  ]
 }
 
 // This creates a self signed certificate
@@ -242,6 +312,8 @@ module "cluster" {
   }
   node_config = {
     boot_disk_kms_key = var.kms_key
+    # The default pool exists until Terraform removes it after cluster creation.
+    service_account = module.gke-node-sa.email
   }
   access_config = {
     private_nodes = true
@@ -269,7 +341,7 @@ module "gke-node-pool" {
   location     = var.region
   cluster_name = var.gke_name
   service_account = {
-    email = google_service_account.gitlab_sa.email
+    email = module.gke-node-sa.email
   }
   name       = "nodes"
   node_count = var.nodepool_node_count
@@ -289,5 +361,6 @@ module "gke-node-pool" {
       enable_integrity_monitoring = true
     }
   }
-  depends_on = [module.cluster]
+  # The service account module outputs do not wait for its role grants.
+  depends_on = [module.cluster, module.gke-node-sa]
 }

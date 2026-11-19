@@ -39,7 +39,7 @@ class TestTfDoc(unittest.TestCase):
         self.assertEqual(directive.args, ["e2e"])
         self.assertIsNone(tfdoc.get_tftest_directive("# no directive\n"))
 
-    def test_parse_fixtures_links_vendored_fixtures(self):
+    def test_parse_fixtures_links_synced_fixtures(self):
         module = os.path.join(tfdoc.REPO_ROOT, "modules", "pubsub")
         readme = (
             "```hcl\nmodule {}\n"

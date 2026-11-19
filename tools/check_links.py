@@ -32,6 +32,26 @@ import requests
 BASEDIR = pathlib.Path(__file__).resolve().parents[1]
 DOC = collections.namedtuple("DOC", "path relpath links")
 LINK = collections.namedtuple("LINK", "dest valid")
+MAX_REDIRECTS = 5
+
+
+def _is_public_http_url(raw_url):
+    "Returns True if raw_url uses http/https and resolves only to public IPs."
+    parsed = urllib.parse.urlparse(raw_url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        return False
+    for info in socket.getaddrinfo(parsed.hostname, None):
+        ip = ipaddress.ip_address(info[4][0])
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            return False
+    return True
 
 
 def check_link(link, readme_path, external):
@@ -46,20 +66,23 @@ def check_link(link, readme_path, external):
         link_valid = True
         if external:
             try:
-                hostname = url.hostname
-                if not hostname:
-                    return LINK(link.dest, False)
-                for info in socket.getaddrinfo(hostname, None):
-                    ip = ipaddress.ip_address(info[4][0])
-                    if (
-                        ip.is_private
-                        or ip.is_loopback
-                        or ip.is_link_local
-                        or ip.is_reserved
-                    ):
+                current = link.dest
+                for _ in range(MAX_REDIRECTS + 1):
+                    if not _is_public_http_url(current):
                         return LINK(link.dest, False)
-                response = requests.get(link.dest, timeout=10)
-                link_valid = response.ok
+                    response = requests.get(
+                        current, timeout=10, allow_redirects=False
+                    )
+                    if response.is_redirect:
+                        location = response.headers.get("Location")
+                        if not location:
+                            return LINK(link.dest, False)
+                        current = urllib.parse.urljoin(current, location)
+                        continue
+                    link_valid = response.ok
+                    break
+                else:
+                    link_valid = False
             except (
                 requests.exceptions.RequestException,
                 socket.gaierror,
@@ -68,12 +91,14 @@ def check_link(link, readme_path, external):
                 link_valid = False
     # The link is private
     else:
+        resolved_base = BASEDIR.resolve()
         if url.path.startswith("/"):
             target = (BASEDIR / url.path.lstrip("/")).resolve()
         else:
             target = (readme_path.parent / url.path).resolve()
-        link_valid = (
-            target.is_relative_to(BASEDIR.resolve()) and target.exists()
+        adrs_dir = resolved_base / "adrs"
+        link_valid = target.is_relative_to(resolved_base) and (
+            target.is_relative_to(adrs_dir) or target.exists()
         )
     return LINK(link.dest, link_valid)
 

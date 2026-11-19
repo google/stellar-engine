@@ -14,8 +14,23 @@
 # limitations under the License.
 
 
-# Default list of service account names
-VALID_NAMES=("bootstrap" "resman" "networking" "security")
+# Default list of service account names. These are the static keys that the
+# 0-bootstrap and 1-resman stages write under "service_accounts" in their
+# tfvars files. The "-r" keys are the read-only plan accounts.
+VALID_NAMES=(
+  "bootstrap" "resman" "networking" "security"
+  "bootstrap-r" "resman-r" "networking-r" "security-r"
+  "data-platform-dev" "data-platform-dev-r"
+  "data-platform-prod" "data-platform-prod-r"
+  "gcve-dev" "gcve-dev-r" "gcve-prod" "gcve-prod-r"
+  "gke-dev" "gke-dev-r" "gke-prod" "gke-prod-r"
+  "project-factory-dev" "project-factory-dev-r"
+  "project-factory-prod" "project-factory-prod-r"
+  "sandbox" "teams"
+)
+
+# 1-resman also writes one "team-<name>" key for each entry in team_folders
+TEAM_PREFIX="team-"
 
 # Initialize variables
 ACTION="disable"  # Default action is to disable
@@ -23,9 +38,10 @@ SERVICE_ACCOUNTS=()  # empty list
 
 # Function to display help
 usage() {
-  echo "Usage: $0 [--enable] [--names <comma-separated list of names>]"
+  echo "Usage: $0 [--enable] [--sa <comma-separated list of names>]"
   echo "  --enable           Enable the service accounts (default is disable)"
-  echo "  --sa               Comma-separated list of service account names to look for (default is 'bootstrap,networking,resman,security')"
+  echo "  --sa               Comma-separated list of service account names to look for (default is all valid names and every '${TEAM_PREFIX}<name>' account)"
+  echo "Valid names are: ${VALID_NAMES[*]} ${TEAM_PREFIX}<name>"
   exit 1
 }
 
@@ -34,6 +50,9 @@ validate_names() {
   local invalid_names=()
   for name in "${SERVICE_ACCOUNTS[@]}"; do
     valid=false
+    if [[ ${name} == "${TEAM_PREFIX}"?* ]]; then
+      valid=true
+    fi
     for valid_name in "${VALID_NAMES[@]}"; do
       if [[ ${name} == "${valid_name}" ]]; then
         valid=true
@@ -49,7 +68,7 @@ validate_names() {
 
   if [ ${#invalid_names[@]} -gt 0 ]; then
     echo "Invalid names provided: ${invalid_names[*]}"
-    echo "Valid names are: ${VALID_NAMES[*]}"
+    echo "Valid names are: ${VALID_NAMES[*]} ${TEAM_PREFIX}<name>"
     exit 1
   fi
 }
@@ -72,8 +91,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 # If no names are provided, use the default names
+USE_DEFAULT_NAMES=false
 if [ ${#SERVICE_ACCOUNTS[@]} -eq 0 ]; then
   SERVICE_ACCOUNTS=("${VALID_NAMES[@]}")
+  USE_DEFAULT_NAMES=true
 fi
 
 # Validate that all provided names are valid
@@ -83,8 +104,16 @@ validate_names
 for tfvars_file in *.tfvars.json; do
   # echo "Processing $tfvars_file..."
 
+  # The default run also covers the per-team keys that this file defines
+  names=("${SERVICE_ACCOUNTS[@]}")
+  if [[ $USE_DEFAULT_NAMES == true ]]; then
+    while IFS= read -r team_name; do
+      names+=("$team_name")
+    done < <(jq -r --arg prefix "$TEAM_PREFIX" '.. | .service_accounts? | objects | keys[] | select(startswith($prefix))' "$tfvars_file")
+  fi
+
   # Use jq to extract service account emails from the "service_accounts" block
-  for name in "${SERVICE_ACCOUNTS[@]}"; do
+  for name in "${names[@]}"; do
     # Extract the email from the "service_accounts" block, keyed by the name
     service_account=$(jq -r --arg name "$name" '.. | .service_accounts?[$name] // empty' "$tfvars_file")
     

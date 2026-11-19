@@ -46,6 +46,7 @@ These modules are used in the examples included in this repository. If you are u
 ## Networking modules
 
 - [Address reservation](./net-address)
+- [Cloud Armor Security Policy](./net-cloud-armor)
 - [Cloud Endpoints](./endpoints)
 - [DNS](./dns)
 - [DNS Response Policy](./dns-response-policy/)
@@ -57,12 +58,13 @@ These modules are used in the examples included in this repository. If you are u
 - [Cross-region Internal Application Load Balancer](./net-lb-app-int-cross-region)
 - [Internal Passthrough Network Load Balancer](./net-lb-int)
 - [Internal Proxy Network Load Balancer](./net-lb-proxy-int)
+- [Cross-region Internal Proxy Network Load Balancer](./net-lb-proxy-int-cross-region)
 - [NAT](./net-cloudnat)
 - [Service Directory](./service-directory)
 - [VPC](./net-vpc)
 - [VPC firewall](./net-vpc-firewall)
-- [VPN dynamic](./net-vpn-dynamic)
 - [VPC peering](./net-vpc-peering)
+- [VPN dynamic](./net-vpn-dynamic)
 - [VPN HA](./net-vpn-ha)
 - [VPN static](./net-vpn-static)
 
@@ -81,6 +83,7 @@ These modules are used in the examples included in this repository. If you are u
 
 - [AlloyDB](./alloydb)
 - [Analytics Hub](./analytics-hub)
+- [BigQuery connection](./bigquery-connection)
 - [BigQuery dataset](./bigquery-dataset)
 - [Bigtable instance](./bigtable-instance)
 - [Biglake catalog](./biglake-catalog)
@@ -91,21 +94,31 @@ These modules are used in the examples included in this repository. If you are u
 - [Dataform Repository](./dataform-repository/)
 - [Datafusion](./datafusion)
 - [Dataplex](./dataplex)
+- [Dataplex Aspect Types](./dataplex-aspect-types/)
 - [Dataplex DataScan](./dataplex-datascan/)
 - [Dataproc](./dataproc)
 - [Firestore](./firestore)
 - [GCS](./gcs)
 - [Looker Core](./looker-core)
+- [Managed Service for Apache Kafka](./managed-kafka)
 - [Pub/Sub](./pubsub)
 - [Spanner instance](./spanner-instance)
+
+## AI
+
+- [Gemini Enterprise Agent Platform (GEAP) - Agent Gateway](./geap-agent-gateway/README.md)
+- [Gemini Enterprise Agent Platform (GEAP) - Agent Runtime](./geap-agent-runtime/README.md)
+- [Gemini Enterprise Agent Platform (GEAP) - Workbench](./geap-workbench/README.md)
 
 ## Development
 
 - [API Gateway](./api-gateway)
 - [Apigee](./apigee)
 - [Artifact Registry](./artifact-registry)
+- [Cloud Build V2 Connection](./cloud-build-v2-connection)
 - [Container Registry](./container-registry)
 - [Cloud Source Repository](./source-repository)
+- [Cloud Deploy](./cloud-deploy)
 - [Secure Source Manager instance](./secure-source-manager-instance)
 - [Workstation cluster](./workstation-cluster)
 
@@ -116,6 +129,7 @@ These modules are used in the examples included in this repository. If you are u
 - [KMS](./kms)
 - [SecretManager](./secret-manager)
 - [VPC Service Control](./vpc-sc)
+- [SecOps rules](./secops-rules)
 - [Secure Web Proxy](./net-swp)
 - [Certificate Manager](./certificate-manager)
 
@@ -124,3 +138,8 @@ These modules are used in the examples included in this repository. If you are u
 - [Cloud Functions v1](./cloud-function-v1)
 - [Cloud Functions v2](./cloud-function-v2)
 - [Cloud Run v2](./cloud-run-v2)
+- [Workflows](./workflows)
+
+## Other
+
+- [Backup DR](./backup-dr)

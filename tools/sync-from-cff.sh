@@ -96,7 +96,7 @@ TRACKED_PATHS=()
 if [[ -f "${BASES_FILE}" ]]; then
   while read -r path; do
     TRACKED_PATHS+=("${path}")
-  done < <(awk '!/^#/ && $1 ~ /\// { print $1 }' "${BASES_FILE}")
+  done < <(awk '!/^#/ && $1 ~ /\// && $1 !~ /^adrs(\/|$)/ && $2 !~ /^adrs(\/|$)/ { print $1 }' "${BASES_FILE}")
 fi
 
 if [[ ${DRY_RUN} -eq 0 && -n "$(git status --porcelain -- modules tools/cff-sync.bases ${TRACKED_PATHS[@]+"${TRACKED_PATHS[@]}"})" ]]; then
@@ -174,10 +174,30 @@ local_entry() {
   fi
 }
 
+# check_safe_path PATH rejects paths outside the repo root or under a symlinked
+# directory component so sync writes never traverse through a symlink.
+check_safe_path() {
+  local rel="$1" cur="" part
+  [[ -n "${rel}" && "${rel}" != /* && "/${rel}/" != *"/../"* ]] ||
+    die "unsafe sync path: ${rel}"
+  local dir="${rel%/*}"
+  if [[ "${dir}" != "${rel}" ]]; then
+    local parts=()
+    IFS='/' read -r -a parts <<<"${dir}"
+    for part in "${parts[@]}"; do
+      [[ -n "${part}" ]] || continue
+      cur="${cur:+${cur}/}${part}"
+      [[ ! -L "${cur}" ]] ||
+        die "refusing to traverse symlink directory: ${cur}"
+    done
+  fi
+}
+
 # write_entry ENTRY PATH replaces PATH with the blob of ENTRY, as a link or a
 # file. Removing PATH first avoids writing through an existing link.
 write_entry() {
   local kind="${1%%:*}" id="${1#*:}"
+  check_safe_path "$2"
   mkdir -p "$(dirname "$2")"
   rm -f "$2"
   if [[ "${kind}" == "L" ]]; then
@@ -247,7 +267,7 @@ for path in modules/*/; do
   fi
 done
 if [[ -f "${BASES_FILE}" ]]; then
-  awk '!/^#/ && $1 ~ /\// { print $1 "\t" $1 "\t" $2 "\t" $3 "\tpaths" }' \
+  awk '!/^#/ && $1 ~ /\// && $1 !~ /^adrs(\/|$)/ && $2 !~ /^adrs(\/|$)/ { print $1 "\t" $1 "\t" $2 "\t" $3 "\tpaths" }' \
     "${BASES_FILE}" | while IFS=$'\t' read -r name rest; do
     if [[ -z "${ONLY_MODULES}" || ",${ONLY_MODULES}," == *",${name},"* ]]; then
       printf '%s\t%s\n' "${name}" "${rest}" >>"${MODULES}"
@@ -299,7 +319,10 @@ sync_file() {
   if [[ "${o}" == "${b}" ]]; then
     if [[ -z "${t}" ]]; then
       record "${dir}" "deleted" "${local_path}"
-      [[ ${DRY_RUN} -eq 1 ]] || rm -f "${local_path}"
+      if [[ ${DRY_RUN} -eq 0 ]]; then
+        check_safe_path "${local_path}"
+        rm -f "${local_path}"
+      fi
     else
       if [[ -z "${b}" ]]; then
         record "${dir}" "added" "${local_path}"
@@ -324,13 +347,17 @@ sync_file() {
     status=$?
   if [[ ${status} -eq 0 ]]; then
     record "${dir}" "merged" "${local_path}"
-    [[ ${DRY_RUN} -eq 1 ]] || cp "${WORK}/ours" "${local_path}"
+    if [[ ${DRY_RUN} -eq 0 ]]; then
+      check_safe_path "${local_path}"
+      cp "${WORK}/ours" "${local_path}"
+    fi
   elif [[ ${status} -gt 127 ]]; then
     # git merge-file fails this way on binary files.
     record "${dir}" "conflict-kept" "${local_path}"
   else
     record "${dir}" "conflict" "${local_path}"
     if [[ ${DRY_RUN} -eq 0 && "${CONFLICT_STYLE}" == "markers" ]]; then
+      check_safe_path "${local_path}"
       cp "${WORK}/ours" "${local_path}"
     fi
   fi
@@ -374,6 +401,8 @@ while IFS=$'\t' read -r dir root up base source; do
     record "${dir}" "base-kept" "${root}"
     # An updated versions.tf already names the target, so restore the base.
     if [[ ${DRY_RUN} -eq 0 && "${source}" == "versions" ]]; then
+      [[ ! -L "${root}/versions.tf" ]] ||
+        die "refusing to edit symlinked ${root}/versions.tf"
       sed -E -i.bak "s#(cloud-foundation-fabric/modules/[A-Za-z0-9_.-]+:)v[0-9]+\.[0-9]+\.[0-9]+-tf#\1${base}-tf#" \
         "${root}/versions.tf"
       rm -f "${root}/versions.tf.bak"
@@ -382,6 +411,8 @@ while IFS=$'\t' read -r dir root up base source; do
     # Record the target release as the new base, also when the module kept a
     # locally modified versions.tf.
     if [[ "${source}" == "versions" ]]; then
+      [[ ! -L "${root}/versions.tf" ]] ||
+        die "refusing to edit symlinked ${root}/versions.tf"
       sed -E -i.bak "s#(cloud-foundation-fabric/modules/[A-Za-z0-9_.-]+:)v[0-9]+\.[0-9]+\.[0-9]+-tf#\1${TO}-tf#" \
         "${root}/versions.tf"
       rm -f "${root}/versions.tf.bak"
@@ -408,7 +439,7 @@ provider_major() {
 
 # Lists relative module sources under modules/ that point to a missing
 # directory, which happens when upstream starts calling a module that
-# Stellar Engine does not vendor yet.
+# Stellar Engine does not sync yet.
 MISSING="${WORK}/missing.txt"
 : >"${MISSING}"
 if [[ ${DRY_RUN} -eq 0 ]]; then
@@ -513,7 +544,7 @@ write_report() {
   echo
   up_names="$(awk -F '\t' '$5 != "paths" { sub(/^modules\//, "", $3); print $3 }' \
     "${MODULES}" | sort -u)"
-  echo "### Upstream modules not vendored"
+  echo "### Upstream modules not synced"
   echo
   git ls-tree --name-only "${TARGET}" modules/ | sed 's|^modules/||' |
     while read -r name; do
@@ -525,7 +556,7 @@ write_report() {
   if [[ -s "${MISSING}" ]]; then
     echo "### Missing module dependencies"
     echo
-    echo "These synced files call a module directory that does not exist. Vendor"
+    echo "These synced files call a module directory that does not exist. Add"
     echo "the upstream module or adapt the caller."
     echo
     sed "s|^|- |" "${MISSING}"
@@ -542,7 +573,7 @@ write_report() {
   echo "### Breaking upstream changes"
   echo
   echo "These entries come from the upstream CHANGELOG.md files for the releases"
-  echo "after ${OLDEST_BASE}, limited to the vendored modules and repository-wide"
+  echo "after ${OLDEST_BASE}, limited to the synced modules and repository-wide"
   echo "changes. Upstream comparison: ${COMPARE_URL}/${OLDEST_BASE}...${TO}"
   echo
   breaking_changes | while IFS=$'\t' read -r release entry; do

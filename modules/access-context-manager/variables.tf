@@ -13,7 +13,7 @@
 # limitations under the License.
 
 variable "access_levels" {
-  description = "List of access levels to create. Each access level is a map containing 'name', 'description', and 'conditions'."
+  description = "List of access levels to create. Each access level is a map containing 'name', 'description', and 'conditions'. A request must satisfy every condition, and 'device_policy' is optional in each condition."
   type = list(object({
     name        = string
     description = string
@@ -21,9 +21,9 @@ variable "access_levels" {
       ip_subnetworks = list(string)
       members        = list(string)
       negate         = bool
-      device_policy = object({
+      device_policy = optional(object({
         require_screen_lock = bool
-      })
+      }))
       regions = list(string)
     }))
   }))

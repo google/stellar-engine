@@ -85,7 +85,7 @@ The script enables these services:
 
 Grant the deploying user the organization-level roles required for the initial
 bootstrap. The DDG documents the manual console flow, and the repository
-provides `fast/stages-aw/0-bootstrap/setIam.sh` plus
+provides `fast/stages-aw/0-bootstrap/setIAM.sh` plus
 `fast/stages-aw/0-bootstrap/setIAM.yaml.sample` for the scripted flow.
 
 The current bootstrap checklist includes:

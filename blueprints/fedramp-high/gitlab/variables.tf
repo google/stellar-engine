@@ -102,7 +102,7 @@ variable "region" {
 }
 
 variable "sa" {
-  description = "Service account to run GKE and VM."
+  description = "Account ID of the service account that runs the GitLab VM."
   type        = string
 }
 

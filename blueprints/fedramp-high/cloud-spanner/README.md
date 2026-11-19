@@ -48,14 +48,15 @@ https://console.cloud.google.com/spanner
 | [database_user](variables.tf#L26) | Database user or group. Must start with \"user:\" or \"group:\" or \"serviceAccount:\". | <code>string</code> | ✓ |  |
 | [display_name](variables.tf#L35) | Cloud spanner display name. | <code>string</code> | ✓ |  |
 | [instance_name](variables.tf#L56) | Cloud spanner instance name. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L61) | Project to deploy Cloud Spanner instance. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L77) | Project to deploy Cloud Spanner instance. | <code>string</code> | ✓ |  |
 | [config_name](variables.tf#L15) | Cloud spanner instance config name. | <code>string</code> |  | <code>&#34;regional-us-east4&#34;</code> |
 | [edition](variables.tf#L40) | The Spanner instance edition. Valid values are 'EDITION_UNSPECIFIED', 'STANDARD', 'ENTERPRISE', or 'ENTERPRISE_PLUS'. | <code>string</code> |  | <code>&#34;ENTERPRISE&#34;</code> |
 | [high_priority_cpu_utilization_percent](variables.tf#L50) | High priority cpu utilization percent. | <code>number</code> |  | <code>75</code> |
-| [max_processing_units](variables.tf#L66) | Max processing units for autoscaling. | <code>number</code> |  | <code>3000</code> |
-| [min_processing_units](variables.tf#L72) | Min processing units for autoscaling. | <code>number</code> |  | <code>2000</code> |
-| [region](variables.tf#L78) | Region to create your App Engine resource. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [storage_utilization_percent](variables.tf#L84) | Storage utilization percent. | <code>number</code> |  | <code>90</code> |
+| [kms_key_name](variables.tf#L61) | Cloud KMS crypto key that encrypts the Spanner database, in the format projects/../locations/../keyRings/../cryptoKeys/... The key location must match the location of the instance configuration, such as us-east4 for regional-us-east4. The blueprint passes a single key, so instance configurations that need one key per replica region are not supported. Leave null to use Google-managed encryption. Setting or changing the key on an existing database forces replacement of the database, which the database deletion protection blocks. | <code>string</code> |  | <code>null</code> |
+| [max_processing_units](variables.tf#L82) | Max processing units for autoscaling. | <code>number</code> |  | <code>3000</code> |
+| [min_processing_units](variables.tf#L88) | Min processing units for autoscaling. | <code>number</code> |  | <code>2000</code> |
+| [region](variables.tf#L94) | Region to create your App Engine resource. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [storage_utilization_percent](variables.tf#L100) | Storage utilization percent. | <code>number</code> |  | <code>90</code> |
 
 ## Outputs
 

@@ -12,8 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+locals {
+  # The spoke VPC module already creates the service networking connection
+  # for environments with PSA ranges, so the default allocation only covers
+  # the remaining ones. The condition mirrors the psa_configs expression
+  # passed to the spoke VPC module, including its fallback to the dev ranges.
+  psa_default_envs = {
+    for k, v in var.envs_folders : k => v
+    if length(try(var.psa_ranges[lower(k)], var.psa_ranges.dev)) == 0
+  }
+}
+
 resource "google_compute_global_address" "private_service_connect_ip" {
-  for_each = var.envs_folders
+  for_each = local.psa_default_envs
 
   project       = module.env-spoke-vpc[each.key].project_id
   name          = "default-peering"
@@ -24,7 +35,7 @@ resource "google_compute_global_address" "private_service_connect_ip" {
 }
 
 resource "google_service_networking_connection" "default" {
-  for_each                = var.envs_folders
+  for_each                = local.psa_default_envs
   network                 = module.env-spoke-vpc[each.key].self_link
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_service_connect_ip[each.key].name]

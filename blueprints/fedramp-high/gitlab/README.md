@@ -4,6 +4,12 @@ This blueprint will deploy all the required infrastructure to host a GitLab inst
 ## Note
 To have external access to the GitLab instance, the shared vpc networks in the Common Services folder need to be used for the GCE VM, GKE Cluster, and Load Balancer. To enable support for GKE clusters, manual steps to add the pods and service range to the network is required.
 
+## Service accounts
+The blueprint creates two service accounts in the deployment project:
+
+- The GitLab VM runs as the account named by the `sa` variable.
+- The GKE nodes run as a separate account named after the first 24 characters of the `gke_name` variable followed by `-nodes`. It holds only `roles/artifactregistry.reader`, `roles/autoscaling.metricsWriter`, `roles/logging.logWriter`, `roles/monitoring.metricWriter`, and `roles/monitoring.viewer` on the deployment project.
+
 ## Manual Pre-Requisite Steps
 Go to the VPC Network inside of the net-host project inside of the Networking folder in the Stellar Engine environment.
 
@@ -153,7 +159,7 @@ The setup should now be complete and GitLab will now have HTTPS enabled.
 | [network_name](variables.tf#L79) | Network name to use for Firewall rules. E.G. test-net-spoke. | <code>string</code> | ✓ |  |
 | [nodepool_node_count](variables.tf#L84) | Number of node per zone in the Nodepool. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [project_id](variables.tf#L93) | Project ID where the GitLab cluster, VM, and load balancer will be deployed to. | <code>string</code> | ✓ |  |
-| [sa](variables.tf#L104) | Service account to run GKE and VM. | <code>string</code> | ✓ |  |
+| [sa](variables.tf#L104) | Account ID of the service account that runs the GitLab VM. | <code>string</code> | ✓ |  |
 | [subnetwork](variables.tf#L109) | Subnet path to use for cluster, VM, and load balancer. | <code>string</code> | ✓ |  |
 | [compute_image](variables.tf#L15) | The image used to provision the compute instance. | <code>string</code> |  | <code>&#34;projects&#47;ubuntu-os-cloud&#47;global&#47;images&#47;ubuntu-2404-noble-amd64-v20241219&#34;</code> |
 | [gitlab_install_script_sha256](variables.tf#L21) | Expected SHA-256 hash for the GitLab package repository install script. | <code>string</code> |  | <code>&#34;47c124527729776870cf09cd6bd46a9b94f55d40c7545ca26640c75de86b560d&#34;</code> |

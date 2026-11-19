@@ -18,6 +18,35 @@ resource "google_project_service" "spanner_api" {
   disable_on_destroy = false
 }
 
+# The Spanner service agent exists only after this call, and the key grant
+# below needs its email.
+resource "google_project_service_identity" "spanner" {
+  provider = google-beta
+  count    = var.kms_key_name == null ? 0 : 1
+  project  = var.main_project_id
+  service  = "spanner.googleapis.com"
+
+  depends_on = [google_project_service.spanner_api]
+}
+
+# IAM does not recognize a new service agent right away, and a grant issued
+# too early fails with "Service account ... does not exist".
+resource "time_sleep" "spanner_agent_propagation" {
+  count           = var.kms_key_name == null ? 0 : 1
+  create_duration = "60s"
+
+  depends_on = [google_project_service_identity.spanner]
+}
+
+resource "google_kms_crypto_key_iam_member" "spanner_cmek" {
+  count         = var.kms_key_name == null ? 0 : 1
+  crypto_key_id = var.kms_key_name
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = google_project_service_identity.spanner[0].member
+
+  depends_on = [time_sleep.spanner_agent_propagation]
+}
+
 moved {
   from = module.cloud_spanner
   to   = module.cloud-spanner
@@ -52,8 +81,14 @@ module "cloud-spanner" {
           var.database_user
         ]
       }
+      kms_key_name = var.kms_key_name
     }
   }
 
-  depends_on = [google_project_service.spanner_api]
+  # Spanner rejects a database whose key the service agent cannot use, so the
+  # key grant completes before the module creates the database.
+  depends_on = [
+    google_project_service.spanner_api,
+    google_kms_crypto_key_iam_member.spanner_cmek,
+  ]
 }

@@ -152,6 +152,11 @@ def test_valid_import_addresses(address):
         ("module..google_x.y", "not a resource address"),
         ("1bad.name", "not a resource address"),
         ("google_x.y[0][1]", "not a resource address"),
+        ('module.a["${var.foo}"].google_x.y', "not a resource address"),
+        ('google_x.y["$${var.foo}"]', "not a resource address"),
+        ('google_x.y["%{if true}a%{endif}"]', "not a resource address"),
+        ('google_x.y["\\${var.foo}"]', "not a resource address"),
+        ('google_x.y["line\nbreak"]', "not a resource address"),
     ],
 )
 def test_invalid_import_addresses(address, message):
