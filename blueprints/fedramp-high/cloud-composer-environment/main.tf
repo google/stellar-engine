@@ -27,6 +27,13 @@ data "google_compute_subnetwork" "subnetwork" {
   project = var.network_project_id
 }
 
+# Composer keeps DAGs, plugins and logs in the environment bucket, so the
+# Cloud Storage service agent of the main project also uses the key.
+data "google_storage_project_service_account" "gcs" {
+  count   = var.kms_key_name == null ? 0 : 1
+  project = var.main_project_id
+}
+
 resource "google_project_service" "cloud_composer_api" {
   project            = var.main_project_id
   service            = "composer.googleapis.com"
@@ -67,13 +74,24 @@ resource "google_composer_environment" "main" {
       subnetwork      = data.google_compute_subnetwork.subnetwork.self_link
       service_account = google_service_account.composer.name
     }
+
+    dynamic "encryption_config" {
+      for_each = var.kms_key_name == null ? [] : [var.kms_key_name]
+      content {
+        kms_key_name = encryption_config.value
+      }
+    }
   }
 
+  # Composer rejects an environment whose key the service agents cannot use,
+  # so both key grants complete before the environment is created.
   depends_on = [
     google_project_service.cloud_composer_api,
     google_project_iam_member.composer_worker,
     google_project_iam_member.composer_service_agent,
     google_compute_subnetwork_iam_member.composer_network_user,
-    google_project_iam_member.composer_vpc_agent
+    google_project_iam_member.composer_vpc_agent,
+    google_kms_crypto_key_iam_member.composer_agent_cmek,
+    google_kms_crypto_key_iam_member.storage_agent_cmek
   ]
 }

@@ -5,3 +5,7 @@ composer_env_name = "composer-env-name-00"
 network_name      = "xxxx-spoke-0"
 subnetwork_name   = "default-us-east4"
 region            = "us-east4"
+
+# Optional. Uncomment to encrypt the environment with a customer-managed key.
+# The key must be in the same region as the environment.
+# kms_key_name = "projects/my-project/locations/us-east4/keyRings/my-keyring/cryptoKeys/my-key"

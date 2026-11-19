@@ -49,3 +49,20 @@ resource "google_project_iam_member" "composer_vpc_agent" {
   role    = "roles/composer.sharedVpcAgent"
   member  = google_project_service_identity.composer_agent.member
 }
+
+# Cloud Composer 3 requires the key for the Composer service agent and the
+# Cloud Storage service agent. Additive members leave the other grants on the
+# key in place.
+resource "google_kms_crypto_key_iam_member" "composer_agent_cmek" {
+  count         = var.kms_key_name == null ? 0 : 1
+  crypto_key_id = var.kms_key_name
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = google_project_service_identity.composer_agent.member
+}
+
+resource "google_kms_crypto_key_iam_member" "storage_agent_cmek" {
+  count         = var.kms_key_name == null ? 0 : 1
+  crypto_key_id = var.kms_key_name
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = data.google_storage_project_service_account.gcs[0].member
+}

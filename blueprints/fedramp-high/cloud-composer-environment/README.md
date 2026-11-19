@@ -6,6 +6,7 @@
 - [Disclaimer](#disclaimer)
 - [Prerequisites](#prerequisites)
 - [IAM bindings](#iam-bindings)
+- [Customer-managed encryption key](#customer-managed-encryption-key)
 - [Deployment Steps](#deployment-steps)
 - [Verification of a successful deployment](#verification-of-a-successful-deployment)
 - [Variables](#variables)
@@ -35,6 +36,17 @@ The blueprint grants each role on the narrowest resource it can confirm that Clo
 | `roles/compute.networkUser` | Composer service agent | Environment subnetwork | The role only needs to cover the subnetwork that the environment uses. |
 | `roles/composer.sharedVpcAgent` | Composer service agent | Shared VPC host project | Private IP environments need the role on the host project, and it carries network-scoped permissions that a subnetwork binding cannot grant. |
 
+## Customer-managed encryption key
+Set the `kms_key_name` variable to encrypt the environment with a Cloud KMS key. The variable is optional. When it is unset, the environment uses Google-managed encryption and the blueprint creates no key grants.
+
+- Create the key in the same region as the environment, which the `region` variable sets. Cloud Composer does not accept multi-regional or global keys.
+- Set the key before the first apply. Cloud Composer accepts a key only when it creates an environment, so setting or changing `kms_key_name` on an existing environment makes Terraform destroy and recreate the environment.
+- Do not unset `kms_key_name` on an encrypted environment. The environment stays encrypted with the key, but Terraform removes the key grants that the environment still needs.
+- The blueprint grants the `roles/cloudkms.cryptoKeyEncrypterDecrypter` role on the key to the Cloud Composer service agent and the Cloud Storage service agent of the main project, and creates the environment after both grants. The grants are additive, so other members on the key keep their access.
+- These two service agents are the ones that [Cloud Composer 3 requires](https://cloud.google.com/composer/docs/composer-3/configure-cmek-encryption). Cloud Composer 2 image versions need more grants, which the blueprint does not create.
+- Give the identity that runs Terraform permission to change the IAM policy of the key, for example with the `roles/cloudkms.admin` role on the key, and enable the Cloud Storage API in the main project.
+- Keep the key enabled. An environment becomes unusable and cannot be recovered when its key is disabled or destroyed.
+
 
 ## Deployment Steps
 You should see this README and some terraform files.
@@ -56,15 +68,16 @@ Use GCP console to verify if the resources have been created.
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
 | [composer_env_name](variables.tf#L16) | Name of the Composer environment. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L27) | Main project ID. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L32) | Full path to VPC. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L37) | The ID of the landing zone project where the VPC is. | <code>string</code> | ✓ |  |
-| [subnetwork_name](variables.tf#L66) | The name of the existing subnetwork to use within the specified VPC network and region. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L43) | Main project ID. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L48) | Full path to VPC. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L53) | The ID of the landing zone project where the VPC is. | <code>string</code> | ✓ |  |
+| [subnetwork_name](variables.tf#L82) | The name of the existing subnetwork to use within the specified VPC network and region. | <code>string</code> | ✓ |  |
 | [composer_version](variables.tf#L21) | Cloud composer version. | <code>string</code> |  | <code>&#34;composer-3-airflow-2&#34;</code> |
-| [region](variables.tf#L42) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [sa_account_id](variables.tf#L48) | Service account id. | <code>string</code> |  | <code>&#34;composer-env-account&#34;</code> |
-| [sa_display_name](variables.tf#L54) | Service account display name. | <code>string</code> |  | <code>&#34;Service Account for Composer Environment&#34;</code> |
-| [service_agent_version](variables.tf#L60) | Composer Service Agent version. This must correspond to Composer version. | <code>string</code> |  | <code>&#34;roles&#47;composer.ServiceAgentV3Ext&#34;</code> |
+| [kms_key_name](variables.tf#L27) | Cloud KMS crypto key that encrypts the Composer environment, in the format projects/../locations/../keyRings/../cryptoKeys/... The key must be in the same region as the environment, and multi-regional or global keys are not supported. Leave null to use Google-managed encryption. Composer accepts a key only at creation, so setting or changing the key on an existing environment forces replacement of the environment. | <code>string</code> |  | <code>null</code> |
+| [region](variables.tf#L58) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [sa_account_id](variables.tf#L64) | Service account id. | <code>string</code> |  | <code>&#34;composer-env-account&#34;</code> |
+| [sa_display_name](variables.tf#L70) | Service account display name. | <code>string</code> |  | <code>&#34;Service Account for Composer Environment&#34;</code> |
+| [service_agent_version](variables.tf#L76) | Composer Service Agent version. This must correspond to Composer version. | <code>string</code> |  | <code>&#34;roles&#47;composer.ServiceAgentV3Ext&#34;</code> |
 
 ## Outputs
 
