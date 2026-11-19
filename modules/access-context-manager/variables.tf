@@ -43,16 +43,6 @@ variable "organization_id" {
   type        = string
 }
 
-variable "project_id" {
-  description = "The project ID where the Access Context Manager resources will be created."
-  type        = string
-}
-
-variable "region" {
-  description = "GCP Region to deploy into."
-  type        = string
-}
-
 variable "service_perimeters" {
   description = "List of service perimeters to create. Each service perimeter is a map containing 'name', 'description', 'status', and 'resources'."
   type = list(object({

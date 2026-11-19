@@ -13,6 +13,7 @@ These controls help implement zero-trust security, ensuring that access is grant
 <!-- BEGIN TOC -->
 - [Introduction to ACM](#introduction-to-acm)
 - [Access Policy ID number](#access-policy-id-number)
+- [Provider configuration](#provider-configuration)
 - [Deployment Steps](#deployment-steps)
 - [Verification of a successful deployment?](#verification-of-a-successful-deployment)
 - [Variables](#variables)
@@ -24,6 +25,24 @@ These controls help implement zero-trust security, ensuring that access is grant
 To get Access Policy ID number, run the following commmand:
 
 ```gcloud access-context-manager policies list```
+
+## Provider configuration
+
+This module declares no `provider` blocks. It inherits the `google` and `google-beta` provider configurations of the calling root module, or the configurations that you pass through the `providers` argument. Access Context Manager resources are organization scoped, so the module takes no project or region input.
+
+When you authenticate with user Application Default Credentials, the Access Context Manager API needs a quota project. Set `billing_project` and `user_project_override` on both providers in the root module:
+
+```hcl
+provider "google" {
+  billing_project       = "my-project"
+  user_project_override = true
+}
+
+provider "google-beta" {
+  billing_project       = "my-project"
+  user_project_override = true
+}
+```
 
 ## Deployment Steps
 1. Run ```cp terraform.tfvars.sample terraform.tfvars``` to copy the sample variables to your own tfvars file.
@@ -49,9 +68,7 @@ To check service perimeters: Go to VPC Service Control and it should be listed i
 | [access_policy_title](variables.tf#L31) | The title for the Access Context Manager policy. | <code>string</code> | ✓ |  |
 | [domain](variables.tf#L36) | Domain for ACM. | <code>string</code> | ✓ |  |
 | [organization_id](variables.tf#L41) | The organization ID. | <code>string</code> | ✓ |  |
-| [project_id](variables.tf#L46) | The project ID where the Access Context Manager resources will be created. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L51) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
-| [service_perimeters](variables.tf#L56) | List of service perimeters to create. Each service perimeter is a map containing 'name', 'description', 'status', and 'resources'. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [service_perimeters](variables.tf#L46) | List of service perimeters to create. Each service perimeter is a map containing 'name', 'description', 'status', and 'resources'. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 
 ## Outputs
 
