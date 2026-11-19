@@ -81,7 +81,7 @@ mark_stage_complete() {
     local stage_id=$1
     log_info "Marking $stage_id as complete..."
     # Update current session variable
-    eval "${stage_id}_DESTROYED=true"
+    printf -v "${stage_id}_DESTROYED" '%s' true
     # Persist to file
     # Persist to file
     # Persist to file
@@ -412,35 +412,18 @@ if [ ! -f "$SCRIPT_DIR"/config.env ] || promptUser "Would you like to update/ove
 
     gcloud organizations list
 
-    # Function to prompt with default
-    prompt_val() {
-        local var_name=$1
-        local prompt_text=$2
-        local current_val=${!var_name}
-        
-        if [[ -n "$current_val" ]]; then
-            read -r -p "$prompt_text [$current_val]: " input
-            if [[ -n "$input" ]]; then
-                eval "$var_name=\"$input\""
-            fi
-        else
-            read -r -p "$prompt_text: " input
-            eval "$var_name=\"$input\""
-        fi
-    }
-
-    prompt_val "BILLING_ACCOUNT" "Enter your billing account"
-    prompt_val "BOOTSTRAP_PROJECT_ID" "Enter your bootstrap project ID"
-    prompt_val "COMPLIANCE_REGIME" "Enter the compliance regime"
-    prompt_val "DIRECTORY_CUSTOMER_ID" "Enter your directory customer ID"
-    prompt_val "DEPLOYER_EMAIL_ADDRESS" "Enter your deployer email address"
-    prompt_val "FULLY_QUALIFIED_DOMAIN_NAME" "Enter your fully qualified domain name"
-    prompt_val "LOGGING_ALERTS_EMAIL_ADDRESS" "Enter your logging alerts email address"
-    prompt_val "ORGANIZATION_ID" "Enter your organization ID"
-    prompt_val "PREFIX" "Enter your prefix"
-    prompt_val "REGION" "Enter your region"
-    prompt_val "AW_REGION" "Enter your Assured Workload region"
-    prompt_val "TENANT_NAME" "Enter your tenant name"
+    prompt_with_default BILLING_ACCOUNT "Enter your billing account" || exit 1
+    prompt_with_default BOOTSTRAP_PROJECT_ID "Enter your bootstrap project ID" || exit 1
+    prompt_with_default COMPLIANCE_REGIME "Enter the compliance regime" || exit 1
+    prompt_with_default DIRECTORY_CUSTOMER_ID "Enter your directory customer ID" || exit 1
+    prompt_with_default DEPLOYER_EMAIL_ADDRESS "Enter your deployer email address" || exit 1
+    prompt_with_default FULLY_QUALIFIED_DOMAIN_NAME "Enter your fully qualified domain name" || exit 1
+    prompt_with_default LOGGING_ALERTS_EMAIL_ADDRESS "Enter your logging alerts email address" || exit 1
+    prompt_with_default ORGANIZATION_ID "Enter your organization ID" || exit 1
+    prompt_with_default PREFIX "Enter your prefix" || exit 1
+    prompt_with_default REGION "Enter your region" || exit 1
+    prompt_with_default AW_REGION "Enter your Assured Workload region" || exit 1
+    prompt_with_default TENANT_NAME "Enter your tenant name" || exit 1
 
     echo "--- Configuration Summary ---"
     echo "billing-account: $BILLING_ACCOUNT"
