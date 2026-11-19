@@ -342,8 +342,8 @@
             <routing-table>
               <ip>
                 <static-route>
-                  %{ for key, value in tenants_subnets ~}
-                  <entry name="${key}-network">
+                  %{ for name, cidr in return_routes ~}
+                  <entry name="${name}">
                     <nexthop>
                       <ip-address>${lz_gateway_ip}</ip-address>
                     </nexthop>
@@ -352,7 +352,7 @@
                     </bfd>
                     <interface>ethernet1/2</interface>
                     <metric>10</metric>
-                    <destination>${value}</destination>
+                    <destination>${cidr}</destination>
                     <route-table>
                       <unicast/>
                     </route-table>
