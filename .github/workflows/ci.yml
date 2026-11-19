@@ -140,7 +140,7 @@ jobs:
         run: bash tools/run_terraform_tests.sh
 
   cli-tests:
-    name: Stellar CLI Tests
+    name: CLI Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

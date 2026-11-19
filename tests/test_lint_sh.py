@@ -287,7 +287,7 @@ class TestLintSh(unittest.TestCase):
                 "security-scan": "Security Scans",
                 "repo-lint": "Repository Lint",
                 "repo-tests": "Repository Tests",
-                "cli-tests": "Stellar CLI Tests",
+                "cli-tests": "CLI Tests",
             },
         )
 
@@ -335,3 +335,49 @@ class TestLintSh(unittest.TestCase):
                 / "monthly-minor-tag-release.yml"
             ).exists()
         )
+
+    def test_github_workflow_and_job_names_are_consistent(self):
+        """Repository workflows must expose standardized workflow/job names."""
+        expected = {
+            "ci.yml": (
+                "CI",
+                {
+                    "security-scan": "Security Scans",
+                    "repo-lint": "Repository Lint",
+                    "repo-tests": "Repository Tests",
+                    "cli-tests": "CLI Tests",
+                },
+            ),
+            "semantic-pr.yml": (
+                "Pull Request",
+                {"validate-title": "Validate Title"},
+            ),
+            "labeler.yml": (
+                "Pull Request",
+                {"label": "Apply Labels"},
+            ),
+            "release.yml": (
+                "Auto",
+                {"release-please": "Release Please"},
+            ),
+            "cff-sync.yml": (
+                "Auto",
+                {"sync": "Sync Modules"},
+            ),
+        }
+        wf_dir = self.repo_root / ".github" / "workflows"
+        actual_files = {p.name for p in wf_dir.glob("*.yml")}
+        self.assertEqual(actual_files, set(expected.keys()))
+        for filename, (wf_name, job_names) in expected.items():
+            with self.subTest(workflow=filename):
+                parsed = yaml.safe_load(
+                    (wf_dir / filename).read_text(encoding="utf-8")
+                )
+                self.assertEqual(parsed.get("name"), wf_name)
+                self.assertEqual(
+                    {
+                        jid: job.get("name")
+                        for jid, job in (parsed.get("jobs") or {}).items()
+                    },
+                    job_names,
+                )

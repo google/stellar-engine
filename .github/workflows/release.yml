@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Auto Release"
+name: Auto
 
 on:
   push:
@@ -27,6 +27,7 @@ permissions:
 
 jobs:
   release-please:
+    name: Release Please
     if: github.repository == 'google/stellar-engine'
     runs-on: ubuntu-latest
     env:
