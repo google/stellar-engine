@@ -19,6 +19,10 @@ terraform {
       source  = "hashicorp/google"
       version = ">= 8.6.0, < 9.0.0" # tftest
     }
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.9.1"
+    }
   }
 }
 
