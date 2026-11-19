@@ -137,7 +137,8 @@ resource "google_dataflow_job" "job" {
 
   parameters = var.parameters
 
-  network    = var.network_project_id
+  # Dataflow derives the Shared VPC network from the complete subnetwork
+  # URL. The network argument takes a name in the job project only.
   subnetwork = data.google_compute_subnetwork.subnetwork.self_link
 
   ip_configuration = "WORKER_IP_PRIVATE" # Required for IL5
