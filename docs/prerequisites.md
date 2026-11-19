@@ -64,10 +64,17 @@ check it performs.
 ## Required APIs
 
 Enable the Stage 0 prerequisite APIs in the bootstrap project before running
-Terraform. The repository provides
-`fast/stages-aw/0-bootstrap/enableServices.sh` for this step.
+Terraform.
 
-The script enables these services:
+> [!TIP]
+> Run [`./fast/stages-aw/0-bootstrap/enableServices.sh`](../fast/stages-aw/0-bootstrap/enableServices.sh)
+> from the repository root after setting the active `gcloud` project to enable
+> the 11 core Stage 0 APIs automatically, then run
+> `gcloud services enable monitoring.googleapis.com` for the Cloud Monitoring
+> API. Alternatively, enable each service listed below manually in the console
+> or with the `gcloud services enable` command.
+
+The `enableServices.sh` script enables these services:
 
 - `iam.googleapis.com`
 - `cloudkms.googleapis.com`
@@ -81,14 +88,28 @@ The script enables these services:
 - `iamcredentials.googleapis.com`
 - `orgpolicy.googleapis.com`
 
+Also enable the `monitoring.googleapis.com` API in the bootstrap project before
+running Stage 0.
+
 ## Initial IAM Grants
 
 Grant the deploying user the organization-level roles required for the initial
-bootstrap. The DDG documents the manual console flow, and the repository
-provides `fast/stages-aw/0-bootstrap/setIAM.sh` plus
-`fast/stages-aw/0-bootstrap/setIAM.yaml.sample` for the scripted flow.
+bootstrap.
 
-The current bootstrap checklist includes:
+> [!TIP]
+> Run [`./fast/stages-aw/0-bootstrap/setIAM.sh`](../fast/stages-aw/0-bootstrap/setIAM.sh)
+> `<user_email> <organization_id>` from the repository root, such as
+> `./fast/stages-aw/0-bootstrap/setIAM.sh admin@example.com 123456789012`, to
+> grant the required organization-level roles from the
+> [`setIAM.yaml.sample`](../fast/stages-aw/0-bootstrap/setIAM.yaml.sample)
+> template automatically while preserving existing IAM bindings. That template
+> also grants the `roles/resourcemanager.projectDeleter` role, so review it
+> before applying the policy in production. If your billing account belongs to
+> another organization, grant the `roles/billing.admin` role directly on the
+> billing account as well. Alternatively, grant each role below manually at the
+> organization level.
+
+The bootstrap checklist includes these roles:
 
 - `roles/axt.admin`
 - `roles/assuredworkloads.admin`
@@ -102,9 +123,6 @@ The current bootstrap checklist includes:
 - `roles/iam.serviceAccountAdmin`
 - `roles/iam.serviceAccountTokenCreator`
 - `roles/resourcemanager.tagAdmin`
-
-`setIAM.yaml.sample` also grants `roles/resourcemanager.projectDeleter`; review
-the generated policy before applying it in production.
 
 A shared billing account whose IAM you cannot change still works with Stage 0.
 

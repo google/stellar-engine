@@ -109,23 +109,54 @@ permissions.**
   have one
   - Enable billing on the bootstrap project by going to [Account
     Management](https://console.cloud.google.com/billing/manage)
-  - [Enable The Cloud Monitoring
-    API](https://console.developers.google.com/apis/api/monitoring.googleapis.com/overview)
-    in the bootstrap project
 - Edit [Variables](#variables) Section above
 - Authenticate and set the active project
   - **gcloud auth login**
   - **gcloud config set project `<bootstrap_project_id>`**
   - **gcloud auth application-default login**
-- Navigate to [IAM & Admin](https://console.cloud.google.com/iam-admin/iam) at
-  the Organization level **_(not project-specific)_** in the GCP Console and
-  assign the following IAM roles for the deploying user. See the note at the
-  bottom of this list for a script to automatically assign these permissions.
+
+> [!TIP]
+> Run [`./fast/stages-aw/0-bootstrap/enableServices.sh`](../fast/stages-aw/0-bootstrap/enableServices.sh)
+> from the repository root to enable the 11 core Stage 0 APIs in the active
+> bootstrap project automatically, then run
+> `gcloud services enable monitoring.googleapis.com` for the Cloud Monitoring
+> API. Alternatively, enable each API listed below manually in the console or
+> with the `gcloud services enable` command.
+
+- Enable the following Google Cloud APIs in the bootstrap project.
+  - `assuredworkloads.googleapis.com`
+  - `bigquery.googleapis.com`
+  - `cloudbilling.googleapis.com`
+  - `cloudkms.googleapis.com`
+  - `cloudresourcemanager.googleapis.com`
+  - `iam.googleapis.com`
+  - `iamcredentials.googleapis.com`
+  - `logging.googleapis.com`
+  - `monitoring.googleapis.com` through `gcloud services enable monitoring.googleapis.com` or the [Cloud Monitoring API](https://console.developers.google.com/apis/api/monitoring.googleapis.com/overview) console page
+  - `orgpolicy.googleapis.com`
+  - `pubsub.googleapis.com`
+  - `serviceusage.googleapis.com`
+
+> [!TIP]
+> Run [`./fast/stages-aw/0-bootstrap/setIAM.sh`](../fast/stages-aw/0-bootstrap/setIAM.sh)
+> `<user_email> <organization_id>` from the repository root, such as
+> `./fast/stages-aw/0-bootstrap/setIAM.sh admin@example.com 123456789012`, to
+> grant the required organization-level roles from the
+> [`setIAM.yaml.sample`](../fast/stages-aw/0-bootstrap/setIAM.yaml.sample)
+> template automatically while preserving existing IAM bindings. That template
+> also grants the `roles/resourcemanager.projectDeleter` role, so review it
+> before applying the policy in production. If your billing account belongs to
+> another organization, grant the `roles/billing.admin` role directly on the
+> billing account as well. Alternatively, assign each role below manually at the
+> organization level in [IAM and Admin](https://console.cloud.google.com/iam-admin/iam).
+
+- Assign the following IAM roles to the deploying user at the organization level
+  in [IAM and Admin](https://console.cloud.google.com/iam-admin/iam) rather than
+  on an individual project.
   - Access Transparency Admin (roles/axt.admin)
   - Assured Workloads Administrator (roles/assuredworkloads.admin)
-  - Billing Account Administrator (roles/billing.admin) either on the
-    organization or the billing account (see the following section for
-    details)
+  - Billing Account Administrator (roles/billing.admin) on the organization or
+    on the billing account
   - Logging Admin (roles/logging.admin)
   - Organization Administrator (roles/resourcemanager.organizationAdmin)
   - Organization Policy Admin (roles/orgpolicy.policyAdmin)
@@ -135,11 +166,6 @@ permissions.**
   - Service Account Admin (roles/iam.serviceAccountAdmin)
   - Service Account Token Creator (roles/iam.serviceAccountTokenCreator)
   - Tag Admin (roles/resourcemanager.tagAdmin)
-    - Note: If you are starting with a brand new organization, the above
-      permissions (excluding billing account admin and super admin) can be
-      automated by running the following script, which adds any of these roles
-      the user does not already hold and keeps every existing binding:
-      - **./setIAM.sh \<your-email-address\> `<organization_id>`** from within the fast/stages-aw/0-bootstrap folder
 
 - Navigate to the [Super Admin](https://admin.google.com/ac/roles) roles
   section in Google Workspace to ensure that the deploying user is a Super
@@ -168,11 +194,6 @@ permissions.**
   - `gcp-logging-admins@<domain>`
   - `gcp-logging-viewers@<domain>`
   - `gcp-monitoring-admins@<domain>`
-- We need to enable these Google Cloud Services by running the following
-  script:
-    - fast/stages-aw/0-bootstrap/enableServices.sh
-      - If you run into issues with the above command, you can simply run the following deprecated command (on MacOS, works on other *nix variants)
-        - `echo "iam cloudkms pubsub serviceusage cloudresourcemanager bigquery assuredworkloads cloudbilling logging iamcredentials orgpolicy" | tr ' ' '\n' | xargs -I {} gcloud services enable "{}.googleapis.com"`
 - [Enable Access
   Transparency](https://console.cloud.google.com/iam-admin/settings) for your
   organization
