@@ -27,10 +27,19 @@ _TARGET_FILES = (
 )
 
 
+def _top_level_block(text, header):
+    pattern = re.compile(
+        r"^" + re.escape(header) + r"\s*\{.*?^\}", re.MULTILINE | re.DOTALL
+    )
+    match = pattern.search(text)
+    if match is None:
+        raise AssertionError(f"Block not found: {header}")
+    return match.group(0)
+
+
 class TestStageFolderParentFallbacks(unittest.TestCase):
     def test_stage_folders_coalesce_enclave_parents(self):
         expected = re.compile(
-            r'module "folder"\s*\{[\s\S]*?'
             r"parent\s*=\s*coalesce\(\s*"
             r"var\.common_services_folder,\s*"
             r"var\.assured_workloads\.folder,\s*"
@@ -38,21 +47,32 @@ class TestStageFolderParentFallbacks(unittest.TestCase):
         )
         for path in _TARGET_FILES:
             with self.subTest(path=path.relative_to(_STAGES_DIR)):
-                self.assertRegex(path.read_text(encoding="utf-8"), expected)
+                block = _top_level_block(
+                    path.read_text(encoding="utf-8"), 'module "folder"'
+                )
+                self.assertRegex(block, expected)
 
     def test_stage_variables_define_non_nullable_assured_workloads(self):
-        expected = re.compile(
-            r'variable "assured_workloads"\s*\{[\s\S]*?'
-            r"folder\s*=\s*optional\(string\)[\s\S]*?"
-            r"nullable\s*=\s*false[\s\S]*?"
-            r"default\s*=\s*\{\}[\s\S]*?\n\}"
-        )
         for path in _TARGET_FILES:
             variables_tf = path.parent / "variables.tf"
             with self.subTest(path=variables_tf.relative_to(_STAGES_DIR)):
-                self.assertRegex(
-                    variables_tf.read_text(encoding="utf-8"), expected
+                block = _top_level_block(
+                    variables_tf.read_text(encoding="utf-8"),
+                    'variable "assured_workloads"',
                 )
+                self.assertRegex(block, r"folder\s*=\s*optional\(string\)")
+                self.assertRegex(block, r"nullable\s*=\s*false")
+                self.assertRegex(block, r"default\s*=\s*\{\}")
+
+    def test_stage_variables_default_common_services_folder_to_null(self):
+        for path in _TARGET_FILES:
+            variables_tf = path.parent / "variables.tf"
+            with self.subTest(path=variables_tf.relative_to(_STAGES_DIR)):
+                block = _top_level_block(
+                    variables_tf.read_text(encoding="utf-8"),
+                    'variable "common_services_folder"',
+                )
+                self.assertRegex(block, r"default\s*=\s*null")
 
 
 if __name__ == "__main__":
