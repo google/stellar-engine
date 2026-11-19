@@ -12,6 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+locals {
+  # The name attribute already holds the full access level path, and IAM
+  # exposes the access levels of a request as a list of those full paths.
+  _access_level = (
+    google_access_context_manager_access_level.endpoint_verified.name
+  )
+  iap_condition_expression = (
+    "\"${local._access_level}\" in request.auth.access_levels"
+  )
+}
+
 data "google_access_context_manager_access_policy" "existing_policy" {
   parent = "organizations/${var.organization_id}"
 }
@@ -36,7 +47,7 @@ resource "google_access_context_manager_access_level" "endpoint_verified" {
   basic {
     conditions {
       device_policy {
-        allowed_encryption_statuses = ["ENCRYPTION_UNSUPPORTED", "ENCRYPTED"]
+        allowed_encryption_statuses = ["ENCRYPTED"]
         require_screen_lock         = true
       }
     }
@@ -61,4 +72,10 @@ resource "google_project_iam_member" "iap_user" {
   project = var.project_id
   role    = "roles/iap.httpsResourceAccessor"
   member  = var.iap_user_email
+
+  condition {
+    title       = "endpoint_verified"
+    description = "Requires the endpoint verification access level."
+    expression  = local.iap_condition_expression
+  }
 }
