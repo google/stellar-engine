@@ -60,6 +60,7 @@ Before deploying this blueprint, ensure the following are in place:
     terraform apply
     ```
     Type `yes` when prompted to confirm the deployment.
+    The first apply creates the Pub/Sub service agent in the `main_project_id` and waits 60 seconds for IAM to recognize it before granting it access to the KMS key.
 
 5.  **Destroy Infrastructure (Optional):**
     If you wish to remove the deployed Pub/Sub topic and associated resources:

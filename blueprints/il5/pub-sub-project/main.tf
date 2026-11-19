@@ -25,6 +25,24 @@ resource "google_project_service" "pubsub_api" {
   disable_on_destroy = false
 }
 
+# Enabling the API does not create the Pub/Sub service agent on a new project,
+# and the key grant below fails with "Service account ... does not exist"
+# until the agent exists.
+resource "google_project_service_identity" "pubsub_sa" {
+  provider   = google-beta
+  project    = var.main_project_id
+  service    = "pubsub.googleapis.com"
+  depends_on = [google_project_service.pubsub_api]
+}
+
+# IAM does not recognize a new service agent right away, so a grant issued
+# right after the agent is created can fail on the first apply.
+resource "time_sleep" "pubsub_sa_propagation" {
+  create_duration = "60s"
+
+  depends_on = [google_project_service_identity.pubsub_sa]
+}
+
 data "google_kms_key_ring" "default" {
   name     = var.kms_keyring_name
   location = var.gcp_region
@@ -82,6 +100,10 @@ resource "google_kms_crypto_key_iam_member" "kms_access" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = each.key
-  depends_on    = [google_project_service.pubsub_api]
+  # The for_each key is built from the project number rather than from
+  # google_project_service_identity.pubsub_sa.member, which is unknown until
+  # apply. The plan stays valid on a new project, and the grant keeps its state
+  # address on existing deployments.
+  depends_on = [time_sleep.pubsub_sa_propagation]
 }
 
