@@ -26,8 +26,12 @@ The service account or identity deploying this blueprint requires the following 
 - **Network Host Project (`network_project_id`):**
   - `roles/compute.networkUser`
   - `roles/compute.securityAdmin` (for managing the firewall rule)
-- **KMS Project / Key (`kms_key_name`):**
-  - `roles/cloudkms.cryptoKeyEncrypterDecrypter`
+- **KMS Key (`kms_key_name`):**
+  - A custom role with `cloudkms.cryptoKeys.getIamPolicy` and `cloudkms.cryptoKeys.setIamPolicy`, or
+    `roles/cloudkms.admin` when a custom role is not available, granted on the key only.
+  - The blueprint uses these permissions to grant the Cloud SQL service agent
+    `roles/cloudkms.cryptoKeyEncrypterDecrypter` on the key
+    (`google_kms_crypto_key_iam_member.sql_sa` in `main.tf`).
 
 ### Impersonated Deployment Configuration
 
