@@ -55,7 +55,10 @@ locals {
       module.tenant-self-iac-sa[k].iam_email
     ]
   }
-  gcs_locations = { for k, v in var.tenants : k => try(v.locations.gcs != "", false) ? v.locations.gcs : var.regions.primary }
+  gcs_locations = {
+    for k, v in var.tenants :
+    k => coalesce(try(v.locations.gcs, null), var.regions.primary)
+  }
   tenant_envs = merge([for e, _ in var.envs_folders : {
     for t, v in var.tenants : "${e}-${t}" => {
       env         = e
