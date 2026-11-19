@@ -18,6 +18,18 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+RUN_TERRAFORM_TESTS="${RUN_TERRAFORM_TESTS:-0}"
+for arg in "$@"; do
+  case "${arg}" in
+    --with-terraform-tests) RUN_TERRAFORM_TESTS=1 ;;
+    *)
+      echo "Unknown argument: ${arg}" >&2
+      echo "Usage: $(basename "$0") [--with-terraform-tests]" >&2
+      exit 2
+      ;;
+  esac
+done
+
 # uv runs every Python step on the interpreter and packages that the root
 # pyproject.toml and uv.lock pin, so the result matches CI on every machine.
 
@@ -63,6 +75,12 @@ for root, dirs, files in os.walk('${REPO_ROOT}'):
       count += 1
 print(f'  [PASS] Successfully compiled and verified {count} Python files.')
 "
+
+if [[ "${RUN_TERRAFORM_TESTS}" == "1" ]]; then
+  echo ""
+  echo "==> [4/4] Running Offline Terraform Mock Tests..."
+  bash "${REPO_ROOT}/tools/run_terraform_tests.sh"
+fi
 
 echo ""
 echo "============================================================"
