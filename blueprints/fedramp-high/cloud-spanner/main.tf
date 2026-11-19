@@ -29,11 +29,22 @@ resource "google_project_service_identity" "spanner" {
   depends_on = [google_project_service.spanner_api]
 }
 
+# IAM does not recognize a new service agent right away, and a grant issued
+# too early fails with "Service account ... does not exist".
+resource "time_sleep" "spanner_agent_propagation" {
+  count           = var.kms_key_name == null ? 0 : 1
+  create_duration = "60s"
+
+  depends_on = [google_project_service_identity.spanner]
+}
+
 resource "google_kms_crypto_key_iam_member" "spanner_cmek" {
   count         = var.kms_key_name == null ? 0 : 1
   crypto_key_id = var.kms_key_name
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = google_project_service_identity.spanner[0].member
+
+  depends_on = [time_sleep.spanner_agent_propagation]
 }
 
 moved {

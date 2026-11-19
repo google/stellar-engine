@@ -110,6 +110,32 @@ class TestCloudSpannerCmek(unittest.TestCase):
         self.assertNotIn("google_kms_crypto_key_iam_binding", self.main_tf)
         self.assertNotIn("google_kms_crypto_key_iam_policy", self.main_tf)
 
+    def test_key_grant_waits_for_the_service_agent_to_propagate(self):
+        # A grant issued right after the service agent is created fails,
+        # because IAM does not recognize the new agent yet.
+        wait = _top_block(
+            self.main_tf,
+            'resource "time_sleep" "spanner_agent_propagation"',
+        )
+        self.assertRegex(wait, _GATE)
+        self.assertRegex(wait, r'create_duration\s*=\s*"\d+[sm]"')
+        self.assertRegex(
+            wait,
+            r"depends_on\s*=\s*\[google_project_service_identity\.spanner\]",
+        )
+        grant = _top_block(
+            self.main_tf,
+            'resource "google_kms_crypto_key_iam_member" "spanner_cmek"',
+        )
+        self.assertRegex(
+            grant,
+            r"depends_on\s*=\s*\[time_sleep\.spanner_agent_propagation\]",
+        )
+        provider_tf = (_BLUEPRINT_DIR / "provider.tf").read_text(
+            encoding="utf-8"
+        )
+        self.assertRegex(provider_tf, r'source\s*=\s*"hashicorp/time"')
+
     def test_database_waits_for_the_key_grant(self):
         module = _top_block(self.main_tf, 'module "cloud-spanner"')
         depends_on = re.search(r"depends_on\s*=\s*\[([\s\S]*?)\]", module)
