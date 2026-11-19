@@ -66,7 +66,8 @@ EOF
 chmod +x "${STUB_DIR}/gcloud"
 
 # Sample tfvars files with the key layout that the 0-bootstrap and 1-resman
-# stages write. The gcve, gke-prod, and teams branches are not deployed.
+# stages write. The gcve, gke-prod, and teams branches are not deployed. The
+# envs key holds the account that owns every environment folder.
 WORK_DIR="${TMP_TEST_DIR}/3-security"
 SA_DOMAIN="my-project.iam.gserviceaccount.com"
 mkdir -p "$WORK_DIR"
@@ -90,6 +91,7 @@ cat > "${WORK_DIR}/1-resman.auto.tfvars.json" << EOF
     "data-platform-dev-r": "dp-dev-0r@${SA_DOMAIN}",
     "data-platform-prod": "dp-prod-0@${SA_DOMAIN}",
     "data-platform-prod-r": "dp-prod-0r@${SA_DOMAIN}",
+    "envs": "envs-0@${SA_DOMAIN}",
     "gcve-dev": null,
     "gcve-dev-r": null,
     "gcve-prod": null,
@@ -143,7 +145,7 @@ DEPLOYED_ACCOUNTS=(
   dp-dev-0 dp-dev-0r dp-prod-0 dp-prod-0r
   gke-dev-0 gke-dev-0r
   pf-dev-0 pf-dev-0r pf-prod-0 pf-prod-0r
-  sandbox-0 team-alpha-0
+  envs-0 sandbox-0 team-alpha-0
 )
 
 # 1. The default run disables every deployed account and skips null and
@@ -192,6 +194,98 @@ assert_equals "an unknown flag exits with status 1" "1" "$LOCKDOWN_STATUS"
 assert_contains "usage text documents the --sa flag" \
   "[--sa <comma-separated list of names>]" "$LOCKDOWN_OUTPUT"
 assert_equals "an unknown flag makes no gcloud call" "" "$LOCKDOWN_CALLS"
+
+# 7. The envs name selects the account that owns every environment folder,
+# and the usage text lists the name.
+run_lockdown --sa "envs"
+assert_equals "--sa envs exits successfully" "0" "$LOCKDOWN_STATUS"
+assert_equals "--sa envs disables only the envs account" \
+  "$(expected_calls disable envs-0)" "$LOCKDOWN_CALLS"
+
+run_lockdown --enable --sa "envs"
+assert_equals "--enable --sa envs exits successfully" "0" "$LOCKDOWN_STATUS"
+assert_equals "--enable --sa envs enables only the envs account" \
+  "$(expected_calls enable envs-0)" "$LOCKDOWN_CALLS"
+
+run_lockdown --sa "envs,networking-r"
+assert_equals "--sa accepts envs next to another name" \
+  "$(expected_calls disable envs-0 net-0r)" "$LOCKDOWN_CALLS"
+
+run_lockdown --help
+assert_contains "usage text lists envs as a valid name" \
+  " envs " "$LOCKDOWN_OUTPUT"
+
+# 8. The CI/CD account IDs are not valid names, so the script never disables
+# a "-1" or "-1r" account.
+run_lockdown --sa "resman-1"
+assert_equals "--sa with a CI/CD account ID exits with status 1" \
+  "1" "$LOCKDOWN_STATUS"
+assert_contains "--sa with a CI/CD account ID reports it" \
+  "Invalid names provided: resman-1" "$LOCKDOWN_OUTPUT"
+assert_equals "--sa with a CI/CD account ID makes no gcloud call" \
+  "" "$LOCKDOWN_CALLS"
+
+# 9. The default run covers the envs account in a tfvars file that carries
+# real 1-resman account IDs, and leaves an account under an unknown key alone.
+# The remaining tests run in a second directory.
+ENVS_DIR="${TMP_TEST_DIR}/envs"
+ENVS_DOMAIN="pfx-prod-iac-core-0.iam.gserviceaccount.com"
+mkdir -p "$ENVS_DIR"
+cat > "${ENVS_DIR}/1-resman.auto.tfvars.json" << EOF
+{
+  "service_accounts": {
+    "envs": "pfx-prod-resman-envs-0@${ENVS_DOMAIN}",
+    "networking": "pfx-prod-resman-net-0@${ENVS_DOMAIN}",
+    "unlisted": "pfx-prod-resman-net-1@${ENVS_DOMAIN}"
+  }
+}
+EOF
+WORK_DIR="$ENVS_DIR"
+run_lockdown
+assert_equals "default run on 1-resman account IDs exits successfully" \
+  "0" "$LOCKDOWN_STATUS"
+assert_equals "default run disables prod-resman-envs-0 and skips other keys" \
+  "iam service-accounts disable pfx-prod-resman-envs-0@${ENVS_DOMAIN} --project=pfx-prod-iac-core-0 --quiet
+iam service-accounts disable pfx-prod-resman-net-0@${ENVS_DOMAIN} --project=pfx-prod-iac-core-0 --quiet" \
+  "$LOCKDOWN_CALLS"
+
+# 10. A null envs key, which 1-resman writes when fast_features.envs is false,
+# makes no gcloud call for the envs account.
+cat > "${ENVS_DIR}/1-resman.auto.tfvars.json" << EOF
+{
+  "service_accounts": {
+    "envs": null,
+    "networking": "pfx-prod-resman-net-0@${ENVS_DOMAIN}"
+  }
+}
+EOF
+run_lockdown
+assert_equals "default run with a null envs key exits successfully" \
+  "0" "$LOCKDOWN_STATUS"
+assert_equals "default run with a null envs key skips the envs account" \
+  "iam service-accounts disable pfx-prod-resman-net-0@${ENVS_DOMAIN} --project=pfx-prod-iac-core-0 --quiet" \
+  "$LOCKDOWN_CALLS"
+run_lockdown --sa "envs"
+assert_equals "--sa envs with a null envs key exits successfully" \
+  "0" "$LOCKDOWN_STATUS"
+assert_equals "--sa envs with a null envs key makes no gcloud call" \
+  "" "$LOCKDOWN_CALLS"
+
+# 11. A tfvars file from a 1-resman release without the envs key still runs,
+# so an upgrade does not break the lockdown of the other accounts.
+cat > "${ENVS_DIR}/1-resman.auto.tfvars.json" << EOF
+{
+  "service_accounts": {
+    "networking": "pfx-prod-resman-net-0@${ENVS_DOMAIN}"
+  }
+}
+EOF
+run_lockdown
+assert_equals "default run without an envs key exits successfully" \
+  "0" "$LOCKDOWN_STATUS"
+assert_equals "default run without an envs key disables the other accounts" \
+  "iam service-accounts disable pfx-prod-resman-net-0@${ENVS_DOMAIN} --project=pfx-prod-iac-core-0 --quiet" \
+  "$LOCKDOWN_CALLS"
 
 echo ""
 echo "Summary: ${TEST_COUNT} tests run, ${FAIL_COUNT} failures."

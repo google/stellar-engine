@@ -30,6 +30,8 @@ The following diagram illustrates the high-level design of created resources and
   - [Using delayed billing association for Google Cloud Projects](#using-delayed-billing-association-for-google-cloud-projects)
   - [Running the stage](#running-the-stage)
   - [Disabling overpermissive service accounts](#disabling-overpermissive-service-accounts)
+    - [Environment folders account](#environment-folders-account)
+    - [CI/CD service accounts](#cicd-service-accounts)
   - [Verifying service account lockdown](#verifying-service-account-lockdown)
   - [Deleting the bootstrap project](#deleting-the-bootstrap-project)
 - [Customizations](#customizations)
@@ -181,6 +183,7 @@ You can also run this script with the following flags
   - bootstrap, resman, networking, security
   - bootstrap-r, resman-r, networking-r, security-r for the read-only plan accounts
   - data-platform-dev, data-platform-prod, gcve-dev, gcve-prod, gke-dev, gke-prod, project-factory-dev, project-factory-prod, each also with an `-r` suffix for its read-only plan account
+  - envs for the `prod-resman-envs-0` account, which holds `roles/owner` on every environment folder
   - sandbox, teams, and one `team-<name>` value for each entry in `team_folders`
 
 Without the `sa` flag, the script covers every value in this list. It skips the accounts of branches that are not deployed. Re-enable the accounts of a branch before you run that branch again.
@@ -197,6 +200,49 @@ Some common troubleshooting steps:
 chmod +x sa_lockdown.sh
 ```
 - Ensure the user running the command has the Service Account Admin role
+
+#### Environment folders account
+
+Stage 1 creates the `prod-resman-envs-0` account when `fast_features.envs` is `true`, and grants it `roles/owner` on every environment folder. The script disables this account through the `envs` key that Stage 1 writes under `service_accounts` in `1-resman.auto.tfvars.json`.
+
+A tfvars file that an earlier Stage 1 release wrote has no `envs` key, so the script skips the account without a message. To lock down a deployment in that state, use one of the following options:
+
+- Run `./sa_lockdown.sh --enable --sa resman`, apply Stage 1 again so that it writes the `envs` key, refresh the `1-resman.auto.tfvars.json` file in this directory if it is a copy, then run `./sa_lockdown.sh` again.
+- Disable the account directly:
+
+```bash
+gcloud iam service-accounts disable \
+  <prefix>-prod-resman-envs-0@<iac-core-project-id>.iam.gserviceaccount.com \
+  --project <iac-core-project-id>
+```
+
+Run `./validation.sh` afterward. The script prints a `FAILED` line for the account while the account is still enabled.
+
+#### CI/CD service accounts
+
+The script does not disable the CI/CD service accounts that the `0-bootstrap` and `1-resman` stages create when you set `cicd_repositories`. The IDs of these accounts end in `-1` for apply pipelines and in `-1r` for plan pipelines, such as `bootstrap-1`, `resman-1r`, `prod-resman-net-1`, and `prod-teams-<name>-1`. The stages do not write these accounts to the tfvars files that the script reads, and `validation.sh` does not check them.
+
+The script leaves these accounts enabled for the following reasons:
+
+- A CI/CD account holds no administrative role of its own. It acts on the deployment by impersonating its matching `-0` or `-0r` account through `roles/iam.serviceAccountTokenCreator`. Google Cloud rejects that impersonation while the target account is disabled, so the default run already blocks every pipeline from acting on the deployment.
+- A Day-2 GitOps pipeline works again after you re-enable its target account alone, for example with `./sa_lockdown.sh --enable --sa networking`.
+
+A CI/CD account that stays enabled keeps the following direct grants:
+
+- `roles/logging.logWriter` on the IaC core project
+- `roles/storage.objectViewer` on the outputs bucket, which holds the provider, tfvars, and workflow files of the stages
+- `roles/source.reader` on its repository, when the repository type is `sourcerepo`
+- The Workload Identity Federation binding that lets its external repository obtain tokens for the account
+
+Disable these accounts as well when the deployment runs no CI/CD pipeline after the lockdown, or when the authorization boundary requires every automation identity to be disabled. List the accounts, review the list, and disable each account:
+
+```bash
+gcloud iam service-accounts list --project <iac-core-project-id> \
+  --filter="email ~ '-1r?@'" --format="value(email)"
+gcloud iam service-accounts disable <account-email> --project <iac-core-project-id>
+```
+
+The filter also matches any other account in the project whose ID ends in `-1` or `-1r`, so review each email before you disable the account. Enable the account again with `gcloud iam service-accounts enable` before the pipeline runs.
 
 ### Verifying service account lockdown
 

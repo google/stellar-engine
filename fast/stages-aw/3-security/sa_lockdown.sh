@@ -17,6 +17,12 @@
 # Default list of service account names. These are the static keys that the
 # 0-bootstrap and 1-resman stages write under "service_accounts" in their
 # tfvars files. The "-r" keys are the read-only plan accounts.
+#
+# The "-1" and "-1r" CI/CD accounts are not in this list, because the stages
+# do not write them to the tfvars files. Their only privileged grant is the
+# permission to impersonate a "-0" or "-0r" account, which stops working when
+# this script disables that account. See the 3-security README.md file before
+# you change this behavior.
 VALID_NAMES=(
   "bootstrap" "resman" "networking" "security"
   "bootstrap-r" "resman-r" "networking-r" "security-r"
@@ -26,7 +32,7 @@ VALID_NAMES=(
   "gke-dev" "gke-dev-r" "gke-prod" "gke-prod-r"
   "project-factory-dev" "project-factory-dev-r"
   "project-factory-prod" "project-factory-prod-r"
-  "sandbox" "teams"
+  "envs" "sandbox" "teams"
 )
 
 # 1-resman also writes one "team-<name>" key for each entry in team_folders

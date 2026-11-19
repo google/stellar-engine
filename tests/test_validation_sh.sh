@@ -48,6 +48,24 @@ case "$1 $2 $3" in
     fi
     proj="${args#*--project=}"
     proj="${proj%% *}"
+    if [ -n "${MOCK_SA_IDS:-}" ]; then
+      # List the account IDs in MOCK_SA_IDS, and apply an "email ~ '<regex>'"
+      # filter the way gcloud does on the server
+      filter=""
+      for arg in "$@"; do
+        if [[ "${arg}" == --filter=* ]]; then
+          filter="${arg#--filter=}"
+        fi
+      done
+      for id in ${MOCK_SA_IDS}; do
+        echo "${id}@${proj}.iam.gserviceaccount.com"
+      done | if [[ "${filter}" =~ ^email\ ~\ \'(.*)\'$ ]]; then
+        grep -E -- "${BASH_REMATCH[1]}" || true
+      else
+        cat
+      fi
+      exit 0
+    fi
     echo "bootstrap-0@${proj}.iam.gserviceaccount.com"
     ;;
   "iam service-accounts describe"*)
@@ -55,6 +73,13 @@ case "$1 $2 $3" in
       echo "ERROR: describe failed" >&2
       exit 1
     fi
+    # gcloud prints an empty value for an account that is still enabled
+    for id in ${MOCK_ENABLED_SA_IDS:-}; do
+      if [[ "$4" == "${id}@"* ]]; then
+        echo ""
+        exit 0
+      fi
+    done
     echo "True"
     ;;
   *)
@@ -138,6 +163,56 @@ if ! grep -q "iam service-accounts describe bootstrap-0@custom-iac-core-0.iam.gs
   echo "FAIL: iam service-accounts describe did not receive --project=custom-iac-core-0"
   exit 1
 fi
+
+echo "==> Testing validation.sh checks the envs branch account and skips CI/CD accounts"
+ENVS_PROJECT="pfx-prod-iac-core-0"
+ENVS_DOMAIN="${ENVS_PROJECT}.iam.gserviceaccount.com"
+ENVS_SA="pfx-prod-resman-envs-0@${ENVS_DOMAIN}"
+# The first five IDs are deployment accounts that sa_lockdown.sh disables. The
+# other IDs are CI/CD accounts and an unrelated account, which stay enabled.
+ENVS_CHECKED_IDS="pfx-bootstrap-0 pfx-resman-0 pfx-prod-resman-net-0 pfx-security-0 pfx-prod-resman-envs-0"
+ENVS_SKIPPED_IDS="pfx-bootstrap-1 pfx-bootstrap-1r pfx-resman-1 pfx-resman-1r pfx-prod-resman-net-1 pfx-prod-resman-net-1r pfx-prod-teams-alpha-1 pfx-app-runtime"
+export MOCK_SA_IDS="${ENVS_CHECKED_IDS} ${ENVS_SKIPPED_IDS}"
+export MOCK_ENABLED_SA_IDS="${ENVS_SKIPPED_IDS}"
+
+: > "${MOCK_GCLOUD_LOG}"
+OUTPUT="$(bash "${VALIDATION_SH}" --project "${ENVS_PROJECT}" 2>&1 || true)"
+if ! grep -qxF "✅ SUCCESS: ${ENVS_SA} is disabled." <<< "${OUTPUT}"; then
+  echo "FAIL: a disabled prod-resman-envs-0 account was not checked; got: ${OUTPUT}"
+  exit 1
+fi
+if grep -qF "❌ FAILED:" <<< "${OUTPUT}"; then
+  echo "FAIL: a locked-down deployment reported an enabled account; got: ${OUTPUT}"
+  exit 1
+fi
+for id in ${ENVS_CHECKED_IDS}; do
+  if ! grep -qF "iam service-accounts describe ${id}@${ENVS_DOMAIN} --project=${ENVS_PROJECT}" "${MOCK_GCLOUD_LOG}"; then
+    echo "FAIL: validation.sh did not check ${id}; got: $(cat "${MOCK_GCLOUD_LOG}")"
+    exit 1
+  fi
+done
+for id in ${ENVS_SKIPPED_IDS}; do
+  if grep -qF "iam service-accounts describe ${id}@" "${MOCK_GCLOUD_LOG}"; then
+    echo "FAIL: validation.sh checked ${id}, which sa_lockdown.sh does not disable"
+    exit 1
+  fi
+done
+
+: > "${MOCK_GCLOUD_LOG}"
+OUTPUT="$(MOCK_ENABLED_SA_IDS="${ENVS_SKIPPED_IDS} pfx-prod-resman-envs-0" bash "${VALIDATION_SH}" --project "${ENVS_PROJECT}" 2>&1 || true)"
+if ! grep -qxF "❌ FAILED: ${ENVS_SA} is still enabled." <<< "${OUTPUT}"; then
+  echo "FAIL: an enabled prod-resman-envs-0 account was not reported; got: ${OUTPUT}"
+  exit 1
+fi
+if [ "$(grep -cF "❌ FAILED:" <<< "${OUTPUT}")" -ne 1 ]; then
+  echo "FAIL: expected one enabled account in the report; got: ${OUTPUT}"
+  exit 1
+fi
+if [ "$(grep -cF "✅ SUCCESS:" <<< "${OUTPUT}")" -ne 4 ]; then
+  echo "FAIL: expected four disabled accounts in the report; got: ${OUTPUT}"
+  exit 1
+fi
+unset MOCK_SA_IDS MOCK_ENABLED_SA_IDS
 
 echo "==> Testing validation.sh rejects invalid, missing, equals-form, and conflicting flags"
 assert_rejected_without_gcloud "❌ ERROR: --prefix requires a non-empty value." --prefix --help
@@ -321,19 +396,18 @@ LOCKDOWN_IDS=(
   pfx-prod-resman-gke-0 pfx-prod-resman-gke-0r
   pfx-dev-resman-pf-0 pfx-dev-resman-pf-0r
   pfx-prod-resman-pf-0 pfx-prod-resman-pf-0r
-  pfx-dev-resman-sbox-0 pfx-prod-resman-teams-0
+  pfx-prod-resman-envs-0 pfx-dev-resman-sbox-0 pfx-prod-resman-teams-0
   pfx-prod-teams-alpha-0 pfx-prod-teams-beta-gamma-0
 )
 
 # Accounts in the same project that sa_lockdown.sh does not cover, such as the
-# CI/CD accounts and the envs branch account. They stay enabled in every test.
+# CI/CD accounts. They stay enabled in every test.
 OTHER_IDS=(
   pfx-bootstrap-1 pfx-bootstrap-1r pfx-resman-1 pfx-resman-1r
   pfx-prod-resman-net-1 pfx-prod-resman-net-1r
   pfx-prod-resman-sec-1 pfx-prod-resman-sec-1r
   pfx-dev-resman-dp-1 pfx-prod-resman-dp-1r
   pfx-dev-pf-resman-pf-1 pfx-prod-resman-pf-1r
-  pfx-prod-teams-alpha-1 pfx-prod-resman-envs-0
   pfx-billing-export pfx-app-runtime
 )
 
@@ -420,8 +494,8 @@ stage_account_ids() {
 # 1. The tfvars keys match the keys that sa_lockdown.sh covers.
 assert_equals "the key list matches VALID_NAMES in sa_lockdown.sh" \
   "$(lockdown_keys "$SA_LOCKDOWN")" "$(lockdown_keys "$VALIDATION")"
-assert_equals "the key list holds 26 keys and the team prefix" \
-  "27" "$(lockdown_keys "$VALIDATION" | wc -l | tr -d ' ')"
+assert_equals "the key list holds 27 keys and the team prefix" \
+  "28" "$(lockdown_keys "$VALIDATION" | wc -l | tr -d ' ')"
 
 # 2. The sample account IDs are the IDs in the stage sources, so a renamed or
 # new account in a stage fails this test until the pattern covers it.
