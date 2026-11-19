@@ -202,7 +202,7 @@ VPCs are defined in separate files, one for `landing` (landing and dmz), one for
 These files contain different resources:
 
 - **project** ([`projects`](../../../modules/project)): the "[host Google Cloud Project](https://cloud.google.com/vpc/docs/shared-vpc)" containing the VPCs and enabling the required APIs.
-- **VPCs** ([`net-vpc`](../../../modules/net-vpc)): manages the subnets, the explicit routes for `{private,restricted}.googleapis.com` and the DNS inbound policy for the landing landing VPC. Non-infrastructural subnets are created leveraging resource factories. Sample subnets are shipped in data/subnets and can be easily customized to fit users' needs. [PSA](https://cloud.google.com/vpc/docs/configure-private-services-access#allocating-range) are configured by the variable `psa_ranges` if managed services are needed.
+- **VPCs** ([`net-vpc`](../../../modules/net-vpc)): manages the subnets, the explicit routes for `{private,restricted}.googleapis.com` and the DNS inbound policy for the landing landing VPC. Non-infrastructural subnets are created leveraging resource factories. Sample subnets are shipped in data/subnets and can be easily customized to fit users' needs. [PSA](https://cloud.google.com/vpc/docs/configure-private-services-access#allocating-range) are configured by the variable `psa_ranges` if managed services are needed. The stage creates a default `/22` allocation named `default-peering` and its service networking connection only for environments that receive no PSA ranges.
 - **Cloud NAT** ([`net-cloudnat`](../../../modules/net-cloudnat)) (in the dmz landing VPC only): it manages the networking infrastructure required to enable the Internet egress.
 
 ### VPNs
@@ -418,9 +418,9 @@ If you are redeploying this stage with the same prefix, please run "pre-redeploy
 
 | name | description | sensitive |
 |---|---|:---:|
-| [host_project_ids](outputs.tf#L62) | Network project ids. |  |
-| [host_project_numbers](outputs.tf#L67) | Network project numbers. |  |
-| [ngfw_password](outputs.tf#L72) | Password for authenticating to the NGFW. | ✓ |
-| [ngfw_ssh_private_key_secret_id](outputs.tf#L78) | Secret Manager secret ID storing the NGFW SSH private key. |  |
-| [tfvars](outputs.tf#L83) | Terraform variables file for the following stages. | ✓ |
+| [host_project_ids](outputs.tf#L64) | Network project ids. |  |
+| [host_project_numbers](outputs.tf#L69) | Network project numbers. |  |
+| [ngfw_password](outputs.tf#L74) | Password for authenticating to the NGFW. | ✓ |
+| [ngfw_ssh_private_key_secret_id](outputs.tf#L80) | Secret Manager secret ID storing the NGFW SSH private key. |  |
+| [tfvars](outputs.tf#L85) | Terraform variables file for the following stages. | ✓ |
 <!-- END TFDOC -->
