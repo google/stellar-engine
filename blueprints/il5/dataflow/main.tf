@@ -58,13 +58,9 @@ resource "google_project_service" "storage_api" {
   disable_on_destroy = false
 }
 
-resource "google_project_service_identity" "compute_agent" {
-  provider   = google-beta
-  project    = var.main_project_id
-  service    = "compute.googleapis.com"
-  depends_on = [google_project_service.compute_api]
-}
-
+# Only dataflow.googleapis.com exposes a primary service identity via
+# serviceusage.services.generateServiceIdentity; compute.googleapis.com and
+# storage.googleapis.com return an empty identity from that API.
 resource "google_project_service_identity" "dataflow_agent" {
   provider   = google-beta
   project    = var.main_project_id
@@ -72,10 +68,8 @@ resource "google_project_service_identity" "dataflow_agent" {
   depends_on = [google_project_service.dataflow_api]
 }
 
-resource "google_project_service_identity" "storage_agent" {
-  provider   = google-beta
+data "google_storage_project_service_account" "gcs_sa" {
   project    = var.main_project_id
-  service    = "storage.googleapis.com"
   depends_on = [google_project_service.storage_api]
 }
 
@@ -85,9 +79,9 @@ resource "time_sleep" "service_agent_propagation" {
   create_duration = "60s"
 
   depends_on = [
-    google_project_service_identity.compute_agent,
+    google_project_service.compute_api,
     google_project_service_identity.dataflow_agent,
-    google_project_service_identity.storage_agent,
+    data.google_storage_project_service_account.gcs_sa,
   ]
 }
 
@@ -122,7 +116,7 @@ resource "google_compute_subnetwork_iam_member" "dataflow_sa_compute_network_use
 resource "google_kms_crypto_key_iam_member" "compute_system_sa_kms_access" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = google_project_service_identity.compute_agent.member
+  member        = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
   depends_on    = [time_sleep.service_agent_propagation]
 }
 
@@ -136,7 +130,7 @@ resource "google_kms_crypto_key_iam_member" "dataflow_sa_kms_access" {
 resource "google_kms_crypto_key_iam_member" "gcs_sa_kms_access" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = google_project_service_identity.storage_agent.member
+  member        = data.google_storage_project_service_account.gcs_sa.member
   depends_on    = [time_sleep.service_agent_propagation]
 }
 
@@ -189,5 +183,11 @@ resource "google_dataflow_job" "job" {
 
   kms_key_name = data.google_kms_crypto_key.default.id
 
-  depends_on = [module.gcs, google_project_iam_member.dataflow_worker, google_kms_crypto_key_iam_member.dataflow_sa_kms_access]
+  depends_on = [
+    module.gcs,
+    google_project_iam_member.dataflow_worker,
+    google_compute_subnetwork_iam_member.dataflow_sa_compute_network_user,
+    google_kms_crypto_key_iam_member.compute_system_sa_kms_access,
+    google_kms_crypto_key_iam_member.dataflow_sa_kms_access,
+  ]
 }

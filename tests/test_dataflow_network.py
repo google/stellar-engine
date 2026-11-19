@@ -58,28 +58,64 @@ class TestDataflowNetwork(unittest.TestCase):
             )
             self.assertRegex(api, rf'service\s*=\s*"{re.escape(service)}"')
 
-        expected_agents = {
-            "compute_agent": ("compute.googleapis.com", "compute_api"),
-            "dataflow_agent": ("dataflow.googleapis.com", "dataflow_api"),
-            "storage_agent": ("storage.googleapis.com", "storage_api"),
-        }
-        for agent_name, (service, api_name) in expected_agents.items():
-            agent = _top_block(
-                main_tf,
-                f'resource "google_project_service_identity" "{agent_name}"',
-            )
-            self.assertRegex(agent, rf'service\s*=\s*"{re.escape(service)}"')
-            self.assertRegex(
-                agent,
-                rf"depends_on\s*=\s*\[google_project_service\.{api_name}\]",
-            )
+        agent = _top_block(
+            main_tf,
+            'resource "google_project_service_identity" "dataflow_agent"',
+        )
+        self.assertRegex(agent, r'service\s*=\s*"dataflow\.googleapis\.com"')
+        self.assertRegex(
+            agent,
+            r"depends_on\s*=\s*\[google_project_service\.dataflow_api\]",
+        )
+        # compute.googleapis.com and storage.googleapis.com are non-primary
+        # service identities that return an empty member from
+        # google_project_service_identity.
+        self.assertNotIn(
+            'resource "google_project_service_identity" "compute_agent"',
+            main_tf,
+        )
+        self.assertNotIn(
+            'resource "google_project_service_identity" "storage_agent"',
+            main_tf,
+        )
+
+        gcs_sa = _top_block(
+            main_tf,
+            'data "google_storage_project_service_account" "gcs_sa"',
+        )
+        self.assertRegex(
+            gcs_sa,
+            r"depends_on\s*=\s*\[google_project_service\.storage_api\]",
+        )
 
         wait = _top_block(
             main_tf, 'resource "time_sleep" "service_agent_propagation"'
         )
         self.assertRegex(wait, r'create_duration\s*=\s*"\d+[sm]"')
-        for agent_name in expected_agents:
-            self.assertIn(f"google_project_service_identity.{agent_name}", wait)
+        for dep in (
+            "google_project_service.compute_api",
+            "google_project_service_identity.dataflow_agent",
+            "data.google_storage_project_service_account.gcs_sa",
+        ):
+            self.assertIn(dep, wait)
+
+        compute_kms = _top_block(
+            main_tf,
+            'resource "google_kms_crypto_key_iam_member" '
+            '"compute_system_sa_kms_access"',
+        )
+        self.assertIn(
+            "@compute-system.iam.gserviceaccount.com",
+            compute_kms,
+        )
+        gcs_kms = _top_block(
+            main_tf,
+            'resource "google_kms_crypto_key_iam_member" "gcs_sa_kms_access"',
+        )
+        self.assertIn(
+            "data.google_storage_project_service_account.gcs_sa.member",
+            gcs_kms,
+        )
 
         provider_tf = (_DATAFLOW_DIR / "provider.tf").read_text(
             encoding="utf-8"
