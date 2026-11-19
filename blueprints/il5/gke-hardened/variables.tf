@@ -13,19 +13,43 @@
 # limitations under the License.
 
 variable "config_sync_secret_type" {
-  description = "The type of secret Config Sync uses to authenticate to the Git repository in source_repo."
+  description = "The type of secret Config Sync uses to authenticate to the Git repository in source_repo. The cookiefile, githubapp, ssh, and token values need a git-creds Kubernetes Secret that you create out of band in the config-management-system namespace. The gcpserviceaccount value needs config_sync_service_account_email. The none value needs no credentials."
   type        = string
   default     = "none"
   nullable    = false
+  # The gcenode type needs Workload Identity disabled, and the cluster in this
+  # blueprint always enables it, so the list leaves gcenode out.
   validation {
     condition = contains(
       [
-        "cookiefile", "gcenode", "gcpserviceaccount", "githubapp", "none",
-        "ssh", "token"
+        "cookiefile", "gcpserviceaccount", "githubapp", "none", "ssh", "token"
       ],
       var.config_sync_secret_type
     )
-    error_message = "The config_sync_secret_type value must be one of cookiefile, gcenode, gcpserviceaccount, githubapp, none, ssh, or token."
+    error_message = "The config_sync_secret_type value must be one of cookiefile, gcpserviceaccount, githubapp, none, ssh, or token."
+  }
+}
+
+variable "config_sync_service_account_email" {
+  description = "The email of the user-managed service account Config Sync uses to authenticate to the Git repository in source_repo. Set it when and only when config_sync_secret_type is gcpserviceaccount. This blueprint creates no IAM binding for the account, so grant roles/iam.workloadIdentityUser on it to the member serviceAccount:MAIN_PROJECT_ID.svc.id.goog[config-management-system/root-reconciler], and grant the account read access to the repository."
+  type        = string
+  default     = null
+  validation {
+    condition = (
+      (var.config_sync_secret_type == "gcpserviceaccount") ==
+      (var.config_sync_service_account_email != null)
+    )
+    error_message = "Set config_sync_service_account_email when and only when config_sync_secret_type is gcpserviceaccount."
+  }
+  validation {
+    condition = (
+      var.config_sync_service_account_email == null ||
+      can(regex(
+        "^[a-z][a-z0-9-]{4,28}[a-z0-9]@[a-z0-9.-]+\\.iam\\.gserviceaccount\\.com$",
+        var.config_sync_service_account_email
+      ))
+    )
+    error_message = "The config_sync_service_account_email value must be a user-managed service account email such as name@my-project.iam.gserviceaccount.com."
   }
 }
 

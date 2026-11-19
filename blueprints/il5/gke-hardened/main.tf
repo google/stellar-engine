@@ -82,10 +82,11 @@ resource "google_gke_hub_feature_membership" "configmanagement_feature_member" {
       source_format = "unstructured"
       enabled       = true
       git {
-        sync_repo   = var.source_repo
-        secret_type = var.config_sync_secret_type
-        sync_branch = var.source_branch
-        policy_dir  = var.source_dir
+        gcp_service_account_email = var.config_sync_service_account_email
+        sync_repo                 = var.source_repo
+        secret_type               = var.config_sync_secret_type
+        sync_branch               = var.source_branch
+        policy_dir                = var.source_dir
       }
     }
   }

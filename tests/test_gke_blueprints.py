@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Checks node privacy and identifier inputs of the GKE blueprints."""
+"""Checks node privacy, identifier, and Config Sync inputs of GKE blueprints."""
 
 import pathlib
 import re
@@ -22,10 +22,11 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 _GKE_DIR = _REPO_ROOT / "blueprints/il5/gke"
 _GKE_HARDENED_DIR = _REPO_ROOT / "blueprints/il5/gke-hardened"
 
-# The secret types Config Sync accepts for a Git repository.
+# The secret types the gke-hardened blueprint accepts for a Git repository.
+# Config Sync also defines gcenode, which needs Workload Identity disabled,
+# and the blueprint cluster always enables Workload Identity.
 _GIT_SECRET_TYPES = {
     "cookiefile",
-    "gcenode",
     "gcpserviceaccount",
     "githubapp",
     "none",
@@ -110,6 +111,82 @@ class TestGkeBlueprints(unittest.TestCase):
             set(re.findall(r'"([^"]+)"', condition.group(1))),
             _GIT_SECRET_TYPES,
         )
+        # The error message names the same values as the condition.
+        message = re.search(r'error_message\s*=\s*"([^"]*)"', variable)
+        self.assertIsNotNone(message)
+        self.assertEqual(
+            set(re.findall(r"[a-z]{3,}", message.group(1).split(" of ")[1]))
+            - {"and", "or"},
+            _GIT_SECRET_TYPES,
+        )
+        # The description tells operators which values need the Secret.
+        self.assertIn("git-creds", variable)
+
+    def test_cluster_keeps_workload_identity_enabled(self):
+        # Leaving gcenode out of the accepted secret types relies on the
+        # cluster module default, which enables Workload Identity.
+        cluster = _top_block(
+            _read(_GKE_HARDENED_DIR, "main.tf"), 'module "cluster"'
+        )
+        self.assertNotIn("workload_identity", cluster)
+        module_variables = _read(
+            _REPO_ROOT / "modules/gke-cluster-standard-se", "variables.tf"
+        )
+        self.assertRegex(
+            module_variables,
+            r"workload_identity\s*=\s*optional\(bool, true\)",
+        )
+
+    def test_config_sync_service_account_email_is_validated(self):
+        git = re.search(
+            r"\n\s*git\s*\{([^}]*)\}", _read(_GKE_HARDENED_DIR, "main.tf")
+        )
+        self.assertIsNotNone(git)
+        self.assertEqual(
+            re.findall(r"gcp_service_account_email\s*=\s*(\S+)", git.group(1)),
+            ["var.config_sync_service_account_email"],
+        )
+        variable = _top_block(
+            _read(_GKE_HARDENED_DIR, "variables.tf"),
+            'variable "config_sync_service_account_email"',
+        )
+        # The null default leaves the planned git block unchanged.
+        self.assertRegex(variable, r"\n\s*default\s*=\s*null\n")
+        # The description states the binding the operator must grant.
+        self.assertIn("roles/iam.workloadIdentityUser", variable)
+        self.assertIn(
+            "svc.id.goog[config-management-system/root-reconciler]", variable
+        )
+        compact = re.sub(r"\s+", "", variable)
+        # The email is set when and only when the secret type needs it.
+        self.assertIn(
+            '(var.config_sync_secret_type=="gcpserviceaccount")=='
+            "(var.config_sync_service_account_email!=null)",
+            compact,
+        )
+        pattern = re.search(r'regex\(\s*"([^"]+)"', variable)
+        self.assertIsNotNone(pattern)
+        # HCL escapes each backslash of the regular expression.
+        email = re.compile(pattern.group(1).replace("\\\\", "\\"))
+        accepted = (
+            "config-sync@my-project.iam.gserviceaccount.com",
+            "config-sync@my-project.example.com.iam.gserviceaccount.com",
+        )
+        rejected = (
+            "",
+            "config-sync",
+            "serviceAccount:config-sync@my-project.iam.gserviceaccount.com",
+            "123456789012-compute@developer.gserviceaccount.com",
+            "config-sync@my-project.iam.gserviceaccount.com.example.com",
+            "Config-Sync@my-project.iam.gserviceaccount.com",
+            "sync@my-project.iam.gserviceaccount.com",
+        )
+        for value in accepted:
+            with self.subTest(accepted=value):
+                self.assertIsNotNone(email.search(value))
+        for value in rejected:
+            with self.subTest(rejected=value):
+                self.assertIsNone(email.search(value))
 
 
 if __name__ == "__main__":

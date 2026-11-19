@@ -25,37 +25,38 @@ The Deployment Steps are outlined in the Stellar Engine GKE Deployment Guide.
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [gatekeeper_sa](variables.tf#L32) | The service account Gatekeeper uses to push metrics to GCP. | <code>string</code> | ✓ |  |
-| [gke_cluster_enable_private_endpoint](variables.tf#L37) | The Private Cluster configuration to enable private end point. | <code>bool</code> | ✓ |  |
-| [gke_cluster_master_global_access](variables.tf#L43) | The Private Cluster configuration to check the master Global Access. | <code>bool</code> | ✓ |  |
-| [gke_cluster_name](variables.tf#L49) | The GKE Kubernetes Cluster Name. | <code>string</code> | ✓ |  |
-| [gke_initial_node_per_zone](variables.tf#L55) | The intial number of Node per each zone. | <code>number</code> | ✓ |  |
-| [gke_nodepool_name](variables.tf#L61) | The GKE Kubernetes Cluster Name. | <code>string</code> | ✓ |  |
-| [gke_vpc_master_ipv4_cidr_block](variables.tf#L67) | The CIDR Range for the GKE Master IP CIDR Ranges for the k8s used for VPC configuration. | <code>string</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L124) | Keyring attributes. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [local_admin_external_ip](variables.tf#L132) | local admin workstation external ip to ssh into bastion vm. | <code>list&#40;string&#41;</code> | ✓ |  |
-| [main_project_id](variables.tf#L137) | The ID of the project in which to create the GKE cluster. | <code>string</code> | ✓ |  |
-| [master_authorized_ranges_ip_ranges](variables.tf#L142) | The CIDR Range for the GKE Nodes Pool when enabled Private End Point with master aurhotized ranges of CIDR. | <code>string</code> | ✓ |  |
-| [nat_gateway_name](variables.tf#L147) | The nat gateway for outboud routing from the cluster. | <code>string</code> | ✓ |  |
-| [nat_router_name](variables.tf#L152) | The nat router for outboud routing from the cluster. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L157) | The VPC Name. | <code>string</code> | ✓ |  |
-| [node_config_tags](variables.tf#L163) | The Tags on the Node Configuration. | <code>list&#40;string&#41;</code> | ✓ |  |
-| [node_disk_size_gb](variables.tf#L169) | The disk size in GB to be given to each node. | <code>number</code> | ✓ |  |
-| [nodepool_node_count](variables.tf#L180) | Number of node per zone in the Nodepool. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [region](variables.tf#L195) | The GCP region to use for the resources. | <code>string</code> | ✓ |  |
-| [source_dir](variables.tf#L219) | The directory in the repository containing policies. | <code>string</code> | ✓ |  |
-| [source_repo](variables.tf#L224) | The repository used for config sync gitops. | <code>string</code> | ✓ |  |
-| [subnetwork_ip_cidr_range_1](variables.tf#L229) | The CIDR Range for the VPC Subnet. | <code>string</code> | ✓ |  |
-| [subnetwork_name](variables.tf#L235) | The Subnet Name. | <code>string</code> | ✓ |  |
-| [subnetwork_secondary_ip_range_pods_1](variables.tf#L241) | The CIDR Range for the secondary IP CIDR Ranges for the k8s pods. | <code>string</code> | ✓ |  |
-| [subnetwork_secondary_ip_range_services_1](variables.tf#L247) | The CIDR Range for the secondary IP CIDR Ranges for the k8s services. | <code>string</code> | ✓ |  |
-| [config_sync_secret_type](variables.tf#L15) | The type of secret Config Sync uses to authenticate to the Git repository in source_repo. | <code>string</code> |  | <code>&#34;none&#34;</code> |
-| [kms_key_names](variables.tf#L73) | Key names and base attributes. Set attributes to null if not needed. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
-| [node_machine_type](variables.tf#L174) | The node machine type, which must support Confidential GKE Nodes, such as the N2D, C2D or C3D series. | <code>string</code> |  | <code>&#34;n2d-standard-2&#34;</code> |
-| [policy_controller_exemptable_namespaces](variables.tf#L189) | The exemted namespaces for policy controller. | <code>list&#40;any&#41;</code> |  | <code>&#91;&#93;</code> |
-| [remove_default_node_pool](variables.tf#L200) | Remove the default node pool, which runs without the hardened node settings of the cluster node pool. | <code>bool</code> |  | <code>true</code> |
-| [snapshot_max_retention_days](variables.tf#L207) | The maximum number of days to retain snapshots. | <code>number</code> |  | <code>14</code> |
-| [source_branch](variables.tf#L213) | The branch of the repository used for config sync gitops. | <code>string</code> |  | <code>&#34;main&#34;</code> |
+| [gatekeeper_sa](variables.tf#L56) | The service account Gatekeeper uses to push metrics to GCP. | <code>string</code> | ✓ |  |
+| [gke_cluster_enable_private_endpoint](variables.tf#L61) | The Private Cluster configuration to enable private end point. | <code>bool</code> | ✓ |  |
+| [gke_cluster_master_global_access](variables.tf#L67) | The Private Cluster configuration to check the master Global Access. | <code>bool</code> | ✓ |  |
+| [gke_cluster_name](variables.tf#L73) | The GKE Kubernetes Cluster Name. | <code>string</code> | ✓ |  |
+| [gke_initial_node_per_zone](variables.tf#L79) | The intial number of Node per each zone. | <code>number</code> | ✓ |  |
+| [gke_nodepool_name](variables.tf#L85) | The GKE Kubernetes Cluster Name. | <code>string</code> | ✓ |  |
+| [gke_vpc_master_ipv4_cidr_block](variables.tf#L91) | The CIDR Range for the GKE Master IP CIDR Ranges for the k8s used for VPC configuration. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L148) | Keyring attributes. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [local_admin_external_ip](variables.tf#L156) | local admin workstation external ip to ssh into bastion vm. | <code>list&#40;string&#41;</code> | ✓ |  |
+| [main_project_id](variables.tf#L161) | The ID of the project in which to create the GKE cluster. | <code>string</code> | ✓ |  |
+| [master_authorized_ranges_ip_ranges](variables.tf#L166) | The CIDR Range for the GKE Nodes Pool when enabled Private End Point with master aurhotized ranges of CIDR. | <code>string</code> | ✓ |  |
+| [nat_gateway_name](variables.tf#L171) | The nat gateway for outboud routing from the cluster. | <code>string</code> | ✓ |  |
+| [nat_router_name](variables.tf#L176) | The nat router for outboud routing from the cluster. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L181) | The VPC Name. | <code>string</code> | ✓ |  |
+| [node_config_tags](variables.tf#L187) | The Tags on the Node Configuration. | <code>list&#40;string&#41;</code> | ✓ |  |
+| [node_disk_size_gb](variables.tf#L193) | The disk size in GB to be given to each node. | <code>number</code> | ✓ |  |
+| [nodepool_node_count](variables.tf#L204) | Number of node per zone in the Nodepool. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [region](variables.tf#L219) | The GCP region to use for the resources. | <code>string</code> | ✓ |  |
+| [source_dir](variables.tf#L243) | The directory in the repository containing policies. | <code>string</code> | ✓ |  |
+| [source_repo](variables.tf#L248) | The repository used for config sync gitops. | <code>string</code> | ✓ |  |
+| [subnetwork_ip_cidr_range_1](variables.tf#L253) | The CIDR Range for the VPC Subnet. | <code>string</code> | ✓ |  |
+| [subnetwork_name](variables.tf#L259) | The Subnet Name. | <code>string</code> | ✓ |  |
+| [subnetwork_secondary_ip_range_pods_1](variables.tf#L265) | The CIDR Range for the secondary IP CIDR Ranges for the k8s pods. | <code>string</code> | ✓ |  |
+| [subnetwork_secondary_ip_range_services_1](variables.tf#L271) | The CIDR Range for the secondary IP CIDR Ranges for the k8s services. | <code>string</code> | ✓ |  |
+| [config_sync_secret_type](variables.tf#L15) | The type of secret Config Sync uses to authenticate to the Git repository in source_repo. The cookiefile, githubapp, ssh, and token values need a git-creds Kubernetes Secret that you create out of band in the config-management-system namespace. The gcpserviceaccount value needs config_sync_service_account_email. The none value needs no credentials. | <code>string</code> |  | <code>&#34;none&#34;</code> |
+| [config_sync_service_account_email](variables.tf#L33) | The email of the user-managed service account Config Sync uses to authenticate to the Git repository in source_repo. Set it when and only when config_sync_secret_type is gcpserviceaccount. This blueprint creates no IAM binding for the account, so grant roles/iam.workloadIdentityUser on it to the member serviceAccount:MAIN_PROJECT_ID.svc.id.goog[config-management-system/root-reconciler], and grant the account read access to the repository. | <code>string</code> |  | <code>null</code> |
+| [kms_key_names](variables.tf#L97) | Key names and base attributes. Set attributes to null if not needed. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [node_machine_type](variables.tf#L198) | The node machine type, which must support Confidential GKE Nodes, such as the N2D, C2D or C3D series. | <code>string</code> |  | <code>&#34;n2d-standard-2&#34;</code> |
+| [policy_controller_exemptable_namespaces](variables.tf#L213) | The exemted namespaces for policy controller. | <code>list&#40;any&#41;</code> |  | <code>&#91;&#93;</code> |
+| [remove_default_node_pool](variables.tf#L224) | Remove the default node pool, which runs without the hardened node settings of the cluster node pool. | <code>bool</code> |  | <code>true</code> |
+| [snapshot_max_retention_days](variables.tf#L231) | The maximum number of days to retain snapshots. | <code>number</code> |  | <code>14</code> |
+| [source_branch](variables.tf#L237) | The branch of the repository used for config sync gitops. | <code>string</code> |  | <code>&#34;main&#34;</code> |
 
 ## Outputs
 
