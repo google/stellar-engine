@@ -87,7 +87,7 @@ resource "time_sleep" "service_agent_propagation" {
 
 resource "google_service_account" "dataflow_worker" {
   project      = var.main_project_id
-  account_id   = var.main_project_id
+  account_id   = coalesce(var.dataflow_worker_sa_id, var.main_project_id)
   display_name = "Dataflow Worker Storage Account"
 }
 

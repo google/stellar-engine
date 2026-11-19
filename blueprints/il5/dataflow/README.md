@@ -99,20 +99,21 @@ The Apache Beam SDK for Java has a warning about a bug in the latest version as 
 | [bucket_name](variables.tf#L28) | This is the name of the bucket. | <code>string</code> | ✓ |  |
 | [core_project_id](variables.tf#L33) | Core Project ID. | <code>string</code> | ✓ |  |
 | [dataflow_name](variables.tf#L38) | Name of the Dataflow project. | <code>string</code> | ✓ |  |
-| [firewall_name](variables.tf#L43) | The firewall name. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L48) | The full self-link (projects/../locations/../cryptoKeys/..) of the existing KMS key to use for encryption. | <code>string</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L53) | Keyring attributes. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L58) | The ID of the project in which to provision resources. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L63) | The network name. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L68) | Project that the Compute Engine VPC is located. | <code>string</code> | ✓ |  |
-| [parameters](variables.tf#L73) | Dataflow Paramaters. | <code>map&#40;string&#41;</code> | ✓ |  |
-| [prefix](variables.tf#L78) | This is the prefix for all resources. | <code>string</code> | ✓ |  |
-| [storage_class](variables.tf#L89) | This is the storage class of the storage bucket. | <code>string</code> | ✓ |  |
-| [subnetwork_name](variables.tf#L94) | The subnet name. | <code>string</code> | ✓ |  |
-| [template_gcs_path](variables.tf#L99) | This is the template path of the dataflow job. | <code>string</code> | ✓ |  |
+| [firewall_name](variables.tf#L56) | The firewall name. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L61) | The full self-link (projects/../locations/../cryptoKeys/..) of the existing KMS key to use for encryption. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L66) | Keyring attributes. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L71) | The ID of the project in which to provision resources. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L76) | The network name. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L81) | Project that the Compute Engine VPC is located. | <code>string</code> | ✓ |  |
+| [parameters](variables.tf#L86) | Dataflow Paramaters. | <code>map&#40;string&#41;</code> | ✓ |  |
+| [prefix](variables.tf#L91) | This is the prefix for all resources. | <code>string</code> | ✓ |  |
+| [storage_class](variables.tf#L102) | This is the storage class of the storage bucket. | <code>string</code> | ✓ |  |
+| [subnetwork_name](variables.tf#L107) | The subnet name. | <code>string</code> | ✓ |  |
+| [template_gcs_path](variables.tf#L112) | This is the template path of the dataflow job. | <code>string</code> | ✓ |  |
 | [allowed_firewall_ports](variables.tf#L17) | The allowed ports for the firewall. Dataflow requires 12345 and 12346. | <code>list&#40;string&#41;</code> |  | <code>&#91;12345, 12346&#93;</code> |
-| [region](variables.tf#L83) | The region in which to provision resources. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [zone](variables.tf#L104) | This is the name of the zone. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
+| [dataflow_worker_sa_id](variables.tf#L43) | Optional account ID for the Dataflow worker service account (6 to 30 lowercase alphanumeric characters or hyphens). Defaults to main_project_id when unset. | <code>string</code> |  | <code>null</code> |
+| [region](variables.tf#L96) | The region in which to provision resources. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [zone](variables.tf#L117) | This is the name of the zone. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
 
 ## Outputs
 

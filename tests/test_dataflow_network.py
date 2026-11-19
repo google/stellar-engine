@@ -145,10 +145,18 @@ class TestDataflowNetwork(unittest.TestCase):
             main_tf, 'resource "google_service_account" "dataflow_worker"'
         )
         self.assertRegex(worker, r"project\s*=\s*var\.main_project_id")
+        self.assertRegex(
+            worker,
+            r"account_id\s*=\s*coalesce\(var\.dataflow_worker_sa_id,\s*var\.main_project_id\)",
+        )
 
         variables_tf = (_DATAFLOW_DIR / "variables.tf").read_text(
             encoding="utf-8"
         )
+        worker_sa_var = _top_block(
+            variables_tf, 'variable "dataflow_worker_sa_id"'
+        )
+        self.assertRegex(worker_sa_var, r"default\s*=\s*null")
         zone = _top_block(variables_tf, 'variable "zone"')
         self.assertRegex(zone, r'default\s*=\s*"us-east4-a"')
 
