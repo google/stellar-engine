@@ -40,10 +40,10 @@ data "google_kms_crypto_key" "default" {
   key_ring = data.google_kms_key_ring.default.id
 }
 
-resource "google_project_service_identity" "dataflow_agent" {
-  provider = google-beta
-  project  = var.main_project_id
-  service  = "dataflow.googleapis.com"
+resource "google_project_service" "compute_api" {
+  project            = var.main_project_id
+  service            = "compute.googleapis.com"
+  disable_on_destroy = false
 }
 
 resource "google_project_service" "dataflow_api" {
@@ -52,8 +52,42 @@ resource "google_project_service" "dataflow_api" {
   disable_on_destroy = false
 }
 
+resource "google_project_service" "storage_api" {
+  project            = var.main_project_id
+  service            = "storage.googleapis.com"
+  disable_on_destroy = false
+}
+
+# Only dataflow.googleapis.com exposes a primary service identity via
+# serviceusage.services.generateServiceIdentity; compute.googleapis.com and
+# storage.googleapis.com return an empty identity from that API.
+resource "google_project_service_identity" "dataflow_agent" {
+  provider   = google-beta
+  project    = var.main_project_id
+  service    = "dataflow.googleapis.com"
+  depends_on = [google_project_service.dataflow_api]
+}
+
+data "google_storage_project_service_account" "gcs_sa" {
+  project    = var.main_project_id
+  depends_on = [google_project_service.storage_api]
+}
+
+# IAM does not recognize newly created service agents right away, so IAM
+# bindings added immediately can fail on first apply.
+resource "time_sleep" "service_agent_propagation" {
+  create_duration = "60s"
+
+  depends_on = [
+    google_project_service.compute_api,
+    google_project_service_identity.dataflow_agent,
+    data.google_storage_project_service_account.gcs_sa,
+  ]
+}
+
 resource "google_service_account" "dataflow_worker" {
-  account_id   = var.main_project_id
+  project      = var.main_project_id
+  account_id   = coalesce(var.dataflow_worker_sa_id, var.main_project_id)
   display_name = "Dataflow Worker Storage Account"
 }
 
@@ -76,24 +110,28 @@ resource "google_compute_subnetwork_iam_member" "dataflow_sa_compute_network_use
   subnetwork = data.google_compute_subnetwork.subnetwork.id
   role       = "roles/compute.networkUser"
   member     = google_project_service_identity.dataflow_agent.member
+  depends_on = [time_sleep.service_agent_propagation]
 }
 
 resource "google_kms_crypto_key_iam_member" "compute_system_sa_kms_access" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
+  depends_on    = [time_sleep.service_agent_propagation]
 }
 
 resource "google_kms_crypto_key_iam_member" "dataflow_sa_kms_access" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = google_project_service_identity.dataflow_agent.member
+  depends_on    = [time_sleep.service_agent_propagation]
 }
 
 resource "google_kms_crypto_key_iam_member" "gcs_sa_kms_access" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:service-${data.google_project.project.number}@gs-project-accounts.iam.gserviceaccount.com"
+  member        = data.google_storage_project_service_account.gcs_sa.member
+  depends_on    = [time_sleep.service_agent_propagation]
 }
 
 module "gcs" {
@@ -145,5 +183,11 @@ resource "google_dataflow_job" "job" {
 
   kms_key_name = data.google_kms_crypto_key.default.id
 
-  depends_on = [module.gcs, google_project_iam_member.dataflow_worker, google_kms_crypto_key_iam_member.dataflow_sa_kms_access]
+  depends_on = [
+    module.gcs,
+    google_project_iam_member.dataflow_worker,
+    google_compute_subnetwork_iam_member.dataflow_sa_compute_network_user,
+    google_kms_crypto_key_iam_member.compute_system_sa_kms_access,
+    google_kms_crypto_key_iam_member.dataflow_sa_kms_access,
+  ]
 }

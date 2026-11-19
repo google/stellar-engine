@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "Pull Request Labeler"
+name: Pull Request
 
 # Pull requests opened from external forks receive a read-only GITHUB_TOKEN
 # under the standard `pull_request` trigger, which causes both `actions/labeler`
@@ -44,7 +44,7 @@ permissions:
 
 jobs:
   label:
-    name: Run Labeler
+    name: Apply Labels
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

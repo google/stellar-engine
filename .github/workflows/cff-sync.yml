@@ -15,7 +15,7 @@
 # Syncs the modules from the latest Cloud Foundation Fabric release every
 # week and keeps one pull request open with the result. docs/upstream-sync.md
 # describes the setup and the review procedure.
-name: Cloud Foundation Fabric sync
+name: Auto
 
 on:
   schedule:
@@ -35,7 +35,7 @@ concurrency:
 
 jobs:
   sync:
-    name: Sync Fabric Modules
+    name: Sync Modules
     if: github.repository == 'google/stellar-engine'
     runs-on: ubuntu-latest
     permissions:
