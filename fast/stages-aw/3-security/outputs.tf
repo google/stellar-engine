@@ -41,7 +41,7 @@ locals {
 
 resource "local_file" "tfvars" {
   for_each        = var.outputs_location == null ? {} : { 1 = 1 }
-  file_permission = "0644"
+  file_permission = "0600"
   filename        = "${pathexpand(var.outputs_location)}/tfvars/3-security.auto.tfvars.json"
   content         = jsonencode(local.tfvars)
 }
