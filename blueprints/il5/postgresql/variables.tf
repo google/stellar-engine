@@ -176,6 +176,23 @@ variable "network_project_id" {
   type        = string
 }
 
+variable "psc_config" {
+  description = "Private Service Connect configuration. When set, the instance uses Private Service Connect instead of Private Services Access, so the network needs no Private Services Access connection. List in allowed_consumer_projects each project that hosts a Private Service Connect endpoint for the instance. Leave null to use Private Services Access."
+  type = object({
+    allowed_consumer_projects = list(string)
+  })
+  default = null
+
+  validation {
+    condition = (
+      var.psc_config == null
+      ? true
+      : length(coalesce(var.psc_config.allowed_consumer_projects, [])) > 0
+    )
+    error_message = "Set psc_config.allowed_consumer_projects to at least one project, because only endpoints in the listed projects can connect to the instance."
+  }
+}
+
 variable "region" {
   description = "This is the region that we are going to be running the cloud sql instance from."
   type        = string

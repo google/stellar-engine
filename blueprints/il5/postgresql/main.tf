@@ -73,11 +73,22 @@ check "deprecated_firewall_inputs" {
 module "postgres" {
   source     = "../../../modules/cloudsql-instance"
   project_id = var.main_project_id
+  # The instance uses Private Services Access unless psc_config is set, and
+  # never both. Public IPv4 stays disabled in either mode.
   network_config = {
     connectivity = {
-      psa_config = {
-        private_network = data.google_compute_network.network.self_link
-      }
+      psa_config = (
+        var.psc_config == null
+        ? { private_network = data.google_compute_network.network.self_link }
+        : null
+      )
+      psc_config = (
+        var.psc_config == null
+        ? null
+        : {
+          allowed_consumer_projects = var.psc_config.allowed_consumer_projects
+        }
+      )
     }
   }
   name             = var.database_name

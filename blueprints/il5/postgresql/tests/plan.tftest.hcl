@@ -62,3 +62,98 @@ run "plan_with_deprecated_firewall_inputs" {
     check.deprecated_firewall_inputs,
   ]
 }
+
+# Without psc_config the instance keeps using Private Services Access on the
+# network, which is the behavior of earlier releases.
+run "plan_default_uses_private_services_access" {
+  command = plan
+
+  assert {
+    condition = (
+      module.postgres.instances["primary"].settings[0].ip_configuration[0].private_network
+      == "https://www.googleapis.com/compute/v1/projects/test-net-host/global/networks/test-vpc"
+    )
+    error_message = "Expected the instance to attach to the network through Private Services Access."
+  }
+
+  assert {
+    condition = (
+      module.postgres.instances["primary"].settings[0].ip_configuration[0].psc_config[0].psc_enabled
+      == false
+    )
+    error_message = "Expected Private Service Connect to stay disabled by default."
+  }
+
+  assert {
+    condition = (
+      module.postgres.instances["primary"].settings[0].ip_configuration[0].ipv4_enabled
+      == false
+    )
+    error_message = "Expected the instance to have no public IPv4 address."
+  }
+
+  assert {
+    condition     = output.psc_dns_name == null && output.psc_service_attachment_link == null
+    error_message = "Expected the Private Service Connect outputs to be null by default."
+  }
+}
+
+# With psc_config the instance uses Private Service Connect only, so the
+# network needs no Private Services Access connection.
+run "plan_psc_config_uses_private_service_connect" {
+  command = plan
+
+  variables {
+    psc_config = {
+      allowed_consumer_projects = ["test-net-host"]
+    }
+  }
+
+  assert {
+    condition = (
+      module.postgres.instances["primary"].settings[0].ip_configuration[0].psc_config[0].psc_enabled
+      == true
+    )
+    error_message = "Expected Private Service Connect to be enabled."
+  }
+
+  assert {
+    condition = (
+      module.postgres.instances["primary"].settings[0].ip_configuration[0].psc_config[0].allowed_consumer_projects
+      == toset(["test-net-host"])
+    )
+    error_message = "Expected only the listed projects to be allowed to connect."
+  }
+
+  assert {
+    condition = (
+      module.postgres.instances["primary"].settings[0].ip_configuration[0].private_network
+      == null
+    )
+    error_message = "Expected no Private Services Access attachment with Private Service Connect."
+  }
+
+  assert {
+    condition = (
+      module.postgres.instances["primary"].settings[0].ip_configuration[0].ipv4_enabled
+      == false
+    )
+    error_message = "Expected the instance to have no public IPv4 address."
+  }
+}
+
+# An empty allowlist creates an instance that no endpoint can reach, so the
+# blueprint rejects it at plan time.
+run "plan_rejects_empty_allowed_consumer_projects" {
+  command = plan
+
+  variables {
+    psc_config = {
+      allowed_consumer_projects = []
+    }
+  }
+
+  expect_failures = [
+    var.psc_config,
+  ]
+}

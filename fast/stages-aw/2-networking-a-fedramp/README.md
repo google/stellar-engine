@@ -27,7 +27,7 @@ When `psc_google_apis.enabled` is `true`, which is the default, the stage provis
 
 - Private Service Connect endpoints for Google APIs are not transitive across Network Connectivity Center, so each spoke VPC receives its own internal endpoint IP (`10.255.255.10` and above by default), Service Directory-backed `p.googleapis.com.` private DNS zone (`goog-psc-*`), and `googleapis` Cloud DNS response policy (`private.googleapis.com.` and `restricted.googleapis.com.`) while peering `${organization.domain}.` to `hub-0`.
 - Inbound DNS forwarding on `hub-0` resolves Google API domains to `psc_google_apis.hub_ip` (`10.255.255.1` by default) so on-premises networks connected through Cloud VPN or Cloud Interconnect can reach Google APIs privately when Cloud Router advertises that `/32` address.
-- Setting `export_psc = true` on the `main` Network Connectivity Center hub propagates Private Service Connect endpoints for published producer services across spoke VPCs without requiring Private Services Access VPC peering; configure `psa_ranges` only for legacy services that do not use Private Service Connect.
+- Setting `export_psc = true` on the `main` Network Connectivity Center hub propagates Private Service Connect endpoints for published producer services across spoke VPCs without requiring Private Services Access VPC peering; configure `psa_ranges` only for legacy services that do not use Private Service Connect, as [7 Private services access](#7-private-services-access) describes.
 - Set `psc_google_apis.enabled = false` only if you require legacy `199.36.153.8/30` and `199.36.153.4/30` Private Google Access routes and root `.` DNS peering to `hub-0`.
 
 ## 4 Centralized internet egress
@@ -90,6 +90,23 @@ import {
 }
 ```
 
+## 7 Private services access
+
+The stage creates no Private Services Access connection on the spoke VPCs unless you set `psa_ranges`, because Private Service Connect is the preferred path to managed services.
+
+- Workloads that attach through Private Services Access need the connection before you deploy them. `blueprints/fedramp-high/postgresql` is one of them with its default inputs, because its Cloud SQL instance uses Private Services Access unless you set the `psc_config` variable of the blueprint to use Private Service Connect.
+- Set `psa_ranges` for an environment to reserve a range and create the `servicenetworking.googleapis.com` connection on that spoke VPC through `modules/net-vpc`. An environment that you leave out gets no connection.
+- Choose ranges that do not overlap a subnet, a proxy-only subnet, or another range in any network that the spoke VPC reaches, because a range inside a spoke subnet conflicts with that subnet.
+- Earlier releases of this stage reserved a default `/22` range on every spoke VPC, so set `psa_ranges` when you upgrade a deployment whose workloads rely on that connection.
+
+```hcl
+psa_ranges = {
+  prod = [{ ranges = { default = "10.250.0.0/22" } }]
+  int  = [{ ranges = { default = "10.250.4.0/22" } }]
+  test = [{ ranges = { default = "10.250.8.0/22" } }]
+}
+```
+
 <p align="center">
   <img src="/fast/stages-aw/2-networking-a-fedramp/images/Stellar-Engine-Network-FedRAMP.png" alt="Networking diagram">
 </p>
@@ -101,6 +118,7 @@ import {
 - [4 Centralized internet egress](#4-centralized-internet-egress)
 - [5 NCC hub factory](#5-ncc-hub-factory)
 - [6 Host project OS Login](#6-host-project-os-login)
+- [7 Private services access](#7-private-services-access)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->

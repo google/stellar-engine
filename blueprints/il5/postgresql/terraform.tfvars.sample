@@ -9,3 +9,10 @@ region                 = "us-east4"
 network_name = "xxxx-spoke-0" # Must already exist
 
 kms_key_name = "projects/<CORE-PROJECT-ID>/locations/us-east4/keyRings/xxxx-xxxx-keyring/cryptoKeys/default" # Must already exist
+
+# Optional. Use Private Service Connect instead of Private Services Access,
+# for a network without a Private Services Access connection. List each
+# project that hosts a Private Service Connect endpoint for the instance.
+# psc_config = {
+#   allowed_consumer_projects = ["xxxx-xxxx-net-host"]
+# }
