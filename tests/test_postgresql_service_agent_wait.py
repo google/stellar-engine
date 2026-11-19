@@ -62,6 +62,21 @@ class TestPostgresqlServiceAgentWait(unittest.TestCase):
         )
         self.assertRegex(provider_tf, r'source\s*=\s*"hashicorp/time"')
 
+    def test_beta_provider_is_declared_and_configured(self):
+        # The service identity and the Cloud SQL module use google-beta, so
+        # it needs the same version bounds and defaults as google.
+        provider_tf = (_BLUEPRINT_DIR / "provider.tf").read_text(
+            encoding="utf-8"
+        )
+        self.assertRegex(
+            provider_tf,
+            r'google-beta = \{\s*source\s*=\s*"hashicorp/google-beta"\s*'
+            r'version\s*=\s*">= 8\.6\.0, < 9\.0\.0"',
+        )
+        block = _top_block(provider_tf, 'provider "google-beta"')
+        self.assertRegex(block, r"project\s*=\s*var\.main_project_id")
+        self.assertRegex(block, r"region\s*=\s*var\.region")
+
 
 if __name__ == "__main__":
     unittest.main()
