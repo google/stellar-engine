@@ -2069,8 +2069,23 @@ def _batch_update_user_licenses(
         if license_config_id.startswith("projects/"):
             full_license_config = license_config_id
         else:
+            # License configs are named with the project number, and
+            # batchUpdateUserLicenses matches the name exactly.
+            project_number = project_id
+            if not project_id.isdigit():
+                project_number = get_project_number(credentials, project_id)
+            if not project_number:
+                click.echo(
+                    click.style(
+                        "Error: Could not resolve the project number for "
+                        f"{project_id}. Pass the full license config "
+                        "resource name to --license-config-id instead.",
+                        fg="red",
+                    )
+                )
+                sys.exit(1)
             full_license_config = (
-                f"projects/{project_id}/locations/{location}"
+                f"projects/{project_number}/locations/{location}"
                 f"/licenseConfigs/{license_config_id}"
             )
 

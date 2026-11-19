@@ -415,6 +415,9 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
             batch_update.return_value.execute.return_value = {
                 "name": "operations/batch-op-1"
             }
+            mock_service.projects().get.return_value.execute.return_value = {
+                "projectNumber": "123456789012"
+            }
 
             gem4gov._batch_update_user_licenses(
                 mock_creds,
@@ -439,7 +442,7 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
                 assign_kwargs["body"]["inlineSource"]["userLicenses"][0][
                     "licenseConfig"
                 ],
-                "projects/proj-1/locations/us/licenseConfigs/lic-abc",
+                "projects/123456789012/locations/us/licenseConfigs/lic-abc",
             )
 
             gem4gov._batch_update_user_licenses(
@@ -458,6 +461,88 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
                 unassign_kwargs["body"]["inlineSource"]["updateMask"],
                 "userPrincipal,licenseConfig",
             )
+
+    def test_assign_license_config_id_uses_project_number(self):
+        """Ensure a bare license config ID is expanded with the project number.
+
+        License configs are named projects/<project number>/..., and
+        batchUpdateUserLicenses rejects the project ID form (#445).
+        """
+        mock_creds = MagicMock()
+
+        def stub_batch_update(mock_build):
+            mock_us = (
+                mock_build.return_value.projects().locations().userStores()
+            )
+            batch_update = mock_us.batchUpdateUserLicenses
+            batch_update.return_value.execute.return_value = {
+                "name": "operations/batch-op-1"
+            }
+            return batch_update
+
+        def assigned_config(batch_update):
+            body = batch_update.call_args[1]["body"]
+            return body["inlineSource"]["userLicenses"][0].get("licenseConfig")
+
+        with (
+            patch.object(gem4gov, "build") as mock_build,
+            patch.object(
+                gem4gov, "get_project_number", return_value="123456789012"
+            ) as mock_get_number,
+        ):
+            batch_update = stub_batch_update(mock_build)
+            gem4gov._batch_update_user_licenses(
+                mock_creds,
+                project_id="proj-1",
+                location="us",
+                users="alice@example.gov",
+                license_config_id="free_trial_gemini",
+            )
+            mock_get_number.assert_called_once_with(mock_creds, "proj-1")
+            self.assertEqual(
+                assigned_config(batch_update),
+                "projects/123456789012/locations/us/licenseConfigs/"
+                "free_trial_gemini",
+            )
+
+        full_name = (
+            "projects/123456789012/locations/us/licenseConfigs/"
+            "free_trial_gemini"
+        )
+        for project_id, license_config_id, unassign, expected in (
+            ("123456789012", "free_trial_gemini", False, full_name),
+            ("proj-1", full_name, False, full_name),
+            ("proj-1", None, True, None),
+        ):
+            with (
+                patch.object(gem4gov, "build") as mock_build,
+                patch.object(gem4gov, "get_project_number") as mock_get_number,
+            ):
+                batch_update = stub_batch_update(mock_build)
+                gem4gov._batch_update_user_licenses(
+                    mock_creds,
+                    project_id=project_id,
+                    location="us",
+                    users="alice@example.gov",
+                    license_config_id=license_config_id,
+                    unassign=unassign,
+                )
+                mock_get_number.assert_not_called()
+                self.assertEqual(assigned_config(batch_update), expected)
+
+        with (
+            patch.object(gem4gov, "build") as mock_build,
+            patch.object(gem4gov, "get_project_number", return_value=None),
+            self.assertRaises(SystemExit),
+        ):
+            gem4gov._batch_update_user_licenses(
+                mock_creds,
+                project_id="proj-1",
+                location="us",
+                users="alice@example.gov",
+                license_config_id="free_trial_gemini",
+            )
+        mock_build.assert_not_called()
 
 
 if __name__ == "__main__":
