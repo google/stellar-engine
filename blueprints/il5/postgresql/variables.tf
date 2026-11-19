@@ -15,9 +15,9 @@
  */
 
 variable "allowed_firewall_ports" {
-  description = "Allowed firewall ports. Postgresql used 5432."
+  description = "Deprecated and ignored. The blueprint no longer creates a VPC firewall rule."
   type        = list(number)
-  default     = [5432]
+  default     = null
 }
 
 variable "database_instance_tier" {
@@ -57,13 +57,15 @@ variable "enable_pgaudit" {
 }
 
 variable "firewall_name" {
-  description = "Firewall name."
+  description = "Deprecated and ignored. The blueprint no longer creates a VPC firewall rule."
   type        = string
+  default     = null
 }
 
 variable "firewall_source_range" {
-  description = "Firewall source IP range."
-  type        = list(any)
+  description = "Deprecated and ignored. The blueprint no longer creates a VPC firewall rule."
+  type        = list(string)
+  default     = null
 }
 
 variable "kms_key_name" {

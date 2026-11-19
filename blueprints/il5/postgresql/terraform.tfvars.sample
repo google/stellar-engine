@@ -6,8 +6,6 @@ database_version       = "POSTGRES_14"
 database_instance_tier = "db-g1-small"
 region                 = "us-east4"
 
-network_name          = "xxxx-spoke-0"     # Must already exist
-firewall_source_range = ["192.168.1.0/24"]
-firewall_name         = "allow-postgres"
+network_name = "xxxx-spoke-0" # Must already exist
 
 kms_key_name = "projects/<CORE-PROJECT-ID>/locations/us-east4/keyRings/xxxx-xxxx-keyring/cryptoKeys/default" # Must already exist

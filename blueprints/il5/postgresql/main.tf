@@ -53,18 +53,21 @@ resource "google_kms_crypto_key_iam_member" "sql_sa" {
   depends_on = [time_sleep.cloudsql_sa_propagation]
 }
 
-resource "google_compute_firewall" "postgres" {
-  project = var.network_project_id
-  name    = var.firewall_name
-  network = data.google_compute_network.network.self_link
-  allow {
-    protocol = "tcp"
-    ports    = var.allowed_firewall_ports
+# The blueprint creates no VPC firewall rule. The instance uses Private
+# Service Access, so it runs in a Google-managed network, and ingress rules
+# in the VPC do not apply to it. The rule that earlier releases created had
+# no target, so it opened the database port to every instance in the VPC.
+# The inputs of that rule stay declared, so existing tfvars files and module
+# calls still plan, and this check warns when a caller sets one.
+check "deprecated_firewall_inputs" {
+  assert {
+    condition = (
+      var.allowed_firewall_ports == null &&
+      var.firewall_name == null &&
+      var.firewall_source_range == null
+    )
+    error_message = "The allowed_firewall_ports, firewall_name, and firewall_source_range variables are deprecated and ignored. The blueprint no longer creates a VPC firewall rule, so remove these inputs."
   }
-  log_config {
-    metadata = "INCLUDE_ALL_METADATA"
-  }
-  source_ranges = var.firewall_source_range
 }
 
 module "postgres" {
