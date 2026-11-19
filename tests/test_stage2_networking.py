@@ -14,6 +14,7 @@
 
 import json
 import pathlib
+import re
 import unittest
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -179,6 +180,36 @@ class TestStage2Networking(unittest.TestCase):
             "depends_on = [\n    time_sleep.peering_delay\n  ]",
             branch_tf,
         )
+
+    def test_il5_outputs_emit_spoke_host_project_ids(self):
+        outputs_tf = (_IL5_NET_DIR / "outputs.tf").read_text(encoding="utf-8")
+        self.assertNotIn("host_project_ids = module.env-spoke-vpc", outputs_tf)
+        self.assertIn(
+            "for k, v in module.env-spoke-projects : lower(k) => v.id",
+            outputs_tf,
+        )
+
+    def test_il5_default_psa_peering_skips_envs_with_psa_ranges(self):
+        branch_tf = (_IL5_NET_DIR / "branch-net-envs.tf").read_text(
+            encoding="utf-8"
+        )
+        psc_tf = (_IL5_NET_DIR / "psc.tf").read_text(encoding="utf-8")
+        # The filter must select on the same expression the spoke VPC gets.
+        self.assertRegex(
+            branch_tf,
+            r"psa_configs\s*= "
+            r"try\(var\.psa_ranges\[lower\(each\.key\)\], "
+            r"var\.psa_ranges\.dev\)",
+        )
+        self.assertIn(
+            "if length(try(var.psa_ranges[lower(k)], var.psa_ranges.dev)) == 0",
+            psc_tf,
+        )
+        self.assertEqual(
+            re.findall(r"^\s*for_each\s*= (.+)$", psc_tf, re.MULTILINE),
+            ["local.psa_default_envs", "local.psa_default_envs"],
+        )
+        self.assertNotRegex(psc_tf, r"(?m)^\s*count\s*=")
 
     def test_il5_ngfw_service_account_and_helper_hardening(self):
         ngfw_tf = (_IL5_NET_DIR / "ngfw.tf").read_text(encoding="utf-8")
