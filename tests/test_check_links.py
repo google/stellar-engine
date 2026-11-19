@@ -118,5 +118,58 @@ class CheckLinksRedirectTest(unittest.TestCase):
         self.assertEqual(loop_get.call_count, check_links.MAX_REDIRECTS + 1)
 
 
+class CheckLinksAdrExclusionTest(unittest.TestCase):
+    def test_skips_missing_adrs_targets(self):
+        readme = (
+            check_links.BASEDIR
+            / "modules"
+            / "net-lb-proxy-int-cross-region"
+            / "README.md"
+        )
+        for dest in (
+            "../../adrs/20251013-context-locals.md",
+            "../../adrs/modules/20261029-write-only-secrets.md",
+            "/adrs/modules/README.md",
+        ):
+            with self.subTest(dest=dest):
+                res = check_links.check_link(
+                    _fake_link(dest), readme, external=False
+                )
+                self.assertTrue(res.valid)
+
+    def test_rejects_missing_non_adr_and_traversal_links(self):
+        readme = (
+            check_links.BASEDIR
+            / "modules"
+            / "net-lb-proxy-int-cross-region"
+            / "README.md"
+        )
+        for dest in (
+            "../../missing.md",
+            "../../adrs/../missing.md",
+            "../../adrs/../../etc/passwd",
+        ):
+            with self.subTest(dest=dest):
+                res = check_links.check_link(
+                    _fake_link(dest), readme, external=False
+                )
+                self.assertFalse(res.valid)
+
+    def test_repo_excludes_adrs_and_legacy_module_docs(self):
+        self.assertFalse((check_links.BASEDIR / "adrs").exists())
+        self.assertFalse((check_links.BASEDIR / "modules" / "__docs").exists())
+        bases_file = check_links.BASEDIR / "tools" / "cff-sync.bases"
+        bases = bases_file.read_text(encoding="utf-8")
+        for line in bases.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            for field in stripped.split()[:2]:
+                self.assertFalse(
+                    field == "adrs" or field.startswith("adrs/"),
+                    f"Unexpected ADR entry in cff-sync.bases: {line}",
+                )
+
+
 if __name__ == "__main__":
     unittest.main()

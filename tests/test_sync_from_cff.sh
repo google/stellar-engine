@@ -81,8 +81,10 @@ git -C "${UP}" init -q
 (
   cd "${UP}"
   mkdir -p modules/alpha modules/beta modules/gamma modules/delta \
-    modules/project modules/newmod
+    modules/project modules/newmod modules/alpha/adrs adrs/modules
   printf 'line 1 v1\nline 2\nline 3\nline 4\nline 5\n' >modules/alpha/main.tf
+  printf 'adr v1\n' >modules/alpha/adrs/note.md
+  printf 'doc v1\n' >adrs/modules/doc.md
   versions_tf alpha v1.0.0 6 >modules/alpha/versions.tf
   printf 'gone v1\n' >modules/alpha/gone.tf
   printf 'beta v1\n' >modules/beta/main.tf
@@ -106,6 +108,8 @@ git -C "${UP}" init -q
   git add -A && git commit -q -m v1 && git tag v1.0.0
 
   printf 'line 1 v2\nline 2\nline 3\nline 4\nline 5\n' >modules/alpha/main.tf
+  printf 'adr v2\n' >modules/alpha/adrs/note.md
+  printf 'doc v2\n' >adrs/modules/doc.md
   printf 'new\n' >modules/alpha/new.tf
   git rm -q modules/alpha/gone.tf
   printf '#!/bin/sh\n' >modules/gamma/run.sh
@@ -137,7 +141,7 @@ git -C "${UP}" init -q
 
 - `modules/alpha`: renamed a variable.
 - `fast/stages/0-org-setup`: changed a stage.
-- `modules/unvendored`: changed a module the fork does not use.
+- `modules/unsynced`: changed a module the fork does not use.
 
 ### MODULES
 
@@ -160,7 +164,8 @@ new_fork() {
     "${fork}/tools/"
   printf 'delta delta v1.0.0\n' >"${fork}/tools/cff-sync.bases"
   git -C "${UP}" archive v1.0.0 modules | tar -x -C "${fork}"
-  rm -rf "${fork}/modules/beta/versions.tofu" "${fork}/modules/newmod"
+  rm -rf "${fork}/modules/beta/versions.tofu" "${fork}/modules/newmod" \
+    "${fork}/modules/alpha/adrs"
   # A local patch far from the upstream change merges cleanly.
   printf 'stellar patch\n' >>"${fork}/modules/alpha/main.tf"
   # A local change on the same line as the upstream change conflicts.
@@ -205,6 +210,8 @@ assert_true "leaves conflict markers in a conflicting file" \
   'grep -q "^<<<<<<< stellar-engine" "${FORK}/modules/beta/main.tf"'
 assert_true "never adds an ignored versions.tofu file" \
   '[[ ! -e "${FORK}/modules/beta/versions.tofu" ]]'
+assert_true "never adds an ignored adrs file" \
+  '[[ ! -e "${FORK}/modules/alpha/adrs/note.md" ]]'
 assert_true "deletes a file that upstream deleted" \
   '[[ ! -e "${FORK}/modules/gamma/old.tf" ]]'
 assert_true "replaces a link that upstream turned into a file" \
@@ -231,18 +238,18 @@ assert_true "reports the conflicting file" \
   'grep -q "modules/beta/main.tf" "${TMP}/report.md"'
 assert_true "reports the skipped Stellar-only module" \
   'grep -q "local-only" "${TMP}/report.md"'
-assert_true "reports an upstream module that is not vendored" \
+assert_true "reports an upstream module that is not synced" \
   'grep -q "newmod" "${TMP}/report.md"'
-assert_true "reports a call to a module that is not vendored" \
+assert_true "reports a call to a module that is not synced" \
   'grep -q "modules/alpha/dep.tf\` calls \`../newmod" "${TMP}/report.md"'
 assert_true "flags a provider major version change" \
   'grep -q "new google provider major version" "${TMP}/report.md"'
-assert_true "reports a breaking change of a vendored module" \
+assert_true "reports a breaking change of a synced module" \
   'grep -q "v2.0.0: \`modules/alpha\`: renamed a variable." "${TMP}/report.md"'
 assert_true "omits breaking changes of FAST stages" \
   '! grep -q "fast/stages" "${TMP}/report.md"'
-assert_true "omits breaking changes of modules that are not vendored" \
-  '! grep -q "modules/unvendored" "${TMP}/report.md"'
+assert_true "omits breaking changes of modules that are not synced" \
+  '! grep -q "modules/unsynced" "${TMP}/report.md"'
 assert_true "omits breaking changes from the base release and earlier" \
   '! grep -q "an older change" "${TMP}/report.md"'
 
@@ -324,6 +331,7 @@ new_fork "${FORK}"
     printf 'tests/fixtures tests/fixtures v1.0.0\n'
     printf 'tests/examples/utils.py tests/examples/utils.py v1.0.0\n'
     printf 'tools/tool.py tools/tool.py v1.0.0\n'
+    printf 'adrs/modules adrs/modules v1.0.0\n'
   } >>tools/cff-sync.bases
   printf '#!/bin/bash\nsed "s/^  /    /"\n' >"${TMP}/fake-format.sh"
   git add -A && git commit -q -m "track paths"
@@ -331,7 +339,7 @@ new_fork "${FORK}"
 status=0
 CFF_SYNC_PY_FORMAT="bash ${TMP}/fake-format.sh" "${BASH}" \
   "${FORK}/tools/sync-from-cff.sh" --upstream "file://${UP}" --to v2.0.0 \
-  --modules tests/fixtures,tests/examples/utils.py,tools/tool.py \
+  --modules tests/fixtures,tests/examples/utils.py,tools/tool.py,adrs/modules \
   --report "${TMP}/report-paths.md" >"${TMP}/out-paths.txt" 2>&1 ||
   status=$?
 assert_equals "syncs tracked paths without conflicts" "0" "${status}"
@@ -356,6 +364,10 @@ assert_true "keeps the module entries of cff-sync.bases" \
   'grep -qx "delta delta v1.0.0" "${FORK}/tools/cff-sync.bases"'
 assert_true "reports a tracked path" \
   'grep -q "| \`tests/fixtures\` | \`tests/fixtures\` | v1.0.0 |" "${TMP}/report-paths.md"'
+assert_true "never mirrors adrs paths from cff-sync.bases" \
+  '[[ ! -e "${FORK}/adrs" ]]'
+assert_true "keeps excluded adrs base line unchanged" \
+  'grep -qx "adrs/modules adrs/modules v1.0.0" "${FORK}/tools/cff-sync.bases"'
 
 FORK="${TMP}/fork-paths-conflict"
 new_fork "${FORK}"

@@ -1,6 +1,6 @@
 # Upstream sync
 
-Stellar Engine vendors the reusable modules under `modules/`, the README tooling and its test fixtures from upstream [Cloud Foundation Fabric](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric), and a weekly pull request keeps them close to the latest Fabric release. Small, regular syncs keep upstream fixes flowing in and keep each merge reviewable.
+Stellar Engine syncs the reusable modules under `modules/`, the README tooling and its test fixtures from upstream [Cloud Foundation Fabric](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric), and a weekly pull request keeps them close to the latest Fabric release. Small, regular syncs keep upstream fixes flowing in and keep each merge reviewable.
 
 <!-- BEGIN TOC -->
 - [1. Base release tracking](#1-base-release-tracking)
@@ -22,7 +22,7 @@ Every synced module records the Fabric release it last merged, so the sync knows
 - The `tools/cff-sync.bases` file also records the release of each tracked repository path outside `modules/`. Such an entry names a directory or a single file, and its local path contains a slash, which sets it apart from a module entry.
 - The tracked paths are the `tools/tfdoc.py` and `tools/check_documentation.py` README tools, the `tests/examples/utils.py` directive parser that `tools/tfdoc.py` imports, and the `tests/fixtures/` files that module README examples name.
 - Python files outside `modules/` keep the repository `ruff format` style. The script formats the base and the target copy the same way before it compares and merges them, so the indentation difference from upstream never conflicts.
-- The `tools/cff-sync.ignore` file lists paths that the sync never writes, such as the OpenTofu `versions.tofu` files that `.gemini/styleguide.md` forbids.
+- The `tools/cff-sync.ignore` file lists paths that the sync never writes, such as the OpenTofu `versions.tofu` files that `.gemini/styleguide.md` forbids and upstream `adrs/` directories, and `tools/sync-from-cff.sh` skips any `adrs/` entries in `tools/cff-sync.bases`.
 
 The stages under `fast/stages-aw/` derive from the FAST stage generation that Fabric replaced in v44.0.0 and removed in v47.0.0. The sync never touches them, so maintainers port stage changes from upstream by hand.
 
@@ -40,7 +40,7 @@ The script fetches only the trees of the base and target releases into `refs/cff
 
 The `--conflict-style ours` option keeps the local copy of every conflicting file and only reports it. A module with such conflicts keeps its base release, so a later run with conflict markers merges the same files again.
 
-The script exits with status 0 for a clean merge, 3 when files conflict, and 1 on errors. Its report lists the per-module results, the Terraform and provider constraint changes, the upstream modules that Stellar Engine does not vendor, and the upstream breaking changes since the base release.
+The script exits with status 0 for a clean merge, 3 when files conflict, and 1 on errors. Its report lists the per-module results, the Terraform and provider constraint changes, the upstream modules that Stellar Engine does not sync, and the upstream breaking changes since the base release.
 
 ## 3. Review checklist
 
