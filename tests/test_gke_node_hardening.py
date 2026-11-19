@@ -210,6 +210,12 @@ class TestGkeNodeHardening(unittest.TestCase):
         metadata = _block(vm, "metadata =")
         self.assertRegex(metadata, r'block-project-ssh-keys\s*=\s*"true"')
         self.assertRegex(metadata, r'enable-oslogin\s*=\s*"TRUE"')
+        self.assertIn(
+            "google_kms_crypto_key_iam_member."
+            "compute_service_agent_kms_permissions",
+            vm,
+        )
+        self.assertIn("google_project_iam_member.compute_agent_subnet_user", vm)
 
 
 if __name__ == "__main__":

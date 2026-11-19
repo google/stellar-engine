@@ -235,7 +235,10 @@ sudo EXTERNAL_URL="${var.gitlab_uri}" apt install gitlab-ee -y
       EOT
   }
 
-  depends_on = [google_kms_crypto_key_iam_member.compute_service_agent_kms_permissions]
+  depends_on = [
+    google_kms_crypto_key_iam_member.compute_service_agent_kms_permissions,
+    google_project_iam_member.compute_agent_subnet_user,
+  ]
 }
 
 // This creates a self signed certificate
