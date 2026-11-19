@@ -18,7 +18,7 @@ variable "core_project_id" {
 }
 
 variable "email" {
-  description = "Email address of a user to grant permissions on KMS keys (if used in `existing_kms_keys.iam_members`)."
+  description = "Email address of a user to grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` on every key in `existing_kms_keys`. Set to null to skip the grant."
   type        = string
   default     = null # Made optional, as it might not always be used
 }
@@ -29,7 +29,7 @@ variable "existing_kms_keyring_name" {
 }
 
 variable "existing_kms_keys" {
-  description = "A map where keys are the names of existing CryptoKeys within the specified KeyRing, and values are objects defining additional properties (e.g., IAM members to add)."
+  description = "A map where keys are the names of existing CryptoKeys within the specified KeyRing, and values are objects defining additional properties (e.g., IAM members to add). The `iam_members` attribute maps a role to the members to grant it to on the key, and its member strings must be known at plan time."
   type = map(object({
     iam_members       = optional(map(list(string)), {}) # Example: { "roles/cloudkms.cryptoKeyEncrypterDecrypter" = ["serviceAccount:...", "user:..."] }
     rotation_period_s = optional(number)                # Example for managing rotation on existing keys (in seconds)
@@ -43,7 +43,7 @@ variable "gcp_region" {
 }
 
 variable "group_email" {
-  description = "An email address that represents a Google group to grant permissions on KMS keys (if used in `existing_kms_keys.iam_members`)."
+  description = "Email address of a Google group to grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` on every key in `existing_kms_keys`. Set to null to skip the grant."
   type        = string
   default     = null # Made optional, as it might not always be used
 }
