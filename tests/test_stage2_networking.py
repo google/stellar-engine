@@ -410,6 +410,39 @@ class TestStage2Networking(unittest.TestCase):
         for out_name in ("ncc_groups", "ncc_hubs", "ncc_spokes"):
             self.assertIn(f'output "{out_name}"', outputs_tf)
 
+    def test_fedramp_kms_protection_level_unused_compat(self):
+        """Verify Stage 2a keeps kms_protection_level documented as unused."""
+        bootstrap_outputs = (
+            _REPO_ROOT / "fast/stages-aw/0-bootstrap/outputs.tf"
+        ).read_text(encoding="utf-8")
+        self.assertRegex(
+            bootstrap_outputs,
+            r"kms_protection_level\s*=\s*local\.kms_protection_level",
+        )
+
+        for tf_file in sorted(_FEDRAMP_NET_DIR.glob("*.tf")):
+            self.assertNotIn(
+                "var.kms_protection_level",
+                tf_file.read_text(encoding="utf-8"),
+                f"{tf_file.name} reads var.kms_protection_level",
+            )
+
+        vars_tf = (_FEDRAMP_NET_DIR / "variables.tf").read_text(
+            encoding="utf-8"
+        )
+        self.assertRegex(
+            vars_tf,
+            r'variable "kms_protection_level" \{\s*'
+            r"# tfdoc:variable:source 0-bootstrap\s*"
+            r'description = "[^"]*does not read this value today'
+            r'[^"]*0-bootstrap\.auto\.tfvars\.json'
+            r'[^"]*creates KMS keys again\."',
+        )
+
+        readme = (_FEDRAMP_NET_DIR / "README.md").read_text(encoding="utf-8")
+        self.assertIn("does not read this value today", readme)
+        self.assertIn("0-bootstrap.auto.tfvars.json", readme)
+
 
 if __name__ == "__main__":
     unittest.main()
