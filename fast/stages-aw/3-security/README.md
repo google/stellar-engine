@@ -30,6 +30,7 @@ The following diagram illustrates the high-level design of created resources and
   - [Using delayed billing association for Google Cloud Projects](#using-delayed-billing-association-for-google-cloud-projects)
   - [Running the stage](#running-the-stage)
   - [Disabling overpermissive service accounts](#disabling-overpermissive-service-accounts)
+  - [Verifying service account lockdown](#verifying-service-account-lockdown)
   - [Deleting the bootstrap project](#deleting-the-bootstrap-project)
 - [Customizations](#customizations)
   - [KMS keys](#kms-keys)
@@ -196,6 +197,24 @@ Some common troubleshooting steps:
 chmod +x sa_lockdown.sh
 ```
 - Ensure the user running the command has the Service Account Admin role
+
+### Verifying service account lockdown
+
+After running `sa_lockdown.sh`, verify that the deployment service accounts in the IaC core project are disabled:
+
+```bash
+./validation.sh
+```
+
+When multiple `-prod-iac-core-0` projects exist in the same organization (multi-tenant or multi-enclave deployments), target a single enclave using one of the following mutually exclusive flags:
+
+- `--prefix PREFIX`: filters project discovery to `^<PREFIX>-prod-iac-core-0$`.
+- `--project PROJECT_ID`: checks the specified IaC core project ID directly without running `gcloud projects list`.
+
+```bash
+./validation.sh --prefix myencl
+./validation.sh --project myencl-prod-iac-core-0
+```
 
 ### Deleting the bootstrap project
 
