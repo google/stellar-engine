@@ -12,6 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "config_sync_secret_type" {
+  description = "The type of secret Config Sync uses to authenticate to the Git repository in source_repo."
+  type        = string
+  default     = "none"
+  nullable    = false
+  validation {
+    condition = contains(
+      [
+        "cookiefile", "gcenode", "gcpserviceaccount", "githubapp", "none",
+        "ssh", "token"
+      ],
+      var.config_sync_secret_type
+    )
+    error_message = "The config_sync_secret_type value must be one of cookiefile, gcenode, gcpserviceaccount, githubapp, none, ssh, or token."
+  }
+}
+
 variable "gatekeeper_sa" {
   description = "The service account Gatekeeper uses to push metrics to GCP."
   type        = string

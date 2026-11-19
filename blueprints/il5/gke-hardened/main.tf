@@ -27,7 +27,8 @@ data "google_project" "current" {
 # }
 
 resource "google_service_account" "gke" {
-  account_id = "gke-${var.main_project_id}"
+  # The account_id value allows at most 30 characters and no trailing hyphen.
+  account_id = replace(substr("gke-${var.main_project_id}", 0, 30), "/-+$/", "")
   project    = var.main_project_id
 }
 
@@ -82,7 +83,7 @@ resource "google_gke_hub_feature_membership" "configmanagement_feature_member" {
       enabled       = true
       git {
         sync_repo   = var.source_repo
-        secret_type = "none"
+        secret_type = var.config_sync_secret_type
         sync_branch = var.source_branch
         policy_dir  = var.source_dir
       }
