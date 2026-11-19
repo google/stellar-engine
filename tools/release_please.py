@@ -24,7 +24,8 @@ import sys
 import urllib.request
 
 DEFAULT_REPO = "google/stellar-engine"
-DEFAULT_GEMINI_LOCATION = "us-central1"
+DEFAULT_GEMINI_ENDPOINT = "aiplatform.us.rep.googleapis.com"
+DEFAULT_GEMINI_LOCATION = "us"
 DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
 RELEASE_BRANCH = "release-please-branches-main"
 RELEASE_PR_LABELS = (
@@ -234,7 +235,6 @@ def gemini_sub_bullet(
     repo=DEFAULT_REPO,
     gemini_token="",
     gemini_project="",
-    gemini_location=DEFAULT_GEMINI_LOCATION,
     gemini_model=DEFAULT_GEMINI_MODEL,
     breaking=False,
 ):
@@ -256,8 +256,8 @@ def gemini_sub_bullet(
         f"PR Description:\n{(pr_body or '')[:3000]}"
     )
     url = (
-        f"https://{gemini_location}-aiplatform.googleapis.com/v1/"
-        f"projects/{gemini_project}/locations/{gemini_location}/"
+        f"https://{DEFAULT_GEMINI_ENDPOINT}/v1/"
+        f"projects/{gemini_project}/locations/{DEFAULT_GEMINI_LOCATION}/"
         f"publishers/google/models/{gemini_model}:generateContent"
     )
     payload = json.dumps(
@@ -275,9 +275,11 @@ def gemini_sub_bullet(
     try:
         with urllib.request.urlopen(req, timeout=25) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-        text = " ".join(
-            data["candidates"][0]["content"]["parts"][0]["text"].split()
+        parts = data["candidates"][0]["content"]["parts"]
+        raw_text = " ".join(
+            part.get("text", "") for part in parts if not part.get("thought")
         )
+        text = " ".join(raw_text.split())
         text = re.sub(r"^[-*•]\s*", "", text).strip()
         if text and not text.endswith("."):
             text += "."
@@ -292,8 +294,14 @@ def collect_sub_bullets(
     gemini_token="",
     gemini_project="",
     fetcher=None,
+    stats=None,
 ):
     """Preserves curated sub-bullets and synthesizes missing summaries."""
+    counts = (
+        stats
+        if stats is not None
+        else {"preserved": 0, "gemini": 0, "fallback": 0}
+    )
     fetch = fetcher or (lambda path: gh_get(path, repo=repo, token=token))
     sub_bullets = {}
     owner = repo.split("/", 1)[0]
@@ -310,6 +318,7 @@ def collect_sub_bullets(
         for pr in open_prs:
             sub_bullets.update(extract_existing(pr.get("body", ""), repo=repo))
 
+    counts["preserved"] = len(sub_bullets)
     if not token:
         return sub_bullets
 
@@ -358,7 +367,7 @@ def collect_sub_bullets(
 
         for pfx in missing:
             is_breaking = pfx == "breaking:"
-            summary = gemini_sub_bullet(
+            gemini_summary = gemini_sub_bullet(
                 title,
                 pr_body,
                 files,
@@ -366,7 +375,16 @@ def collect_sub_bullets(
                 gemini_token=gemini_token,
                 gemini_project=gemini_project,
                 breaking=is_breaking,
-            ) or fallback_sub_bullet(pr_body, message, breaking=is_breaking)
+            )
+            if gemini_summary:
+                counts["gemini"] += 1
+                summary = gemini_summary
+            else:
+                summary = fallback_sub_bullet(
+                    pr_body, message, breaking=is_breaking
+                )
+                if summary:
+                    counts["fallback"] += 1
             if summary:
                 normalized = normalize_gh_refs(summary.strip(), repo=repo)
                 sub_bullets[f"{pfx}{sha7}"] = (
@@ -519,16 +537,26 @@ def _cmd_prepare():
     out_path = pathlib.Path(
         os.environ.get("RELEASE_SUB_BULLETS_PATH", str(SUB_BULLETS_PATH))
     )
+    stats = {"preserved": 0, "gemini": 0, "fallback": 0}
     try:
         sub_bullets = collect_sub_bullets(
             repo=repo,
             token=token,
             gemini_token=gemini_token,
             gemini_project=gemini_project,
+            stats=stats,
         )
     except Exception as exc:
         print(f"Warning: sub-bullet collection failed: {exc}", file=sys.stderr)
         sub_bullets = {}
+    wif_status = "enabled" if gemini_token and gemini_project else "disabled"
+    print(
+        f"Prepared {len(sub_bullets)} sub-bullet(s) "
+        f"({stats['preserved']} preserved, {stats['gemini']} Gemini, "
+        f"{stats['fallback']} fallback; Vertex AI WIF: {wif_status}, "
+        f"location: {DEFAULT_GEMINI_LOCATION}).",
+        flush=True,
+    )
     out_path.write_text(json.dumps(sub_bullets), encoding="utf-8")
 
     runner_temp = os.environ.get("RUNNER_TEMP", "")

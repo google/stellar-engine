@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import base64
+import contextlib
+import io
 import json
 import os
 import pathlib
@@ -361,12 +363,16 @@ class TestReleasePlease(unittest.TestCase):
                                 "content": {
                                     "parts": [
                                         {
+                                            "thought": True,
+                                            "text": "Internal reasoning step.",
+                                        },
+                                        {
                                             "text": (
                                                 "- Updates Stage 2 routing "
                                                 "with @Calvin-Cheng1, "
                                                 "fixing #404\n"
                                             )
-                                        }
+                                        },
                                     ]
                                 }
                             }
@@ -395,8 +401,8 @@ class TestReleasePlease(unittest.TestCase):
 
         self.assertEqual(
             captured["url"],
-            "https://us-central1-aiplatform.googleapis.com/v1/"
-            "projects/example-project/locations/us-central1/"
+            "https://aiplatform.us.rep.googleapis.com/v1/"
+            "projects/example-project/locations/us/"
             "publishers/google/models/gemini-3.8-flash:generateContent",
         )
         self.assertEqual(captured["auth"], "Bearer test-wif-access-token")
@@ -660,6 +666,17 @@ class TestReleasePlease(unittest.TestCase):
                 _upstream_index_js("### Features"), encoding="utf-8"
             )
             sub_path = runner_temp / "sub_bullets.json"
+            stdout_buf = io.StringIO()
+
+            def fake_collect(**kwargs):
+                kwargs["stats"].update(
+                    {"preserved": 2, "gemini": 1, "fallback": 0}
+                )
+                return {
+                    "abc1234": "Synthesized summary.",
+                    "def5678": "Preserved one.",
+                    "fed9876": "Preserved two.",
+                }
 
             with (
                 unittest.mock.patch.dict(
@@ -677,8 +694,9 @@ class TestReleasePlease(unittest.TestCase):
                 unittest.mock.patch.object(
                     release_please,
                     "collect_sub_bullets",
-                    return_value={"abc1234": "Synthesized summary."},
+                    side_effect=fake_collect,
                 ) as mock_collect,
+                contextlib.redirect_stdout(stdout_buf),
             ):
                 release_please.main(["prepare"])
 
@@ -687,10 +705,22 @@ class TestReleasePlease(unittest.TestCase):
                 token="test-release-pat",
                 gemini_token="test-wif-token",
                 gemini_project="example-project",
+                stats=unittest.mock.ANY,
+            )
+            lines = stdout_buf.getvalue().splitlines()
+            self.assertEqual(len(lines), 1)
+            self.assertEqual(
+                lines[0],
+                "Prepared 3 sub-bullet(s) (2 preserved, 1 Gemini, 0 fallback; "
+                "Vertex AI WIF: enabled, location: us).",
             )
             self.assertEqual(
                 json.loads(sub_path.read_text(encoding="utf-8")),
-                {"abc1234": "Synthesized summary."},
+                {
+                    "abc1234": "Synthesized summary.",
+                    "def5678": "Preserved one.",
+                    "fed9876": "Preserved two.",
+                },
             )
 
     def test_label_pr_cli_applies_curated_labels_and_skips_missing_inputs(self):
