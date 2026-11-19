@@ -40,8 +40,14 @@ resource "google_project_service_identity" "iap_sa" {
   service = "iap.googleapis.com"
 }
 
-resource "google_project_iam_member" "iap_sa_cloudrun_invoker" {
-  project = var.main_project_id
-  role    = "roles/run.invoker"
-  member  = google_project_service_identity.iap_sa.member
+# IAP calls each Cloud Run backend as its service agent. Cloud Run accepts
+# the invoker role on a single service, so the grant covers only the services
+# behind the load balancer and not every service in the project.
+resource "google_cloud_run_v2_service_iam_member" "iap_sa_cloudrun_invoker" {
+  for_each = google_cloud_run_v2_service.cloud_run_apps
+  project  = each.value.project
+  location = each.value.location
+  name     = each.value.name
+  role     = "roles/run.invoker"
+  member   = google_project_service_identity.iap_sa.member
 }

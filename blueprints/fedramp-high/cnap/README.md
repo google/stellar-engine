@@ -74,6 +74,8 @@ The groups specified in the `cloud-run.yaml` and `compute-engine.yaml` files mus
 
 There are two sources of configuration for this blueprint: The `cloudrun.yaml` file in the `data/` folder, as well as normal `.tfvars`. In the `.tfvars` file, there are parameters that define this deployment, such as organization information and domains. In the cloudrun.yaml, we define the Cloud Run applications that will be created, as well as the IAM configuration for how these will be protected behind the IAP.
 
+The blueprint grants the IAP service agent the `roles/run.invoker` role on each Cloud Run service in the `cloudrun.yaml` file and not on the project, so IAP can invoke only the applications behind the load balancer.
+
 In the `cloudrun.yaml` file, certain variables are templated in using the standard Terraform templating language, Jinja2.
 
 | Variable in template | Value Source | Description |
