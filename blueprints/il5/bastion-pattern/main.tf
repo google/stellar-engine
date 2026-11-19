@@ -56,7 +56,10 @@ resource "google_compute_firewall" "default" {
   log_config {
     metadata = "INCLUDE_ALL_METADATA"
   }
-  source_ranges = var.allowed_source_ranges
+  # Target the bastion service account so the rule does not apply to
+  # every instance in the shared network.
+  target_service_accounts = [google_service_account.compute.email]
+  source_ranges           = var.allowed_source_ranges
 }
 
 module "bastion-vm" {
