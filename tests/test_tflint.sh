@@ -37,7 +37,7 @@ assert_equals() {
 echo "==> Running tools/tflint.sh Unit Tests"
 
 if ! command -v tflint >/dev/null; then
-  echo "  [SKIP] tflint is not installed; the CI tflint job runs these tests."
+  echo "  [SKIP] tflint is not installed; CI runs these tests in Repository Tests."
   exit 0
 fi
 
