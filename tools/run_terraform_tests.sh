@@ -84,7 +84,12 @@ for dir in "${DIRS[@]}"; do
   if ! (
     cd "${dir}"
     terraform init -backend=false -input=false >/dev/null
-    terraform test
+    # Prevent unmocked Google providers from falling back to ambient ADC or GCE
+    # metadata locally, so missing mock_provider blocks fail here as in CI.
+    unset GOOGLE_CREDENTIALS GOOGLE_CLOUD_KEYFILE_JSON GCLOUD_KEYFILE_JSON \
+      GOOGLE_OAUTH_ACCESS_TOKEN GOOGLE_IMPERSONATE_SERVICE_ACCOUNT \
+      CLOUDSDK_AUTH_ACCESS_TOKEN
+    GOOGLE_APPLICATION_CREDENTIALS=/dev/null terraform test
   ); then
     echo "terraform test failed in ${dir}" >&2
     FAILED=$((FAILED + 1))

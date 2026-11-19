@@ -47,6 +47,12 @@ make_sandbox() {
   cat > "${dir}/bin/terraform" <<'EOF'
 #!/bin/bash
 echo "$(pwd) $*" >> "${STUB_LOG}"
+if [ -n "${STUB_ENV_LOG:-}" ] && [ "$1" = "test" ]; then
+  printf 'ADC=%s CRED=%s TOKEN=%s\n' \
+    "${GOOGLE_APPLICATION_CREDENTIALS:-}" \
+    "${GOOGLE_CREDENTIALS:-}" \
+    "${GOOGLE_OAUTH_ACCESS_TOKEN:-}" > "${STUB_ENV_LOG}"
+fi
 if [ "${STUB_FAIL_TEST:-0}" = "1" ] && [ "$1" = "test" ]; then
   exit 1
 fi
@@ -80,6 +86,15 @@ assert_eq "fails closed on terraform test error" "1" "${RC2}"
 RC3=0
 PATH="${SB1}/bin:${PATH}" STUB_LOG="${LOG2}" bash "${SB1}/tools/run_terraform_tests.sh" blueprints/il5/does-not-exist >/dev/null 2>&1 || RC3=$?
 assert_eq "fails closed on missing explicit directory" "1" "${RC3}"
+
+# 4. Scrubs ambient GCP credentials before invoking terraform test.
+ENV_LOG="${TMP_ROOT}/env.txt"
+PATH="${SB1}/bin:${PATH}" STUB_LOG="${LOG2}" STUB_ENV_LOG="${ENV_LOG}" \
+  GOOGLE_CREDENTIALS='placeholder' \
+  GOOGLE_OAUTH_ACCESS_TOKEN='placeholder' \
+  GOOGLE_APPLICATION_CREDENTIALS='/tmp/should-be-overridden.json' \
+  bash "${SB1}/tools/run_terraform_tests.sh" >/dev/null
+assert_eq "scrubs ambient GCP credentials" "ADC=/dev/null CRED= TOKEN=" "$(cat "${ENV_LOG}")"
 
 echo "Summary: ${PASS} passed, ${FAIL} failed."
 [ "${FAIL}" -eq 0 ]

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 mock_provider "google" {}
+mock_provider "google-beta" {}
 
 override_data {
   target = data.google_project.current
