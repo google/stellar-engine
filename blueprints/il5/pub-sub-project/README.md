@@ -33,7 +33,7 @@ Before deploying this blueprint, ensure the following are in place:
 3.  **Permissions:** The service account or user deploying this blueprint must have:
     * `roles/owner` or sufficient granular permissions (e.g., `pubsub.admin`, `serviceusage.serviceUsageAdmin`, `resourcemanager.projectIamAdmin`) in the `main_project_id`.
     * `roles/cloudkms.viewer` in the `core_project_id` (to read KMS key details).
-    * `roles/cloudkms.cryptoKeyEncrypterDecrypter` on the specific KMS key used by the Pub/Sub service account. This blueprint handles that grant.
+    * Permission to set the IAM policy of the KMS key, for example `roles/cloudkms.admin` on the key. The blueprint grants `roles/cloudkms.cryptoKeyEncrypterDecrypter` on the key to the Pub/Sub service agent only. The publisher and subscriber service accounts get no access to the key, because Pub/Sub encrypts and decrypts messages on their behalf.
     * The `Cloud Pub/Sub API` (`pubsub.googleapis.com`) and `Cloud KMS API` (`cloudkms.googleapis.com`) enabled in the `main_project_id`. This blueprint attempts to enable the Pub/Sub API automatically.
 
 ## Deployment Steps
