@@ -175,7 +175,13 @@ Each stage of this deployment uses service accounts with admin roles. Once the d
 You can also run this script with the following flags
 
 - enable: enables the service accounts instead of disabling them (useful if you would like to rerun a stage or make customizations).
-- sa: comma-separated list of service account names if you don't want to enable/disable all of them (possible values are: bootstrap, resman, networking, security).
+- sa: comma-separated list of service account names if you don't want to enable/disable all of them. The possible values are the keys that the `0-bootstrap` and `1-resman` stages write under `service_accounts` in their tfvars files:
+  - bootstrap, resman, networking, security
+  - bootstrap-r, resman-r, networking-r, security-r for the read-only plan accounts
+  - data-platform-dev, data-platform-prod, gcve-dev, gcve-prod, gke-dev, gke-prod, project-factory-dev, project-factory-prod, each also with an `-r` suffix for its read-only plan account
+  - sandbox, teams, and one `team-<name>` value for each entry in `team_folders`
+
+Without the `sa` flag, the script covers every value in this list. It skips the accounts of branches that are not deployed. Re-enable the accounts of a branch before you run that branch again.
 
 ```bash
 ./sa_lockdown.sh --enable --sa "bootstrap,networking"
