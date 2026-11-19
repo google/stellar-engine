@@ -103,9 +103,14 @@ locals {
     keys(local._iam)
   ))
 
+  _org_policy_factory_path = pathexpand(coalesce(var.factories_config.org_policy, "-"))
   # Some of the org policies require templating to construct, they have been moved to data/custom-org-policies
   # load org policy yaml files from a subdirectory
   _org_policies_raw = merge(concat(
+    [
+      for f in try(fileset(local._org_policy_factory_path, "*.yaml"), []) :
+      yamldecode(file("${local._org_policy_factory_path}/${f}"))
+    ],
     [
       for f in try(fileset("./data/org-policies/", "*_policy.yaml"), []) :
       yamldecode(file("./data/org-policies/${f}"))
@@ -258,6 +263,9 @@ locals {
     !var.deploy_org_resources.logging_sinks ||
     !var.deploy_org_resources.org_policies
   )
+  org_only_policies = [
+    "resourcemanager.accessBoundaries",
+  ]
   org_only_roles = [
     "roles/assuredworkloads.admin",
     "roles/axt.admin",
@@ -414,13 +422,6 @@ module "root-folder-config" {
   folder_create = false
   id            = local.assured_workload_folder
   contacts      = var.deploy_org_resources.iam || var.bootstrap_user != null ? {} : local.essential_contacts
-  factories_config = {
-    org_policies = (
-      var.deploy_org_resources.org_policies || var.bootstrap_user != null
-      ? null
-      : var.factories_config.org_policy
-    )
-  }
   iam_by_principals = var.deploy_org_resources.iam ? {} : {
     for k in distinct(concat(keys(local.iam_principals), keys(var.iam_by_principals))) :
     k => [
@@ -505,7 +506,8 @@ module "root-folder-config" {
     ? null
     : {
       for k, v in local.org_policies : k => v
-      if !startswith(k, "custom.")
+      if !startswith(trimprefix(k, "dry_run:"), "custom.") &&
+      !contains(local.org_only_policies, trimprefix(k, "dry_run:"))
     }
   )
 }
