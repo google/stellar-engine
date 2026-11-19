@@ -146,27 +146,42 @@ class TestGkeNodeHardening(unittest.TestCase):
             )
             self.assertRegex(api, rf'service\s*=\s*"{re.escape(service)}"')
 
-        expected_agents = {
-            "compute_agent": ("compute.googleapis.com", "compute_api"),
-            "gke_agent": ("container.googleapis.com", "container_api"),
-        }
-        for agent_name, (service, api_name) in expected_agents.items():
-            agent = _top_block(
-                main_tf,
-                f'resource "google_project_service_identity" "{agent_name}"',
-            )
-            self.assertRegex(agent, rf'service\s*=\s*"{re.escape(service)}"')
-            self.assertRegex(
-                agent,
-                rf"depends_on\s*=\s*\[google_project_service\.{api_name}\]",
-            )
+        agent = _top_block(
+            main_tf,
+            'resource "google_project_service_identity" "gke_agent"',
+        )
+        self.assertRegex(agent, r'service\s*=\s*"container\.googleapis\.com"')
+        self.assertRegex(
+            agent,
+            r"depends_on\s*=\s*\[google_project_service\.container_api\]",
+        )
+        # compute.googleapis.com is non-primary and returns an empty member
+        # from google_project_service_identity.
+        self.assertNotIn(
+            'resource "google_project_service_identity" "compute_agent"',
+            main_tf,
+        )
 
         wait = _top_block(
             main_tf, 'resource "time_sleep" "service_agent_propagation"'
         )
         self.assertRegex(wait, r'create_duration\s*=\s*"\d+[sm]"')
-        for agent_name in expected_agents:
-            self.assertIn(f"google_project_service_identity.{agent_name}", wait)
+        for dep in (
+            "google_project_service.compute_api",
+            "google_project_service_identity.gke_agent",
+        ):
+            self.assertIn(dep, wait)
+
+        for header in (
+            'resource "google_project_iam_member" "compute_agent_subnet_user"',
+            'resource "google_kms_crypto_key_iam_member" '
+            '"compute_service_agent_kms_permissions"',
+        ):
+            self.assertIn(
+                "@compute-system.iam.gserviceaccount.com",
+                _top_block(main_tf, header),
+                msg=header,
+            )
 
         provider_tf = (_GITLAB_DIR / "provider.tf").read_text(encoding="utf-8")
         self.assertRegex(provider_tf, r'source\s*=\s*"hashicorp/time"')

@@ -71,13 +71,9 @@ resource "google_project_service" "storagetransfer_api" {
   disable_on_destroy = false
 }
 
-resource "google_project_service_identity" "compute_agent" {
-  provider   = google-beta
-  project    = var.project_id
-  service    = "compute.googleapis.com"
-  depends_on = [google_project_service.compute_api]
-}
-
+# Only container.googleapis.com exposes a primary service identity via
+# serviceusage.services.generateServiceIdentity; compute.googleapis.com returns
+# an empty identity from that API and provisions its agent on API enablement.
 resource "google_project_service_identity" "gke_agent" {
   provider   = google-beta
   project    = var.project_id
@@ -92,7 +88,6 @@ resource "time_sleep" "service_agent_propagation" {
 
   depends_on = [
     google_project_service.compute_api,
-    google_project_service_identity.compute_agent,
     google_project_service_identity.gke_agent,
   ]
 }
@@ -107,7 +102,7 @@ resource "google_project_iam_member" "gke_host_agent_use" {
 
 resource "google_project_iam_member" "compute_agent_subnet_user" {
   for_each = {
-    compute_agent = google_project_service_identity.compute_agent.member
+    compute_agent = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
     gke_agent     = google_project_service_identity.gke_agent.member
     cloudservices = "serviceAccount:${data.google_project.project.number}@cloudservices.gserviceaccount.com"
     gitlab_sa     = "serviceAccount:${google_service_account.gitlab_sa.email}"
@@ -120,7 +115,7 @@ resource "google_project_iam_member" "compute_agent_subnet_user" {
 
 resource "google_kms_crypto_key_iam_member" "compute_service_agent_kms_permissions" {
   for_each = {
-    compute_agent = google_project_service_identity.compute_agent.member
+    compute_agent = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
     gke_agent     = google_project_service_identity.gke_agent.member
     cloudservices = "serviceAccount:${data.google_project.project.number}@cloudservices.gserviceaccount.com"
     gitlab_sa     = "serviceAccount:${google_service_account.gitlab_sa.email}"
