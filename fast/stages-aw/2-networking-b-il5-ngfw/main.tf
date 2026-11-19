@@ -32,8 +32,12 @@ locals {
 }
 
 module "folder" {
-  source        = "../../../modules/folder"
-  parent        = "organizations/${var.organization.id}"
+  source = "../../../modules/folder"
+  parent = coalesce(
+    var.common_services_folder,
+    var.assured_workloads.folder,
+    "organizations/${var.organization.id}"
+  )
   name          = "Networking"
   folder_create = var.folder_ids.networking == null
   id            = var.folder_ids.networking

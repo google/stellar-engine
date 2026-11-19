@@ -66,6 +66,7 @@ variable "common_services_folder" {
   # tfdoc:variable:source 0-bootstrap
   description = "Common services folder where non-tenant related resources should be kept."
   type        = string
+  default     = null
 }
 
 variable "custom_roles" {

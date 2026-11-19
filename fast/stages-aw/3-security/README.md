@@ -348,28 +348,28 @@ Some references that might be useful in setting up this stage
 | [alert_email](variables.tf#L17) | Email to receive log alerts. | <code>string</code> | ✓ |  |
 | [automation](variables.tf#L35) | Automation resources created by the bootstrap stage. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [billing_account](variables.tf#L43) | Billing account id. If billing account is not part of the same org set `is_org_level` to false. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [common_services_folder](variables.tf#L65) | Common services folder where non-tenant related resources should be kept. | <code>string</code> | ✓ |  |
-| [envs_folders](variables.tf#L83) | List of environments to be created for projects to go into. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [folder_ids](variables.tf#L135) | Folder name => id mappings, the 'security' folder name must exist. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [organization](variables.tf#L217) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [prefix](variables.tf#L233) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
-| [regions](variables.tf#L250) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [service_accounts](variables.tf#L259) | Automation service accounts that can assign the encrypt/decrypt roles on keys. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [tenant_accounts](variables.tf#L274) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [envs_folders](variables.tf#L84) | List of environments to be created for projects to go into. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [folder_ids](variables.tf#L136) | Folder name => id mappings, the 'security' folder name must exist. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [organization](variables.tf#L218) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [prefix](variables.tf#L234) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
+| [regions](variables.tf#L251) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [service_accounts](variables.tf#L260) | Automation service accounts that can assign the encrypt/decrypt roles on keys. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [tenant_accounts](variables.tf#L275) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [assured_workloads](variables.tf#L23) | Configuration for Assured Workloads. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [billing_override](variables.tf#L56) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [custom_roles](variables.tf#L71) | Custom roles defined at the org level, in key => id format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [essential_contacts](variables.tf#L91) | Email or map of emails to notification category lists used for essential contacts, unset if null or empty. | <code>any</code> |  | <code>&#123;&#125;</code> |
-| [factories_config](variables.tf#L105) | Paths to folders that enable factory functionality. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [fast_features](variables.tf#L119) | Selective control for top-level FAST features. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [gcp_ranges](variables.tf#L143) | GCP address ranges configuration. | <code>any</code> |  | <code>null</code> |
-| [groups](variables.tf#L150) | IAM groups configuration. | <code>any</code> |  | <code>null</code> |
-| [kms_keys](variables.tf#L157) | KMS keys to create, keyed by name. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [kms_protection_level](variables.tf#L200) | Protection level (HSM or SOFTWARE) applied to every key in kms_keys that does not set its own version_template. | <code>string</code> |  | <code>null</code> |
-| [logging](variables.tf#L207) | Log writer identities for organization / folders. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [outputs_location](variables.tf#L227) | Path where providers, tfvars files, and lists for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
-| [regime_mapping](variables.tf#L243) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
-| [vpc_sc](variables.tf#L285) | VPC SC configuration. Setting `perimeter_default.dry_run_spec` keeps the perimeter enforced and trials the overridden attributes in the dry-run spec. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [common_services_folder](variables.tf#L65) | Common services folder where non-tenant related resources should be kept. | <code>string</code> |  | <code>null</code> |
+| [custom_roles](variables.tf#L72) | Custom roles defined at the org level, in key => id format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [essential_contacts](variables.tf#L92) | Email or map of emails to notification category lists used for essential contacts, unset if null or empty. | <code>any</code> |  | <code>&#123;&#125;</code> |
+| [factories_config](variables.tf#L106) | Paths to folders that enable factory functionality. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [fast_features](variables.tf#L120) | Selective control for top-level FAST features. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [gcp_ranges](variables.tf#L144) | GCP address ranges configuration. | <code>any</code> |  | <code>null</code> |
+| [groups](variables.tf#L151) | IAM groups configuration. | <code>any</code> |  | <code>null</code> |
+| [kms_keys](variables.tf#L158) | KMS keys to create, keyed by name. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [kms_protection_level](variables.tf#L201) | Protection level (HSM or SOFTWARE) applied to every key in kms_keys that does not set its own version_template. | <code>string</code> |  | <code>null</code> |
+| [logging](variables.tf#L208) | Log writer identities for organization / folders. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [outputs_location](variables.tf#L228) | Path where providers, tfvars files, and lists for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
+| [regime_mapping](variables.tf#L244) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
+| [vpc_sc](variables.tf#L286) | VPC SC configuration. Setting `perimeter_default.dry_run_spec` keeps the perimeter enforced and trials the overridden attributes in the dry-run spec. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 
