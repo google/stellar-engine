@@ -25,6 +25,7 @@ locals {
       ), []) : trimsuffix(f, ".yaml")
     ]
   ))
+  _vpc_sc_dry_run_spec = try(var.vpc_sc.perimeter_default.dry_run_spec, null)
   # map bare access level names to context references so existing
   # configurations keep resolving to the access levels created here, and pass
   # an omitted to.resources as an empty list because the module iterates on it
@@ -60,6 +61,11 @@ locals {
       })
     })
   }
+  # a dry-run spec applies in dry run mode or when dry_run_spec is set
+  _vpc_sc_use_dry_run_spec = (
+    try(var.vpc_sc.perimeter_default.dry_run, false) ||
+    local._vpc_sc_dry_run_spec != null
+  )
   vpc_sc_ingress_policies = var.logging == null ? {} : {
     fast-org-log-sinks = {
       from = {
@@ -77,40 +83,66 @@ locals {
       }
     }
   }
-  vpc_sc_perimeter = (
+  # perimeter inputs before normalization, where the dry-run spec replaces
+  # only the attributes that dry_run_spec sets and inherits the null ones, so
+  # the enforced status never picks up a candidate value
+  _vpc_sc_perimeter_inputs = (
     var.vpc_sc.perimeter_default == null
     ? null
-    : merge(var.vpc_sc.perimeter_default, {
-      access_levels = [
-        for a in var.vpc_sc.perimeter_default.access_levels : (
-          contains(local._vpc_sc_access_level_names, a)
-          ? "$access_levels:${a}"
-          : a
+    : {
+      for k, v in {
+        spec = (
+          local._vpc_sc_dry_run_spec == null
+          ? {}
+          : { for a, l in local._vpc_sc_dry_run_spec : a => l if l != null }
         )
-      ]
-      # the module expects policy keys in context format and keeps list order,
-      # sorting preserves the previous key-ordered policy blocks
-      egress_policies = [
-        for p in sort(distinct(var.vpc_sc.perimeter_default.egress_policies)) :
-        "$egress_policies:${p}"
-      ]
-      ingress_policies = [
-        for p in sort(distinct(concat(
-          var.vpc_sc.perimeter_default.ingress_policies,
-          var.logging == null ? [] : ["fast-org-log-sinks"]
-        ))) : "$ingress_policies:${p}"
-      ]
-      restricted_services = yamldecode(file(
-        var.factories_config.vpc_sc.restricted_services
-      ))
-      resources = distinct(concat(
-        var.vpc_sc.perimeter_default.resources,
-        var.vpc_sc.resource_discovery.enabled != true ? [] : [
-          for v in module.vpc-sc-discovery[0].project_numbers :
-          "projects/${v}"
+        status = {}
+      } :
+      k => merge({
+        access_levels    = var.vpc_sc.perimeter_default.access_levels
+        egress_policies  = var.vpc_sc.perimeter_default.egress_policies
+        ingress_policies = var.vpc_sc.perimeter_default.ingress_policies
+        resources        = var.vpc_sc.perimeter_default.resources
+        restricted_services = yamldecode(file(
+          var.factories_config.vpc_sc.restricted_services
+        ))
+      }, v)
+    }
+  )
+  vpc_sc_perimeters = (
+    local._vpc_sc_perimeter_inputs == null
+    ? null
+    : {
+      for k, v in local._vpc_sc_perimeter_inputs : k => {
+        access_levels = [
+          for a in v.access_levels : (
+            contains(local._vpc_sc_access_level_names, a)
+            ? "$access_levels:${a}"
+            : a
+          )
         ]
-      ))
-    })
+        # the module expects policy keys in context format and keeps list
+        # order, sorting preserves the previous key-ordered policy blocks
+        egress_policies = [
+          for p in sort(distinct(v.egress_policies)) :
+          "$egress_policies:${p}"
+        ]
+        ingress_policies = [
+          for p in sort(distinct(concat(
+            v.ingress_policies,
+            var.logging == null ? [] : ["fast-org-log-sinks"]
+          ))) : "$ingress_policies:${p}"
+        ]
+        restricted_services = v.restricted_services
+        resources = distinct(concat(
+          v.resources,
+          var.vpc_sc.resource_discovery.enabled != true ? [] : [
+            for n in module.vpc-sc-discovery[0].project_numbers :
+            "projects/${n}"
+          ]
+        ))
+      }
+    }
   )
 }
 
@@ -147,17 +179,16 @@ module "vpc-sc" {
   perimeters = {
     default = {
       spec = (
-        var.vpc_sc.perimeter_default.dry_run ? local.vpc_sc_perimeter : null
+        local._vpc_sc_use_dry_run_spec ? local.vpc_sc_perimeters.spec : null
       )
-      # dry run drops the enforced configuration unless the operator opts in
-      # to keep it, so a dry run never starts enforcing by default
+      # dry run alone drops the enforced configuration, while dry_run_spec
+      # keeps it and trials the candidate in the dry-run spec
       status = (
-        !var.vpc_sc.perimeter_default.dry_run ||
-        var.vpc_sc.perimeter_default.dry_run_keep_enforced
-        ? local.vpc_sc_perimeter
+        !var.vpc_sc.perimeter_default.dry_run
+        ? local.vpc_sc_perimeters.status
         : null
       )
-      use_explicit_dry_run_spec = var.vpc_sc.perimeter_default.dry_run
+      use_explicit_dry_run_spec = local._vpc_sc_use_dry_run_spec
     }
   }
 }
