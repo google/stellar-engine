@@ -3,6 +3,19 @@ This blueprint deploys a 2nd Generation Cloud Function. The Cloud Function Modul
 
 ## Pre-requsites
 Enable the following APIs in your GCP project by running the enable-apis.sh script in the blueprint directory. Put your function source code in the ./src-code folder.
+
+## IAM scope
+The blueprint grants each role to the runner service account on the narrowest resource that accepts it.
+
+| Role | Resource |
+|---|---|
+| `roles/run.invoker` | The Cloud Run service behind the function. |
+| `roles/artifactregistry.writer` | The Artifact Registry repository. |
+| `roles/storage.objectUser` | The Cloud Storage bucket. |
+| `roles/cloudbuild.builds.builder` | The project, because Cloud Build does not support IAM policies on builds. |
+| `roles/logging.logWriter` | The project, because Cloud Logging authorizes log entry writes against the project. |
+
+The `roles/cloudbuild.builds.builder` role also carries project-wide Cloud Storage object and Artifact Registry write permissions.
 <!-- BEGIN TFDOC -->
 ## Variables
 
@@ -31,10 +44,10 @@ Enable the following APIs in your GCP project by running the enable-apis.sh scri
 
 | name | description | sensitive |
 |---|---|:---:|
-| [artifact_registry_iam_member](outputs.tf#L15) | IAM member assigned to roles/artifactregistry.createOnPushWriter. |  |
-| [bucket](outputs.tf#L20) | Bucket holding function source code. |  |
-| [cloud_build_iam_member](outputs.tf#L25) | IAM member assigned to roles/cloudbuild.builds.builder. |  |
-| [kms_crypto_key_iam_binding_members](outputs.tf#L30) | IAM members assigned to roles/cloudkms.cryptoKeyEncrypterDecrypter for the specified KMS key. |  |
-| [logging_iam_member](outputs.tf#L35) | IAM member assigned to roles/logging.logWriter. |  |
-| [storage_object_admin_iam_member](outputs.tf#L40) | IAM member assigned to roles/storage.objectAdmin. |  |
+| [artifact_registry_iam_member](outputs.tf#L15) | IAM member assigned to roles/artifactregistry.writer on the Artifact Registry repository. |  |
+| [bucket](outputs.tf#L21) | Bucket holding function source code. |  |
+| [cloud_build_iam_member](outputs.tf#L26) | IAM member assigned to roles/cloudbuild.builds.builder. |  |
+| [kms_crypto_key_iam_binding_members](outputs.tf#L31) | IAM members assigned to roles/cloudkms.cryptoKeyEncrypterDecrypter for the specified KMS key. |  |
+| [logging_iam_member](outputs.tf#L36) | IAM member assigned to roles/logging.logWriter. |  |
+| [storage_object_admin_iam_member](outputs.tf#L41) | IAM member assigned to roles/storage.objectUser on the bucket. |  |
 <!-- END TFDOC -->
