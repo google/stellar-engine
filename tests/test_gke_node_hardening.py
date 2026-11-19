@@ -119,6 +119,83 @@ class TestGkeNodeHardening(unittest.TestCase):
                 "gke-node-sa", _top_block(main_tf, header), msg=header
             )
 
+    def test_gitlab_vm_and_instance_group_use_zone_directly(self):
+        main_tf = (_GITLAB_DIR / "main.tf").read_text(encoding="utf-8")
+        for header in (
+            'resource "google_compute_instance_group" "umig"',
+            'module "compute-vm"',
+        ):
+            block = _top_block(main_tf, header)
+            self.assertRegex(block, r"\n\s*zone\s*=\s*var\.zone\n", msg=header)
+            self.assertNotIn("${var.zone}-a", block, msg=header)
+
+        sample = (_GITLAB_DIR / "terraform.tfvars.sample").read_text(
+            encoding="utf-8"
+        )
+        self.assertRegex(sample, r'\nzone\s*=\s*"us-east4-a"\n')
+
+    def test_gitlab_apis_and_service_agents_wait_before_iam_grants(self):
+        main_tf = (_GITLAB_DIR / "main.tf").read_text(encoding="utf-8")
+        expected_apis = {
+            "compute_api": "compute.googleapis.com",
+            "container_api": "container.googleapis.com",
+        }
+        for res_name, service in expected_apis.items():
+            api = _top_block(
+                main_tf, f'resource "google_project_service" "{res_name}"'
+            )
+            self.assertRegex(api, rf'service\s*=\s*"{re.escape(service)}"')
+
+        expected_agents = {
+            "compute_agent": ("compute.googleapis.com", "compute_api"),
+            "gke_agent": ("container.googleapis.com", "container_api"),
+        }
+        for agent_name, (service, api_name) in expected_agents.items():
+            agent = _top_block(
+                main_tf,
+                f'resource "google_project_service_identity" "{agent_name}"',
+            )
+            self.assertRegex(agent, rf'service\s*=\s*"{re.escape(service)}"')
+            self.assertRegex(
+                agent,
+                rf"depends_on\s*=\s*\[google_project_service\.{api_name}\]",
+            )
+
+        wait = _top_block(
+            main_tf, 'resource "time_sleep" "service_agent_propagation"'
+        )
+        self.assertRegex(wait, r'create_duration\s*=\s*"\d+[sm]"')
+        for agent_name in expected_agents:
+            self.assertIn(f"google_project_service_identity.{agent_name}", wait)
+
+        provider_tf = (_GITLAB_DIR / "provider.tf").read_text(encoding="utf-8")
+        self.assertRegex(provider_tf, r'source\s*=\s*"hashicorp/time"')
+
+        iam_headers = (
+            'resource "google_project_iam_member" "gke_host_agent_use"',
+            'resource "google_project_iam_member" "compute_agent_subnet_user"',
+            'resource "google_kms_crypto_key_iam_member" '
+            '"compute_service_agent_kms_permissions"',
+        )
+        for header in iam_headers:
+            grant = _top_block(main_tf, header)
+            self.assertRegex(
+                grant,
+                r"depends_on\s*=\s*\[time_sleep\.service_agent_propagation\]",
+                msg=header,
+            )
+
+    def test_gitlab_vm_enables_shielded_and_os_login_hardening(self):
+        main_tf = (_GITLAB_DIR / "main.tf").read_text(encoding="utf-8")
+        vm = _top_block(main_tf, 'module "compute-vm"')
+        shielded = _block(vm, "shielded_config =")
+        self.assertRegex(shielded, r"enable_secure_boot\s*=\s*true")
+        self.assertRegex(shielded, r"enable_vtpm\s*=\s*true")
+        self.assertRegex(shielded, r"enable_integrity_monitoring\s*=\s*true")
+        metadata = _block(vm, "metadata =")
+        self.assertRegex(metadata, r'block-project-ssh-keys\s*=\s*"true"')
+        self.assertRegex(metadata, r'enable-oslogin\s*=\s*"TRUE"')
+
 
 if __name__ == "__main__":
     unittest.main()
