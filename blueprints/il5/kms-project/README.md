@@ -9,9 +9,9 @@ This blueprint demonstrates how to manage existing Google Cloud Key Management S
 | [existing_kms_keyring_name](variables.tf#L26) | The name of the existing Cloud KMS KeyRing to manage or apply policies to. | <code>string</code> | ✓ |  |
 | [gcp_region](variables.tf#L40) | The Google Cloud region where the existing KMS KeyRing is located. This will also be used as the default region for the provider. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L51) | The Google Cloud Project ID where KMS-related IAM policies will be managed (i.e., the project where the existing KMS keys reside). | <code>string</code> | ✓ |  |
-| [email](variables.tf#L20) | Email address of a user to grant permissions on KMS keys (if used in `existing_kms_keys.iam_members`). | <code>string</code> |  | <code>&#34;null &#35; Made optional, as it might not always be used&#34;</code> |
-| [existing_kms_keys](variables.tf#L31) | A map where keys are the names of existing CryptoKeys within the specified KeyRing, and values are objects defining additional properties (e.g., IAM members to add). | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [group_email](variables.tf#L45) | An email address that represents a Google group to grant permissions on KMS keys (if used in `existing_kms_keys.iam_members`). | <code>string</code> |  | <code>&#34;null &#35; Made optional, as it might not always be used&#34;</code> |
+| [email](variables.tf#L20) | Email address of a user to grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` on every key in `existing_kms_keys`. Set to null to skip the grant. | <code>string</code> |  | <code>&#34;null &#35; Made optional, as it might not always be used&#34;</code> |
+| [existing_kms_keys](variables.tf#L31) | A map where keys are the names of existing CryptoKeys within the specified KeyRing, and values are objects defining additional properties (e.g., IAM members to add). The `iam_members` attribute maps a role to the members to grant it to on the key, and its member strings must be known at plan time. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [group_email](variables.tf#L45) | Email address of a Google group to grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` on every key in `existing_kms_keys`. Set to null to skip the grant. | <code>string</code> |  | <code>&#34;null &#35; Made optional, as it might not always be used&#34;</code> |
 
 ## Outputs
 
