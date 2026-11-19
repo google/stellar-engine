@@ -73,9 +73,9 @@ module "env-spoke-projects" {
     "stackdriver.googleapis.com",
     "vpcaccess.googleapis.com"
   ], local._ncc_enabled ? ["networkconnectivity.googleapis.com"] : [])
+  # enable-oslogin is not set here: see oslogin.tf.
   compute_metadata = {
     block-project-ssh-keys = "true" # CIS Compliance Benchmark 4.3
-    enable-oslogin         = "true" # CIS Compliance Benchmark 4.4
   }
   metric_scopes = [module.hub-project.project_id]
   iam = merge(

@@ -113,9 +113,9 @@ module "hub-project" {
     "stackdriver.googleapis.com",
     "cloudkms.googleapis.com"
   ], local._ncc_enabled ? ["networkconnectivity.googleapis.com"] : [])
+  # enable-oslogin is not set here: see oslogin.tf.
   compute_metadata = {
     block-project-ssh-keys = "true" # CIS Compliance Benchmark 4.3
-    enable-oslogin         = "true" # CIS Compliance Benchmark 4.4
   }
   iam = {
     "roles/dns.admin" = compact([

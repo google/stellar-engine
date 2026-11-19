@@ -364,6 +364,12 @@ variable "logging" {
   default     = null
 }
 
+variable "manage_oslogin_metadata" {
+  description = "Set the `enable-oslogin` metadata key on the hub and spoke host projects from this stage. Null sets it only when `assured_workloads.regime` is `IL4`, `IL5`, or unset, because Stage 0 enforces `compute.requireOsLogin` for every other regime and that constraint sets the key on new projects."
+  type        = bool
+  default     = null
+}
+
 variable "ncc_hubs" {
   description = "Network Connectivity Center hubs, groups, and spokes in hub_name => config format, merged with YAML definitions from factories_config.ncc_hubs."
   type = map(object({
