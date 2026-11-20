@@ -64,18 +64,11 @@ resource "google_service_account" "subscriber" {
   display_name = var.subscriber_name
 }
 
-resource "google_project_iam_member" "pubsub_publisher" {
-  project = var.main_project_id
-  role    = "roles/pubsub.publisher"
-  member  = google_service_account.publisher.member
-}
-
-resource "google_project_iam_member" "pubsub_subscriber" {
-  project = var.main_project_id
-  role    = "roles/pubsub.subscriber"
-  member  = google_service_account.subscriber.member
-}
-
+# Pub/Sub accepts roles/pubsub.publisher on a topic and roles/pubsub.subscriber
+# on a subscription, so neither role needs a project-level grant. The module
+# binds each role additively on the resource that the service account uses.
+# The subscriber role is not bound on the topic, where it only allows attaching
+# new subscriptions, which the subscriber service account does not create.
 module "pubsub" {
   source     = "../../../modules/pubsub"
   project_id = var.main_project_id
@@ -83,6 +76,22 @@ module "pubsub" {
   regions    = var.allowed_persistence_regions
 
   kms_key = data.google_kms_crypto_key.default.id
+  iam_bindings_additive = {
+    publisher = {
+      member = google_service_account.publisher.member
+      role   = "roles/pubsub.publisher"
+    }
+  }
+  subscriptions = {
+    for k, v in var.subscriptions : k => merge(v, {
+      iam_bindings_additive = {
+        "${k}-subscriber" = {
+          member = google_service_account.subscriber.member
+          role   = "roles/pubsub.subscriber"
+        }
+      }
+    })
+  }
   depends_on = [
     google_project_service.pubsub_api,
     google_kms_crypto_key_iam_member.kms_access
