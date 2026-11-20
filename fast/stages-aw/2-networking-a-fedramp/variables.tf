@@ -352,7 +352,7 @@ variable "groups" {
 
 variable "kms_protection_level" {
   # tfdoc:variable:source 0-bootstrap
-  description = "KMS protection level."
+  description = "Cloud KMS protection level from 0-bootstrap outputs. This stage creates no KMS keys and does not read this value today; it retains the variable for compatibility with the `0-bootstrap.auto.tfvars.json` file and uses it only if the stage creates KMS keys again."
   type        = string
   nullable    = true
   default     = null

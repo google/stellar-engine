@@ -104,7 +104,7 @@ spokes:
 | [firewall_policy_rules](variables.tf#L211) | Global network firewall policy rules keyed by VPC name (hub, egress, or environment spoke name), supporting Cloud NGFW Essentials, Standard, and Enterprise attributes. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [gcp_ranges](variables.tf#L337) | GCP address ranges in name => range format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
 | [groups](variables.tf#L347) | IAM groups mapping. | <code>any</code> |  | <code>null</code> |
-| [kms_protection_level](variables.tf#L353) | KMS protection level. | <code>string</code> |  | <code>null</code> |
+| [kms_protection_level](variables.tf#L353) | Cloud KMS protection level from 0-bootstrap outputs. This stage creates no KMS keys and does not read this value today; it retains the variable for compatibility with the `0-bootstrap.auto.tfvars.json` file and uses it only if the stage creates KMS keys again. | <code>string</code> |  | <code>null</code> |
 | [logging](variables.tf#L361) | Logging configuration. | <code>any</code> |  | <code>null</code> |
 | [ncc_hubs](variables.tf#L367) | Network Connectivity Center hubs, groups, and spokes in hub_name => config format, merged with YAML definitions from factories_config.ncc_hubs. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [outputs_location](variables.tf#L477) | Path where providers and tfvars files for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
