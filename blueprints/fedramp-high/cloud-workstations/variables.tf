@@ -36,6 +36,16 @@ variable "image" { # https://cloud.google.com/workstations/docs/preconfigured-ba
   default     = null
 }
 
+variable "image_repository" {
+  description = "Artifact Registry repository that holds the custom image set in `image`. When both are set, the workstation VMs run as a dedicated service account that reads only this repository. The project defaults to `main_project_id`."
+  type = object({
+    location   = string
+    name       = string
+    project_id = optional(string)
+  })
+  default = null
+}
+
 variable "kms_key_name" {
   description = "The name of the kms key."
   type        = string
