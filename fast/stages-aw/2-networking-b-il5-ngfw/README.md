@@ -147,6 +147,7 @@ In this setup
 - the spokes and the landing landing VPC exchange routes through VPC peerings
 - for cross-environment (spokes) communications, and for connections to on-premises and to the Internet, the spokes leverage some default tagged routes that send the traffic of each region (whose machines are identified by a dedicated network tag, e.g. *ew1*) to a corresponding regional NVA in the landing VPC, through an ILB (whose VIP is set as the route next-hop)
 - the NVAs are configured with static routes that allow the communication with the GCP resources (including the cross-environment communication)
+- those static routes are on the trusted interface, one for every range of every spoke: the primary and secondary ranges of each subnet, and the proxy-only subnet. The NVAs have a default route on the DMZ interface only, so a reply to a spoke range without a static route would leave through the DMZ. Private Service Access ranges have no route, because VPC peering is not transitive and does not carry them to the landing VPC
 
 The Cloud Routers (connected to the VPN gateways in the landing VPC) are configured to exclude the default advertisement of VPC ranges and they only advertise their respective aggregate ranges, via custom advertisements. This greatly simplifies the routing configuration and avoids quota or limit issues, by keeping the number of routes small, instead of making it proportional to the subnets and to the secondary ranges in the VPCs.
 
@@ -371,6 +372,9 @@ There is currently no way to automate this process, but take the version of the 
 * `ssh_pubkey`: Used 2 times, once near the top and once near the middle
 * `healthcheck_cidrs`: Used 1 time as part of a Jinja template loop. Make sure to copy the entire loop starting with `%{ for` and ending with `%{ endfor`
 * `iap_cidrs`: Used 1 time as part of a Jinja template loop. Make sure to copy the entire loop starting with `%{ for` and ending with `%{ endfor`
+* `return_routes` and `lz_gateway_ip`: Used 1 time as part of the template loop that writes the static routes. Make sure to copy the entire loop starting with `%{ for` and ending with `%{ endfor`
+
+Terraform builds `return_routes` from the subnets of every spoke, so adding or removing a spoke subnet, secondary range or proxy-only subnet changes the rendered `bootstrap.xml`. The instance template tracks the hash of that file. The next `terraform apply` therefore creates a new template, and the managed instance group replaces the running NGFWs with newly bootstrapped ones. It creates the new instances before it deletes the old ones, but connections that are open through an old instance are dropped, and any setting changed on a running NGFW and not merged into the template is lost.
 
 # Redeployment
 If you are redeploying this stage with the same prefix, please run "pre-redeploy.sh" to handle imports.

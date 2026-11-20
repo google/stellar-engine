@@ -186,10 +186,8 @@ resource "google_storage_bucket_object" "bootstrap_xml" {
     ssh_pubkey        = tls_private_key.ngfw_ssh.public_key_openssh
     healthcheck_cidrs = local.cidr_ranges["healthchecks"]
     iap_cidrs         = local.cidr_ranges["iap"]
-    tenants_subnets = { for k, v in var.envs_folders : k => module.env-spoke-vpc[k].subnets[
-      "${var.regions.primary}/${[for s in try(var.subnets[lower(k)], []) : s.name if s.tenant != null][0]}"
-    ].ip_cidr_range }
-    lz_gateway_ip = module.vdss-vpc.subnets["${each.value}/landing-default"].gateway_address
+    return_routes     = local.ngfw_return_routes
+    lz_gateway_ip     = module.vdss-vpc.subnets["${each.value}/landing-default"].gateway_address
 
   })
   bucket = module.ngfw-bootstrap-bucket[each.key].name
