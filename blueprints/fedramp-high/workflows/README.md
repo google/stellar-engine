@@ -1,64 +1,56 @@
+# Workflows blueprint
 
+This blueprint provisions a CMEK-encrypted Google Cloud Workflows workflow in a multi-project Assured Workloads environment targeting FedRAMP High and IL5 compliance regimes.
 
 <!-- BEGIN TOC -->
-- [Introduction to Workflows](#introduction-to-workflows)
-- [Disclaimer](#disclaimer)
-- [Deployment Steps](#deployment-steps)
-- [Demo](#demo)
-- [Next Steps](#next-steps)
-- [Note](#note)
+- [1 Workflows overview](#1-workflows-overview)
+- [2 Compliance scope](#2-compliance-scope)
+- [3 Deployment steps](#3-deployment-steps)
+- [4 Execution demo](#4-execution-demo)
+- [5 Next steps](#5-next-steps)
+- [6 Service agent notes](#6-service-agent-notes)
 - [Variables](#variables)
 <!-- END TOC -->
 
-# Workflows Blueprint
-This blueprint demonstrates how to create a Google Cloud Workflow in a multi-project environment, utilizing existing KMS infrastructure for Customer-Managed Encryption Keys (CMEK) and adhering to FedRAMP High / IL5 compliance standards.
+## 1 Workflows overview
 
-## Introduction to Workflows
-Workflows is a fully managed orchestration platform that executes services in an order that you define. These workflows can combine services including custom services hosted on Cloud Run or Cloud Run functions, Google Cloud services such as Cloud Vision AI and BigQuery, and any HTTP-based API.
-By incorporating Workflows into solutions, you can make service dependencies explicit and observable end-to-end. A workflow that specifies an application, operational, or business process provides a source-of-truth or canonical narrative for the process.
+Workflows is a managed orchestration platform that executes Cloud Run services, Cloud Run functions, Google Cloud APIs such as BigQuery and Vision AI, and external HTTP endpoints in a deterministic sequence. Defining operational or application workflows declaratively makes service dependencies explicit and observable end to end while encrypting workflow state with a Cloud KMS key hosted in `core_project_id`.
 
-This blueprint specifically configures Google Cloud Workflows to leverage **CMEK** for enhanced data security, utilizing a key provisioned in a dedicated core project.
+## 2 Compliance scope
 
-## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in either a FedRAMP-High or IL5 (Impact Level 5) environment using Assured Workloads within the Google Cloud Platform (GCP) organization.
-- Assured Workloads in both environments ensures that sensitive data and workloads in GCP adhere to the rigorous security standards mandated by the DoD, making it suitable for government agencies.
+- Deploy this blueprint inside a FedRAMP High or IL5 Assured Workloads folder within your Google Cloud organization.
+- Assured Workloads enforces regional data residency and encryption guardrails required for federal and defense workloads.
 
-## Deployment Steps
-1.  **Ensure Prerequisites:** Before deploying this blueprint, you must have the following resources already provisioned, ideally in their respective designated projects:
-    * An existing KMS Key Ring in the `core_project_id`.
-    * An existing KMS Crypto Key within that Key Ring in the `core_project_id`, configured for encryption purposes.
+## 3 Deployment steps
 
-2.  Copy the contents of the `terraform.tfvars.sample` file into your own `terraform.tfvars` file, then update the variables in this file to match your environment.
+1. Verify that an existing Cloud KMS key ring and encryption key exist in `core_project_id` in the same region as the workflow.
+2. Copy `terraform.tfvars.sample` to `terraform.tfvars` and update the project, key, and workflow settings to match your environment.
+3. Initialize and apply the Terraform configuration from this directory:
 
-3.  The usual Terraform commands will be used to deploy the workflow. To provision this example, run the following from within this directory:
+```bash
+terraform init
+terraform plan
+terraform apply
+```
 
-    ```bash
-    terraform init
-    terraform plan # to see the infrastructure plan
-    terraform apply # to apply the infrastructure build
-    ```
+4. The blueprint automatically enables the Workflows API, provisions the Workflows Google-managed service identity, and grants `roles/cloudkms.cryptoKeyEncrypterDecrypter` on the configured KMS key. If the first `terraform apply` reports that the service agent does not yet exist due to IAM propagation delay, re-run `terraform apply`.
+5. Open Workflows in the Google Cloud console to confirm the deployed workflow and its CMEK configuration.
+6. Run `terraform destroy` if you need to tear down the deployed workflow.
 
-4.  **API Enablement & Service Agent:** The blueprint automatically enables the Workflows API and ensures the necessary Google-managed service identity for Workflows is created and granted appropriate KMS permissions. Manual intervention for API enablement or service agent creation should generally not be required. If a `Service account ... does not exist` error is encountered during the first `terraform apply`, a simple retry of the `terraform apply` command often resolves it due to Google Cloud's eventual consistency.
+## 4 Execution demo
 
-5.  To verify a successful deployment, search for "Workflows" in the Google Cloud Console. From here, you will be able to view your newly created workflow and confirm its CMEK configuration.
+1. Select your deployed workflow in the Google Cloud console.
+2. Select `Execute`.
+3. Leave the input payload empty for the default `code/example.yaml` workflow and select `Execute` to run it.
+4. Inspect the execution output after completion.
 
-6.  To destroy the deployed infrastructure:
-    ```bash
-    terraform destroy # only if you wish to destroy the built infrastructure
-    ```
+## 5 Next steps
 
-## Demo
-1.  Click on your newly created workflow in the Google Cloud Console.
-2.  Click the `Execute` button.
-3.  For the `code/example.yaml` workflow provided, you can leave the input and logging level empty. Then, click `Execute` at the bottom of the screen.
-4.  Wait for the workflow to run, then view the output in the output box. The `example.yaml` fetches the current time and retrieves Wikipedia articles related to the day of the week.
+Review the [Workflows best practices documentation](https://cloud.google.com/workflows/docs/best-practice) to trigger workflows from Eventarc, Cloud Scheduler, Cloud Tasks, or parent workflows.
 
-## Next Steps
-Workflows can be used to automate various processes, connect different GCP services, and create end-to-end solutions. View the [workflow documentation](https://cloud.google.com/workflows/docs/best-practice) to learn about some of the capabilities of workflows.
-You can also start a workflow execution through Eventarc triggers, Cloud Scheduler, Cloud Tasks, or even another workflow. Configure the workflow for your specific use case.
+## 6 Service agent notes
 
-## Note
-This blueprint has been refactored to resolve the prior limitation regarding CMEK. The Workflows Google-managed service agent (e.g., `service-PROJECT_NUMBER@gcp-sa-workflows.iam.gserviceaccount.com`) now receives explicit `roles/cloudkms.cryptoKeyEncrypterDecrypter` permissions on the specified KMS key. This allows the Workflows instance to be created successfully with CMEK enabled, ensuring data encryption at rest via customer-managed keys.
+This blueprint explicitly provisions the Workflows service agent `service-<project-number>@gcp-sa-workflows.iam.gserviceaccount.com` and grants `roles/cloudkms.cryptoKeyEncrypterDecrypter` on the configured KMS key before creating the workflow so CMEK encryption succeeds on initial deployment.
 
 ## Variables
 

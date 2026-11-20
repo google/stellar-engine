@@ -1,47 +1,33 @@
-# FAST Stages
+# FAST stages
 
-Each of the git folders contained here is a separate "stage", or Terraform root module.
+Each subdirectory in `fast/stages-aw/` is a standalone Terraform root module representing a landing zone stage. You can deploy a single stage in isolation, such as provisioning a hub-and-spoke VPC in an existing environment, or combine all stages sequentially to configure a Google Cloud organization from the top down.
 
-Each stage can be run in isolation (for example to only bring up a hub and spoke VPC in an existing environment), but when combined together they form a modular setup that allows top-down configuration of a whole GCP organization.
+Each stage consumes outputs from earlier stages and exports configuration contracts for downstream stages:
 
-When combined together, each stage is designed to leverage the previous stage's resources and to provide outputs to the following stages via predefined contracts, that regulate what is exchanged.
+- You can replace any stage implementation as long as it provides the expected outputs and accepts the upstream stage inputs.
+- Automated output files pass provider and `.auto.tfvars.json` definitions forward between stages as described in the [Stage 0 documentation](./0-bootstrap/README.md), eliminating manual variable transcription.
+- Data flows strictly forward through the stage sequence so earlier stages never depend on downstream outputs.
+- Stages use Google Cloud [delegated role grants](https://medium.com/google-cloud/managing-gcp-service-usage-through-delegated-role-grants-a843610f2226) to scope organization-level IAM administration to specific roles per stage.
 
-This has two important consequences
+Refer to each stage `README.md` file for architectural details and deployment steps, and follow the cleanup instructions to tear down an existing deployment.
 
-- any stage can be swapped out and replaced by different code as long as it respects the contract by providing a predefined set of outputs and optionally accepting a predefined set of variables
-- data flow between stages can be partially automated (see [stage 00 documentation on output files](./0-bootstrap/README.md#output-files-and-cross-stage-variables)), reducing the effort and pain required to compile variables by hand
-
-One important assumption is that the flow of data is always forward looking, so no stage needs to depend on outputs generated further down the chain. This greatly simplifies both the logic and the implementation, and allows stages to be effectively independent.
-
-To achieve this, we rely on specific GCP functionality like [delegated role grants](https://medium.com/google-cloud/managing-gcp-service-usage-through-delegated-role-grants-a843610f2226) that allow controlled delegation of responsibilities, for example to allow managing IAM bindings at the organization level in different stages only for specific roles.
-
-Refer to each stage's documentation for a detailed description of its purpose, the architectural choices made in its design, and how it can be configured and wired together to terraform a whole GCP organization. The following is a brief overview of each stage.
-
-To destroy a previous FAST deployment follow the instructions detailed in cleanup.
-
-## Fast Stages Diagram
+## 1 Stage architecture diagram
 
 ![Stellar Engine Fast Stages](../stages.png)
 
-## Organization (0 and 1)
+## 2 Organization stages
 
-- [Bootstrap](0-bootstrap/README.md)  
-  Enables critical Google Cloud Organization level functionality, including the provisioning of a top-level Assured Workloads Google Cloud Folder, that depends on broad permissions. It has two primary purposes. The first is to bootstrap the resources needed for automation of this and the following stages (service accounts, GCS buckets). Secondly, it applies the minimum amount of configuration needed at the Google Cloud Organization level to avoid the need of broad permissions later on, and to implement from the start critical auditing or security features like organization policies, sinks and exports.\
-  Exports: automation variables, organization-level custom roles
-- [Resource Management](1-resman/README.md)  
-  Creates the base resource hierarchy (Google Cloud Folders) and the automation resources that will be required later to delegate deployment of each part of the hierarchy to separate stages. This stage also configures resource management tags used in scoping specific IAM roles on the resource hierarchy. Note that the project factory takes place in this stage to ensure consistency with the architecture established by Cloud One. To add, modify, or delete users, please modify the tfvars file in this stage and rerun the terraform.
+- [0-bootstrap](0-bootstrap/README.md) provisions the top-level Assured Workloads folder, stage automation service accounts and state buckets, organization policies, and organization-level audit log sinks, and exports automation variables and custom roles.
+- [1-resman](1-resman/README.md) creates the environment, networking, security, and tenant folder hierarchy, configures resource management tags for scoped IAM bindings, and provisions tenant projects. Update `terraform.tfvars` in this stage and re-apply Terraform to add, modify, or remove tenant definitions.
 
-## Networking (2)
+## 3 Networking stages
 
-- [FedRAMP High/Moderate Compliant](/fast/stages-aw/2-networking-a-fedramp/README.md)
-- [IL5/IL4 Compliant](2-networking-b-il5-ngfw/README.md)
+- [2-networking-a-fedramp](/fast/stages-aw/2-networking-a-fedramp/README.md) deploys a Network Connectivity Center hub-and-spoke architecture for FedRAMP High, FedRAMP Moderate, and IL2 environments.
+- [2-networking-b-il5-ngfw](2-networking-b-il5-ngfw/README.md) deploys a Palo Alto VM-Series Next-Generation Firewall hub-and-spoke architecture for IL4 and IL5 environments.
 
-Manages centralized network resources in a separate stage and is typically owned by the networking team. This stage implements a hub-and-spoke design. Firewall rules and subnets are configured through Terraform variables. Currently, two networking options (IL5/IL4 and FedRAMP High/Moderate Compliant) are available.
+Stage 2 centralizes Shared VPC host projects, subnets, Cloud DNS zones, and firewall policies for the networking team. Design hybrid connectivity separately according to your on-premises transit requirements.
 
-Hybrid connectivity is not deployed by either networking option and must be designed separately.
+## 4 Security stage
 
-## Security (3)
-
-- [Security](3-security/README.md)
-This stage provides an added layer of security to deployment. To further secure your environment, please see the [Security Best Practices Guide](../../docs/security-best-practices.md).
+- [3-security](3-security/README.md) provisions security projects, centralized Cloud KMS keys, CIS log metric alerts, and VPC Service Controls perimeters across the landing zone. See the [Security Best Practices Guide](../../docs/security-best-practices.md) for additional hardening guidance.
 

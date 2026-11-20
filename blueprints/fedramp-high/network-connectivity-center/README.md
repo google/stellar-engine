@@ -1,94 +1,85 @@
-# Network Connectivity Center Blueprint
-This blueprint demonstrates how to create a Google Cloud Network Connectivity Center (NCC) Hub and connect existing VPC networks as spokes, supporting various network topologies (MESH/STAR) within a multi-project GCP environment.
+# Network Connectivity Center blueprint
+
+This blueprint creates a Google Cloud Network Connectivity Center hub and attaches existing VPC networks as spokes using `MESH` or `STAR` topologies across multiple projects.
 
 <!-- BEGIN TOC -->
-- [Introduction](#introduction)
-- [Disclaimer](#disclaimer)
-- [Prerequisites](#prerequisites)
-- [Deployment Steps](#deployment-steps)
-- [Verification](#verification)
-- [Important Notes](#important-notes)
+- [1 NCC overview](#1-ncc-overview)
+- [2 Compliance scope](#2-compliance-scope)
+- [3 Prerequisites](#3-prerequisites)
+- [4 Deployment steps](#4-deployment-steps)
+- [5 Deployment verification](#5-deployment-verification)
+- [6 Operational notes](#6-operational-notes)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Introduction
-Network Connectivity Center is an orchestration framework that simplifies network connectivity among spoke resources that are connected to a central management resource called a hub. It enables you to manage connectivity between multiple VPC networks, on-premise networks, or other cloud provider networks.
+## 1 NCC overview
 
-This blueprint specifically focuses on establishing hub-and-spoke connectivity with existing Google Cloud VPC networks.
+Network Connectivity Center provides centralized transit and route exchange across spoke resources connected to a hub. Attaching existing Google Cloud VPC networks as spokes unifies multi-project connectivity under either full-mesh or hub-and-spoke group policies.
 
-## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in either a FedRAMP-High or IL5 (Impact Level 5) environment using Assured Workloads within the Google Cloud Platform (GCP) organization.
-- Assured Workloads in both environments ensures that sensitive data and workloads in GCP adhere to the rigorous security standards mandated by the DoD, making it suitable for government agencies.
+## 2 Compliance scope
 
-## Prerequisites
-Before deploying this blueprint, ensure the following are in place:
+- Deploy this blueprint inside a FedRAMP High or IL5 Assured Workloads folder within your Google Cloud organization.
+- Assured Workloads enforces regional data residency and security guardrails required for federal and defense workloads.
 
-1.  **Google Cloud Projects:**
-    * A **main project** (`var.main_project_id`) where the NCC Hub will be created.
-    * **Network projects** (where your VPCs reside) from which you intend to attach spokes. These can include your `main_project_id` or other distinct projects.
-2.  **Existing VPC Networks:** The VPC networks intended to be attached as spokes must already exist. This blueprint consumes existing VPCs; it does not create them. You will need their full self-links (e.g., `projects/<PROJECT_ID>/global/networks/<VPC_NETWORK_NAME>`).
-3.  **Permissions:** The service account or user deploying this blueprint must have:
-    * `roles/owner` or sufficient granular permissions (e.g., `networkconnectivity.admin`, `compute.networkAdmin`, `serviceusage.serviceUsageAdmin`, `resourcemanager.projectIamAdmin`) in the `main_project_id`.
-    * `roles/networkconnectivity.admin` (or `roles/owner`) in any **spoke project** where the VPC networks reside, as NCC Spoke resources are created within the VPC's project.
-    * The `Network Connectivity Center API` (`networkconnectivity.googleapis.com`) enabled in the `main_project_id`. This blueprint attempts to enable it automatically.
+## 3 Prerequisites
 
-## Deployment Steps
-1.  **Configure Variables:**
-    * Copy the sample variables file:
-        ```bash
-        cp terraform.tfvars.sample terraform.tfvars
-        ```
-    * Open `terraform.tfvars` and update the placeholder values (`xxxx-xxxx-main-0`, `my-network-project-id-1`, etc.) with your actual project IDs, NCC hub name, and VPC network self-links.
+Verify that the following projects, networks, and IAM roles are in place before applying Terraform:
 
-2.  **Initialize Terraform:**
-    ```bash
-    terraform init
-    ```
+- Identify `main_project_id` to host the Network Connectivity Center hub and any host projects containing spoke VPC networks.
+- Provision all spoke VPC networks ahead of time and collect their full self-links in `projects/<project-id>/global/networks/<vpc-name>` format.
+- Grant the deploying identity `roles/networkconnectivity.admin`, `roles/compute.networkAdmin`, `roles/serviceusage.serviceUsageAdmin`, and `roles/resourcemanager.projectIamAdmin` on `main_project_id`, plus `roles/networkconnectivity.admin` on every project hosting an attached VPC spoke.
 
-3.  **Review Plan:**
-    ```bash
-    terraform plan
-    ```
-    Carefully review the proposed infrastructure changes before applying.
+## 4 Deployment steps
 
-4.  **Apply Changes:**
-    ```bash
-    terraform apply
-    ```
-    Type `yes` when prompted to confirm the deployment.
+1. Copy the sample variables file and update `terraform.tfvars` with your hub project ID, `ncc_hub_name`, `topology`, and `spokes` VPC self-links:
 
-5.  **Destroy Infrastructure (Optional):**
-    If you wish to remove the deployed NCC Hub and Spokes:
-    ```bash
-    terraform destroy
-    ```
-    Type `yes` when prompted to confirm.
+```bash
+cp terraform.tfvars.sample terraform.tfvars
+```
 
-## Verification
-To verify a successful deployment:
+2. Initialize the Terraform working directory:
 
-1.  **Google Cloud Console:**
-    * Navigate to **Network Connectivity** > **Network Connectivity Center** in your `main_project_id`.
-    * Confirm that a new **Hub** with the specified `ncc_hub_name` has been created.
-    * Click on the Hub and navigate to the **Spokes** tab.
-    * Verify that all specified VPC networks from your `spokes` variable are listed as attached spokes.
+```bash
+terraform init
+```
 
-2.  **`gcloud` CLI:**
-    * **Describe the Hub:**
-        ```bash
-        gcloud network-connectivity hubs describe <NCC_HUB_NAME> --project=<MAIN_PROJECT_ID>
-        ```
-    * **List Spokes:**
-        ```bash
-        gcloud network-connectivity spokes list --hub=<NCC_HUB_NAME> --project=<MAIN_PROJECT_ID>
-        ```
-        (You may need to filter by location or project if there are many spokes)
+3. Review the execution plan:
 
-## Important Notes
--   This blueprint currently supports **VPC spokes only**. For information on other types of NCC spokes (e.g., VPN, Cloud Interconnect, Router appliance), refer to the official [Network Connectivity Center documentation](https://cloud.google.com/network-connectivity/docs/network-connectivity-center/concepts/overview).
--   **STAR Topology Behavior:** If you choose the `STAR` topology, VPCs located in the same project as the hub (`main_project_id`) will be automatically placed into the "center" connectivity group. All other VPCs from different projects will be placed into the "edge" connectivity group. For `MESH` topology, all spokes are in the "default" group.
--   **Private Service Connect (PSC) Propagation:** You can enable Private Service Connect [connection propagation](https://cloud.google.com/network-connectivity/docs/network-connectivity-center/concepts/psc-propagated-connection-overview) via the `psc_prop` variable.
+```bash
+terraform plan
+```
+
+4. Apply the configuration to create the hub and attach VPC spokes:
+
+```bash
+terraform apply
+```
+
+5. Run `terraform destroy` if you need to remove the Network Connectivity Center hub and spoke attachments:
+
+```bash
+terraform destroy
+```
+
+## 5 Deployment verification
+
+Confirm the hub and attached VPC spokes in the Google Cloud console or with the `gcloud` CLI:
+
+- In the Google Cloud console, open Network Connectivity Center in `main_project_id`, select the hub named by `ncc_hub_name`, and verify on the Spokes tab that every VPC from `spokes` is attached.
+- Inspect the hub and list attached spokes from the command line:
+
+```bash
+gcloud network-connectivity hubs describe <NCC_HUB_NAME> --project=<MAIN_PROJECT_ID>
+gcloud network-connectivity spokes list --hub=<NCC_HUB_NAME> --project=<MAIN_PROJECT_ID>
+```
+
+## 6 Operational notes
+
+- This blueprint attaches VPC spokes only; see the [Network Connectivity Center overview](https://cloud.google.com/network-connectivity/docs/network-connectivity-center/concepts/overview) for Cloud VPN, Cloud Interconnect, and router appliance spokes.
+- Under `STAR` topology, VPCs residing in `main_project_id` join the `center` group while VPCs in other projects join the `edge` group; under `MESH` topology, all spokes join the `default` group.
+- Set `psc_prop = true` to enable Private Service Connect [connection propagation](https://cloud.google.com/network-connectivity/docs/network-connectivity-center/concepts/psc-propagated-connection-overview) across spokes.
+
 <!-- BEGIN TFDOC -->
 ## Variables
 

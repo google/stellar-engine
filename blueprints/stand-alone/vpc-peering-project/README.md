@@ -1,94 +1,84 @@
-# VPC Peering Project Blueprint
-This blueprint provides a self-contained solution for creating two new Google Cloud VPC networks and establishing a peering connection between them. It is intended for customers who want to develop their own network infrastructure without the full Stellar Engine deployment.
+# VPC peering project blueprint
+
+This standalone blueprint provisions two Google Cloud VPC networks with regional subnets and establishes an active VPC Network Peering connection between them for environments that do not use Stellar Engine Stage 2 networking.
 
 <!-- BEGIN TOC -->
-- [Introduction](#introduction)
-- [Disclaimer](#disclaimer)
-- [Prerequisites](#prerequisites)
-- [Deployment Steps](#deployment-steps)
-- [Verification](#verification)
-- [Important Notes](#important-notes)
+- [1 VPC peering overview](#1-vpc-peering-overview)
+- [2 Compliance scope](#2-compliance-scope)
+- [3 Prerequisites](#3-prerequisites)
+- [4 Deployment steps](#4-deployment-steps)
+- [5 Deployment verification](#5-deployment-verification)
+- [6 Operational notes](#6-operational-notes)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Introduction
-VPC Network Peering allows you to connect two Virtual Private Cloud (VPC) networks so that workloads in each network can communicate with each other using internal IP addresses. This enables you to share services, data, and applications across different VPC networks, whether they are in the same or different Google Cloud projects and organizations, without using external IP addresses or VPNs.
+## 1 VPC peering overview
 
-This blueprint offers a complete solution to demonstrate VPC peering by provisioning two distinct VPC networks and configuring their peering connection.
+VPC Network Peering connects two VPC networks privately across internal IPv4 or IPv6 addresses within the same or separate projects and organizations without traversing external IP addresses or VPN tunnels.
 
-## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in either a FedRAMP-High or IL5 (Impact Level 5) environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
-- Assured Workloads in both environments ensures that sensitive data and workloads in GCP adhere to the rigorous security standards mandated by the DoD, making it suitable for government agencies.
+## 2 Compliance scope
 
-## Prerequisites
-Before deploying this blueprint, ensure the following are in place:
+- Deploy this blueprint inside a FedRAMP High or IL5 Assured Workloads folder within your Google Cloud organization when operating outside Stellar Engine Stage 2.
+- Assured Workloads enforces regional data residency and security guardrails required for federal and defense workloads.
 
-1.  **Google Cloud Projects:**
-    * You will need two Google Cloud projects where the VPCs will be created. These can be the same project (e.g., if `local_vpc_project_id` and `peer_vpc_project_id_to_create` are the same).
-    * `var.main_project_id` should typically be one of these two project IDs, as it's where the peering connection resource will be managed.
-2.  **Permissions:** The service account or user deploying this blueprint must have:
-    * `roles/owner` or sufficient granular permissions (e.g., `compute.admin`, `serviceusage.serviceUsageAdmin`, `resourcemanager.projectIamAdmin`) in **both** `local_vpc_project_id` and `peer_vpc_project_id_to_create`. This is because the blueprint will create VPCs in both projects.
-    * The `Compute Engine API` (`compute.googleapis.com`) enabled in both `local_vpc_project_id` and `peer_vpc_project_id_to_create`. This blueprint attempts to enable it automatically.
+## 3 Prerequisites
 
-## Deployment Steps
-1.  **Configure Variables:**
-    * Copy the sample variables file:
-        ```bash
-        cp terraform.tfvars.sample terraform.tfvars
-        ```
-    * Open `terraform.tfvars` and update the placeholder values (`xxxx-xxxx-main-0`, `my-local-vpc`, `my-peer-vpc`, etc.) with your actual project IDs, VPC names, and CIDR ranges for both the local and peer VPCs.
+Verify that the target projects and IAM permissions exist before running Terraform:
 
-2.  **Initialize Terraform:**
-    ```bash
-    terraform init
-    ```
+- Provision `local_vpc_project_id` and `peer_vpc_project_id_to_create` to host the two VPC networks, which can reference the same project or two separate projects, and set `main_project_id` to manage the peering connection.
+- Grant the deploying identity `roles/compute.admin`, `roles/serviceusage.serviceUsageAdmin`, and `roles/resourcemanager.projectIamAdmin` on both `local_vpc_project_id` and `peer_vpc_project_id_to_create` so Terraform can enable `compute.googleapis.com` and create both VPC networks.
 
-3.  **Review Plan:**
-    ```bash
-    terraform plan
-    ```
-    Carefully review the proposed infrastructure changes (e.g., creation of two VPCs and one peering connection) before applying.
+## 4 Deployment steps
 
-4.  **Apply Changes:**
-    ```bash
-    terraform apply
-    ```
-    Type `yes` when prompted to confirm the deployment.
+1. Copy the sample variables file and update `terraform.tfvars` with your project IDs, VPC names, and non-overlapping primary and secondary subnet CIDR ranges:
 
-5.  **Destroy Infrastructure (Optional):**
-    If you wish to remove the deployed VPCs and peering connection:
-    ```bash
-    terraform destroy
-    ```
-    Type `yes` when prompted to confirm.
+```bash
+cp terraform.tfvars.sample terraform.tfvars
+```
 
-## Verification
-To verify a successful deployment:
+2. Initialize the Terraform working directory:
 
-1.  **Google Cloud Console:**
-    * Navigate to **VPC network** > **VPC networks** in both your `local_vpc_project_id` and `peer_vpc_project_id_to_create`.
-    * Confirm that `var.local_vpc_name` and `var.peer_vpc_name_to_create` VPCs (with their subnets) have been created.
-    * In the Console, navigate to **VPC network** > **VPC Network Peering** (in `var.main_project_id`).
-    * Verify that a peering connection exists and is in an `ACTIVE` state, connecting your `local_vpc_name` and `peer_vpc_name_to_create`.
+```bash
+terraform init
+```
 
-2.  **`gcloud` CLI:**
-    * **List Peering Connections:**
-        ```bash
-        gcloud compute network-peering list --project=<MAIN_PROJECT_ID>
-        ```
-    * **Describe a VPC Network:**
-        ```bash
-        gcloud compute networks describe <VPC_NAME> --project=<PROJECT_ID>
-        ```
-        (Do this for both `local_vpc_name` and `peer_vpc_name_to_create` in their respective projects).
-    * **Test Connectivity (Optional, requires VMs):** Deploy simple Compute Engine VMs in subnets within each peered VPC, and try to ping/connect them via their internal IP addresses.
+3. Review the execution plan for both VPC networks and the bidirectional peering connection:
 
-## Important Notes
--   This blueprint strictly **creates two VPC networks and a peering connection between them.** It is a standalone deployment and does not consume pre-existing VPCs for its core function.
--   **Do NOT use this blueprint within an environment provisioned by Stellar Engine** where networking (including VPCs and peering) is already managed by Stage 2 of the foundational deployment. Using this blueprint in such an environment will cause conflicts.
--   VPC Peering requires non-overlapping IP CIDR ranges between the peered networks. Ensure your `local_subnetwork_cidr_*` and `peer_subnetwork_cidr_*` ranges do not overlap.
--   VPC Peering connections are **global** resources, but they connect regional VPC networks. Ensure `var.gcp_region` is consistent for both VPCs.
+```bash
+terraform plan
+```
+
+4. Apply the configuration:
+
+```bash
+terraform apply
+```
+
+5. Run `terraform destroy` if you need to remove both VPC networks and the peering connection:
+
+```bash
+terraform destroy
+```
+
+## 5 Deployment verification
+
+Confirm the VPC networks and `ACTIVE` peering state in the Google Cloud console or with the `gcloud` CLI:
+
+- In the Google Cloud console, verify that `local_vpc_name` and `peer_vpc_name_to_create` exist with their configured subnets under VPC networks, and open VPC Network Peering in `main_project_id` to confirm the peering state is `ACTIVE`.
+- List peering connections and inspect both VPC networks from the command line:
+
+```bash
+gcloud compute network-peering list --project=<MAIN_PROJECT_ID>
+gcloud compute networks describe <VPC_NAME> --project=<PROJECT_ID>
+```
+
+## 6 Operational notes
+
+- This standalone blueprint creates two new VPC networks rather than peering pre-existing VPCs.
+- Do not deploy this blueprint inside a landing zone already managed by Stellar Engine Stage 2 networking, where hub-and-spoke VPCs and peering are centrally provisioned.
+- Primary (`local_subnetwork_cidr_*`, `peer_subnetwork_cidr_*`) and secondary CIDR ranges must never overlap across peered VPC networks.
+- Keep `gcp_region` consistent with your Assured Workloads regional boundary.
 
 <!-- BEGIN TFDOC -->
 ## Variables

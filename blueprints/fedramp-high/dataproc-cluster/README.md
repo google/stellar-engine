@@ -1,92 +1,89 @@
-Copyright 2023 Google LLC
+# Dataproc blueprint
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-## Dataproc
-
-<!-- START TOC -->
-- [Introduction to Dataproc](#introduction-to-dataproc)
-- [Blueprint](#blueprint)
-- [Prerequisites for Dataproc](#prequisites-for-dataproc)
-- [Disclaimer](#disclaimer)
-- [The Deployment Steps](#the-deployment-steps)
-- [Verification of a successful deployment](#verification-of-a-successful-deployment)
-- [Troubleshooting](#troubleshooting)
+<!-- BEGIN TOC -->
+- [1 Dataproc overview](#1-dataproc-overview)
+- [2 Blueprint scope](#2-blueprint-scope)
+- [3 Prerequisites](#3-prerequisites)
+- [4 Compliance scope](#4-compliance-scope)
+- [5 Deployment steps](#5-deployment-steps)
+- [6 Deployment verification](#6-deployment-verification)
+- [7 Troubleshooting](#7-troubleshooting)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Introduction to Dataproc
-Dataproc is a managed Spark and Hadoop service that lets you take advantage of open source data tools for batch processing, querying, streaming, and machine learning. Dataproc automation helps you create clusters quickly, manage them easily, and save money by turning clusters off when you don't need them. With less time and money spent on administration, you can focus on your jobs and your data.
+## 1 Dataproc overview
 
-When compared to traditional, on-premises products and competing cloud services, Dataproc has a number of unique advantages for clusters of three to hundreds of nodes:
+Dataproc is a managed Apache Spark and Apache Hadoop service for batch processing, querying, streaming, and machine learning on Google Cloud:
 
-* Low cost — Dataproc is priced at only 1 cent per virtual CPU in your cluster per hour, on top of the other Cloud Platform resources you use. In addition to this low price, Dataproc clusters can include preemptible instances that have lower compute prices, reducing your costs even further. Instead of rounding your usage up to the nearest hour, Dataproc charges you only for what you really use with second-by-second billing and a low, one-minute-minimum billing period.
-* Super fast — Without using Dataproc, it can take from five to 30 minutes to create Spark and Hadoop clusters on-premises or through IaaS providers. By comparison, Dataproc clusters are quick to start, scale, and shutdown, with each of these operations taking 90 seconds or less, on average. This means you can spend less time waiting for clusters and more hands-on time working with your data.
-* Integrated — Dataproc has built-in integration with other Google Cloud Platform services, such as BigQuery, Cloud Storage, Cloud Bigtable, Cloud Logging, and Cloud Monitoring, so you have more than just a Spark or Hadoop cluster—you have a complete data platform. For example, you can use Dataproc to effortlessly ETL terabytes of raw log data directly into BigQuery for business reporting.
-* Managed — Use Spark and Hadoop clusters without the assistance of an administrator or special software. You can easily interact with clusters and Spark or Hadoop jobs through the Google Cloud console, the Cloud SDK, or the Dataproc REST API. When you're done with a cluster, you can simply turn it off, so you don’t spend money on an idle cluster. You won’t need to worry about losing data, because Dataproc is integrated with Cloud Storage, BigQuery, and Cloud Bigtable.
-* Simple and familiar — You don't need to learn new tools or APIs to use Dataproc, making it easy to move existing projects into Dataproc without redevelopment. Spark, Hadoop, Pig, and Hive are frequently updated, so you can be productive faster.
+- Per-second billing with a one-minute minimum and optional Spot VMs reduces cluster compute costs when you shut down idle clusters.
+- Automated cluster provisioning, scaling, and teardown typically complete in 90 seconds or less.
+- Native integration with BigQuery, Cloud Storage, Bigtable, Cloud Logging, and Cloud Monitoring connects Spark and Hadoop jobs directly to managed storage and observability services.
+- Managed cluster operations let you submit jobs through the Google Cloud console, `gcloud` CLI, or Dataproc REST API while persisting data in Cloud Storage or BigQuery across cluster lifecycles.
+- Standard open-source Spark, Hadoop, Pig, and Hive versions let you migrate existing pipelines without rewriting application code.
 
-## Blueprint
-This blueprint deploys a dataproc cluster and meets all compliane with Assured Workloads FedRAMP High environments.
+## 2 Blueprint scope
 
-## Prequisites for Dataproc
-1. Have access to the GCP Project ID.
-2. You will need an existing [project](https://cloud.google.com/resource-manager/docs/creating-managing-projects) with [billing enabled](https://cloud.google.com/billing/docs/how-to/modify-project) and a user with the “Project owner” [IAM](https://cloud.google.com/iam) role on that project.
-3.  __Note__: to grant a user a role, take a look at the [Granting and Revoking Access](https://cloud.google.com/iam/docs/granting-changing-revoking-access#grant-single-role) documentation.
+This blueprint deploys a CMEK-encrypted Dataproc cluster, staging bucket, and VPC firewall rule configured for Assured Workloads FedRAMP High environments.
 
-## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in an FedRAMP-High environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
-- An Assured Workloads in FedRAMP-High environments ensures that sensitive data and workloads in GCP adhere to the rigorous security standards mandated by the DoD, making it suitable for government agencies.
+## 3 Prerequisites
 
-## The Deployment Steps
-You should see this README and some terraform files.
-1. Review and follow the [Prerequisites for Dataproc](#prerequisite-for-dataproc).
-2. Run ```cp terraform.tfvars.sample terraform.tfvars``` to copy the sample variables to your own tfvars file.
-3. Update the variables as necessary in your tfvars file.
+1. Identify your target workload, Shared VPC host, and KMS core Google Cloud project IDs.
+2. Ensure the target [project](https://cloud.google.com/resource-manager/docs/creating-managing-projects) has [billing enabled](https://cloud.google.com/billing/docs/how-to/modify-project) and your deploying principal holds required [IAM](https://cloud.google.com/iam) permissions, following [Granting, changing, and revoking access](https://cloud.google.com/iam/docs/granting-changing-revoking-access#grant-single-role).
 
-- ```main_project_id``` with your main GCP Project ID.<br />
-- ```core_project_id``` with your core GCP Project ID.<br />
-- ```network_project_id``` with your network GCP Project ID.<br />
-- ```dataproc_cluster_name``` with the name for your Dataproc cluster.<br />
-- ```dataproc_bucket_name``` with the name of the Cloud Storage Bucket 
-- ```network_name``` with the name of the VPC network.<br />
-- ```subnetwork_name``` with the name of the VPC subnetwork.<br />
-- ```firewall_name``` with the name for the firewall rule.<br />
-- ```kms_keyring_name``` with the name of the KMS keyring.<br />
-- ```kms_key_name``` with the name of the KMS key to be used within the KMS keyring.<br />
-- ```region``` with the region to deploy the Dataproc cluster to.<br />
+## 4 Compliance scope
+
+- Deploy this blueprint inside a FedRAMP High Assured Workloads folder within your Google Cloud organization.
+- Assured Workloads enforces regional data residency and encryption guardrails required for federal workloads.
+
+## 5 Deployment steps
+
+1. Complete the steps in [Prerequisites](#3-prerequisites).
+2. Copy the sample variables file with `cp terraform.tfvars.sample terraform.tfvars`.
+3. Update `terraform.tfvars` with values for your environment:
+   - Set `main_project_id` to the workload Google Cloud project ID.
+   - Set `core_project_id` to the core project ID hosting the Cloud KMS key.
+   - Set `network_project_id` to the Shared VPC host project ID.
+   - Set `dataproc_cluster_name` to the Dataproc cluster name.
+   - Set `dataproc_bucket_name` to a globally unique Cloud Storage staging bucket name.
+   - Set `network_name` and `subnetwork_name` to your target VPC network and subnet names.
+   - Set `firewall_name` to the intra-cluster VPC firewall rule name.
+   - Set `kms_keyring_name` and `kms_key_name` to the Cloud KMS key ring and key used for CMEK encryption.
+   - Set `region` to the target Google Cloud region.
+4. Initialize and apply the Terraform configuration:
 
 ```bash
 terraform init
 terraform plan
 terraform apply
-terraform destroy
 ```
 
-## Verification of a successful deployment
-The apply will take a couple of minutes to complete. Once done, the Dataproc cluster will be deployed to the main project. Browse to [Dataproc Clusters](https://console.cloud.google.com/dataproc/clusters) to view the cluster. Click the cluster name to see more details about the cluster. Under "VM Instances" you will see the VMs that were created for the Dataproc cluster along with which is the master and which are the workers. Under "Configuration" you see the Cloud Storage bucket that is linked to the cluster. You will also see the KMS key used for encryption.
+Run `terraform destroy` when you want to tear down the cluster and associated resources.
 
-## Troubleshooting
-* If you encounter the error below when running a ```terraform destroy```, you will need to run a command to remove the Temporary hold.
-```bash
+## 6 Deployment verification
+
+Open [Dataproc Clusters](https://console.cloud.google.com/dataproc/clusters) in the Google Cloud console after `terraform apply` completes:
+
+- Select the cluster name and inspect the VM Instances tab to confirm the master and worker nodes are running.
+- Inspect the Configuration tab to confirm the staging Cloud Storage bucket and Customer-Managed Encryption Key are attached.
+
+## 7 Troubleshooting
+
+If `terraform destroy` fails with a `403` error reporting that `spark-job-history/` is under an active temporary hold:
+
+```text
 Error: could not delete non-empty bucket due to error when deleting contents: googleapi: Error 403: Object 'tmp-dataproc-bucket-00/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/spark-job-history/' is under active Temporary hold and cannot be deleted, overwritten or archived until hold is removed., forbidden
 ```
-Go to the [Cloud Storage Bucket](https://console.cloud.google.com/storage/browser) and open the Cloud Storage bucket created by this blueprint. There will be a bucket with a long the same name as recorded in the error message. Under that bucket, there will be a bucket called "spark-job-history". Click the "spark-job-history" bucket and copy the full path. In the terminal you are running the Terraform commands from, run the following command to remove the Temporary hold.
+
+1. Open [Cloud Storage](https://console.cloud.google.com/storage/browser) in the Google Cloud console and locate the `spark-job-history` object path inside the staging bucket.
+2. Release the temporary hold from your terminal:
+
 ```bash
 gsutil retention temp release gs://tmp-dataproc-bucket-00/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxx/spark-job-history/
 ```
-Once ran, re-running a ```terraform destroy``` will succesfully destroy the Google Cloud bucket.
+
+3. Re-run `terraform destroy` to delete the bucket cleanly.
+
 <!-- BEGIN TFDOC -->
 ## Variables
 

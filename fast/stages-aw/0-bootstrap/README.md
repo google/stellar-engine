@@ -1,75 +1,67 @@
-# Google Cloud Organization Bootstrap
+# Google Cloud organization bootstrap
 
-The purpose of this stage is to enable critical Google Cloud Organization level functionalities that depend on broad administrative permissions, and prepare the prerequisites needed to enable automation in this and future stages. In addition, this stage ensures that all future fast stages are compliant with the selected compliance regime.
+Stage 0 enables organization-level Google Cloud capabilities that require broad administrative permissions, provisions automation prerequisites for downstream stages, and establishes the Assured Workloads compliance boundary for the landing zone.
 
 <!-- BEGIN TOC -->
-- [Design Overview and Choices](#design-overview-and-choices)
+- [1 Design overview](#1-design-overview)
   - [Assured Workloads](#assured-workloads)
-  - [User Groups](#user-groups)
-  - [Google Cloud Organization Level IAM](#google-cloud-organization-level-iam)
-  - [Google Cloud Organization Policies and Tag-Based Conditions](#google-cloud-organization-policies-and-tag-based-conditions)
-  - [Automation Google Cloud Project and Resources](#automation-google-cloud-project-and-resources)
-  - [Billing Account](#billing-account)
-    - [Billing Budgets](#billing-budgets)
-  - [Google Cloud Organization Level Logging](#google-cloud-organization-level-logging)
-  - [Naming](#naming)
+  - [User groups](#user-groups)
+  - [Organization IAM](#organization-iam)
+  - [Organization policy tags](#organization-policy-tags)
+  - [Automation project](#automation-project)
+  - [Billing account](#billing-account)
+    - [Billing budgets](#billing-budgets)
+  - [Organization logging](#organization-logging)
+  - [Resource naming](#resource-naming)
   - [Workforce Identity Federation](#workforce-identity-federation)
-  - [Workload Identity Federation and CI/CD](#workload-identity-federation-and-cicd)
-- [How to Run This Stage](#how-to-run-this-stage)
-- [Customizations](#customizations)
-  - [Group Names](#group-names)
-  - [IAM](#iam)
-  - [Log Sinks and Log Destinations](#log-sinks-and-log-destinations)
-  - [Names and Naming Convention](#names-and-naming-convention)
-  - [Pre-created resources](#pre-created-resources)
   - [Workload Identity Federation](#workload-identity-federation)
-  - [CI/CD Repositories](#cicd-repositories)
-  - [Toggling features](#toggling-features)
+- [2 Stage deployment](#2-stage-deployment)
+- [3 Customizations](#3-customizations)
+  - [Group names](#group-names)
+  - [IAM bindings](#iam-bindings)
+  - [Log sinks](#log-sinks)
+  - [Naming convention](#naming-convention)
+  - [Pre-created resources](#pre-created-resources)
+  - [Federated identity providers](#federated-identity-providers)
+  - [CI/CD repositories](#cicd-repositories)
+  - [Feature toggles](#feature-toggles)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Design Overview and Choices
+## 1 Design overview
 
-This stage only does the bare minimum required to bootstrap Assured Workloads, automation, and common services. It ensures that base audit and billing exports are in place from the start to provide some measure of accountability, before the security configurations are applied in a later stage.
+Stage 0 bootstraps Assured Workloads, automation projects, service accounts, and foundational audit and billing exports before downstream stages deploy network, resource hierarchy, and security controls.
 
 ### Assured Workloads
 
-Assured Workloads Google Cloud Folders are provisioned in this stage to ensure all future Google Cloud Folders, Google Cloud Projects, and services are deployed within scope of the selected Assured Workloads compliance regime. More information on Assured Workloads is highlighted [here](https://cloud.google.com/security/products/assured-workloads).
+Stage 0 provisions the top-level [Assured Workloads](https://cloud.google.com/security/products/assured-workloads) folder so every downstream folder, project, and workload stays within the selected compliance regime.
 
-### User Groups
+### User groups
 
-User groups are important, not only here but throughout the whole automation process. They provide a stable frame of reference that allows decoupling the final set of permissions for each group, from the stage where entities and resources are created and their IAM bindings defined. For example, the final set of roles for the networking group is contributed by this stage at the Google Cloud Organization level (XPN Admin, Cloud Asset Viewer, etc.), and by the Resource Management stage at the Google Cloud Folder level.
+User groups decouple human operational permissions from the stages where individual resources are created. For example, the networking group receives organization-level roles such as Shared VPC Admin and Cloud Asset Viewer in Stage 0 and folder-level roles in Stage 1.
 
-We have standardized the initial set of groups on those outlined in the [GCP Enterprise Setup Checklist](https://cloud.google.com/docs/enterprise/setup-checklist) to simplify adoption. They provide a comprehensive and flexible starting point that can suit most users. Adding new groups, or deviating from the initial setup is  possible and reasonably simple, and it's briefly outlined in the customization section below.
+Stage 0 standardizes the initial group keys on the [Google Cloud Enterprise Setup Checklist](https://cloud.google.com/docs/enterprise/setup-checklist) to simplify adoption. You can map custom group names or add groups as described in [Customizations](#3-customizations).
 
-### Google Cloud Organization Level IAM
+### Organization IAM
 
-The service account used in the [Resource Management stage](../1-resman) needs to be able to grant specific permissions at the Google Cloud Organization level, to enable specific functionality for subsequent stages that deal with network or security resources, or billing-related activities.
+The [Stage 1 resource management](../1-resman) service account grants targeted organization-level permissions required by downstream network, security, and billing workflows.
 
-In order to be able to assign those roles without having the full authority of the Google Cloud Organization Admin role, this stage defines a custom role that only allows setting IAM policies on the Google Cloud Organization, and grants it via a [delegated role grant](https://cloud.google.com/iam/docs/setting-limits-on-granting-roles) that only allows it to be used to grant a limited subset of roles.
+To avoid granting full Organization Admin privileges, Stage 0 defines a custom role scoped to setting organization IAM policies and binds it through a [delegated role grant](https://cloud.google.com/iam/docs/setting-limits-on-granting-roles) limited to an explicit allowlist of roles. Because both Stage 0 and Stage 1 manage bindings for those delegated roles, Stage 0 configures them as additive bindings so neither stage overwrites the other during `terraform apply`.
 
-In this way, the Resource Management service account can effectively act as a Google Cloud Organization Admin, but only to grant the specific roles it needs to control.
+See [IAM.md](./IAM.md) for the full list of IAM roles managed by this stage.
 
-One consequence of the above setup is the need to configure IAM bindings that can be assigned via the condition as non-authoritative, since those same roles are effectively under the control of two stages: this one and Resource Management. Using authoritative bindings for these roles (instead of non-authoritative ones) would generate potential conflicts, where each stage could try to overwrite and negate the bindings applied by the other at each `apply` cycle.
+### Organization policy tags
 
-A full reference of IAM roles managed by this stage [is available here](./IAM.md).
+Deploying organization policies during Stage 0 enforces location restrictions, default network removal, and IAM guardrails before downstream projects exist.
 
-### Google Cloud Organization Policies and Tag-Based Conditions
+Stage 0 manages organization policy exceptions through a dedicated tag hierarchy rooted at the `org-policies` tag key. A built-in condition on `iam.allowedPolicyMemberDomains` relaxes domain restrictions on resources that bind or inherit the `org-policies/allowed-policy-member-domains-all` tag value.
 
-It's often desirable to have Google Cloud Organization policies deployed before any other resource in the org, so as to ensure compliance with specific requirements (e.g. location restrictions), or control the configuration of specific resources (e.g. default network at Google Cloud Project creation or service account grants).
+- Define additional tag values and `tagUser` IAM bindings through the `org_policies_config.tag_values` variable.
+- Stage 0 exports managed tag keys and values into `0-bootstrap.auto.tfvars` so downstream stages can reference their IDs.
+- Stage 1 manages the remaining resource hierarchy tags alongside the folder structure.
 
-Google Cloud Organization policy exceptions are managed via a dedicated resource management tag hierarchy, rooted in the `org-policies` tag key. A default condition is already present for the `iam.allowedPolicyMemberDomains` constraint, that relaxes the policy on resources that have the `org-policies/allowed-policy-member-domains-all` tag value bound or inherited.
-
-Further tag values can be defined via the `org_policies_config.tag_values` variable, and IAM access can be granted on them via the same variable. Once a tag value has been created, its id can be used in constraint rule conditions.
-
-Management of the rest of the tag hierarchy is delegated to the resource management stage, as that is often intimately tied to the Google Cloud Folder hierarchy design.
-
-The Google Cloud Organization policy tag key and values managed by this stage have been added to the `0-bootstrap.auto.tfvars` stage, so that IAM can be delegated to the resource management or successive stages via their ids.
-
-The following example shows an example on how to define an additional tag value, and use it in a boolean constraint rule.
-
-This snippet defines a new tag value under the `org-policies` tag key via the `org_policies_config` variable, and assigns the permission to bind it to a group.
+The following example defines a custom tag value under `org-policies` via `org_policies_config` and grants `roles/resourcemanager.tagUser` to a group:
 
 ```hcl
 # stage 0 custom tfvars
@@ -87,7 +79,7 @@ org_policies_config = {
 }
 ```
 
-The above tag can be used to define a constraint condition via the `data/org-policies/compute.yaml` or similar factory file. The id in the condition is the Google Cloud Organization id, followed by the name of the Google Cloud Organization policy tag key (defaults to `org-policies`).
+Reference that tag value inside a constraint condition in `data/org-policies/compute.yaml` or another policy factory file using your numeric organization ID and tag key name:
 
 ```yaml
 compute.requireOsLogin:
@@ -98,57 +90,53 @@ compute.requireOsLogin:
       expression: resource.matchTag('12345678/org-policies-config', 'compute-require-oslogin-false')
 ```
 
-### Automation Google Cloud Project and Resources
+### Automation project
 
-One other design choice worth mentioning here is using a single automation Google Cloud Project for all foundational stages. We trade off some complexity on the API side (single source for usage quota, multiple service activation) for increased flexibility and simpler operations, while still effectively providing the same degree of separation via resource-level IAM.
+Stage 0 uses a single automation Google Cloud project across all foundational stages. Consolidating API quota usage and service activation into one project simplifies operations while preserving separation through resource-level IAM on state buckets and service accounts.
 
-### Billing Account
+### Billing account
 
-We support three use cases in regards to billing:
+Stage 0 supports three billing account models:
 
-- the billing account is part of this same Google Cloud Organization, IAM bindings will be set at the Google Cloud Organization level
-- the billing account is not considered part of an Google Cloud Organization (even though it might be), billing IAM bindings are set on the billing account itself
-- billing IAM is managed separately, and no bindings should (or can) be set via Terraform, this requires a few extra steps and is definitely not recommended and mainly used for development purposes
+- When the billing account belongs to the same Google Cloud organization, Stage 0 manages billing IAM bindings at the organization level using a custom role and delegated role grant.
+- When the billing account belongs to an external organization or stands alone, Stage 0 sets billing IAM bindings directly on the billing account.
+- When billing IAM is managed outside Terraform (`no_iam = true`), Terraform skips billing IAM bindings for development environments that require manual billing linkage.
 
-For same Google Cloud Organization billing, we configure a custom Google Cloud Organization role that can set IAM bindings, via a delegated role grant to limit its scope to the relevant roles.
+See [Stage deployment](#2-stage-deployment) for prerequisites and setup steps.
 
-For details on configuring the different billing account modes, refer to the [How to run this stage](#how-to-run-this-stage) section below.
+Because Cloud Billing export to BigQuery is not configurable via API, enable export to the Stage 0 `billing_export` BigQuery dataset manually in the Cloud Console by following the [BigQuery billing export guide](https://cloud.google.com/billing/docs/how-to/export-data-bigquery-setup#enable-bq-export).
 
-Due to limitations of API availability, manual steps have to be followed to enable billing export within the billing Google Cloud Project to BigQuery dataset `billing_export`, which will be created as part of the bootstrap stage. The process to share billing data [is outlined here](https://cloud.google.com/billing/docs/how-to/export-data-bigquery-setup#enable-bq-export).
+#### Billing budgets
 
-#### Billing Budgets
+Set the `billing_budget_amount` variable to create a default billing budget covering all projects under the Assured Workloads folder or fallback root folder. The object variable accepts the budget amount and optional alert threshold rules, which default to `0.5`, `0.75`, and `0.9`.
 
-A default billing budget can be created for the top-level folder of the landing zone by setting the `billing_budget_amount` variable. This budget will cover all projects created within the Assured Workload folder (or the "no-compliance" folder if Assured Workloads are disabled). The variable is an object that allows specifying the budget amount and optional threshold rules (defaults to 0.5, 0.75, and 0.9).
+### Organization logging
 
-### Google Cloud Organization Level Logging
+Stage 0 creates organization-level log sinks during bootstrap so audit trails are active before downstream resources deploy. Default log filters route [Cloud Audit Logs](https://cloud.google.com/logging/docs/audit), [VPC Service Controls violations](https://cloud.google.com/vpc-service-controls/docs/troubleshooting#vpc-sc-errors), and [Google Workspace logs](https://cloud.google.com/logging/docs/audit/configure-gsuite-audit-logs) into Cloud Logging buckets in the top-level audit logging project, alongside an unfiltered sink for [CIS Benchmark](https://cloud.google.com/security/compliance/cis) compliance.
 
-We create Google Cloud Organization level log sinks early in the bootstrap process to ensure a proper audit trail is in place from the very beginning. By default, we provide log filters to capture [Cloud Audit Logs](https://cloud.google.com/logging/docs/audit), [VPC Service Controls violations](https://cloud.google.com/vpc-service-controls/docs/troubleshooting#vpc-sc-errors) and [Workspace Logs](https://cloud.google.com/logging/docs/audit/configure-gsuite-audit-logs) into logging buckets in the top-level audit logging Google Cloud Project. In addition, a log sink with an empty filter is included to comply with [Center for Internet Security (CIS) Benchmarks](https://cloud.google.com/security/compliance/cis) related to log sinks.
+See [Log sinks](#log-sinks) to customize log filters or export destinations.
 
-The [Customizations](#log-sinks-and-log-destinations) section explains how to change the logs captured and their destination.
+### Resource naming
 
-### Naming
+Stage 0 uses deterministic resource naming rather than random prefixes or suffixes so production deployments follow a predictable naming convention.
 
-We are intentionally not supporting random prefix/suffixes for names, as that is an antipattern typically only used in development. It does not map to our customer's actual production usage, where they always adopt a fixed naming convention.
+Globally unique resources such as Google Cloud projects and Cloud Storage buckets combine five hyphen-separated tokens ordered by scope:
 
-What is implemented here is a fairly common convention, composed of tokens ordered by relative importance
+- Static organization prefix up to 7 characters in `prefix`, such as `myco`
+- Environment identifier, such as `prod`
+- Team or owner identifier, such as `sec`
+- Context identifier, such as `core` or `kms`
+- Instance sequence identifier, such as `0` or `1`
 
-- an Google Cloud Organization level static prefix less or equal to 7 characters (e.g. `myco` or `myco-gcp`)
-- an environment identifier (e.g. `prod`)
-- a team/owner identifier (e.g. `sec` for Security)
-- a context identifier (e.g. `core` or `kms`)
-- an arbitrary identifier used to distinguish similar resources (e.g. `0`, `1`)
+Joining tokens with `-` keeps resource names readable and enables automated cost attribution in BigQuery billing exports. Project-scoped resources use shorter names because their parent project provides the organization and environment context.
 
-Tokens are joined by a `-` character, making it easy to separate the individual tokens visually, and to programmatically split them in billing exports to derive initial high-level groupings for cost attribution.
-
-The convention is used in its full form only for specific resources with globally unique names (Google Cloud Projects, GCS buckets). Other resources adopt a shorter version for legibility, as the full context can always be derived from their Google Cloud Project.
-
-The [Customizations](#names-and-naming-convention) section on names below explains how to configure tokens, or implement a different naming convention.
+See [Naming convention](#naming-convention) for token customization options.
 
 ### Workforce Identity Federation
 
-This stage supports configuration of [Workforce Identity Federation](https://cloud.google.com/iam/docs/workforce-identity-federation) which lets an external identity provider (IdP) to authenticate and authorize a group of users (usually employees) using IAM, so that the users can access Google Cloud services.
+Stage 0 supports [Workforce Identity Federation](https://cloud.google.com/iam/docs/workforce-identity-federation) so external identity providers can authenticate and authorize workforce users through IAM.
 
-The following example shows an example on how to define a Workforce Identity pool for the Google Cloud Organization.
+The following example configures an organization-level Workforce Identity pool:
 
 ```hcl
 # stage 0 wif tfvars
@@ -164,34 +152,28 @@ workforce_identity_providers = {
 }
 ```
 
-### Workload Identity Federation and CI/CD
+### Workload Identity Federation
 
-This stage also implements initial support for two interrelated features
+Stage 0 optionally configures two related automation capabilities when their variables are populated:
 
-- configuration of [Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation) pools and providers
-- configuration of CI/CD repositories to allow impersonation via Workload identity Federation, and stage running via provided workflow templates
+- [Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation) pools and OIDC providers exported to downstream stages for IAM bindings and service account impersonation.
+- CI/CD repository bindings and generated workflow templates for GitHub, GitLab, and Cloud Build.
 
-Workload Identity Federation support allows configuring external providers independently from CI/CD, and offers predefined attributes for a few well known ones (more can be easily added by editing the `identity-providers.tf` file). Once providers have been configured their names are passed to the following stages via interface outputs, and can be leveraged to set up access or impersonation in IAM bindings.
+See [Federated identity providers](#federated-identity-providers) and [CI/CD repositories](#cicd-repositories) for configuration details.
 
-CI/CD support is fully implemented for GitHub, Gitlab, and Cloud Source Repositories / Cloud Build.
+## 2 Stage deployment
 
-For details on how to configure both features, refer to the Customizations sections below on [Workload Identity Federation](#workload-identity-federation) and [CI/CD repositories](#cicd-repositories).
+Follow the [Detailed Deployment Guide](/docs/ddg.md) for prerequisites, bootstrap permissions, and step-by-step deployment commands.
 
-These features are optional and only enabled if the relevant variables have been populated.
+## 3 Customizations
 
-## How to Run This Stage
+Most required variables such as `billing_account` and `organization` supply environment identifiers directly. Use the variables below to customize group mappings, IAM bindings, log exports, naming, and CI/CD integration.
 
-For detailed information on prerequisites and steps to deploy this stage, please see the latest [Detailed Deployment Guide (DDG)](/docs/ddg.md) If you do not have access, you will have to request it.
+### Group names
 
-## Customizations
+The `groups` variable maps logical group keys from the [Google Cloud Enterprise Setup Checklist](https://cloud.google.com/docs/enterprise/setup-checklist) to your organization's group local-parts so you can customize group addresses without modifying module code.
 
-Most variables (e.g. `billing_account` and `organization`) are only used to input actual values and should be self-explanatory. The only meaningful customizations that apply here are groups, and IAM roles.
-
-### Group Names
-
-As we mentioned above, groups reflect the convention used in the [GCP Enterprise Setup Checklist](https://cloud.google.com/docs/enterprise/setup-checklist), with an added level of indirection: the `groups` variable maps logical names to actual names, so that you don't need to delve into the code if your group names do not comply with the checklist convention.
-
-For example, if your network admins team is called `net-rockstars@example.com`, simply set that name in the variable, minus the domain which is interpolated internally with the Google Cloud Organization domain:
+For example, to map the network administrator group to `net-rockstars@example.com`, specify the group name without the domain, which Terraform appends from `organization.domain`:
 
 ```hcl
 variable "groups" {
@@ -204,80 +186,58 @@ variable "groups" {
 }
 ```
 
-If your groups layout differs substantially from the checklist, define all relevant groups in the `groups` variable, then rearrange IAM roles in the code to match your setup.
+If your group structure differs from the checklist layout, define your group keys in `groups` and update the role mappings in `organization-iam.tf`.
 
-### IAM
+### IAM bindings
 
-One other area where we directly support customizations is IAM. The code here, as in all stages, follows a simple pattern derived from best practices
+All FAST stages separate human and machine principals across module IAM inputs:
 
-- operational roles for humans are assigned to groups
-- any other principal is a service account
+- Human operational roles bind to groups through `iam_groups` variables.
+- Automation roles bind to service accounts through `iam` variables.
 
-In code, the distinction above reflects on how IAM bindings are specified in the underlying module variables
+Stage 0 also distinguishes between authoritative and additive IAM bindings:
 
-- group roles "for humans" always use `iam_groups` variables
-- service account roles always use `iam` variables
+- Authoritative bindings manage the complete principal list for a role and prevent configuration drift when a single Terraform stage owns that role.
+- Additive bindings manage individual role-and-principal pairs and prevent conflicts when multiple stages grant the same role, such as `roles/compute.networkUser` on Shared VPCs.
 
-This makes it easy to tweak user roles by adding mappings to the `iam_groups` variables of the relevant resources, without having to understand and deal with the details of service account roles.
+All default organization IAM bindings live in [organization-iam.tf](./organization-iam.tf). Use three stage variables to inject custom organization-level bindings:
 
-One more critical difference in IAM bindings is between authoritative and additive:
+- Set `group_iam` to add authoritative role bindings for groups.
+- Set `iam` to add authoritative role bindings for any principal type, merged with internal `iam` locals and group bindings.
+- Set `iam_bindings_additive` to add individual role-and-principal pairs with optional IAM conditions.
 
-- authoritative bindings have complete control on principals for a given role; this is the recommended best practice when a single automation actor controls the role, as it removes drift each time Terraform runs
-- additive bindings have control only on given role/principal pairs, and need to be used whenever multiple automation actors need to control the role, as is the case for the network user role in Shared VPC setups, and many other situations
+See the [project module](../../../modules/project/) documentation for examples of this shared IAM variable interface.
 
-This stage groups all IAM definitions in the [organization-iam.tf](./organization-iam.tf) file, to allow easy parsing of roles assigned to each group and machine identity.
+### Log sinks
 
-When customizations are needed, three stage-level variables allow injecting additional bindings to match the desired setup
+Customize organization-level log exports through the `log_sinks` variable to add sinks with custom filters or route logs to Cloud Logging buckets, BigQuery datasets, Cloud Storage buckets, or Pub/Sub topics.
 
-- `group_iam` allows adding authoritative bindings for groups
-- `iam` allows adding authoritative bindings for any type of supported principal, and is merged with the internal `iam` local and then with group bindings at the module level
-- `iam_bindings_additive` allows adding individual role/member pairs, and also supports IAM conditions
+See [Scenarios for exporting Cloud Logging data](https://cloud.google.com/architecture/exporting-stackdriver-logging-for-security-and-access-analytics) for filter examples.
 
-Refer to the [project module](../../../modules/project/) for examples on how to use the IAM variables, and they are an interface shared across all our modules.
+### Naming convention
 
-### Log Sinks and Log Destinations
+Customize resource naming tokens according to scope:
 
-You can customize Google Cloud Organization level logs through the `log_sinks` variable in two ways
-
-- creating additional log sinks to capture more logs
-- changing the destination of captured logs
-
-By default, all logs are exported to a log bucket, but FAST can create sinks to BigQuery, GCS, or PubSub.
-
-If you need to capture additional logs, please refer to GCP's documentation on [scenarios for exporting logging data](https://cloud.google.com/architecture/exporting-stackdriver-logging-for-security-and-access-analytics), where you can find ready-made filter expressions for different use cases.
-
-### Names and Naming Convention
-
-Configuring the individual tokens for the naming convention described above, has varying degrees of complexity
-
-- the static prefix can be set via the `prefix` variable once
-- the environment identifier is set to `prod` as resources here influence production and are considered as such, and can be changed in `main.tf` locals
-
-All other tokens are set directly in resource names, as providing abstractions to manage them would have added too much complexity to the code, making it less readable and more fragile.
-
-If a different convention is needed, identify names via search/grep (e.g. with `^\s+name\s+=\s+"`) and change them in an editor it should take a couple of  minutes at most, as there's just a handful of modules and resources to change.
-
-Names used in internal references (e.g. `module.foo-prod.id`) are only used by Terraform and do not influence resource naming, so they are best left untouched to avoid having to debug complex errors.
+- Set the organization prefix once through the `prefix` variable.
+- Change the default `prod` environment token in `main.tf` `locals` if required.
+- Edit resource-specific context tokens directly in module `name` attributes while keeping internal Terraform module labels unchanged to preserve state addresses and references.
 
 ### Pre-created resources
 
-Import the Stage 0 projects and the Assured Workloads workload when an administrator creates them in advance, for example when only a human user can use the billing account. Stage 0 then adopts them instead of creating them.
+Import Stage 0 projects and the Assured Workloads workload when an administrator provisions them ahead of time, such as when only a human principal holds billing linkage permissions.
 
-- The workload ignores changes to its `billing_account` and `resource_settings` arguments, because the Assured Workloads API never returns them.
-- Create the workload in advance with the billing account, the regime, and the location of the `google_assured_workloads_workload.primary` resource.
-- Give the workload a `CONSUMER_FOLDER` resource setting named `StellarEngine-<prefix>`.
-- Enable violation notifications on the workload.
-- Import the workload as `google_assured_workloads_workload.primary[0]` with the ID `organizations/<organization_id>/locations/<location>/workloads/<workload_id>`.
-- Import the projects as `module.automation-project.google_project.project[0]` and `module.log-export-project.google_project.project[0]` with their project IDs.
-- Review the plan after each import, and stop when it plans to replace an imported resource.
+- The workload resource ignores changes to `billing_account` and `resource_settings` because the Assured Workloads API does not return those fields on read.
+- Pre-create the workload with the billing account, regime, and location matching `google_assured_workloads_workload.primary`.
+- Configure a `CONSUMER_FOLDER` resource setting named `StellarEngine-<prefix>` and enable violation notifications on the workload.
+- Import the workload into `google_assured_workloads_workload.primary[0]` using `organizations/<organization_id>/locations/<location>/workloads/<workload_id>`.
+- Import pre-created projects into `module.automation-project.google_project.project[0]` and `module.log-export-project.google_project.project[0]` using their project IDs.
+- Run `terraform plan` after each import and halt if Terraform proposes replacing an imported resource.
 
-Set the `project_deletion_policies` variable to keep pre-created projects in place when you run `terraform destroy`.
+Set `project_deletion_policies` to retain pre-created projects during `terraform destroy`:
 
-- The `automation`, `billing`, and `logging` keys match the keys of the `project_parent_ids` variable.
-- Each key defaults to `DELETE`, which matches the behavior of the project module.
-- The `ABANDON` value removes the project from the Terraform state on destroy and leaves the project in your organization.
-- Destroy still removes the resources and the lien that the stage manages inside an abandoned project.
-- The `PREVENT` value makes Terraform refuse any destroy action on the project.
+- Valid map keys `automation`, `billing`, and `logging` match `project_parent_ids` and default to `DELETE`.
+- Setting `ABANDON` removes the project from Terraform state on destroy while still deleting stage-managed resources and liens inside the project.
+- Setting `PREVENT` blocks any Terraform destroy plan that targets the project.
 
 ```hcl
 project_deletion_policies = {
@@ -286,21 +246,15 @@ project_deletion_policies = {
 }
 ```
 
-### Workload Identity Federation
+### Federated identity providers
 
-At any time during this stage's lifecycle you can configure a Workload Identity Federation pool, and one or more providers. These are part of this stage's interface, included in the automatically generated `.tfvars` files and accepted by the Resource Manager stage that follows.
+Configure a Workload Identity Federation pool and OIDC providers at any point in Stage 0 through `federated_identity_providers`. Stage 0 exports configured provider names in generated `.auto.tfvars.json` files for Stage 1 and `cicd_repositories`.
 
-The variable maps each provider's `issuer` attribute with the definitions in the `identity-providers.tf` file. We currently support GitHub and Gitlab directly, and extending to definitions to support more providers is trivial (send us a PR if you do!).
+The `identity-providers.tf` file includes built-in issuer definitions for GitHub and GitLab, and you can extend it to support additional OIDC providers. For self-hosted GitHub Enterprise or GitLab instances, configure `custom_settings`:
 
-Provider key names are used by the `cicd_repositories` variable to configure authentication for CI/CD repositories, and generally from your Terraform code whenever you need to configure IAM access or impersonation for federated identities.
-
-This is a sample configuration of a GitHub and a Gitlab provider. Every parameter is optional.
-
-The `custom_settings` attributes are used to configure the provider to work with privately managed installations of Github and Gitlab
-
-- `issuer_uri` (defaults to the public platforms one if not set)
-- `audience` (defaults to the public URL of the provider if not set, as recommended in the [WIF FAQ section](https://cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation#provider-audience))
-- `jwks_json` for public key upload
+- Set `issuer_uri` to override the public platform issuer URL.
+- Set `audiences` to override the default [Workload Identity Federation provider audience](https://cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation#provider-audience).
+- Set `jwks_json` to upload custom signing keys.
 
 ```tfvars
 workload_identity_providers = {
@@ -329,13 +283,9 @@ workload_identity_providers = {
 }
 ```
 
-### CI/CD Repositories
+### CI/CD repositories
 
-FAST is designed to directly support running in automated workflows from separate repositories for each stage. The `cicd_repositories` variable allows you to configure impersonation from external repositories leveraging Workload identity Federation, and pre-configures a FAST workflow file that can be used to validate and apply the code in each repository.
-
-The repository design we support is fairly simple, with a repository for modules that enables centralization and versioning, and one repository for each stage optionally configured from the previous stage.
-
-This is an example of configuring the bootstrap and resource management repositories in this stage. CI/CD configuration is optional, so the entire variable or any of its attributes can be set to null if not needed.
+Configure external CI/CD repository impersonation and workflow generation through the optional `cicd_repositories` variable. The multi-repository layout uses one central repository for shared Terraform modules and one repository per stage:
 
 ```tfvars
 cicd_repositories = {
@@ -354,51 +304,30 @@ cicd_repositories = {
 }
 ```
 
-The `type` attribute can be set to one of the supported repository types: `github`, `gitlab`, or `sourcerepo`.
+Set `type` to `github`, `gitlab`, or `sourcerepo`. Applying Stage 0 writes pre-configured workflow files that authenticate via Workload Identity Federation using a dedicated CI/CD service account per repository.
 
-Once the stage is applied the generated output files will contain pre-configured workflow files for each repository, that will use Workload Identity Federation via a dedicated service account for each repository to impersonate the automation service account for the stage.
+Complete the repository setup manually after `terraform apply`:
 
+- Create a central modules repository populated with the repository `modules/` directory and configure read access for CI/CD runners:
+  - On GitHub, generate an SSH key pair, register the public key as a [deploy key](https://docs.github.com/en/developers/overview/managing-deploy-keys#deploy-keys) on the modules repository, and store the private key in a `CICD_MODULES_KEY` secret in each stage repository.
+  - On GitLab, Base64-encode the SSH private key before storing it in `CICD_MODULES_KEY` so runner log masking applies.
+  - On Cloud Source Repositories, grant `roles/source.reader` to each CI/CD service account.
+- Create one repository per stage populated with that stage's Terraform files and rewrite relative module `source` paths (`source\s*= "../../../modules/([^"]+)"`) to reference your versioned modules repository:
+  - For GitHub, use `source = "git@github.com:my-org/fast-modules.git//$1?ref=v1.0"`.
+  - For GitLab, use `source = "git::ssh://git@gitlab.com/my-org/fast-modules.git//$1?ref=v1.0"`.
+  - For Cloud Source Repositories, use `source = "git::https://source.developers.google.com/p/my-project/r/my-repository//$1?ref=v1.0"` after configuring the `gcloud.sh` credential helper as documented in the [Cloud Source Repositories remote setup guide](https://cloud.google.com/source-repositories/docs/adding-repositories-as-remotes#add_the_repository_as_a_remote).
+- Copy each generated workflow file from the Stage 0 outputs bucket or local `outputs_location` directory into `.github/workflows/` for GitHub, `.gitlab-ci.yml` for GitLab, or `.cloudbuild/workflow.yaml` for Cloud Build.
 
-The remaining configuration is manual, as it regards the repositories themselves
+### Feature toggles
 
-- create a repository for modules
-  - clone and populate it with the Fabric modules
-  - configure authentication to the modules repository
-    - for GitHub
-      - create a key pair
-      - create a [deploy key](https://docs.github.com/en/developers/overview/managing-deploy-keys#deploy-keys) in the modules repository with the public key
-      - create a `CICD_MODULES_KEY` secret with the private key in each of the repositories that need to access modules (for Gitlab, please Base64 encode the private key for masking)
-    - for Source Repositories
-      - assign the reader role to the CI/CD service accounts
-- create one repository for each stage
-  - clone and populate them with the stage source
-  - edit the modules source to match your modules repository
-    - a simple way is using the "Replace in files" function of your editor
-      - search for `source\s*= "../../../modules/([^"]+)"`
-      - replace with:
-        - modules stored on GitHub: `source = "git@github.com:my-org/fast-modules.git//$1?ref=v1.0"`
-        - modules stored on Gitlab: `source = "git::ssh://git@gitlab.com/my-org/fast-modules.git//$1?ref=v1.0"`
-        - modules stored on Source Repositories: `"source = git::https://source.developers.google.com/p/my-project/r/my-repository//$1?ref=v1.0"`. You may need to run `git config --global credential.'https://source.developers.google.com'.helper gcloud.sh` first as documented [here](https://cloud.google.com/source-repositories/docs/adding-repositories-as-remotes#add_the_repository_as_a_remote)
-  - copy the generated workflow file for the stage from the GCS output files bucket or from the local clone if enabled
-    - for GitHub, place it in a `.github/workflows` folder in the repository root
-    - for Gitlab, rename it to `.gitlab-ci.yml` and place it in the repository root
-    - for Source Repositories, place it in `.cloudbuild/workflow.yaml`
+Feature toggles in `fast_features` are experimental and not officially supported in Stellar Engine. Downstream stages read `fast_features` to conditionally provision optional hierarchy branches:
 
-### Toggling features
+- The `data_platform` toggle provisions folders, service accounts, buckets, and IAM bindings for the [3-data-platform](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/3-data-platform) stage.
+- The `gke` toggle provisions prerequisites for the [3-gke-multitenant](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/3-gke-multitenant) stage.
+- The `project_factory` toggle provisions prerequisites for the [3-project-factory](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/3-project-factory) stage.
+- The `sandbox` toggle creates a top-level `Sandbox` folder with relaxed policies for experimentation.
+- The `teams` toggle creates a top-level `Teams` folder for the [Stage 1 teams feature](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/1-resman#team-folders).
 
-Note: This is not currently officially supported in Stellar Engine, but is left in as an experimental feature.
-
-Some FAST features can be enabled or disabled using the `fast_features` variables. While this variable is not directly used in the bootstrap stage, it can instruct the following stages to create certain resources only if needed.
-
-The `fast_features` variable consists of 4 toggles
-
-- **`data_platform`** controls the creation of required resources (Google Cloud Folders, service accounts, buckets, IAM bindings) to deploy the [3-data-platform](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/3-data-platform) stage
-- **`gke`** controls the creation of required resources (Google Cloud Folders, service accounts, buckets, IAM bindings) to deploy the [3-gke-multitenant](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/3-gke-multitenant) stage
-- **`project_factory`** controls the creation of required resources (Google Cloud Folders, service accounts, buckets, IAM bindings) to deploy the [3-project-factory](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/3-project-factory) stage
-- **`sandbox`** controls the creation of a "Sandbox" top level Google Cloud Folder with relaxed policies, intended for sandbox environments where users can experiment
-- **`teams`** controls the creation of the top level "Teams" Google Cloud Folder used by the [teams feature in resman](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/1-resman#team-folders).
-
----
 <!-- BEGIN TFDOC -->
 ## Variables
 

@@ -1,76 +1,69 @@
-# Boundary Cloud Access Point (BCAP)
+# Boundary Cloud Access Point blueprint
 
-This Terraform blueprint provisions the necessary Google Cloud infrastructure to establish a highly available connection to a Boundary Cloud Access Point (BCAP) provider, such as DISA, using Google Cloud Partner Interconnect.
-
-The BCAP architecture follows the **99.99% Availability for Partner Interconnect** topology as recommended in the [GCP Documentation](https://cloud.google.com/network-connectivity/docs/interconnect/tutorials/partner-creating-9999-availability) and referenced in the BCAP Customer Guide for GCP.
-
-Google BCAP Contact: <trusted-networks@gss.google>
+This blueprint provisions Google Cloud Partner Interconnect infrastructure for a redundant Boundary Cloud Access Point connection to providers such as DISA, implementing the [99.99% availability Partner Interconnect topology](https://cloud.google.com/network-connectivity/docs/interconnect/tutorials/partner-creating-9999-availability) described in the Google Cloud BCAP Customer Guide. Reach the Google BCAP team at `trusted-networks@gss.google` for onboarding coordination.
 
 <!-- BEGIN TOC -->
-- [Architecture](#architecture)
-- [Prerequisites](#prerequisites)
-- [Deployment](#deployment)
-- [Disclaimer](#disclaimer)
+- [1 Architecture](#1-architecture)
+- [2 Prerequisites](#2-prerequisites)
+- [3 Deployment steps](#3-deployment-steps)
+  - [Post-apply activation](#post-apply-activation)
+- [4 Deployment verification](#4-deployment-verification)
+  - [VPC and subnets](#vpc-and-subnets)
+  - [Routers and VLAN attachments](#routers-and-vlan-attachments)
+- [5 Compliance scope](#5-compliance-scope)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Architecture
+## 1 Architecture
 
-This blueprint creates the following resources:
+This blueprint provisions four core networking components inside `hub_project_id`:
 
-1.  **VPC Network**
-    * A custom-mode VPC (`auto_create_subnetworks = false`), named using `network_name`.
-2.  **Two VPC Subnets**
-    * Names are defined via `subnet_configs`.
-    * Their regions are automatically assigned to `region1` (for `subnet1`) and `region2` (for `subnet2`).
-    * The IP CIDRs are calculated and split into two /25s from the /24 `dod_base_cidr_block` variable.
-    * Private Google Access and Flow Logs are enabled by default.
-3.  **Two Cloud Routers**
-    * Names are defined via `router_configs` (`router1` is placed in `region1` and `router2` in `region2`).
-    * Each router is attached to the created VPC, uses the `router_google_asn` (16550 for Partner Interconnect), and by default, advertises **both** calculated DoD /25 subnets.
-4.  **Four VLAN Attachments**
-    * Defined via the `attachment_configs` variable and configured as `PARTNER` type.
-    * The region for each attachment is derived from the region of the router it's linked to via `router_key`.
-    * MTU is set to 1440 by default as recommended for BCAP.
+- A custom-mode VPC network named by `network_name` with `auto_create_subnetworks = false`.
+- Two regional `/25` subnets defined in `subnet_configs` across `region1` and `region2`, programmatically split from the DoD `/24` `dod_base_cidr_block` with Private Google Access and VPC Flow Logs enabled by default.
+- Two regional Cloud Routers defined in `router_configs` across `region1` and `region2` using ASN `16550` (`router_google_asn`) for Partner Interconnect and advertising both `/25` DoD subnets by default.
+- Four `PARTNER` VLAN attachments defined in `attachment_configs` with MTU `1440` and regions derived from each linked `router_key`.
 
-## Prerequisites
+## 2 Prerequisites
 
-* Review the BCAP Customer Guide for GCP.
-* The **base /24 CIDR block** assigned by the Department of Defense Network Information Center (DoD NIC) (`dod_base_cidr_block`).
-* Completion of BCAP onboarding steps (Phase 1 & 2 from the guide), including obtaining necessary approvals (e.g., Cloud Permission to Connect (CPTC)) and the official IP space from DoD NIC.
-* MD5 Authentication Keys (provided by customer/mission owner) to be configured on the Cloud Router BGP sessions *after* the attachments are provisioned and activated by the partner.
+- Review the Google Cloud BCAP Customer Guide.
+- Obtain your assigned `/24` CIDR block (`dod_base_cidr_block`) from the Department of Defense Network Information Center.
+- Complete BCAP onboarding Phases 1 and 2, including Cloud Permission to Connect approvals and official DoD NIC IP allocation.
+- Obtain BGP MD5 authentication keys from the mission owner to configure on the Cloud Router BGP sessions after partner activation.
 
-## Deployment
+## 3 Deployment steps
 
-1.  Create a `terraform.tfvars` file based on the example provided (`terraform.tfvars.sample`).
-2.  Populate the `terraform.tfvars` file with values specific to your environment.
-3.  Run `terraform init`.
-4.  Run `terraform plan`.
-5.  Run `terraform apply`.
+1. Copy `terraform.tfvars.sample` to `terraform.tfvars` and populate values for your environment.
+2. Initialize and apply the Terraform configuration:
 
-**Post-Apply Steps:**
+```bash
+terraform init
+terraform plan
+terraform apply
+```
 
-1.  Retrieve the `pairing_keys` from the Terraform output (`terraform output -json pairing_keys`) or from the Google Cloud web console within each VLAN Attachment's detail screen.
-2.  Provide these keys to the BCAP provider (DISA/Google BCAP Team) to activate the connections.
-3.  Once attachments are active, configure BGP peering on the Cloud Routers, including Peer ASN (e.g., 64519 for DISA) and MD5 authentication using the keys provided by the mission owner.
+### Post-apply activation
 
-**Deployment Verification**
+1. Retrieve the VLAN attachment pairing keys via `terraform output -json pairing_keys` or from each attachment detail page in the Google Cloud console.
+2. Deliver the pairing keys to DISA and the Google BCAP team to activate the Partner Interconnect connections.
+3. Once the attachments are active, configure BGP peering on both Cloud Routers with the partner ASN, such as `64519` for DISA, and the mission-owner MD5 authentication keys.
 
-***VPC and Subnetworks***
+## 4 Deployment verification
 
-1. Navigate to the [VPC Network](https://console.cloud.google.com/networking/networks/list) within your hub network project.
-2. Click on the BCAP VPC name.
-3. Click on the Subnets tab.
-4. Confirm that the (x1) VPC and (x2) Subnets exist and that the DISA provided /24 `dod_base_cidr_block` is split into two /25 `dod_split_cidr_blocks` for each subnet.
+### VPC and subnets
 
-***Cloud Routers and VLAN Attachments***
+1. Open [VPC networks](https://console.cloud.google.com/networking/networks/list) in `hub_project_id` and select the BCAP VPC network.
+2. Open the Subnets tab and confirm that two `/25` subnets split from `dod_base_cidr_block` exist in `region1` and `region2`.
 
-1. Navigate to the [Cloud Router](https://console.cloud.google.com/hybrid/routers/list) resource within your hub network project.
-2. Confirm that (x2) BCAP Cloud Routers exist with their specified VPC, region, and that (x2) VLAN Attachments exist per Cloud router.
+### Routers and VLAN attachments
 
-## Disclaimer
-- The present GCP Terraform Blueprint in this project is set up and intended to be implemented in an Impact Level 4 (IL4) and Impact Level 5 (IL5) environments using the Assured Workloads within the Google Cloud Platform (GCP) organization.
+1. Open [Cloud Routers](https://console.cloud.google.com/hybrid/routers/list) in `hub_project_id`.
+2. Confirm that two BCAP Cloud Routers exist in `region1` and `region2`, each with two attached Partner Interconnect VLAN attachments.
+
+## 5 Compliance scope
+
+- Deploy this blueprint inside an IL4 or IL5 Assured Workloads folder within your Google Cloud organization.
+
 <!-- BEGIN TFDOC -->
 ## Variables
 

@@ -1,50 +1,56 @@
-# Datastore Blueprint
+# Datastore blueprint
 
 <!-- BEGIN TOC -->
-- [Introduction to Datastore](#introduction-to-datastore)
-- [Datastore Blueprint](#datastore-blueprint)
-- [Disclaimer](#disclaimer)
-- [Prerequisites](#prerequisites)
-- [Deployment Steps](#deployment-steps)
-- [Verification of a successful deployment](#verification-of-a-successful-deployment)
+- [1 Datastore overview](#1-datastore-overview)
+- [2 Blueprint scope](#2-blueprint-scope)
+- [3 Operational notes](#3-operational-notes)
+- [4 Prerequisites](#4-prerequisites)
+- [5 Deployment steps](#5-deployment-steps)
+- [6 Deployment verification](#6-deployment-verification)
 - [Variables](#variables)
 <!-- END TOC -->
 
-## Introduction to Datastore
-Google Cloud Datastore is a highly scalable, fully managed NoSQL document database built for web and mobile applications. Firestore is the next generation of Datastore. It automatically scales to handle vast amounts of data and high transaction loads without requiring database administration. Datastore offers rich query capabilities, atomic transactions, and high availability, making it ideal for storing non-relational data.
+## 1 Datastore overview
 
-# Datastore Blueprint
-This Terraform blueprint primarily focuses on provisioning and configuring Google Cloud Datastore for a project. It first enables the necessary Datastore API and then establishes a Google App Engine application, which is a prerequisite for Datastore. The blueprint strategically incorporates delays to ensure the App Engine instance is fully initialized before proceeding to deploy and configure the Datastore instance, including the custom indexes.
+Firestore in Datastore mode is a managed NoSQL document database for web and mobile applications that provides automatic scaling, atomic transactions, and high availability without manual database administration.
 
-## Disclaimer
-This module leverages local execs and should be carefully monitored. Datastore Mode databases are not automatically deleted by `terraform destroy` and serves as an important warning and a reminder for manual cleanup. If App Engine has been previously deployed, the datastore may not deploy properly.
+## 2 Blueprint scope
 
-## Prerequisites
-1. For projects using Datastore, the App Engine Blueprint must be installed.
-2. Enable Datastore API
-3. Modify index.yaml per your datastore requirements
+This blueprint enables the Datastore API, initializes the App Engine application prerequisite when needed, and deploys custom composite indexes from `index.yaml`.
 
-## Deployment Steps
-1. Review and follow necessary [Prerequisites Steps](#prerequisites-steps).
-2. Determine your GCP region for deployment
-3. Run ```cp terraform.tfvars.sample terraform.tfvars``` to copy the sample variables to your own tfvars file & update the variables as necessary in your tfvars file.
-  a. edit the project ID and region
-4. The usual terraform commands will do the work. To provision this example, run the following from within this directory:
+## 3 Operational notes
 
-```terraform init```<br />
-```terraform plan``` to see the infrastructure plan<br />
-```terraform apply``` to apply the infrastructure build<br />
-```terraform destroy``` only if you wish to destroy the built infrastructure<br />
+Monitor runs carefully because this blueprint invokes `local-exec` commands for index deployment. Running `terraform destroy` does not delete Firestore in Datastore mode databases automatically, so clean up databases manually when retiring a project. If the target project already contains an App Engine application, verify compatibility before applying.
 
-## Verification of a successful deployment
-To confirm your deployment was successful, follow these steps in the GCP Console:
+## 4 Prerequisites
 
-- Search for "Datastore" in the search bar
-- Select the Datastore service in the dropdown
-- Select the "default" database
-- Here, you can review the structure of the database to ensure it's set up as expected.
-- Select "Indexes" in the left side menu
-- Ensure the indexes are set as configured in the index.yaml file
+1. Deploy the App Engine blueprint in the target project if an App Engine application does not yet exist.
+2. Enable the Datastore API on `main_project_id`.
+3. Update `index.yaml` to match your application query index requirements.
+
+## 5 Deployment steps
+
+1. Complete the steps in [Prerequisites](#4-prerequisites).
+2. Select your target Google Cloud region.
+3. Run `cp terraform.tfvars.sample terraform.tfvars` and set `main_project_id` and `region` in `terraform.tfvars`.
+4. Initialize and apply the Terraform configuration from this directory:
+
+```bash
+terraform init
+terraform plan
+terraform apply
+```
+
+Run `terraform destroy` if you need to remove Terraform-managed resources.
+
+## 6 Deployment verification
+
+Confirm the database and composite indexes in the Google Cloud console:
+
+- Search for Datastore in the console search bar and open the service.
+- Select the `default` database to confirm the database mode and configuration.
+- Open Indexes in the navigation menu and verify the composite indexes match `index.yaml`.
+
 <!-- BEGIN TFDOC -->
 ## Variables
 

@@ -1,327 +1,235 @@
-# Networking with Network Virtual Appliance
+# Networking with network virtual appliances
 
-This stage sets up the shared network infrastructure for the whole Google Cloud Organization.
+Stage 2 deploys centralized hub-and-spoke Shared VPC infrastructure inspected by Network Virtual Appliances between the landing and DMZ zones for IL4 and IL5 Assured Workloads environments:
 
-It is designed for those who would like to leverage Network Virtual Appliances (NVAs) between landing and dmz areas of the network, for example for Intrusion Prevention System (IPS) purposes.
+- The landing hub VPC centralizes connectivity to on-premises networks, spoke VPCs, and shared services such as CI/CD, repositories, and monitoring.
+- Environment spoke VPCs isolate workloads per environment while preserving controlled transit to central services.
+- Dedicated Shared VPC host projects separate network administration from workload service projects.
+- Cloud DNS peering and forwarding zones centralize hybrid and internal name resolution across the hub and spokes.
 
-It adopts the common “hub and spoke” reference design, which is well suited for multiple scenarios, and it offers several advantages versus other designs:
-
-- the "landing hub" VPC centralizes the external connectivity towards landing network resources (e.g. on-prem, other cloud environments and the spokes), and it is ready to host cross-environment services like CI/CD, code repositories, and monitoring probes
-- the "spoke" VPCs allow partitioning workloads (e.g. by environment like in this setup), while still retaining controlled access to central connectivity and services
-- Shared VPCs -both in hub and spokes- split the management of the network resources into specific (host) Google Cloud Projects, while still allowing them to be consumed from the workload (service) Google Cloud Project
-- the design facilitates DNS centralization
-
-Connectivity between the hub and the spokes is established via [VPC network peerings](https://cloud.google.com/vpc/docs/vpc-peering), which offer uncapped bandwidth, lower latencies, at no additional costs and with a very low management overhead. Different ways of implementing connectivity, and related some pros and cons, are discussed below.
-
-The diagram shows the high-level design and it should be used as a reference throughout the following sections.
-
-The final number of subnets, and their IP addressing will depend on the user-specific requirements. It can be easily changed via variables or external data files, without any need to edit the code.
+[VPC network peering](https://cloud.google.com/vpc/docs/vpc-peering) connects the landing hub VPC to environment spoke VPCs with full bandwidth and low latency. Customize subnet counts and CIDR allocations through Terraform variables or YAML factory files without modifying module code.
 
 <p align="center">
   <img src="images/Stellar-Engine-Network-IL-5.png" alt="Networking diagram">
 </p>
 
-# Table of Contents
-
 <!-- BEGIN TOC -->
-- [Table of Contents](#table-of-contents)
-- [Design overview and choices](#design-overview-and-choices)
+- [1 Design overview](#1-design-overview)
   - [Palo Alto NGFW](#palo-alto-ngfw)
   - [Multi-regional deployment](#multi-regional-deployment)
   - [VPC design](#vpc-design)
   - [Internal connectivity](#internal-connectivity)
-  - [IP ranges, subnetting, routing](#ip-ranges-subnetting-routing)
+  - [IP addressing and routing](#ip-addressing-and-routing)
   - [Internet egress](#internet-egress)
-  - [VPC and Hierarchical Firewall](#vpc-and-hierarchical-firewall)
-  - [DNS](#dns)
-- [Stage structure and files layout](#stage-structure-and-files-layout)
+  - [VPC and hierarchical firewalls](#vpc-and-hierarchical-firewalls)
+  - [DNS design](#dns-design)
+- [2 Stage file layout](#2-stage-file-layout)
   - [VPCs](#vpcs)
   - [VPNs](#vpns)
   - [Routing and BGP](#routing-and-bgp)
-  - [Firewall](#firewall)
+  - [Firewalls](#firewalls)
   - [DNS architecture](#dns-architecture)
     - [Cloud environment](#cloud-environment)
-- [How to run this stage](#how-to-run-this-stage)
-  - [Provider and Terraform variables](#provider-and-terraform-variables)
-  - [Impersonating the automation service account](#impersonating-the-automation-service-account)
-  - [Setting default Google Cloud Projects for manual run](#setting-default-google-cloud-projects-for-manual-run)
+- [3 Stage deployment](#3-stage-deployment)
+  - [Provider and variable files](#provider-and-variable-files)
+  - [Service account impersonation](#service-account-impersonation)
+  - [Default gcloud project](#default-gcloud-project)
   - [Variable configuration](#variable-configuration)
-  - [Using delayed billing association for Google Cloud Project](#using-delayed-billing-association-for-google-cloud-project)
-  - [Running the stage](#running-the-stage)
+  - [Delayed billing association](#delayed-billing-association)
+  - [Terraform execution](#terraform-execution)
     - [Private Google Access](#private-google-access)
-- [Customizations](#customizations)
-  - [Changing default regions](#changing-default-regions)
-- [Configuring Palo Alto NGFWs](#configuring-palo-alto-ngfws)
-  - [Reaching the Management Console](#reaching-the-management-console)
-  - [Updating configuration](#updating-configuration)
-- [Redeployment](#redeployment)
+- [4 Customizations](#4-customizations)
+  - [Default regions](#default-regions)
+- [5 Palo Alto NGFW configuration](#5-palo-alto-ngfw-configuration)
+  - [Management console access](#management-console-access)
+  - [Bootstrap XML updates](#bootstrap-xml-updates)
+- [6 Redeployment](#6-redeployment)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Design overview and choices
+## 1 Design overview
 
 ### Palo Alto NGFW
 
-In order to support full NGFW capabilities, including IDS/IPS and TLS break-and-inspect, the team has chosen to implement Palo Alto NGFWs. While there are other vendor products that can support these requirements, our team has the most experience getting accreditations using Palo Alto NGFW. In future iterations of this codebase, we intend on expanding this capability to include: GCP Cloud NGFW, Barracuda, and Cisco.
+This stage deploys Palo Alto VM-Series Next-Generation Firewalls to provide intrusion detection, intrusion prevention, and TLS inspection for IL4 and IL5 accreditations.
 
 ### Multi-regional deployment
 
-The stage can optionally deploy the infrastructure into one or two regions. You can deploy the stage in any region that Assured Workloads supports for the IL4 or IL5 overlay. Regional resources include NVAs (templates, MIGs, LBs) and test VMs. The specific regions can be configured via the `regions` variable.
-As part of your design, you should weigh the additional maintenance cost of operating in two regions against your availability requirements to decide what is best for your deployment.
+Configure the `regions` variable to deploy regional NVA instance templates, managed instance groups, internal load balancers, and test VMs into one or two Assured Workloads regions supported for IL4 or IL5. Weigh the operational cost of running dual-region firewall appliances against your availability requirements when selecting single-region versus multi-region topology.
 
 ### VPC design
 
-The "landing zone" is divided into two VPC networks
+The central VDSS inspection boundary separates traffic across two transit VPC networks connected by regional multi-zone [Managed Instance Groups](https://cloud.google.com/compute/docs/instance-groups) of Palo Alto VM-Series appliances fronted by regional internal passthrough Network Load Balancers:
 
-- the landing VPC: the connectivity hub towards other landing networks
-- the dmz VPC: the connectivity hub towards any other dmz network
+- The landing VPC serves as the trusted hub peered with environment spoke VPCs and terminates Cloud VPN tunnels from on-premises networks.
+- The DMZ VPC serves as the untrusted boundary towards the public internet and hosts [Cloud NAT](https://cloud.google.com/nat/docs/overview) when enabled.
+- Cross-environment traffic and north-south traffic between landing and DMZ networks traverse the NVA appliances, which come up unlicensed for initial routing and NAT bootstrap until you apply production licenses and security policies.
+- Outbound traffic from landing networks to DMZ networks undergoes source NAT on the NVAs unless excluded by policy.
 
-The VPCs are connected with two sets of sample NVA machines, grouped in regional (multi-zone) [Managed Instance Groups (MIGs)](https://cloud.google.com/compute/docs/instance-groups). The appliances are currently unlicensed Palo Alto NGFWs. In their unlicensed state, they are capable of basic routing and NAT functionality, as well as a subset of the traffic identification and security policies. They are not intended to be used in this way long term, but instead as a way to get the network bootstrapped while the security configurations are further developed.
-The traffic destined to the VMs in each MIG is mediated through regional internal load balancers, both in the landing and in the dmz networks.
-
-By default, the design assumes the following:
-
-- on-premise networks (and related resources) are considered landing. As such, the VPNs connecting with on-premises are terminated in GCP, in the landing VPC
-- the public Internet is considered dmz. As such [Cloud NAT](https://cloud.google.com/nat/docs/overview) is deployed in the dmz landing VPC only
-- cross-environment traffic and traffic from any dmz network to any landing network (and vice versa) pass through the NVAs. For demo purposes, the current NVA performs simple routing/natting only
-- any traffic from a landing network to an dmz network (e.g. Internet) is natted by the NVAs. Users can configure further exclusions
-
-The landing landing VPC acts as a hub: it bridges internal resources with the outside world and it hosts the shared services consumed by the spoke VPCs, connected to the hub through VPC network peerings. Spokes are used to partition the environments. These environments are inherited from the `0-bootstrap` and `1-resman` stages.
-
-Each virtual network is a [shared VPC](https://cloud.google.com/vpc/docs/shared-vpc): shared VPCs are managed in dedicated *host Google Cloud Project* and shared with other *service Google Cloud Projects* that consume the network resources.
-Shared VPC lets Google Cloud Organization administrators delegate administrative responsibilities, such as creating and managing instances, to Service Google Cloud Projects Admins while maintaining centralized control over network resources like subnets, routes, and firewalls.
-
-Users can easily extend the design to host additional environments, or adopt different logical mappings for the spokes (for example, in order to create a new spoke for each company entity). Adding spokes is trivial and it does not increase the design complexity. The steps to add more spokes are provided in the following sections.
-
-In multi-organization scenarios, where production and non-production resources use different Cloud Identity and GCP organizations, the hub/landing VPC is usually part of the production organization. It establishes connections with the production spokes within the same organization, and with non-production spokes in a different organization.
+Each VPC operates as a [Shared VPC](https://cloud.google.com/vpc/docs/shared-vpc) in a dedicated host project so organization administrators retain central control over subnets, routes, and firewalls while delegating workload deployment to service project administrators. Environment spoke definitions flow directly from `0-bootstrap` and `1-resman`, and you can extend spokes across single-organization or multi-organization layouts.
 
 ### Internal connectivity
 
-Internal connectivity (e.g. between the landing landing VPC and the spokes) is realized with VPC network peerings. As mentioned, there are other ways to implement connectivity. These can be easily retrofitted with minimal code changes, although they introduce additional considerations on service interoperability, quotas and management.
+Environment spokes peer directly with the landing hub VPC while multi-NIC appliances bridge the landing and DMZ VPCs:
 
-This is an options summary
+- [VPC Network Peering](https://cloud.google.com/vpc/docs/vpc-peering) connects the landing VPC to spoke VPCs with zero per-GB transit cost, full line-rate bandwidth, and no added latency, though peering is non-transitive, exchanges all subnet routes without granular filtering, and shares peering-group quotas.
+- [Multi-NIC NVA appliances](https://cloud.google.com/architecture/best-practices-vpc-design#multi-nic) connect the landing and DMZ VPCs to enforce Layer 7 IPS inspection and vendor policy parity with on-premises firewalls, trading off higher VM and licensing costs, VM throughput ceilings, and HA failover management.
 
-- [VPC Peering](https://cloud.google.com/vpc/docs/vpc-peering) (used here to connect the landing landing VPC with the spokes)
-  - Pros: no additional costs, full bandwidth with no configurations, no extra latency
-  - Cons: no transitivity (e.g. to GKE masters, Cloud SQL, etc.), no selective exchange of routes, several quotas and limits shared between VPCs in a peering group
-- [Multi-NIC appliances](https://cloud.google.com/architecture/best-practices-vpc-design#multi-nic) (used here to connect the landing landing and dmz VPCs) and multi-NIC appliances with NCC/BGP support implemented here
-  - Pros: provides additional security features (e.g. IPS), potentially better integration with on-prem systems by using the same vendor
-  - Cons: complex HA/failover setup, limited by VM bandwidth and scale, additional costs for VMs and licenses, out of band management of a critical cloud component
+### IP addressing and routing
 
-### IP ranges, subnetting, routing
+Plan your cloud IP address space up front so routes aggregate into larger CIDR blocks and stay well within [Cloud Router](https://cloud.google.com/network-connectivity/docs/router/quotas) and [VPC](https://cloud.google.com/vpc/docs/quota) quotas.
 
-Minimizing the number of routes (and subnets) in the cloud environment is important, as it simplifies management and it avoids hitting [Cloud Router](https://cloud.google.com/network-connectivity/docs/router/quotas) and [VPC](https://cloud.google.com/vpc/docs/quota) quotas and limits. For this reason, we recommend to carefully plan the IP space used in your cloud environment. This allows the use of larger IP CIDR blocks in routes, whenever possible.
+By default, this stage partitions a `/11` CIDR block (`10.64.0.0/11`) into eight `/16` blocks across configured regions for landing DMZ, landing hub, development, and production zones. Within each `/16` block, the first `/24` allocates a default subnet and the final three `/24` ranges stay available for [Private Services Access](https://cloud.google.com/vpc/docs/private-services-access) via `psa_ranges` or [Internal Application Load Balancer](https://cloud.google.com/load-balancing/docs/l7-internal) proxy-only subnets.
 
-This stage uses a dedicated `/11` block (`10.64.0.0/11`), which should be sized to the own needs. The subnets created in each VPC derive from this range.
-
-The `/11` block is evenly split in eight, smaller `/16` blocks, assigned to different areas of the Google Cloud network across the configured regions: *landing dmz primary-region*, *landing dmz secondary-region*, *landing landing primary-region*, *landing dmz secondary-region*, *development primary-region*, *development secondary-region*, *production primary-region*, *production secondary-region*.
-
-The first `/24` range in every area is allocated for a default subnet, which can be removed or modified as needed. The last three `/24` ranges can be used for [PSA (Private Service Access)](https://cloud.google.com/vpc/docs/private-services-access)via the `psa_ranges` variable, or for [Internal Application Load Balancers (L7 LBs)](https://cloud.google.com/load-balancing/docs/l7-internal) subnets via the factory.
-
-This is a summary of the VPC Networks deployed into the `<prefix>-net-vdss-host` Google Cloud Projects by this stage:
+The `<prefix>-net-vdss-host` project hosts three VDSS networks alongside one peered spoke VPC per `<env>` host project from `1-resman`:
 
 | name | description |
-| ---- | ------------|
-| `vdss-mgmt-0` | Management network for the Palo Alto deployments. |
-| `vdss-dmz-0` | The Internet facing network for the DMZ |
-| `vdss-landing-0` | The landing network on the "trust" side of the Palo Alto NGFW deployments |
+| --- | --- |
+| `vdss-mgmt-0` | Management network for the Palo Alto NGFW appliances and bastion host. |
+| `vdss-dmz-0` | Internet-facing untrusted DMZ network. |
+| `vdss-landing-0` | Trusted landing hub network peered with environment spoke VPCs. |
 
-Additionally, a VPC is created for each of the `net-<env>-net-host` Google Cloud Project deployed in `1-resman`, and those are all peered to the `landing-vdss-0` VPC.
+Default VDSS subnets allocate from the primary region:
 
-This is a summary of the subnets allocated by default in this setup:
-
-| name | region | VPC network | description | CIDR |
-|---|---|---|---|---|
+| name | region | VPC network | CIDR |
+| --- | --- | --- | --- |
 | `mgmt-default` | `<primary-region>` | `prod-mgmt-0` | `10.64.128.0/24` |
-| `dmz-default`  | `<primary-region>` | `prod-dmz-0` | `10.64.128.0/24` |
+| `dmz-default` | `<primary-region>` | `prod-dmz-0` | `10.64.128.0/24` |
 | `landing-default` | `<primary-region>` | `prod-landing-0` | `10.64.0.0/24` |
 
-Within each environment, there is a shared-subnet deployed and a proxy-only subnet deployed.
+Each environment spoke VPC also receives a workload subnet and a regional proxy-only subnet.
 
-Routes in Google Cloud are either automatically created (for example, when a subnet is added to a VPC), manually created via static routes, dynamically exchanged through VPC peerings, or dynamically programmed by [Cloud Routers](https://cloud.google.com/network-connectivity/docs/router#docs) when a BGP session is established. BGP sessions can be configured to advertise VPC ranges, and/or custom ranges via custom advertisements.
+Routing combines automatic subnet routes, VPC peering route exchange, tagged static routes, and [Cloud Router](https://cloud.google.com/network-connectivity/docs/router#docs) BGP advertisements:
 
-In this setup
-
-- routes between multiple subnets within the same VPC are automatically exchanged by Google Cloud
-- the spokes and the landing landing VPC exchange routes through VPC peerings
-- for cross-environment (spokes) communications, and for connections to on-premises and to the Internet, the spokes leverage some default tagged routes that send the traffic of each region (whose machines are identified by a dedicated network tag, e.g. *ew1*) to a corresponding regional NVA in the landing VPC, through an ILB (whose VIP is set as the route next-hop)
-- the NVAs are configured with static routes that allow the communication with the GCP resources (including the cross-environment communication)
-- those static routes are on the trusted interface, one for every range of every spoke: the primary and secondary ranges of each subnet, and the proxy-only subnet. The NVAs have a default route on the DMZ interface only, so a reply to a spoke range without a static route would leave through the DMZ. Private Service Access ranges have no route, because VPC peering is not transitive and does not carry them to the landing VPC
-
-The Cloud Routers (connected to the VPN gateways in the landing VPC) are configured to exclude the default advertisement of VPC ranges and they only advertise their respective aggregate ranges, via custom advertisements. This greatly simplifies the routing configuration and avoids quota or limit issues, by keeping the number of routes small, instead of making it proportional to the subnets and to the secondary ranges in the VPCs.
+- Subnets within the same VPC exchange routes automatically.
+- Environment spoke VPCs and the landing hub VPC exchange subnet routes over VPC peering.
+- Tagged static routes in spoke VPCs steer cross-environment, on-premises, and internet traffic from regional VMs to the regional NVA internal load balancer VIP as next hop.
+- Static routes on the NVA trusted interface return traffic to every spoke primary subnet, secondary subnet range, and proxy-only subnet. Because the NVAs hold a default route on the DMZ interface only, a reply to any spoke range missing a static route exits through the DMZ. Private Services Access ranges have no static route because VPC peering is not transitive.
+- Cloud Routers attached to landing VPC VPN gateways disable default subnet advertisements and advertise aggregated CIDR blocks through custom advertisements to conserve route quotas.
 
 ### Internet egress
 
-In this setup, Internet egress is realized through a NAT policy between landing->DMZ on the Palo Alto NGFW. There is also an option to implement the [Cloud NAT](https://cloud.google.com/nat/docs/overview), deployed in the dmz landing VPC. This allows instances in all other VPCs to reach the Internet, passing through the NVAs (being the public Internet considered dmz). Cloud NAT is disabled by default; enable it by setting the `enable_cloud_nat` variable
+Outbound internet traffic traverses a NAT policy from the landing zone to the DMZ zone on the Palo Alto NGFW. Set `enable_cloud_nat = true` to enable [Cloud NAT](https://cloud.google.com/nat/docs/overview) in the DMZ VPC, which defaults to disabled. You can also adapt the design for per-VPC Cloud NAT, explicit forwarding proxies with URL filtering, or hairpinned egress through on-premises firewalls.
 
-Several other scenarios are possible, with various degrees of complexity
+### VPC and hierarchical firewalls
 
-- deploy Cloud NAT in every VPC
-- add forwarding proxies, with optional URL filters
-- send Internet traffic to on-premises, so the existing egress infrastructure can be leveraged
+Stage 2 combines folder-level hierarchical firewall policies on the `Networking` folder for baseline ingress rules such as load balancer health checks and Identity-Aware Proxy TCP forwarding with per-VPC firewall rules defined in YAML factory files.
 
-Future pluggable modules will allow users to easily experiment with the above scenarios.
+### DNS design
 
-### VPC and Hierarchical Firewall
+Cloud DNS policies and peering zones support bidirectional hybrid and cloud name resolution:
 
-The Google Cloud Firewall is a stateful, distributed feature that allows the creation of L4 policies, either via VPC-level rules or -more recently- via hierarchical policies, applied on the resource hierarchy (Google Cloud Organization, Google CLoud Folders).
+- Private zones and an [inbound server policy](https://cloud.google.com/dns/docs/server-policies-overview#dns-server-policy-in) resolve cloud domains for on-premises resolvers, while forwarding zones send `onprem.example.com` queries to on-premises DNS servers.
+- The landing hub hosts on-premises forwarding zones, Google API zones, and the top-level private zone (`gcp.example.com`).
+- Environment spoke projects host environment subdomains such as `prod.gcp.example.com` using [cross-project binding](https://cloud.google.com/dns/docs/zones/zones-overview#cross-project_binding) and delegate root `.` resolution to the landing hub via DNS peering.
+- [Cloud DNS response policies](https://cloud.google.com/dns/docs/zones/manage-response-policies#create-response-policy-rule) resolve [Private Google Access domains](https://cloud.google.com/vpc/docs/configure-private-google-access#domain-options) privately.
 
-The current setup adopts both firewall types. Hierarchical firewall rules are applied in the networking Google Cloud Folder for common ingress rules (egress is open by default): for example, it allows the health checks and the IAP forwarders traffic to reach the VMs.
+Route `35.199.192.0/19` from on-premises networks into the Cloud VPN tunnels and forward `private.googleapis.com`, `restricted.googleapis.com`, and your cloud domain such as `gcp.example.com` to the landing inbound DNS addresses.
 
-Rules and policies are defined in simple YAML files, described below.
-
-### DNS
-
-DNS goes hand in hand with networking, especially on Google Cloud where Cloud DNS zones and policies are associated at the VPC level. This setup implements both DNS flows:
-
-- on-prem to cloud via private zones for cloud-managed domains, and an [inbound policy](https://cloud.google.com/dns/docs/server-policies-overview#dns-server-policy-in) used as forwarding target or via delegation (requires some extra configuration) from on-prem DNS resolvers
-- cloud to on-prem via forwarding zones for the on-prem managed domains
-
-DNS configuration is further centralized by leveraging peering zones, so that
-
-- the hub/landing Cloud DNS hosts configurations for on-prem forwarding, Google API domains, and the top-level private zone/s (e.g. gcp.example.com)
-- the spokes Cloud DNS host configurations for the environment-specific domains (e.g. prod.gcp.example.com), which are bound to the hub/landing leveraging [cross-project binding](https://cloud.google.com/dns/docs/zones/zones-overview#cross-project_binding); a peering zone for the `.` (root) zone is then created on each spoke, delegating all DNS resolution to hub/landing.
-- Private Google Access is enabled via [DNS Response Policies](https://cloud.google.com/dns/docs/zones/manage-response-policies#create-response-policy-rule) for most of the [supported domains](https://cloud.google.com/vpc/docs/configure-private-google-access#domain-options)
-
-To complete the configuration, the 35.199.192.0/19 range should be routed to the VPN tunnels from on-premises, and the following names should be configured for DNS forwarding to cloud:
-
-- `private.googleapis.com`
-- `restricted.googleapis.com`
-- `gcp.example.com` (used as a placeholder)
-
-In Google Cloud, a forwarding zone in the landing Google Cloud Projects is configured to forward queries to the placeholder domain `onprem.example.com` to on-premises.
-
-This configuration is battle-tested, and flexible enough to lend itself to simple modifications without subverting its design.
-
-## Stage structure and files layout
+## 2 Stage file layout
 
 ### VPCs
 
-VPCs are defined in separate files, one for `landing` (landing and dmz), one for `prod` and one for `dev`.
+Separate `vpc-*.tf` files define the landing and DMZ VDSS networks and environment spoke networks:
 
-These files contain different resources:
-
-- **project** ([`projects`](../../../modules/project)): the "[host Google Cloud Project](https://cloud.google.com/vpc/docs/shared-vpc)" containing the VPCs and enabling the required APIs.
-- **VPCs** ([`net-vpc`](../../../modules/net-vpc)): manages the subnets, the explicit routes for `{private,restricted}.googleapis.com` and the DNS inbound policy for the landing landing VPC. Non-infrastructural subnets are created leveraging resource factories. Sample subnets are shipped in data/subnets and can be easily customized to fit users' needs. [PSA](https://cloud.google.com/vpc/docs/configure-private-services-access#allocating-range) are configured by the variable `psa_ranges` if managed services are needed. The stage creates a default `/22` allocation named `default-peering` and its service networking connection only for environments that receive no PSA ranges.
-- **Cloud NAT** ([`net-cloudnat`](../../../modules/net-cloudnat)) (in the dmz landing VPC only): it manages the networking infrastructure required to enable the Internet egress.
+- The [`project`](../../../modules/project) module provisions each [Shared VPC host project](https://cloud.google.com/vpc/docs/shared-vpc) and enables required APIs.
+- The [`net-vpc`](../../../modules/net-vpc) module manages subnets from `data/subnets/`, Private Google Access routes, landing DNS inbound policies, and [Private Services Access](https://cloud.google.com/vpc/docs/configure-private-services-access#allocating-range) ranges via `psa_ranges`, falling back to a default `/22` `default-peering` range when `psa_ranges` is unset for an environment.
+- The [`net-cloudnat`](../../../modules/net-cloudnat) module provisions Cloud NAT for outbound internet egress in the DMZ VPC.
 
 ### VPNs
 
-The connectivity between on-premises and GCP (the landing landing VPC) is implemented with Cloud HA VPN ([`net-vpn`](../../../modules/net-vpn-ha)) and defined in `vpn-onprem.tf`. The file implements a single logical connection between on-premises and the landing landing VPC, both in `us-east4` and `us-central1`. The relevant parameters for its configuration are found in the variables `vpn_onprem_primary_config` and `vpn_onprem_secondary_config`.
+The `vpn-onprem.tf` file configures HA VPN connectivity through the [`net-vpn-ha`](../../../modules/net-vpn-ha) module between on-premises networks and the landing VPC using `vpn_onprem_primary_config` and `vpn_onprem_secondary_config`.
 
 ### Routing and BGP
 
-Each VPC network ([`net-vpc`](../../../modules/net-vpc)) manages a separate routing table, which can define static routes (e.g. to private.googleapis.com) and receives dynamic routes through VPC peering and BGP sessions established with the neighbor networks (e.g. the landing landing VPC receives routes from on-premises, and the spokes receive RFC1918 from the landing landing VPC).
+Each [`net-vpc`](../../../modules/net-vpc) call in `vpc-*.tf` manages static routes alongside dynamic routes learned via VPC peering and BGP sessions configured through `vpn_onprem_configs`.
 
-Static routes are defined in `vpc-*.tf` files in the `routes` section of each `net-vpc` module.
+### Firewalls
 
-BGP sessions for landing landing to on-premises are configured through the variable `vpn_onprem_configs`.
+Per-VPC firewall rules use [`net-vpc-firewall`](../../../modules/net-vpc-firewall) YAML factories under `data/firewall-rules/dmz/` and `data/firewall-rules/landing/`, following the [rules factory documentation](../../../modules/net-vpc-firewall#rules-factory).
 
-### Firewall
-
-**VPC firewall rules** ([`net-vpc-firewall`](../../../modules/net-vpc-firewall)) are defined per-vpc on each `vpc-*.tf` file and leverage a resource factory to massively create rules.
-To add a new firewall rule, create a new file or edit an existing one in the `data_folder` directory defined in the module `net-vpc-firewall`, following the examples of the "[Rules factory](../../../modules/net-vpc-firewall#rules-factory)" section of the module documentation. Sample firewall rules are shipped in data/firewall-rules/dmz and in data/firewall-rules/landing, and can be easily customized.
-
-**Hierarchical firewall policies** ([`folder`](../../../modules/folder)) are defined in `main.tf` and managed through a policy factory implemented by the `net-firewall-policy` module, which is then applied to the `Networking` folder containing all the core networking infrastructure. Policies are defined in the `rules_file` file, to define a new one simply use the [firewall policy module documentation](../../../modules/net-firewall-policy/README.md#factory)". Sample hierarchical firewall rules are shipped in data/hierarchical-ingress-rules.yaml and can be easily customised.
+Folder-level hierarchical firewall policies in `main.tf` attach to the `Networking` folder via [`folder`](../../../modules/folder) and [`net-firewall-policy`](../../../modules/net-firewall-policy/README.md#factory) using rules in `data/hierarchical-ingress-rules.yaml`.
 
 ### DNS architecture
 
-The DNS ([`dns`](../../../modules/dns)) infrastructure is defined in [`dns-*.tf`] files.
-
-Cloud DNS manages onprem forwarding, the main GCP zone (in this example `gcp.example.com`) and environment-specific zones (i.e. `dev.gcp.example.com` and `prod.gcp.example.com`).
+Files matching `dns-*.tf` configure [`dns`](../../../modules/dns) zones for on-premises forwarding, the root cloud domain (`gcp.example.com`), and environment subdomains (`dev.gcp.example.com` and `prod.gcp.example.com`).
 
 #### Cloud environment
 
-The root DNS zone defined in the landing Google Cloud Projects acts as the source of truth for DNS within the Cloud environment. The resources defined in the spoke VPCs consume the landing DNS infrastructure through DNS peering (e.g. `prod-landing-root-dns-peering`).
-The spokes can optionally define private zones (e.g. `prod-dns-private-zone`). Granting visibility both to the landing and dmz landing VPCs ensures that the whole cloud environment can query such zones.
+The root DNS zone in the landing host project serves as the central resolver for spoke VPCs through root DNS peering (`prod-landing-root-dns-peering`). Grant visibility to both the landing and DMZ VPCs when adding spoke private zones (`prod-dns-private-zone`) so the entire cloud network can resolve them.
 
-## How to run this stage
+## 3 Stage deployment
 
-This stage is meant to be executed after the [resource management](../1-resman) stage has run, as it leverages the automation service account and bucket created there, and additional resources configured in the [bootstrap](../0-bootstrap) stage.
+Deploy this stage after [0-bootstrap](../0-bootstrap) and [1-resman](../1-resman) so the Stage 2 automation service account, state bucket, and upstream `.auto.tfvars.json` files exist.
 
-It's of course possible to run this stage in isolation, but that's outside the scope of this document, and you would need to refer to the code for the previous stages for the environmental requirements.
+### Provider and variable files
 
-Before running this stage, you need to make sure you have the correct credentials and permissions, and localize variables by assigning values that match your configuration.
-
-### Provider and Terraform variables
-
-As all other FAST stages, the [mechanism used to pass variable values and pre-built provider files from one stage to the next](../0-bootstrap/README.md#output-files-and-cross-stage-variables) is also leveraged here.
-
-The commands to link or copy the provider and terraform variable files can be easily derived from the `stage-links.sh` script in the FAST root git folder, passing it a single argument with the local output files git folder (if configured) or the Google Cloud output bucket in the automation Google Cloud Projects (derived from stage 0 outputs). The following examples demonstrate both cases, and the resulting commands that then need to be copy/pasted and run.
+Stage 2 consumes generated provider and `.auto.tfvars.json` files from [Stage 0 and Stage 1](../0-bootstrap/README.md). Run `stage-links.sh` from the FAST root directory with your Stage 0 outputs bucket or local outputs path to print the `gcloud storage cp` commands:
 
 ```bash
 ../../stage-links.sh gs://xxx-prod-iac-core-outputs-0
 ```
 
-_copy and paste the following commands for '`2-networking-a-peering`'_
+Copy the generated provider and variable files into the stage directory:
 
-```
+```bash
 gcloud alpha storage cp gs://xxx-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./
 gcloud alpha storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./
 gcloud alpha storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./
 gcloud alpha storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
 ```
 
-### Impersonating the automation service account
+### Service account impersonation
 
-The preconfigured provider file uses impersonation to run with this stage's automation service account's credentials. The `gcp-devops` and `organization-admins` groups have the necessary IAM bindings in place to do that, so make sure the current user is a member of one of those groups.
+The generated provider file impersonates the Stage 2 automation service account. Ensure your active user identity belongs to `gcp-devops` or `organization-admins`.
 
-### Setting default Google Cloud Projects for manual run
+### Default gcloud project
 
-**Important**: Before running this, make sure that if you are running these stages manually from the command line, that your default Google Cloud Projects is set to the 'automation' Google Cloud Projects created in 0-bootstrap.
+Set your default `gcloud` project to the Stage 0 automation project before running Terraform manually from the command line.
 
-To find the 'automation' Google Cloud Projects
+Look up the automation project ID from Stage 0 outputs:
 
 ```bash
 cd ../0-bootstrap
 terraform output project_ids
 ```
-And to set the gcloud Google Cloud Projects default in your CLI
+
+Configure the default project in `gcloud` and return to the Stage 2 directory:
 
 ```bash
 gcloud config set project <prefix>-prod-iac-core-0
-```
-
-Return to the Networking directory
-
-```bash
 cd ../2-networking-b-il5-ngfw
 ```
 
 ### Variable configuration
 
-Variables in this stage -- like most other FAST stages -- are broadly divided into three separate sets:
+Stage 2 inputs fall into three groups:
 
-- variables which refer to global values for the whole organization (org id, billing account id, prefix, etc.), which are pre-populated via the `0-globals.auto.tfvars.json` file linked or copied above
-- variables which refer to resources managed by previous stage, which are prepopulated here via the `0-bootstrap.auto.tfvars.json` and `1-resman.auto.tfvars.json` files linked or copied above
-- and finally variables that optionally control this stage's behaviour and customizations, and can to be set in a custom `terraform.tfvars` file
+- Organization-wide globals populated from `0-globals.auto.tfvars.json`.
+- Upstream stage resource identifiers populated from `0-bootstrap.auto.tfvars.json` and `1-resman.auto.tfvars.json`.
+- Stage-specific customizations set in `terraform.tfvars`, documented in [Customizations](#4-customizations) and the [Variables](#variables) table.
 
-The latter set is explained in the [Customization](#customizations) sections below, and the full list can be found in the [Variables](#variables) table at the bottom of this document.
-
-Note that the `outputs_location` variable is disabled by default, you need to explicitly set it in your `terraform.tfvars` file if you want output files to be generated by this stage. This is a sample `terraform.tfvars` that configures it, refer to the [bootstrap stage documentation](../0-bootstrap/README.md#output-files-and-cross-stage-variables) for more details:
+To write downstream stage output files to a local directory, set `outputs_location` in `terraform.tfvars`:
 
 ```tfvars
 outputs_location = "~/fast-config"
 ```
 
-### Using delayed billing association for Google Cloud Project
+### Delayed billing association
 
-This configuration is possible but unsupported and only exists for development purposes, use at your own risk:
+Delayed billing linkage is unsupported for production and intended only for development environments where Terraform cannot attach billing accounts directly:
 
-- temporarily switch `billing_account.id` to `null` in `0-globals.auto.tfvars.json`
-- for each Google Cloud Projects resources in the Google Cloud Projects modules used in this stage (`dev-spoke-project`, `landing-project`, `prod-spoke-project`)
-  - apply using `-target`, for example
-    `terraform apply -target 'module.landing-project.google_project.project[0]'`
-  - untaint the Google Cloud Projects resource after applying, for example
-    `terraform untaint 'module.landing-project.google_project.project[0]'`
-- go through the process to associate the billing account with the two Google Cloud Projects
-- switch `billing_account.id` back to the real billing account id
-- resume applying normally
+- Set `billing_account.id` to `null` temporarily in `0-globals.auto.tfvars.json`.
+- Target each project resource (`dev-spoke-project`, `landing-project`, `prod-spoke-project`) individually and untaint it if needed:
+  `terraform apply -target 'module.landing-project.google_project.project[0]'`
+  `terraform untaint 'module.landing-project.google_project.project[0]'`
+- Link the billing account to the created projects manually.
+- Restore `billing_account.id` in `0-globals.auto.tfvars.json` and run `terraform apply`.
 
-### Running the stage
+### Terraform execution
 
-Once provider and variable values are in place and the correct user is configured, the stage can be run:
+Initialize and apply the stage once provider and variable files are in place:
 
 ```bash
 terraform init
@@ -331,55 +239,61 @@ terraform apply
 
 #### Private Google Access
 
-[Private Google Access](https://cloud.google.com/vpc/docs/private-google-access) (or PGA) enables VMs and on-prem systems to consume Google APIs from within the Google network, and is already fully configured on this environment:
+[Private Google Access](https://cloud.google.com/vpc/docs/private-google-access) comes preconfigured across Stage 2:
 
-- DNS response policies in the landing Google Cloud Projects implement rules for all supported domains reachable via PGA
-- routes for the private and restricted ranges are defined in all VPCs except dmz
+- Cloud DNS response policies in the landing project resolve supported Google API domains to Private Google Access VIPs.
+- Static routes for `private.googleapis.com` and `restricted.googleapis.com` VIP ranges exist on every VPC except the DMZ VPC.
+- Advertise the Private Google Access VIP ranges through custom router or tunnel advertisements on `vpn_onprem_primary_config` and `vpn_onprem_secondary_config` to enable private Google API access from on-premises networks.
 
-To enable PGA access from on premises advertise the private/restricted ranges via the `vpn_onprem_primary_config` and `vpn_onprem_secondary_config` variables, using router or tunnel custom advertisements.
+## 4 Customizations
 
-## Customizations
+### Default regions
 
-### Changing default regions
+The `regions` variable maps `regions.primary` to a Google Cloud region. Replace every `<region>` placeholder in `terraform.tfvars` with the `regions.primary` value from Stage 0:
 
-The `regions` variable maps the `regions.primary` logical name to the actual GCP region name. Replace every `<region>` placeholder in the `terraform.tfvars` file with the `regions.primary` value from Stage 0. If you need to change regions from the defaults:
+- Update the region values in `regions` to match your target Assured Workloads regions.
+- Keep `landing-default`, `dmz-default`, and `mgmt-default` in `regions.primary` because the NGFW instance templates and bootstrap configuration look up those subnets by primary region.
 
-- change the values of the mappings in the `regions` variable to the regions you are going to use
-- keep the `landing-default`, `dmz-default` and `mgmt-default` subnets in `regions.primary`, because the NGFW instance templates and bootstrap configuration look up those subnets by region
+## 5 Palo Alto NGFW configuration
 
-##  Configuring Palo Alto NGFWs
+### Management console access
 
-### Reaching the Management Console
+Gather three prerequisites to reach the Palo Alto web management console:
 
-In order to access the Palo Alto managment console, you will need 3 things
+1. Retrieve the initial administrator password from Terraform outputs with `terraform output -json | jq ".ngfw_password.value.result"`.
+2. Start the `management-bastion` VM on the management network if it is stopped.
+3. Target the second network interface (`nic1`) attached to `prod-mgmt-0`, which is the only NGFW interface enabled for administration.
 
-  1. The admin password is stored in the terraform state file, use this command to get it `terraform output -json | jq ".ngfw_password.value.result"`
-  2. The terraform code should have automatically created a small VM on the mgmt network that will work as a bastion. You may have to start it, if it is not already running.
-  3. Each NGFW instance will have at least 3 interfaces, but only the second one, connected to `prod-mgmt-0` is usable for administration.
+Open an Identity-Aware Proxy SSH tunnel through `management-bastion` in its deployed `<ZONE>`, which you can look up with `terraform show | grep zone`:
 
-Use the following command to access the web portal `gcloud compute ssh management-bastion --zone <ZONE> --tunnel-through-iap -- -L 8443:<ip-of-ngfw>:443`. From here, you should be able to access the management interface at the url https://localhost:8443/ and log in with the username `admin` and the password you found using in the terraform output command.
+```bash
+gcloud compute ssh management-bastion --zone <ZONE> --tunnel-through-iap -- -L 8443:<ip-of-ngfw>:443
+```
 
-*Note*: Replace `<ZONE>` with the zone where your management bastion host was deployed. You can find this in the Terraform outputs or by running `terraform show | grep zone`.
+Sign in at `https://localhost:8443/` with username `admin` and the password from Terraform outputs.
 
-If you wish to SSH into the NGFWs from the management bastion host, retrieve the private key directly from Secret Manager on the bastion host by running `mkdir -p ~/.ssh && gcloud secrets versions access latest --secret=ngfw-ssh-private-key --project=<vdss-host-project-id> > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa`.
+To connect to the NGFW over SSH from `management-bastion`, fetch the SSH private key from Secret Manager on the bastion host:
 
-### Updating configuration
+```bash
+mkdir -p ~/.ssh && gcloud secrets versions access latest --secret=ngfw-ssh-private-key --project=<vdss-host-project-id> > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa
+```
 
-These Palo Alto NGFWs operate the same as normal ones. But, in order to update the Bootstrap autoconfig XML file after changing a setting, you must take additional steps. In the device settings, under the operations tab, there is an option to export the running config. This will produce a tar file with the `running-config.xml` file in it. You must merge this into the XML file stored under `templates/bootstrap.xml.tpl` by replacing key fields with the terraform template tags.
+### Bootstrap XML updates
 
-There is currently no way to automate this process, but take the version of the file committed in Git and find where these template tags are
-* `password_hash`: Used 1 time near the top of the document
-* `ssh_pubkey`: Used 2 times, once near the top and once near the middle
-* `healthcheck_cidrs`: Used 1 time as part of a Jinja template loop. Make sure to copy the entire loop starting with `%{ for` and ending with `%{ endfor`
-* `iap_cidrs`: Used 1 time as part of a Jinja template loop. Make sure to copy the entire loop starting with `%{ for` and ending with `%{ endfor`
-* `return_routes` and `lz_gateway_ip`: Used 1 time as part of the template loop that writes the static routes. Make sure to copy the entire loop starting with `%{ for` and ending with `%{ endfor`
+After changing firewall settings in the Palo Alto console, export the running configuration archive from the Device Operations tab to extract `running-config.xml`, then merge your changes back into `templates/bootstrap.xml.tpl` while preserving five Terraform template expressions:
 
-Terraform builds `return_routes` from the subnets of every spoke, so adding or removing a spoke subnet, secondary range or proxy-only subnet changes the rendered `bootstrap.xml`. The instance template tracks the hash of that file. The next `terraform apply` therefore creates a new template, and the managed instance group replaces the running NGFWs with newly bootstrapped ones. It creates the new instances before it deletes the old ones, but connections that are open through an old instance are dropped, and any setting changed on a running NGFW and not merged into the template is lost.
+- `password_hash` appears once near the top of `templates/bootstrap.xml.tpl`.
+- `ssh_pubkey` appears twice, once near the top and once near the middle of the template.
+- `healthcheck_cidrs` wraps a template loop from `%{ for` to `%{ endfor`.
+- `iap_cidrs` wraps a template loop from `%{ for` to `%{ endfor`.
+- `return_routes` and `lz_gateway_ip` wrap the static-route template loop from `%{ for` to `%{ endfor`.
 
-# Redeployment
-If you are redeploying this stage with the same prefix, please run "pre-redeploy.sh" to handle imports.
+Terraform builds `return_routes` from every spoke subnet, secondary range, and proxy-only subnet, and the NGFW instance template tracks the hash of the rendered `bootstrap.xml` file. Adding or removing a spoke range causes the next `terraform apply` to create a new instance template and replace running NGFW instances through the managed instance group, dropping active connections on replaced instances and discarding any live NGFW changes not merged into `templates/bootstrap.xml.tpl`.
 
----
+## 6 Redeployment
+
+Run `pre-redeploy.sh` before redeploying this stage with the same `prefix` to import retained resources cleanly.
+
 <!-- BEGIN TFDOC -->
 ## Variables
 
