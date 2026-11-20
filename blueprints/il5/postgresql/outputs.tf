@@ -18,3 +18,13 @@ output "connection_internal_ip" {
   value       = module.postgres.ip
   description = "Conntection internal IP address."
 }
+
+output "psc_dns_name" {
+  value       = var.psc_config == null ? null : module.postgres.dns_name
+  description = "DNS name of the instance, for the DNS record of the Private Service Connect endpoint. Null unless psc_config is set."
+}
+
+output "psc_service_attachment_link" {
+  value       = var.psc_config == null ? null : module.postgres.psc_service_attachment_link
+  description = "Service attachment that a Private Service Connect endpoint targets. Null unless psc_config is set."
+}

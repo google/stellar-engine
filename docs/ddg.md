@@ -470,7 +470,7 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.au
 ```
 - Copy the sample `terraform.tfvars` file and configure your network settings:
   - `cp terraform.tfvars.sample terraform.tfvars`
-- Update custom subnets, proxy subnets, global network firewall policy rules (`firewall_policy_rules`), named CIDRs (`cidrs`), Private Service Connect settings (`psc_google_apis`), optional centralized Secure Web Proxy egress (`centralized_egress`), and optional hybrid NCC spokes (`ncc_hubs`) inside **`terraform.tfvars`** (built-in Google APIs DNS response policy rules load automatically from `data/dns-policy-rules.yaml`).
+- Update custom subnets, proxy subnets, global network firewall policy rules (`firewall_policy_rules`), named CIDRs (`cidrs`), Private Service Connect settings (`psc_google_apis`), optional Private Services Access ranges (`psa_ranges`) for workloads such as `blueprints/fedramp-high/postgresql` that need them, optional centralized Secure Web Proxy egress (`centralized_egress`), and optional hybrid NCC spokes (`ncc_hubs`) inside **`terraform.tfvars`** (built-in Google APIs DNS response policy rules load automatically from `data/dns-policy-rules.yaml`).
 - Replace every `<region>` placeholder in **`terraform.tfvars`** with the `regions.primary` value from the Stage 0 **`terraform.tfvars`** file.
 - Run `terraform init`
   - `terraform apply`

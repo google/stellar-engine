@@ -13,9 +13,52 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 ## Requirements
-1. An existing VPC with Private Service Access (PSA) peering already configured on the target network (`network_name` / `network_project_id`).
+1. Private connectivity for the instance on the target network (`network_name` / `network_project_id`). The default is an existing Private Services Access (PSA) connection on that network, and `psc_config` selects Private Service Connect (PSC) instead. See [Private connectivity](#private-connectivity).
 1. Copy terraform.tfvars.sample to terraform.tfvars
 1. Updated terraform.tfvars
+
+## Private connectivity
+
+The instance never has a public IP address. It connects through Private Services Access unless you set `psc_config`, which makes it use Private Service Connect instead.
+
+### Private Services Access
+
+The default mode needs a Private Services Access connection to `servicenetworking.googleapis.com` on the network before you deploy. The blueprint does not create that connection, and Cloud SQL cannot create a private IP instance without it.
+
+- On FedRAMP Moderate and FedRAMP High, `fast/stages-aw/2-networking-a-fedramp` creates no Private Services Access connection unless you ask for one. Set `psa_ranges` for the environment of the spoke VPC in the Stage 2 `terraform.tfvars` file and apply Stage 2 first. See [Private services access](../../../fast/stages-aw/2-networking-a-fedramp/README.md#7-private-services-access) for an example.
+- On IL4 and IL5, `fast/stages-aw/2-networking-b-il5-ngfw` creates a default `/22` connection on every spoke VPC, so this mode needs no extra step.
+- Clients connect to the address in the `connection_internal_ip` output.
+
+### Private Service Connect
+
+Set `psc_config` to deploy the instance with Private Service Connect. The network then needs no Private Services Access connection, which matches the Stage 2 FedRAMP default.
+
+```hcl
+psc_config = {
+  allowed_consumer_projects = ["<network-project-id>"]
+}
+```
+
+- Cloud SQL accepts a Private Service Connect endpoint only from a project in `allowed_consumer_projects`. List the project that hosts each endpoint and no other project.
+- The blueprint does not create the endpoint. Create it in a subnet of the spoke VPC, target the `psc_service_attachment_link` output, and add a private DNS record that points the `psc_dns_name` output to the endpoint address. The `modules/net-address` module creates the address and the forwarding rule, as the example after this list shows.
+- Clients connect to the endpoint address. The `connection_internal_ip` output reports the Private Services Access address only, so do not use it in this mode.
+- Choose the mode before the first apply. Setting or removing `psc_config` later plans an in-place change to the network settings of the instance, and Cloud SQL can reject that change, so treat it as a migration and test it outside production first.
+
+```hcl
+module "postgres-psc-endpoint" {
+  source     = "../../../modules/net-address"
+  project_id = "<network-project-id>"
+  psc_addresses = {
+    postgres = {
+      region           = "<region>"
+      subnet_self_link = "<subnet-self-link>"
+      service_attachment = {
+        psc_service_attachment_link = "<psc_service_attachment_link output>"
+      }
+    }
+  }
+}
+```
 
 ## Deployer Permissions
 
@@ -79,17 +122,20 @@ provider "google-beta" {
 | [log_min_error_statement](variables.tf#L127) | The log_min_error_statement flag defines the minimum message severity level that are considered as an error statement. | <code>string</code> |  | <code>&#34;error&#34; &#35; Required for CIS Compliance Benchmark 6.2&#34;</code> |
 | [log_min_messages](variables.tf#L138) | The log_min_messages flag defines the minimum message severity level that is considered as an error statement. | <code>string</code> |  | <code>&#34;warning&#34;</code> |
 | [log_statement](variables.tf#L151) | The value of log_statement flag determines the SQL statements that are logged. | <code>string</code> |  | <code>&#34;ddl&#34;</code> |
-| [region](variables.tf#L179) | This is the region that we are going to be running the cloud sql instance from. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [psc_config](variables.tf#L179) | Private Service Connect configuration. When set, the instance uses Private Service Connect instead of Private Services Access, so the network needs no Private Services Access connection. List in allowed_consumer_projects each project that hosts a Private Service Connect endpoint for the instance. Leave null to use Private Services Access. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [region](variables.tf#L196) | This is the region that we are going to be running the cloud sql instance from. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
 | [connection_internal_ip](outputs.tf#L17) | Conntection internal IP address. |  |
+| [psc_dns_name](outputs.tf#L22) | DNS name of the instance, for the DNS record of the Private Service Connect endpoint. Null unless psc_config is set. |  |
+| [psc_service_attachment_link](outputs.tf#L27) | Service attachment that a Private Service Connect endpoint targets. Null unless psc_config is set. |  |
 <!-- END TFDOC -->
 ## Firewall Policy Coexistence and Auditing
 
-This blueprint creates no VPC firewall rule. The Cloud SQL instance connects through Private Service Access, so it runs in a Google-managed network that is peered with the Shared VPC (`network_name`). Ingress firewall rules in the Shared VPC apply only to instances in that VPC, so they do not control traffic to the database.
+This blueprint creates no VPC firewall rule. The Cloud SQL instance connects through Private Services Access or Private Service Connect, so it runs in a Google-managed network rather than inside the Shared VPC (`network_name`). Ingress firewall rules in the Shared VPC apply only to instances in that VPC, so they do not control traffic to the database.
 
 - To limit which clients reach the database, apply egress rules to the client workloads for the instance address (`connection_internal_ip`) on `tcp:5432`, in the Stage 2 firewall policies or through `modules/net-vpc-firewall`.
 - Earlier releases created `google_compute_firewall.postgres` from the `firewall_name`, `firewall_source_range`, and `allowed_firewall_ports` variables. That rule had no target, so it allowed the database port to every instance in the Shared VPC and did not protect the database. The three variables are deprecated and ignored, and Terraform warns when one is set.

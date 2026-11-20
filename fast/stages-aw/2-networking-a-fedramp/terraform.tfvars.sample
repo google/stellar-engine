@@ -122,10 +122,13 @@ proxy_subnets = {
 # Optional Private Services Access (PSA) IP Ranges per Environment
 # Prefer Private Service Connect (PSC) endpoints for managed services (propagated
 # via NCC export_psc = true). Uncomment only for workloads that still require PSA.
+# The stage creates no PSA connection unless psa_ranges is set, and
+# blueprints/fedramp-high/postgresql needs one unless its psc_config is set.
+# Choose ranges that do not overlap the subnets above.
 # psa_ranges = {
-#   prod = [{ ranges = { default = "10.202.252.0/22" } }]
-#   int  = [{ ranges = { default = "10.30.252.0/22" } }]
-#   test = [{ ranges = { default = "10.203.252.0/22" } }]
+#   prod = [{ ranges = { default = "10.250.0.0/22" } }]
+#   int  = [{ ranges = { default = "10.250.4.0/22" } }]
+#   test = [{ ranges = { default = "10.250.8.0/22" } }]
 # }
 
 # Named IP Ranges to reference in Network Firewall Policy Rules
