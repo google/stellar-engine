@@ -21,7 +21,7 @@
 module "branch-pf-dev-cicd-repo" {
   source = "../../../modules/source-repository"
   for_each = (
-    try(local.cicd_repositories.project_factory_dev.type, null) == "sourcerepo"
+    try(local.cicd_repositories.project_factory_dev.type, null) == "ssm"
     ? { 0 = local.cicd_repositories.project_factory_dev }
     : {}
   )
@@ -57,7 +57,7 @@ module "branch-pf-dev-cicd-repo" {
 module "branch-pf-prod-cicd-repo" {
   source = "../../../modules/source-repository"
   for_each = (
-    try(local.cicd_repositories.project_factory_prod.type, null) == "sourcerepo"
+    try(local.cicd_repositories.project_factory_prod.type, null) == "ssm"
     ? { 0 = local.cicd_repositories.project_factory_prod }
     : {}
   )
@@ -104,7 +104,7 @@ module "branch-pf-dev-sa-cicd" {
   display_name = "Terraform CI/CD project factory development service account."
   prefix       = var.prefix
   iam = (
-    each.value.type == "sourcerepo"
+    each.value.type == "ssm"
     # used directly from the cloud build trigger for source repos
     ? {
       "roles/iam.serviceAccountUser" = local.automation_resman_sa_iam
@@ -145,7 +145,7 @@ module "branch-pf-prod-sa-cicd" {
   display_name = "Terraform CI/CD project factory production service account."
   prefix       = var.prefix
   iam = (
-    each.value.type == "sourcerepo"
+    each.value.type == "ssm"
     # used directly from the cloud build trigger for source repos
     ? {
       "roles/iam.serviceAccountUser" = local.automation_resman_sa_iam
@@ -188,7 +188,7 @@ module "branch-pf-dev-r-sa-cicd" {
   display_name = "Terraform CI/CD project factory development service account (read-only)."
   prefix       = var.prefix
   iam = (
-    each.value.type == "sourcerepo"
+    each.value.type == "ssm"
     # build trigger for read-only SA is optionally defined by users
     ? {}
     # impersonated via workload identity federation for external repos
@@ -222,7 +222,7 @@ module "branch-pf-prod-r-sa-cicd" {
   display_name = "Terraform CI/CD project factory production service account (read-only)."
   prefix       = var.prefix
   iam = (
-    each.value.type == "sourcerepo"
+    each.value.type == "ssm"
     # build trigger for read-only SA is optionally defined by users
     ? {}
     # impersonated via workload identity federation for external repos

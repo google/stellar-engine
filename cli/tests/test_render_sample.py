@@ -52,9 +52,11 @@ def test_bootstrap_order_includes_commented_keys():
         "bootstrap_project",
         "alert_email",
         "kms_protection_level",
+        "cicd_repositories",
     ]
     commented = {"billing_budget_amount", "logging_bucket_retention"}
     commented.add("kms_protection_level")
+    commented.add("cicd_repositories")
     assert set(parsed.order) - set(parsed.values) == commented
     assert set(parsed.comments) == set(parsed.order)
 

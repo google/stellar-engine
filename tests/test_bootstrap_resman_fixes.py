@@ -256,8 +256,9 @@ class TestBootstrapResmanFixes(unittest.TestCase):
 
         unrendered_var_re = re.compile(r"(?<!\$)\$\{[^{}]+\}")
         for tpl_dir in _TEMPLATE_DIRS:
-            for wf_type in ("github", "gitlab", "sourcerepo"):
-                tpl_path = tpl_dir / f"workflow-{wf_type}.yaml"
+            tpl_paths = sorted(tpl_dir.glob("workflow-*.yaml"))
+            self.assertEqual(len(tpl_paths), 3)
+            for tpl_path in tpl_paths:
                 with self.subTest(
                     rendered_template=str(tpl_path.relative_to(_REPO_ROOT))
                 ):
