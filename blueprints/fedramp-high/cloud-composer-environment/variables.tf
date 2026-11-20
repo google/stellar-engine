@@ -24,6 +24,22 @@ variable "composer_version" {
   default     = "composer-3-airflow-2"
 }
 
+variable "kms_key_name" {
+  description = "Cloud KMS crypto key that encrypts the Composer environment, in the format projects/../locations/../keyRings/../cryptoKeys/... The key must be in the same region as the environment, and multi-regional or global keys are not supported. Leave null to use Google-managed encryption. Composer accepts a key only at creation, so setting or changing the key on an existing environment forces replacement of the environment."
+  type        = string
+  default     = null
+  validation {
+    condition = (
+      var.kms_key_name == null ||
+      can(regex(
+        "^projects/[^/]+/locations/[^/]+/keyRings/[^/]+/cryptoKeys/[A-Za-z0-9_-]+$",
+        var.kms_key_name
+      ))
+    )
+    error_message = "kms_key_name must be null or use the format projects/../locations/../keyRings/../cryptoKeys/..."
+  }
+}
+
 variable "main_project_id" {
   description = "Main project ID."
   type        = string
