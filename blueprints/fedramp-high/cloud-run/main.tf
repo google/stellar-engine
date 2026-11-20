@@ -43,10 +43,25 @@ resource "google_service_account" "cloud_run_service_account" {
   project      = var.main_project_id
 }
 
-resource "google_project_iam_member" "cloud_run_permissions" {
-  project = var.main_project_id
-  role    = "roles/run.invoker"
-  member  = "serviceAccount:${google_service_account.cloud_run_service_account.email}"
+# The invoker role is granted on the service or job that this blueprint
+# creates, not on the project. The `iam` input of the Cloud Run module is
+# authoritative for a role, so additive members keep other grants in place.
+resource "google_cloud_run_v2_service_iam_member" "cloud_run_invoker" {
+  count    = var.is_job ? 0 : 1
+  project  = var.main_project_id
+  location = var.region
+  name     = module.cloud-run.resource_name
+  role     = "roles/run.invoker"
+  member   = google_service_account.cloud_run_service_account.member
+}
+
+resource "google_cloud_run_v2_job_iam_member" "cloud_run_invoker" {
+  count    = var.is_job ? 1 : 0
+  project  = var.main_project_id
+  location = var.region
+  name     = module.cloud-run.resource_name
+  role     = "roles/run.invoker"
+  member   = google_service_account.cloud_run_service_account.member
 }
 
 resource "google_kms_crypto_key_iam_member" "cloud_run_service_agent_kms_permissions" {

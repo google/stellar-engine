@@ -20,6 +20,7 @@ This blueprint configures and deploys a Cloud Run Service or Job based on your s
 - Using a Customer-Managed Encryption Key (CMEK) from Cloud Key Management Service (KMS) for encryption.
 - Enforcing Binary Authorization to ensure only trusted and verified container images can be deployed.
 - Utilizing a dedicated Service Account with least privilege for the Cloud Run instance.
+- Granting that Service Account the `roles/run.invoker` role on the deployed Service or Job only, not on the project.
 
 ## Disclaimer
 - The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
