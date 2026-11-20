@@ -1,33 +1,23 @@
 # How to contribute
 
-We'd love to accept your patches and contributions to this project.
+You can contribute patches, documentation improvements, and bug fixes to Stellar Engine through GitHub pull requests.
 
-## Before you begin
+## 1. Before you begin
 
-### Sign our Contributor License Agreement
+### Contributor License Agreement
 
-Contributions to this project must be accompanied by a
-[Contributor License Agreement](https://cla.developers.google.com/about) (CLA).
-You (or your employer) retain the copyright to your contribution; this simply
-gives us permission to use and redistribute your contributions as part of the
-project.
+Accompany every contribution to this project with a signed [Contributor License Agreement](https://cla.developers.google.com/about). You or your employer retain the copyright to your contribution while granting Google permission to use and redistribute your work as part of the project.
 
-If you or your current employer have already signed the Google CLA (even if it
-was for a different project), you probably don't need to do it again.
+If you or your current employer already signed the Google CLA for another project, you do not need to sign it again.
 
-Visit <https://cla.developers.google.com/> to see your current agreements or to
-sign a new one.
+Visit <https://cla.developers.google.com/> to view your active agreements or sign a new one.
 
-### Review our community guidelines
+### Community guidelines
 
-This project follows
-[Google's Open Source Community Guidelines](https://opensource.google/conduct/).
+Follow [Google's Open Source Community Guidelines](https://opensource.google/conduct/) when participating in this project.
 
-## Contribution process
+## 2. Contribution process
 
 ### Code reviews
 
-All submissions, including submissions by project members, require review. We
-use GitHub pull requests for this purpose. Consult
-[GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
-information on using pull requests.
+Submit all changes, including submissions from project maintainers, through GitHub pull requests for code review. Consult [GitHub Help](https://help.github.com/articles/about-pull-requests/) for instructions on creating and updating pull requests.

@@ -1,537 +1,239 @@
-# SE Security Best Practices Guide
-
-**Created Date:** Nov 21, 2024
-
-**Google POC(s):** stellar-engine@google.com
-
-**Version:** 1.0.2
-
-**Recent changes**: Updated formatting, TOC, and added
-essentialcontacts.managed.allowedContactDomains information
-
-**Purpose:** The purpose of this document is to outline recommended actions and
-procedures to help organizations effectively protect their systems, data, and
-infrastructure from cyber threats, while using Stellar Engine.
-
-**Background:** Stellar Engine is designed to facilitate rapid deployment and
-operation of services within a secure Google Cloud environment, specifically
-targeting Department of Defense (DoD) Impact Level 5 (IL5) and FedRAMP High
-Authorization to Operate (ATO) requirements. Leveraging Infrastructure as Code
-(IaC), Stellar Engine utilizes bootstrap scripts to provision a baseline
-environment within an Assured Workloads folder. This foundational environment
-allows users to selectively deploy Google Cloud and approved third-party
-services based on their specific needs, offering flexibility while maintaining a
-standardized security posture.
-
-To proactively identify and mitigate potential security vulnerabilities within
-Stellar Engine, Mandiant conducted a penetration test. This assessment focused
-on emulating real-world attacker tactics, techniques, and procedures (TTPs) from
-the perspective of an authenticated user on a Google Compute Engine instance.
-The primary objective was to attempt privilege escalation and lateral movement
-within the environment.
-
-Mandiant’s testing encompassed 18 key Google Cloud resources, aiming to identify
-and close any security gaps that could impede the attainment of an ATO. The
-findings and recommendations presented in this Security Best Practices guide are
-derived from the penetration test report and aim to enhance Stellar Engine’s
-ability to prevent, detect, and contain potential threats. These best practices
-will assist in bolstering the security posture of Stellar Engine and contribute
-to a successful ATO.
-
-# Table of Contents
-
-# Identity and Access Management
+# Security best practices guide
 
-Stellar Engine's Identity and Access Management (IAM) security best practices
-prioritize least privilege and Infrastructure-as-Code (IaC) using Terraform.
-Human access to create or modify cloud resources is limited to tightly
-controlled development environments. The Cloud Resource Manager service account
-must be used for terraform apply actions within the CI/CD pipeline.
+This guide outlines operational hardening procedures to protect Google Cloud workloads, data, and foundational infrastructure deployed with Stellar Engine against privilege escalation, lateral movement, and data exfiltration.
 
-Access must be granted to _groups_, not _users_, based on curated,
-least-privilege roles. Each microservice must utilize a unique service account
-with minimal necessary permissions. Downloadable service account keys and
-automatic role grants to default service accounts must be disabled.
+| Field | Value |
+| :--- | :--- |
+| Created date | Nov 21, 2024 |
+| Google contact | stellar-engine@google.com |
+| Version | 1.0.2 |
+| Recent changes | Updated formatting, table of contents, and `essentialcontacts.managed.allowedContactDomains` guidance |
 
-Role groups, mirroring development and administrative functions must manage
-access, following a gcp-X-${tenant}-${role}@X.gov naming convention. Initial
-memberships are defined in Terraform with ongoing management handled by existing
-IAM systems or Terraform.
+Stellar Engine provisions compliant Google Cloud foundations inside Assured Workloads folders to support Department of Defense Impact Level 5 and FedRAMP High Authorization to Operate requirements. Using Terraform bootstrap stages, platform teams establish a standardized security baseline before deploying Google Cloud and approved third-party workload services.
 
-While both individual Google Cloud accounts (preferred) and service accounts can
-execute the bootstrap phase, an individual account (with gcp_org_admins group
-membership) must be used. This account shall be tightly controlled and must be
-disabled when not in use. Specific organization and folder-level roles are
-required for bootstrap execution, including Organization Admin/Viewer,
-Organization Policy Admin, Billing Admin/User, Folder Creator, Access Context
-Manager Admin/User, and Security Admin.
+To validate this baseline against real-world attacker tactics, techniques, and procedures, Mandiant conducted an authenticated penetration test from a Compute Engine instance across 18 Google Cloud resource types. The recommendations below address the resulting privilege escalation, lateral movement, and exfiltration findings so your organization can harden its deployment prior to authorization.
 
-ISV must follow the principle of least privilege and configure IAM roles that
-align with the needs of the system.
+<!-- BEGIN TOC -->
+- [1. Identity and access management](#1-identity-and-access-management)
+  - [Human access](#human-access)
+  - [Machine access](#machine-access)
+  - [Application-specific groups](#application-specific-groups)
+  - [User-specific IAM](#user-specific-iam)
+  - [Group IAM](#group-iam)
+  - [IAM references](#iam-references)
+- [2. Group visibility restrictions](#2-group-visibility-restrictions)
+- [3. Multi-factor authentication](#3-multi-factor-authentication)
+  - [MFA references](#mfa-references)
+- [4. Cloud Shell restrictions](#4-cloud-shell-restrictions)
+  - [Cloud Shell references](#cloud-shell-references)
+- [5. Logging and SIEM segmentation](#5-logging-and-siem-segmentation)
+  - [Logging references](#logging-references)
+- [6. Cloud Storage exfiltration controls](#6-cloud-storage-exfiltration-controls)
+  - [Storage boundary references](#storage-boundary-references)
+- [7. Essential Contacts](#7-essential-contacts)
+  - [Domain restrictions](#domain-restrictions)
+  - [Adding contacts](#adding-contacts)
+  - [Managing contacts](#managing-contacts)
+  - [Essential Contacts references](#essential-contacts-references)
+- [8. Data security](#8-data-security)
+  - [Encryption and data handling](#encryption-and-data-handling)
+  - [Cloud KMS](#cloud-kms)
+  - [Cloud Storage](#cloud-storage)
+  - [Data residency](#data-residency)
+<!-- END TOC -->
 
-## _Human Access_
+## 1. Identity and access management
 
-- Access must be granted to groups, not individual users.
-- Access will be granted based on a minimalized set of curated roles.
+Enforce least privilege across all principals and manage IAM bindings through Terraform rather than manual console edits. Restrict human permissions to create or modify resources to tightly controlled development projects, and execute `terraform apply` operations in higher environments exclusively through the dedicated Cloud Resource Manager automation service account in your CI/CD pipeline.
 
-## _Machine Access_
-
-- Individual Service Accounts will be defined for each microservice.&#9;
-- Downloadable Service Account keys will not be used and their creation should
-  be disabled by organization policy.
-- Access will be granted based on the principle of least privilege, with only
-  necessary functionality granted for the microservice.
-- Disable automatic role grants to default service accounts
-  (iam.automaticIamGrantsForDefaultServiceAccounts ) should be enabled as
-  organization policy , this will remove the editor role from the default
-  service accounts.
+Configure role groups matching administrative and engineering functions using the `gcp-X-${tenant}-${role}@X.gov` naming convention. Seed initial memberships in Terraform and manage ongoing membership through your enterprise identity provider or Terraform state.
 
-## _Application Specific Groups_
+Run the Stage 0 bootstrap phase using a tightly controlled individual administrator account belonging to the `gcp_org_admins` group, and disable that bootstrap account when it is not actively in use. Bootstrap execution requires Organization Admin or Viewer, Organization Policy Admin, Billing Admin or User, Folder Creator, Access Context Manager Admin or User, and Security Admin permissions. Independent Software Vendors must scope custom and predefined IAM roles strictly to system requirements.
 
-While Stellar Engine manages a core set of role groups, it's important to
-acknowledge that other platforms and tenant-specific environments may require
-additional role groups not explicitly defined within Stellar Engine. These
-externally managed groups, such as those found in a secured data warehouse
-(e.g., Data Analyst, Data Engineer, Network Administrator, Security
-Administrator, Security Analyst), are outside the immediate scope of Stellar
-Engine. However, understanding their potential overlap and interaction with
-Stellar Engine's role management is crucial for a holistic view. Future
-integrations or extensions may consider mapping or accommodating these external
-groups.
+### Human access
 
-## User Specific IAM
+- Grant IAM roles to Google Cloud groups rather than individual user accounts.
+- Scope group bindings to the minimum set of curated predefined roles required for each job function.
 
-- Navigate to <https://console.cloud.google.com>
-- In the console search bar type and select **_IAM_**
+### Machine access
 
-- Select the **_Allow_** and **_View By Principals_**
-- Click **_Grant Access_**
+- Provision a dedicated service account for each microservice workload.
+- Block downloadable service account keys and enforce the organization policy constraint that disables key creation.
+- Grant each workload service account only the permissions required for its runtime function.
+- Enforce the `iam.automaticIamGrantsForDefaultServiceAccounts` organization policy constraint to prevent default service accounts from receiving the primitive Editor role.
 
-- Insert the email address into the **_New principals_** field
-- Assign the appropriate roles needed. **Ensure to select roles based off the
-  principle of least privileged. **
+### Application-specific groups
 
-- Click **_SAVE_** when all necessary roles have been selected.
+Tenant platforms such as enterprise data warehouses often require workload-specific groups including Data Analyst, Data Engineer, Network Administrator, Security Administrator, and Security Analyst. Although you manage these application-level groups outside the core Stellar Engine stages, map their permissions carefully against foundational role groups to prevent unintended privilege overlap.
 
-## Group IAM
+### User-specific IAM
 
-- Navigate to <https://console.cloud.google.com>
-- In the console search bar type and select **Groups**.
+When a development exception requires inspecting or granting principal-level access in the Google Cloud console, apply least-privilege roles:
 
-You will see pre-configured IAM Groups that are organically a part of Stellar
-Engine
+1. Open <https://console.cloud.google.com> and select **IAM** from the search bar.
+2. Select **Allow** and **View By Principals**, then click **Grant Access**.
+3. Enter the principal address in the **New principals** field.
+4. Select the minimum roles required under the principle of least privilege.
+5. Click **Save**.
 
-- By clicking on the three dots of a particular group, you can add users to
-  the specified group
+### Group IAM
 
-- To create additional groups, click **_Create_**
+Add users to Stellar Engine role groups or register new functional groups in the Google Cloud console:
 
-- Fill out **Group Name**, **Group email address**, _and_ **Group
-  description**.
-- Click **_SAVE_**
-- Navigate to **_IAM_**
+1. Open <https://console.cloud.google.com> and select **Groups** from the search bar to view pre-configured Stellar Engine IAM groups.
+2. Click the three-dot menu next to an existing group to add members, or click **Create** to define a new group with its name, email address, and description, then click **Save**.
+3. Navigate to **IAM**, select **Allow** and **View By Principals**, and click **Grant Access**.
+4. Enter the group email address in the **New principals** field and assign the minimum required roles.
+5. Click **Save**.
 
-- Select the **_Allow_** and **_View By Principals_**
-- Click **_Grant Access_**
+### IAM references
 
-- Insert the new group email address into the **_New principals_** field
-- Assign the appropriate roles needed. **Ensure to select roles based off the
-  principle of least privilege. **
+- NIST SP 800-53 Revision 5 control SA-8(14), Security and Privacy Engineering Principles for Least Privilege.
 
-- Click **_SAVE_** when all necessary roles have been selected.
+## 2. Group visibility restrictions
 
-**References**
+Restrict group membership visibility in Google Workspace or Cloud Identity so non-administrative users such as application developers cannot enumerate privileged administrator groups:
 
-**_NIST SP 800-53 revision 5, Security and Privacy Controls for Federal
-Information Systems and Organizations_**
+1. Sign in to [Google Admin console](https://admin.google.com/ac/security/2sv) with a Super Admin account.
+2. Navigate to **Directory** and select **Groups**.
+3. Select the privileged group whose membership list you want to restrict.
+4. Open **Access settings** and click the edit icon next to **Access type**.
+5. Select **Restricted** to prevent general directory users from viewing group members.
 
-- **SA-8(14) Security and Privacy Engineering Principles | Least Privilege**
-  - Implement the security design principle of least privilege
+## 3. Multi-factor authentication
 
-#
+Enforce multi-factor authentication for all privileged and non-privileged user accounts to meet IL5 and NIST authentication requirements. Stellar Engine cannot toggle Workspace-level authentication settings automatically during Terraform bootstrap, so Independent Software Vendors and organization administrators must enable multi-factor authentication when provisioning user accounts to block credential stuffing, phishing, and lateral movement:
 
-# Group Permission Viewing Restrictions
+1. Sign in to <https://admin.google.com/ac/security/2sv> with a Super Admin account.
+2. Select **Allow users to turn on 2-Step Verification**.
+3. Set **Enforcement** to **On**.
+4. Configure the **New user enrollment period**, **Frequency**, and allowed **Methods** according to your compliance baseline.
+5. Click **Save**.
 
-In most organizations a healthy amount of opacity is desired. Most organizations
-will want to disable general viewership of group members. For example, an
-organization may wish that their developers not be able to generally see who are
-all the members of a super-admin group. For instance, an organization might want
-to restrict developers' general access to the membership list of a super-admin
-group. &#11;
+### MFA references
 
-- With a Super User account, visit
-  [https://admin.google.com](https://admin.google.com/ac/security/2sv)
-- Via the Dropdown Menu Directory \> Groups
-- Select the group which you wish to restrict membership viewers
-- Access Settings \> Edit (hover over access type and click the pencil)
-- Change the Radio Icon to Restricted.
+- NIST SP 800-53 Revision 5 control IA-2(1), Multi-Factor Authentication for Privileged Accounts.
+- NIST SP 800-53 Revision 5 control IA-2(2), Multi-Factor Authentication for Non-Privileged Accounts.
+- NIST SP 800-63-3, Digital Identity Guidelines.
 
-# Multi Factor Authentication
+## 4. Cloud Shell restrictions
 
-Multi-Factor Authentication (MFA) must be enforced for all users (both
-privileged and non-privileged) to significantly enhance account security. While
-not enforced by default in Stellar Engine due to logistical reasons, enabling
-MFA is crucial for IL5 compliance and aligns with best practices recommended by
-Google and NIST. Without MFA, compromised user credentials (obtained via methods
-like password spraying or social engineering) grant an attacker unrestricted
-access to internal resources, potentially facilitating lateral movement.
+Disable Google Cloud Shell across IL2, IL4, and IL5 organizations because Cloud Shell is not an approved service for those regimes; check the [Assured Workloads supported products list](https://cloud.google.com/assured-workloads/docs/supported-products) for current regime coverage. Leaving Cloud Shell enabled gives an authenticated attacker a Google-hosted execution environment outside your customer-managed VPC perimeter that can proxy traffic and bypass host-level audit controls.
 
-ISV must implement MFA when creating user accounts.
+Independent Software Vendors and organization administrators must disable Cloud Shell in the Google Admin console:
 
-- With a Super User account, visit <https://admin.google.com/ac/security/2sv>
-- Check the box **_Allow users to turn on 2-Step Verification_**
-- Select **_Enforcement On_**
-- Configure **_New user enrollment period_**, **_Frequency_**, and
-  **_Methods_**, as needed
+1. Sign in to <https://admin.google.com/ac/appslist/additional> with a Super Admin account.
+2. Select **Google Cloud Platform** and open **Cloud Shell Access Settings**.
+3. Clear **Allow access to Cloud Shell**.
+4. Click **Save**.
 
-- Click **_SAVE_**
+### Cloud Shell references
 
-**References**
+- [Disable or reset Cloud Shell](https://cloud.google.com/shell/docs/resetting-cloud-shell) in the Google Cloud documentation.
 
-**_NIST SP 800-53 revision 5, Security and Privacy Controls for Federal
-Information Systems and Organizations_**
+## 5. Logging and SIEM segmentation
 
-- **IA-2(1) Identification and Authentication (organizational users) |
-  Multi-Factor Authentication for Privileged Accounts**
-  - Implement multi-factor authentication for access to privileged accounts
-- **IA-2(2) Identification and Authentication (organizational users) |
-  Multi-Factor Authentication for Non-Privileged Accounts**
-  - Implement multi-factor authentication for access to non-privileged
-    accounts
+Google Cloud generates audit, network, and provider access telemetry to support continuous monitoring and incident response:
 
-**_NIST SP 800-63-3, Digital Identity Guidelines_**
+- Admin Activity audit logs record API calls and administrative actions that modify resource configurations or IAM policies.
+- Data Access audit logs record reads of resource configurations and metadata along with user-driven creation, modification, or reads of resource data.
+- System Event audit logs record automated Google Cloud actions that modify resource configurations.
+- VPC Flow Logs sample network flows to and from Compute Engine instances for traffic analysis and forensics.
+- Firewall Rules Logging records rule matches and connection counts across VPC firewall rules.
+- Access Transparency logs record actions taken by Google personnel when servicing support requests or maintaining platform availability.
 
-#
+Independent Software Vendors must deploy a dedicated Security Information and Event Management and Security Orchestration, Automation, and Response platform in a separate project and isolated VPC away from monitored tenant workloads. Isolating the SIEM instance preserves log integrity while delivering real-time alerting across infrastructure and application telemetry.
 
-# GCP Cloud Shell Enabled
+### Logging references
 
-Cloud Shell is not currently supported at IL2, IL4, and IL5 and should be
-disabled. To see a list of compliant products, refer to this page
-[https://cloud.google.com/assured-workloads/docs/supported-products
-](https://cloud.google.com/assured-workloads/docs/supported-products)
+- NIST SP 800-53 Revision 5 control families for Audit and Accountability, Assessment, Authorization, and Monitoring, and System and Information Integrity.
 
-Cloud Shell provides an opportunity for execution within the GCP Environment. An
-attacker can leverage this resource to execute a payload and gain persistence in
-the environment. The Cloud Shell instance is not a Compute Instance hosted by
-the GCP customer, rather GCP. Although the compromised instance isn't directly
-involved in critical projects, it lets attackers proxy traffic through Google
-and bypass system-level logging on the host.
+## 6. Cloud Storage exfiltration controls
 
-ISV is responsible for disabling GCP Cloud Shell access.
+Enforce multi-factor authentication across all accounts as described in section 3 so compromised user credentials cannot read or exfiltrate sensitive objects from Cloud Storage.
 
-- With a Super User account, visit
-  <https://admin.google.com/ac/appslist/additional>
+Layer Context-Aware Access policies and VPC Service Controls perimeters around Cloud Storage buckets wherever your target compliance regime supports them. Note that Identity-Aware Proxy is not compliant with IL5, and VPC Service Controls are currently unavailable within an IL5 environment.
 
-<!-- end list -->
+### Storage boundary references
 
-- Scroll down and click **_Google Cloud Platform_**
-- Click **Cloud Shell Access Settings**
+- NIST SP 800-53 Revision 5 controls IA-2(1) and IA-2(2), and NIST SP 800-63-3.
+- [Context-Aware Access setup guide](https://cloud.google.com/iap/docs/cloud-iap-context-aware-access-howto).
+- [VPC Service Controls overview](https://cloud.google.com/vpc-service-controls/docs/overview#how-vpc-service-controls-works).
 
-- Uncheck **_Allow access to Cloud Shell_**
-- Click **_SAVE_**
+## 7. Essential Contacts
 
-#
+Configure Google Cloud Essential Contacts so designated security, billing, legal, and operations groups receive critical platform notifications without delay. Independent Software Vendors must register Essential Contacts across their organization hierarchy.
 
-**References**
+### Domain restrictions
 
-**_Google Cloud Shell Documentation_**
+Google Cloud enforces the `essentialcontacts.managed.allowedContactDomains` organization policy constraint to restrict notification recipients to approved email domains. Organizations created on or after June 26, 2025 automatically allow their primary organization domain, whereas older organizations or Terraform-managed policies may restrict or omit secondary partner domains and block contact registration.
 
-- **_Disable or reset Cloud Shell;
-  _**<https://cloud.google.com/shell/docs/resetting-cloud-shell>
+Verify and update allowed contact domains through your Infrastructure as Code workflow:
 
-# Detection, Alerting, and Logging; Security Information and Event Management is Not Segmented
+1. Inspect the active [Essential Contacts](https://cloud.google.com/resource-manager/docs/managing-notification-contacts) `essentialcontacts.managed.allowedContactDomains` policy on your organization.
+2. Add each trusted recipient domain prefixed with `@`, such as `@myorgdomain.com` or `@`[partnerdomain.com](http://partnerdomain.com).
+3. Commit these domain policy updates in Terraform or your active policy automation tool rather than editing them manually in the Google Cloud console or `gcloud`, so subsequent pipeline runs do not overwrite your changes.
 
-Google Cloud collects several types of logs for auditing and monitoring:
+### Adding contacts
 
-- **Audit Logs**: Record actions within the cloud environment. There are three
-  types:
-  - **Admin Activity**: Logs changes to resource configurations (e.g.,
-    creating VMs, changing permissions).
-  - **Data Access**: Logs reads of resource configuration and metadata, as
-    well as user actions that create, modify, or read user data.
-  - **System Event**: Logs changes made by Google's systems, not directly by
-    users.
-- **Other Logs**: Provide network and access information:
-- **VPC Flow Logs**: Sample network traffic to and from your VMs. Useful for
-  network monitoring and security analysis.
-- **Firewall Rule Logs**: Show how firewall rules are working and how many
-  connections they affect.
-- **Access Transparency Logs**: Detail actions taken by Google staff when they
-  access your environment.
+Register notification recipients at the organization level for inherited coverage or override them on specific folders and projects:
 
-ISV must bring a SIEM/SOAR solution that lives outside the project, in order to
-meet organizational and compliance requirements.
+1. Open <https://console.cloud.google.com> and select the target organization, folder, or project.
+2. Search for and select **Essential Contacts**, then click **Add Contact**.
+3. Enter the recipient group email address and select the notification categories to subscribe:
+   - Select **Suspension** for imminent account or resource suspension alerts.
+   - Select **Security** for security advisories, privacy notices, and vulnerability alerts.
+   - Select **Technical** for service outages, errors, and platform bugs.
+   - Select **Billing** for payment notices, pricing updates, and credit alerts.
+   - Select **Legal** for regulatory compliance and government notices.
+   - Select **Product Updates** for new releases, terms updates, and deprecations.
+   - Select **All** to subscribe the recipient to every notification category.
+4. Click **Save**.
 
-The ISV shall implement their own SIEM to proactively monitor their software’s
-infrastructure and the usage patterns within the software. This SIEM system may
-integrate with existing SIEM tools, but the ISV shall maintain its own dedicated
-instance for comprehensive internal security oversight. The SIEM system must
-provide real-time alerts and notifications based on configured rules and
-thresholds, enabling the ISV to promptly respond to potential threats or
-anomalies.
+### Managing contacts
 
-The ISV must segment the SIEM in another project and on a separate VPC from
-where it is collecting data.
+Update or remove existing Essential Contacts from the Google Cloud console:
 
-**References**
+1. Select the contact entry under the target notification category.
+2. Click **Edit** to update subscribed categories or click **Delete** to remove the contact.
 
-**_NIST SP 800-53 revision 5, Security and Privacy Controls for Federal
-Information Systems and Organizations_**
+### Essential Contacts references
 
-- **Audit and Accountability (AU)**
-- **Assessment, Authorization, and Monitoring (CA)**
-- **System and information Integrity (SI)**
+- [Managing contacts for notifications](https://cloud.google.com/resource-manager/docs/managing-notification-contacts).
 
-# Data Exfiltration Possible from Cloud Storage
+## 8. Data security
 
-Multi-Factor Authentication (MFA) must be enforced for all users (both
-privileged and non-privileged) to significantly enhance account security. While
-not enforced by default in Stellar Engine due to logistical reasons, enabling
-MFA is crucial for IL5 compliance and aligns with best practices recommended by
-Google and NIST. Without MFA, compromised user credentials (obtained via methods
-like password spraying or social engineering) grant an attacker unrestricted
-access to internal resources, potentially facilitating lateral movement.
+Securing data in Google Cloud follows a shared responsibility model in which Google secures the underlying physical infrastructure while you control transport configurations, encryption key lifecycles, bucket permissions, and regional placement.
 
-ISV must implement MFA when creating user accounts.
+### Encryption and data handling
 
-Referring to **_Multi Factor Authentication_**
+Google encrypts inter-service platform traffic and data at rest across physical storage media automatically. Enforce TLS across all external and application-level channels, supply Customer-Managed Encryption Keys for Compute Engine persistent disks and Cloud Storage buckets where required, and add application-layer encryption for sensitive database fields to limit data exposure if workload credentials are compromised. When loading regulated data such as PII or PCI records into BigQuery, enforce dataset access controls and compliance governance before ingestion.
 
-While implementing robust security measures, Stellar Engine shall utilize
-Context Aware Access to restrict resource access based on user context.
-Additionally, the implementation of VPC Service Controls on data storage buckets
-is strongly recommended for enhanced data security. However, it is important to
-note that Identity-Aware Proxy (IAP) is not compliant with IL5 and VPC Service
-Controls are currently unavailable within an IL5.
+### Cloud KMS
 
-**References**
+Use Cloud Key Management Service to manage cryptographic keys and application-level encryption under your compliance boundary:
 
-**_NIST SP 800-53 revision 5, Security and Privacy Controls for Federal
-Information Systems and Organizations_**
+- Rotate encryption keys on an automated schedule through Terraform, `gcloud`, or the Google Cloud console to bound the volume of data protected by any single key version.
+- Enforce separation of duties by hosting Cloud KMS in a dedicated security project without project-level Owner bindings. Restrict organization administrators to IAM policy administration so principals who manage key permissions cannot encrypt or decrypt workload ciphertext.
+- Supply Additional Authenticated Data strings on Cloud KMS encrypt and decrypt API calls to bind ciphertext to its intended context and defend against confused deputy attacks.
 
-- **IA-2(1) Identification and Authentication (organizational users) |
-  Multi-Factor Authentication for Privileged Accounts**
-  - Implement multi-factor authentication for access to privileged accounts
-- **IA-2(2) Identification and Authentication (organizational users) |
-  Multi-Factor Authentication for Non-Privileged Accounts**
-  - Implement multi-factor authentication for access to non-privileged
-    accounts
+### Cloud Storage
 
-**_NIST SP 800-63-3, Digital Identity Guidelines_**
+Because unauthenticated callers can probe Cloud Storage bucket and object existence through error responses, apply strict naming and access hygiene across all buckets:
 
-**_Context Aware Access_**
+- Include random suffixes in bucket names such as `stellar-engine-mybucket-gxl3` so external parties cannot guess or enumerate bucket names or infer stored contents.
+- Configure uniform access or default object ACLs before uploading objects so individual objects do not require retroactive permission fixes.
+- Isolate intentionally public assets in dedicated, explicitly labeled buckets such as `stellar-engine-mybucket-public-3vxa`, completely separate from private tenant buckets.
+- Review object access controls before publishing any data as publicly readable, because internet-exposed objects can be replicated immediately beyond your control.
+- Never grant public write access on Cloud Storage buckets, because writable buckets expose your organization to malware hosting, abuse, and legal or financial liability for uploaded content.
+- Issue time-bounded Signed URLs with explicit read, write, or delete scope whenever external users without Google accounts need temporary authenticated access to specific objects.
 
-- <https://cloud.google.com/iap/docs/cloud-iap-context-aware-access-howto>
+### Data residency
 
-**_VPC Service Controls_**
+Enforce geographic data residency by combining Organization Policy constraints with least-privilege IAM:
 
-- [https://cloud.google.com/vpc-service-controls/docs/overview\#how-vpc-service-controls-work](https://cloud.google.com/vpc-service-controls/docs/overview#how-vpc-service-controls-works)
-
-# Essential Contacts
-
-Essential Contacts, a core service within Google Cloud, is designed to provide
-timely and relevant notifications to designated personnel regarding critical
-aspects of resources and projects. This service allows organizations to assign
-specific individuals or groups to receive alerts on a wide range of topics,
-including billing, security, technical matters, and legal obligations. Properly
-leveraging Essential Contacts is essential for mitigating risks, ensuring
-compliance, and fostering a proactive approach to maintaining a secure and
-well-managed Google Cloud environment.
-
-ISV must configure essential contacts.
-
-## Managing Essential Contacts Domain Restrictions
-
-To enhance security, Google Cloud may enforce the
-essentialcontacts.managed.allowedContactDomains organization policy constraint.
-This policy restricts the email domains that can be used when adding [Essential
-Contacts](https://cloud.google.com/resource-manager/docs/managing-notification-contacts)
-for important notifications.
-
-By default, for organizations created on or after June 26, 2025, the
-organization's own domain is automatically included in the allowed list.
-However, you might find that the list of allowed domains is empty or does not
-include all necessary domains. This can occur if the organization was created
-before this date or if an Infrastructure as Code (IaC) tool like Terraform is
-managing and applying a stricter version of the policy.
-
-If a domain is not on the allowed list, you will be blocked from adding contacts
-with email addresses from that domain.
-
-**Action**:
-
-1.  Verify the current state of the
-    essentialcontacts.managed.allowedContactDomains policy for your
-    organization.
-2.  If necessary, update the policy to add any required contact domains. Each
-    domain entry must be prefixed with an "@" symbol (e.g., @myorgdomain.com,
-    @[partnerdomain.com](http://partnerdomain.com)).
-3.  **Important**: If you use Terraform, Latchkey, or another IaC tool to manage
-    organization policies, ensure you make these changes within your IaC
-    configuration files. Manual changes made via the Cloud Console or gcloud may
-    be overwritten by your IaC automation.
-
-This ensures that only email addresses from approved domains can be designated
-as essential contacts, while allowing you to configure the domains your
-organization trusts.
-
-## Add Essential Contacts
-
-- Navigate to <https://console.cloud.google.com>
-- Select the appropriate organization or project where Essential Contacts will
-  be configured. Essential Contacts configured at the organizational level
-  will be inherited by sub-folders and projects but are able to be overridden
-  at lower levels
-
-- In the console search bar type and select **_Essential Contacts_**
-
-- Click **_Add Contact_**
-
-- Enter the email address of the individual or group to configure
-  notifications.
-- Select the Notification Categories to send corresponding notifications for.
-  - Suspension; messages related to imminent suspension
-  - Security; Security/Privacy issues, notifications, and vulnerabilities
-  - Technical; Technical events and issues, such as outages, errors, and
-    bugs
-  - Billing; Billing and payments notifications, price updates, errors,
-    credits
-  - Legal; Enforcement actions, regulatory compliance, government notices
-  - Product Updates; New versions, product terms updates, deprecations
-  - All; All notifications from every other category
-- Click **_SAVE_**
-
-## Manage Existing Contacts
-
-- Click to **_edit_** the Essential Contact for the applicable **_Notification
-  Category_**
-
-- Click to **_EDIT_** the Essential Contact or Click to ***DELETE ***the
-  Essential Contact
-
-**References**
-
-**_Managing Contacts for Notifications_**
-
-- <https://cloud.google.com/resource-manager/docs/managing-notification-contacts>
-
-# Data Security
-
-Google provides many protections to GCP customers, however, security of
-workloads running in GCP is a shared responsibility.
-
-Customers are responsible for the following aspects of their application
-security:
-
-## Data
-
-Google encrypts all data communication channels that it uses to transmit data
-between services; customers are responsible for ensuring that the transmission
-of data is facilitated over an encrypted channel.
-
-Google encrypts all data on storage devices to prevent anyone with physical
-access to physical devices from being able to inspect the data contained on
-those devices. Customers can provide their own encryption keys for the
-encryption of Google Compute Engine Persistent Disks and Google Cloud Storage
-buckets.
-
-Data stored within databases are all encrypted at the storage level, however
-additional encryption is advisable at the application level to prevent customer
-users from accessing content and limiting spillage in the event of intrusion.
-
-A customer may load data which may include PII and PCI into BigQuery for
-analysis. Customers are responsible for being aware of and abiding by any
-regulations regarding the use and storage of this data and are responsible for
-developing their own aggregation capabilities.
-
-## Cloud Key Management Service (KMS)
-
-Cloud KMS is a global cloud-hosted key management service that lets customers
-manage encryption for cloud services the same way a customer would on-premise.
-
-Cloud KMS is a good solution if a customer needs to encrypt data at the
-application level or manage their own encryption keys for compliance or
-regulatory reasons.
-
-- **Key Rotation: **Regular rotation of the encryption key is encouraged.
-  Regular rotation will limit the amount of data protected by a single key.
-  Automatic rotation can be configured on a user defined schedule by using
-  _gcloud_ or the _GCP Console_.
-- **Separation of duties: **Cloud KMS should be run in its own project without
-  an owner at the project-level and instead being managed by an Org Admin. The
-  Org Admin is not able to manage or use keys, but they are able to set IAM
-  policies to restrict who has permissions for key management and usage.
-  Additionally, the ability to manage Cloud KMS should have role separation
-  from the ability to perform encryption and decryption operations. Any user
-  with management access should not be able to decrypt data.
-- **Additional Authenticated Data (AAD): **It is recommended to use AAD as an
-  additional integrity check to help protect your data from a confused deputy
-  attack. Additional authenticated data is a string that is passed to Cloud
-  KMS as part of an encrypt or decrypt API call. Cloud KMS cannot decrypt
-  ciphertext unless the same AAD value is used for both encryption and
-  decryption. By default, an empty string is used for the AAD value.
-
-## Google Cloud Storage
-
-Google Cloud Storage identifies buckets and objects by their names. While Access
-Control Lists (ACLs) prevent unauthorized actions, anyone can attempt requests
-using bucket or object names. Even a failed request reveals whether a bucket or
-object exists. This is a potential security concern, as observing error
-responses can expose the existence of buckets and objects to unauthorized
-parties. Furthermore, bucket names themselves might hint at the data they
-contain, potentially leading to information leaks. If you're concerned about
-protecting the privacy of your bucket and object names, consider taking
-appropriate precautions, such as:
-
-- Choosing bucket and object names that are difficult to guess
-  - For example, a bucket named _stellar-engine-mybucket-gxl3_ is random
-    enough that unauthorized third parties cannot feasibly guess it or
-    enumerate other bucket names from it.
-- Ensure your default object ACLs meet your requirements before uploading
-  objects to a bucket. Setting them correctly beforehand can save significant
-  time compared to updating individual object ACLs later.
-- A straightforward and effective security practice is to segregate private
-  and public data into separate buckets, clearly labeling those intended for
-  public access.
-  - For example, _stellar-engine-mybucket-public-3vxa_.
-- **_Best Practice_**: Carefully evaluate the access control settings for each
-  Cloud Storage object before writing data. Public read access grants
-  universal read permissions and should only be used when deliberately
-  exposing data to the public internet. Once an object is made publicly
-  readable, it can be copied and disseminated, making it virtually impossible
-  to regain exclusive control over the content.
-- **_Best Practice_**: Avoid granting public write access to Cloud Storage
-  buckets. While publicly writable buckets may appear convenient, the security
-  risks are substantial. They can be easily exploited for malicious purposes,
-  including the distribution of illegal content, viruses, and malware. Bucket
-  owners bear full legal and financial responsibility for all content stored
-  within their buckets, regardless of its origin.
-- **_Best Practice_**: Utilize Signed URLs to securely share Cloud Storage
-  content with users who do not have Google accounts. Signed URLs offer a
-  controlled method for granting temporary, authenticated access to specific
-  objects without requiring users to directly authenticate with Cloud Storage.
-  Users retain control over the access type (read, write, delete) and its
-  duration.
-
-## Data residency
-
-**_Best Practice_**: Implement a comprehensive data residency strategy
-leveraging the Organization Policy Service and Cloud IAM.
-
-- **Define Required Regions**: Clearly define the regions where your data is
-  permitted to reside, based on regulatory requirements and business needs.
-- **Implement Organization Policy**: Use the Organization Policy Service's
-  "resource locations" constraint to restrict the creation of new resources to
-  the approved regions. Apply this policy at the organization, folder, or
-  project level as appropriate.
-- **Integrate with Cloud IAM**: Configure Cloud IAM to control service usage,
-  preventing users from inadvertently deploying resources in non-compliant
-  regions.
-- **Audit and Monitor**: Regularly audit your Google Cloud environment to
-  ensure ongoing compliance with data residency policies.
-- **Understand Limitations**: Be aware that the "resource locations"
-  constraint only applies to newly created resources. Existing resources
-  created before the policy was implemented will continue to function in their
-  existing locations.
-
-This multi-faceted approach helps ensure your data at rest remains within the
-intended geographic boundaries.
+- Identify the exact Google Cloud regions authorized by your compliance regime and customer contracts.
+- Apply the `constraints/gcp.resourceLocations` organization policy constraint at the organization, folder, or project level to restrict newly created resources to approved regions.
+- Restrict IAM permissions for regional and global services so operators cannot provision resources outside compliant boundaries.
+- Audit deployed assets regularly to verify continuous compliance with regional residency policies.
+- Account for existing resources separately during migrations, because `constraints/gcp.resourceLocations` evaluates new resource creation and does not relocate pre-existing resources.

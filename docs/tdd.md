@@ -1,292 +1,285 @@
-# **Stellar Engine**
+# Stellar Engine technical design document
 
-Technical Design Document
+| Field | Value |
+| :--- | :--- |
+| Date updated | December 5, 2025 |
+| Version | v3.0 |
+| Recent changes | Updates to reflect new architecture and administrative corrections |
 
-Date updated: December 5, 2025
+This document serves as an illustrative technical working reference to guide project delivery. Its activities and design goals provide architectural detail and do not supersede any legal terms or conditions defined in the customer's written contract with Google.
 
-| <strong>Created:</strong>             |                                                                 |
-| :------------------------------------ | :-------------------------------------------------------------- |
-| <strong>Updated:</strong>             |                                                                 |
-| <strong>Version:</strong>             | v3.0                                                            |
-| <strong>Most recent changes:</strong> | Updates to reflect new architecture; Administrative corrections |
+<!-- BEGIN TOC -->
+- [1. Purpose](#1-purpose)
+- [2. Executive summary](#2-executive-summary)
+  - [2.1 Overview](#21-overview)
+  - [2.2 Project architecture](#22-project-architecture)
+- [3. Cloud foundation](#3-cloud-foundation)
+  - [3.1 Project organization](#31-project-organization)
+    - [Network security and isolation](#network-security-and-isolation)
+    - [Data security and encryption](#data-security-and-encryption)
+    - [IAM and service accounts](#iam-and-service-accounts)
+    - [Serverless security](#serverless-security)
+    - [Resource management](#resource-management)
+    - [Folder hierarchy](#folder-hierarchy)
+    - [Example organization layout](#example-organization-layout)
+  - [3.2 IAM](#32-iam)
+    - [IAM principles](#iam-principles)
+    - [Role groups](#role-groups)
+      - [Initial role groups](#initial-role-groups)
+      - [Role group mappings](#role-group-mappings)
+      - [Application-specific groups](#application-specific-groups)
+    - [Service accounts](#service-accounts)
+      - [Bootstrap service account](#bootstrap-service-account)
+    - [IAM roles](#iam-roles)
+      - [Organization node](#organization-node)
+      - [Data platform development folder](#data-platform-development-folder)
+      - [Data platform production folder](#data-platform-production-folder)
+      - [GKE development folder](#gke-development-folder)
+      - [GKE production folder](#gke-production-folder)
+      - [Networking folder](#networking-folder)
+      - [Networking development folder](#networking-development-folder)
+      - [Networking production folder](#networking-production-folder)
+      - [Core automation project](#core-automation-project)
+  - [3.3 Code control](#33-code-control)
+    - [GitHub repositories](#github-repositories)
+    - [Branching strategy](#branching-strategy)
+    - [Pull request validation](#pull-request-validation)
+  - [3.4 Infrastructure as Code](#34-infrastructure-as-code)
+    - [Repository layout](#repository-layout)
+  - [3.5 Terraform design principles](#35-terraform-design-principles)
+    - [Environment partitioning](#environment-partitioning)
+  - [3.6 Networking](#36-networking)
+    - [Shared VPC topology](#shared-vpc-topology)
+    - [Virtual Private Clouds](#virtual-private-clouds)
+    - [Subnet allocations](#subnet-allocations)
+    - [Private Google Access](#private-google-access)
+    - [Inter-service communication](#inter-service-communication)
+    - [VPC firewall rules](#vpc-firewall-rules)
+    - [Hub-and-spoke topology](#hub-and-spoke-topology)
+    - [Compliance regime overlays](#compliance-regime-overlays)
+      - [FedRAMP High and Moderate pattern](#fedramp-high-and-moderate-pattern)
+      - [IL5 pattern](#il5-pattern)
+- [4. Assured Workloads](#4-assured-workloads)
+- [5. Information security](#5-information-security)
+  - [5.1 Access control](#51-access-control)
+    - [Account types](#account-types)
+    - [Identity providers](#identity-providers)
+    - [Multi-factor authentication](#multi-factor-authentication)
+    - [Role-based access control](#role-based-access-control)
+  - [5.2 Data security](#52-data-security)
+    - [Platform security](#platform-security)
+    - [Data protection](#data-protection)
+    - [Cloud KMS](#cloud-kms)
+      - [Key management practices](#key-management-practices)
+    - [Cloud Storage](#cloud-storage)
+    - [Data residency](#data-residency)
+    - [Encryption at rest](#encryption-at-rest)
+    - [Encryption in transit](#encryption-in-transit)
+    - [TLS version](#tls-version)
+  - [5.3 Logging and auditing](#53-logging-and-auditing)
+    - [Audit logs](#audit-logs)
+    - [Network and access logs](#network-and-access-logs)
+    - [Log destinations](#log-destinations)
+  - [5.4 Monitoring](#54-monitoring)
+    - [Host projects](#host-projects)
+    - [Monitoring groups](#monitoring-groups)
+    - [Alerting policies](#alerting-policies)
+    - [Dashboards](#dashboards)
+  - [5.5 Security boundaries](#55-security-boundaries)
+    - [Organization policy inheritance](#organization-policy-inheritance)
+    - [Project layout and VPC Service Controls](#project-layout-and-vpc-service-controls)
+  - [5.6 Network security](#56-network-security)
+    - [Shared VPC access control](#shared-vpc-access-control)
+    - [Environment firewall rules](#environment-firewall-rules)
+    - [Cloud DNS](#cloud-dns)
+  - [5.7 Customer security practices](#57-customer-security-practices)
+    - [Security Command Center](#security-command-center)
+    - [VPC and hierarchical firewall governance](#vpc-and-hierarchical-firewall-governance)
+    - [Data management](#data-management)
+      - [Sensitive data inspection](#sensitive-data-inspection)
+  - [5.8 Vulnerability management](#58-vulnerability-management)
+    - [Rapid Vulnerability Detection](#rapid-vulnerability-detection)
+    - [Supported scan targets](#supported-scan-targets)
+    - [Managed scans](#managed-scans)
+    - [Service enablement](#service-enablement)
+      - [Testing](#testing)
+      - [Reviewing findings](#reviewing-findings)
+      - [Viewing findings](#viewing-findings)
+<!-- END TOC -->
 
-Contents
+## 1. Purpose
 
-_This document is intended to be a technical working document to help manage the
-delivery of a project and is provided for illustrative purposes only. The
-activities and goals serve as guidelines and additional detail, and do not
-supersede any legal terms or conditions as defined in the customer’s written
-contract with Google. _
+Extending [Cloud Foundation Fabric](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric), Stellar Engine provides compliant Google Cloud infrastructure and opinionated architecture patterns for supported [Assured Workloads](https://cloud.google.com/security/products/assured-workloads?hl=en) compliance regimes, paired with Google best practices and cybersecurity documentation to accelerate the federal Authorization to Operate process. Stellar Engine serves as an engineering accelerator for teams supporting Google Cloud customer and partner engagements:
 
-# 1.0 Purpose
+- Automates the foundational Google Cloud landing zone phases of a Google Public Sector Professional Services engagement.
+- Establishes a reusable baseline for Google Public Sector reference architectures and workload blueprints.
+- Delivers an Impact Level 5 compliant Terraform Infrastructure as Code framework that customers can adopt and operate.
+- Extends cleanly to additional federal compliance regimes across customer engagements.
+- Simplifies Google Cloud and Terraform adoption for regulated public sector teams.
 
-Extending [Cloud Foundation
-Fabric](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric), Stellar
-Engine provides compliant Google Cloud infrastructure and opinionated
-architecture patterns for supported [Assured
-Workloads](https://cloud.google.com/security/products/assured-workloads?hl=en)
-compliance regimes, including Google best practices and cybersecurity
-documentation to aid in the Federal Authorization to Operate (ATO) process.
-Stellar Engine is designed as an accelerator for technology teams supporting
-Google Cloud customer and partner engagements.
+For post-deployment operational hardening procedures, see the [Security Best Practices Guide](security-best-practices.md).
 
-Specifically, Stellar Engine:
+## 2. Executive summary
 
-- Templatizes and automates the initial GCP foundations phases of a GPS
-  Professional Services Organization (PSO) customer engagement
-- Provides a common base on which to build GPS reference architectures and
-  solutions
-- Supports PSO customers with an Impact Level 5 (IL5) compliant Infrastructure
-  as Code (IaC) framework that they can adopt
-- Provides PSO the ability to extend the codebase to be compliant with other
-  Federal Government programs in future engagements
-- Eases the use of GCP and Terraform for GPS customers
+The supplied directory structure and Terraform modules provide a starting foundation with pragmatic defaults that you can tailor to organizational requirements. Operators currently deploy the stages manually while evaluating IL5-compliant CI/CD automation options such as GitHub Actions, GitLab CI/CD, and Cloud Build.
 
-This document is not intended to inform users on Security Best Practices. For
-information on post deployment recommendations, please see the [Security Best
-Practices Guide
-(SBPG)](security-best-practices.md).
+Stage 0 creates a root folder at the top of the organization to hold foundational projects and policies. Under the root folder, you can provision tenant folders inside Assured Workloads boundaries configured for regimes such as FedRAMP Moderate, FedRAMP High, or IL5. Deployments typically validate workloads in non-production environments before promoting configurations to production.
 
-# 2.0 Executive Summary
+### 2.1 Overview
 
-The supplied structure and code is intended to form a starting point for
-building your own foundation with pragmatic defaults that you can customize to
-meet your own requirements. Currently, all code is deployed manually as we
-determine a path forward that embraces automation – such as Github Actions,
-GitLab CI/CD, or Cloud Build – and is compliant with established IL5
-regulations.
+Bootstrap scripts and staged Terraform configurations provision a baseline landing zone inside an Assured Workloads folder. Once the foundation is active, you can deploy individual Google Cloud and approved third-party workload blueprints based on tenant requirements, as detailed in section 3.4.
 
-A root folder is created at the top of the organization to hold all projects and
-resources. From the root folder, tenants can be created in either an Assured
-Workloads folder with configurable compliance regime, such as FedRAMP High, FedRAMP Moderate, or IL5, based on the needs of the user. Each deployment initially creates a
-development environment with the intention of users migrating to a production
-environment after the development environment has been fully built and tested.
+### 2.2 Project architecture
 
-## 2.1 Overview
+In the `example.com` reference architecture, foundational projects reside under the organization hierarchy to host shared automation, audit logging, and billing telemetry created by the deployment pipeline.
 
-Stellar Engine is provisioned through a series of bootstrap scripts to create a
-baseline environment within an Assured Workloads folder. Once the environment is
-provisioned, users can pick and choose what services to deploy based on their
-specific use case (see Section 3.4 for more details). In addition to Google
-Cloud services, the IaC provides users the flexibility to provision third-party
-offerings to operate within the Stellar Engine environment.
+| Project | Description |
+| :--- | :--- |
+| `org-iac-core-0` | Hosts the Terraform state buckets and automation service accounts that build foundational organization components. Restrict access to this project tightly. |
+| `org-audit-logs-0` | Hosts centralized log sinks, retention buckets, and detective security controls. |
+| `org-billing-export-0` | Hosts an optional BigQuery dataset for organization [billing exports](https://cloud.google.com/billing/docs/how-to/export-data-bigquery). |
 
-## 2.2 Project Architecture
+## 3. Cloud foundation
 
-In the _example.com_ architecture, a series of projects reside under the
-organization node, which contains resources that are used across the
-_example.com_ organization. These projects, detailed in the table below, provide
-various enterprise functions and are created through the infrastructure
-deployment pipeline.
+### 3.1 Project organization
 
-| Project              | Description                                                                                                                                                         |     |
-| :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :-- |
-| org-iac-core-0       | Contains the deployment pipeline that's used to build out the foundation components of the organization. <strong>This project should be highly restricted</strong>. |     |
-| org-audit-logs-0     | Provides a destination for log sinks and detective controls.                                                                                                        |     |
-| org-billing-export-0 | Contains a BigQuery dataset with the organization's <a href='https://cloud.google.com/billing/docs/how-to/export-data-bigquery'>billing exports</a>. (optional)     |     |
+Terraform enforces the following organization policies at the organization level using Google-managed constraints and custom constraints defined in YAML files under `data/org-policies/` and `data/custom-org-policies/`.
 
-# 3.0 Cloud Foundation
+#### Network security and isolation
 
-## 3.1 Project Organization
+| Constraint | Enforcement |
+| :--- | :--- |
+| `compute.vmExternalIpAccess` | Denies all external IP addresses on Compute Engine VM instances. |
+| `compute.skipDefaultNetworkCreation` | Skips creation of the `default` VPC network in newly created projects. |
+| `compute.restrictProtocolForwardingCreationForTypes` | Restricts new forwarding rules to `INTERNAL` IP addresses. |
+| `compute.restrictLoadBalancerCreationForTypes` | Restricts load balancer creation to `INTERNAL` types only. |
+| `compute.disableGlobalLoadBalancing` | Disables global load balancing resources. |
+| `compute.disableGlobalCloudArmorPolicy` | Disables global Cloud Armor security policies. |
+| `compute.disableGlobalSelfManagedSslCertificate` | Disables global self-managed SSL certificates. |
+| `compute.restrictCloudNATUsage` | Restricts Cloud NAT gateways to organization resources. |
+| `compute.restrictDedicatedInterconnectUsage` | Restricts Dedicated Interconnect attachments to organization resources. |
+| `compute.restrictPartnerInterconnectUsage` | Restricts Partner Interconnect attachments to organization resources. |
+| `compute.restrictVpcPeering` | Restricts VPC Network Peering to organization resources and approved folders. |
+| `compute.setNewProjectDefaultToZonalDNSOnly` | Configures newly created projects to use zonal internal DNS by default. |
+| `sql.restrictAuthorizedNetworks` | Blocks unproxied authorized network ranges on Cloud SQL instances. |
+| `sql.restrictPublicIp` | Blocks public IP addresses on Cloud SQL instances. |
 
-.The following policies are implemented at the organization level via Terraform.
-They are applied using a combination of Google-managed defaults and custom
-constraints defined in YAML files (data/org-policies/ and
-data/custom-org-policies/).
+#### Data security and encryption
 
-### Network Security & Isolation:
+| Constraint | Enforcement |
+| :--- | :--- |
+| `custom.kmsRotation` | Custom constraint enforcing the maximum rotation period on Cloud KMS keys. |
+| `storage.uniformBucketLevelAccess` | Requires uniform bucket-level access across Cloud Storage buckets. |
+| `storage.publicAccessPrevention` | Blocks public access on Cloud Storage buckets. |
+| `storage.secureHttpTransport` | Requires HTTPS transport for Cloud Storage requests. |
+| `appengine.disableCodeDownload` | Disables source code downloads from App Engine applications. |
+| `bigquery.disableBQOmniAWS` | Disables BigQuery Omni cross-cloud connections to AWS. |
+| `bigquery.disableBQOmniAzure` | Disables BigQuery Omni cross-cloud connections to Azure. |
 
-- compute.vmExternalIpAccess: Deny All. VMs cannot be created with external IP
-  addresses.
-- compute.skipDefaultNetworkCreation: Enforced. Skips creation of the default
-  network in new projects.
-- compute.restrictProtocolForwardingCreationForTypes: Restricted to INTERNAL.
-  New forwarding rules must use internal IP addresses.
-- compute.restrictLoadBalancerCreationForTypes: Restricted to INTERNAL. Only
-  internal load balancers are allowed.
-- compute.disableGlobalLoadBalancing: Enforced. Global load balancing is
-  disabled.
-- compute.disableGlobalCloudArmorPolicy: Enforced. Global Cloud Armor policies
-  are disabled.
-- compute.disableGlobalSelfManagedSslCertificate: Enforced. Global
-  self-managed SSL certificates are disabled.
-- compute.restrictCloudNATUsage: Restricted to organization resources.
-- compute.restrictDedicatedInterconnectUsage: Restricted to organization
-  resources.
-- compute.restrictPartnerInterconnectUsage: Restricted to organization
-  resources.
-- compute.restrictVpcPeering: Restricted to organization resources and
-  specific allowed folders.
-- compute.setNewProjectDefaultToZonalDNSOnly: Enforced. Newly created projects
-  use Zonal DNS by default.
-- sql.restrictAuthorizedNetworks: Enforced. Prevents adding authorized
-  networks for unproxied Cloud SQL access.
-- sql.restrictPublicIp: Enforced. Restricts public IP addresses on Cloud SQL
-  instances.
+#### IAM and service accounts
 
-### Data Security & Encryption:
+| Constraint | Enforcement |
+| :--- | :--- |
+| `iam.managed.disableServiceAccountKeyCreation` | Disables user-managed service account key creation. |
+| `iam.managed.disableServiceAccountKeyUpload` | Disables uploading external public keys to service accounts. |
+| `iam.managed.preventPrivilegedBasicRolesForDefaultServiceAccounts` | Blocks privileged basic roles on default service accounts. |
+| `iam.automaticIamGrantsForDefaultServiceAccounts` | Prevents automatic Editor role grants on default service accounts. |
+| `iam.serviceAccountKeyExposureResponse` | Sets `DISABLE_KEY` to disable exposed service account keys automatically. |
+| `iam.allowedPolicyMemberDomains` | Restricts IAM policy principals to the customer ID and approved domains. |
+| `essentialcontacts.managed.allowedContactDomains` | Restricts Essential Contacts notifications to approved domains. |
+| `essentialcontacts.allowedContactDomains` | Restricts Essential Contacts addresses to the organization domain. |
 
-- custom.kmsRotation: Enforced. Requires proper rotation period for KMS keys
-  (Custom Constraint).
-- storage.uniformBucketLevelAccess: Enforced. Buckets must use uniform
-  bucket-level access.
-- storage.publicAccessPrevention: Enforced. Prevents public access to Cloud
-  Storage buckets.
-- storage.secureHttpTransport: Enforced. Requires HTTPS for Cloud Storage.
-- appengine.disableCodeDownload: Enforced. Disables downloading source code
-  from App Engine.
-- bigquery.disableBQOmniAWS: Enforced. Disables BigQuery Omni for AWS.
-- bigquery.disableBQOmniAzure: Enforced. Disables BigQuery Omni for Azure.
+#### Serverless security
 
-### IAM & Service Accounts:
+| Constraint | Enforcement |
+| :--- | :--- |
+| `cloudfunctions.allowedIngressSettings` | Sets `ALLOW_INTERNAL_AND_GCLB` to restrict Cloud Functions ingress. |
+| `cloudfunctions.allowedVpcConnectorEgressSettings` | Sets `ALL_TRAFFIC` to route all Cloud Functions egress through a VPC connector. |
+| `run.allowedIngress` | Sets `internal-and-cloud-load-balancing` to restrict Cloud Run ingress. |
+| `run.allowedVPCEgress` | Sets `all-traffic` to route all Cloud Run egress through VPC networking. |
+| `cloudbuild.allowedIntegrations` | Restricts Cloud Build external repository integrations to `github.com`. |
 
-- iam.managed.disableServiceAccountKeyCreation: Enforced.
-- iam.managed.disableServiceAccountKeyUpload: Enforced.
-- iam.managed.preventPrivilegedBasicRolesForDefaultServiceAccounts: Enforced.
-- iam.automaticIamGrantsForDefaultServiceAccounts: Enforced. Prevents
-  automatic role grants for default service accounts.
-- iam.serviceAccountKeyExposureResponse: DISABLE_KEY. Automatically disables
-  exposed keys.
-- iam.allowedPolicyMemberDomains: Restricted to the customer ID and allowed
-  domains.
-- essentialcontacts.managed.allowedContactDomains: Restricted to allowed
-  domains.
-- essentialcontacts.allowedContactDomains: Restricted to the organization's
-  domain.
+#### Resource management
 
-### Serverless Security (Cloud Run & Functions):
+| Constraint | Enforcement |
+| :--- | :--- |
+| `resourcemanager.allowedImportSources` | Restricts project imports to the organization. |
+| `resourcemanager.allowedExportDestinations` | Restricts project exports to the organization. |
+| `resourcemanager.accessBoundaries` | Restricts Google Cloud console visibility boundaries to the organization. |
 
-- cloudfunctions.allowedIngressSettings: ALLOW_INTERNAL_AND_GCLB. Restricts
-  function ingress.
-- cloudfunctions.allowedVpcConnectorEgressSettings: ALL_TRAFFIC. Forces all
-  traffic through VPC connector.
-- run.allowedIngress: internal-and-cloud-load-balancing. Restricts Cloud Run
-  ingress.
-- run.allowedVPCEgress: all-traffic. Forces all Cloud Run traffic through VPC
-  connector.
-- cloudbuild.allowedIntegrations: Restricted to github.com.
+#### Folder hierarchy
 
-### Resource Management:
+Stage `1-resman` creates the folder hierarchy below, and you can customize folder display names in the `1-resman` configuration:
 
-- resourcemanager.allowedImportSources: Restricted to the organization.
-- resourcemanager.allowedExportDestinations: Restricted to the organization.
-- resourcemanager.accessBoundaries: Restricted to the organization (Cloud
-  Console visibility).
+- Root-level folders represent the top-level organization or business unit boundary.
+- First-level folders separate Common Services, Test, Integration, and Production environments.
+- Second-level folders organize shared and tenant domains:
+  - The Network folder sits under Common Services and hosts centralized networking projects.
+  - The Security folder sits under Common Services and hosts centralized IaC Core, Audit Logs, and Billing Export projects.
+  - Tenant folders sit under the Test, Integration, and Production environment folders.
+- Third-level folders separate each tenant into a Tenant Core folder hosting the tenant IaC Core project and a Tenant Main folder hosting workload projects.
 
-The purpose of this step is to create the below resources. The names of the
-folders can be modified in 1-resman folders.
+#### Example organization layout
 
-**Folders:**
-
-- Root level folders
-  - Folder representing an organization root - Eg: Organization Business
-    Unit
-- First level folders
-  - Common Services
-  - Test
-  - Integration
-  - Production
-- Second level folders
-  - Network - Downstream of Common Services. Network hub folder, contains
-    all the networking projects.
-  - Security - Downstream of Common Services. Centralized security services
-    folder. Contains IAC Core, Audit Logs, and Billing Export projects.
-  - Tenant - Downstream of Test/Integration/Prod folders.
-- Third Level Folders
-  - Tenant Core - Contains Tenant IAC Core project
-  - Tenant Main - Contains Tenant Main Project
-
-The structure below is an example of a nested layout conforming to the proposed
-cloud project organization.
-
-Example Organization
+The hierarchy below illustrates a nested multi-workstream organization layout:
 
 - Organization Root Folder
   - Network-IL5
     - Production
-      - \<prefix\>-prod-net-landing-0
-      - \<prefix\>-prod-net-spoke-0
+      - `<prefix>-prod-net-landing-0`
+      - `<prefix>-prod-net-spoke-0`
     - Development
-      - \<prefix\>-dev-net-landing-0
-      - \<prefix\>-dev-net-spoke-0
+      - `<prefix>-dev-net-landing-0`
+      - `<prefix>-dev-net-spoke-0`
   - Security
-    - \<prefix\>-prod-security-core-0
-    - \<prefix-dev-security-core-0
+    - `<prefix>-prod-security-core-0`
+    - `<prefix>-dev-security-core-0`
   - Tenants
     - Workstream-A-IL5
       - Workstream Core
-        - \<prefix\>-workstream-a-iac-core-0
+        - `<prefix>-workstream-a-iac-core-0`
       - Workstream Tenant
         - Project-A
         - Project-B
     - Workstream-B-IL4
       - Workstream Core
-        - \<prefix\>-workstream-b-iac-core-0
+        - `<prefix>-workstream-b-iac-core-0`
       - Workstream Tenant
         - Project-C
         - Project-D
 
-## 3.2 IAM
+### 3.2 IAM
 
-### IAM Principles
+#### IAM principles
 
-These are the cybersecurity design principles that guide the IAM settings.
+Cybersecurity least-privilege principles govern all IAM bindings in Stellar Engine:
 
-- IAM Policy is defined by Infrastructure-as-code (IaC) and enforced by Google
-  IAM. The IaC used to define this policy is reviewed and submitted using
-  Terraform. Using this code:
-  - No human should have permissions to create or modify cloud resources in
-    any environment other than a development environment. Even in a
-    development environment, these permissions should be tightly controlled.
-  - The Cloud Resource Manager access required to execute Terraform code
-    will be assigned to a unique service account defined by Stellar Engine.
-    - This service account will only be used by the CI/CD pipeline for
-      terraform apply actions.
-  - **Note:** Broader permissions may be given to development projects to
-    accelerate the rate of development. This should only be done under
-    extreme caution, and permissions should not propagate to any environment
-    other than the development environment (e.g., testing, staging, or
-    production).
-- Human access
-  - Access must be granted to groups, not individual users.
-  - Access will be granted based on a minimalized set of curated roles.
-  - Access is granted based on the principle of least privilege, with only
-    the minimum amount of access granted to perform a function.
-- Machine access
-  - Individual Service Accounts will be defined for each microservice.&#9;
-  - Downloadable Service Account keys will not be used and their creation
-    should be disabled by organization policy.
-  - Access will be granted based on the principle of least privilege, with
-    only necessary functionality granted for the microservice.
-  - Disable automatic role grants to default service accounts
-    (*iam.automaticIamGrantsForDefaultServiceAccounts ) *should be enabled
-    as organization policy , this will remove the editor role from the
-    default service accounts.
+- Manage IAM policies declaratively in Terraform and enforce them through Google Cloud IAM after peer code review:
+  - Grant no human principal permissions to create or modify cloud resources outside tightly controlled development projects.
+  - Assign the Cloud Resource Manager permissions required to execute Terraform exclusively to dedicated Stellar Engine automation service accounts used by CI/CD `terraform apply` pipelines.
+  - Scope any broader development permissions strictly to development projects so elevated access never propagates to testing, staging, or production environments.
+- Enforce group-based human access:
+  - Bind IAM roles to Google Cloud groups rather than individual user principals.
+  - Restrict bindings to a curated set of predefined least-privilege roles scoped to each operational function.
+- Enforce isolated machine identities:
+  - Provision a dedicated service account for each microservice workload.
+  - Block downloadable service account keys through organization policy constraints.
+  - Scope each workload service account strictly to its required runtime permissions.
+  - Enforce `iam.automaticIamGrantsForDefaultServiceAccounts` through organization policy to strip default Editor grants from default service accounts.
 
-The IAM model used in GCP is illustrated in the diagram below:
+Prefer Google Cloud predefined roles over custom IAM roles wherever possible to minimize custom permission maintenance overhead.
 
-GCP Pre-Defined Roles will be used, custom roles are not recommended due to
-lifecycle management burdens.
+#### Role groups
 
-### Role Groups
+Role groups align Google Cloud access with engineering, security, and platform operations teams:
 
-Role Groups are created corresponding to the various development and
-administrative roles needed to build and maintain the application.
+- Development and administrative teams identify required job functions before bootstrap.
+- Each role maps to a dedicated group following the `gcp-X-${tenant}-${role}@X.gov` naming convention, with the bootstrap Terraform service account retaining group ownership for automated provisioning.
+- Bootstrap Terraform configurations seed initial group memberships, while ongoing membership lifecycle management runs through your enterprise identity provider or Terraform state.
 
-- Roles are identified by development and administrative teams.
-- Groups are created for each role and owned by X. The bootstrap Terraform
-  service account is an owner of each of these groups.
-  - Group naming convention: **gcp-X-${tenant}-${role}@X.gov**
-- Initial role group memberships needed for system provisioning are checked
-  into Terraform code and applied by the bootstrap Terraform service accounts.
-  Ongoing role group membership management should be implemented with
-  customers existing IAM systems, or should continue to use the Terraform IaC
-  method.
+##### Initial role groups
 
-#### GCP Initial Role Groups
-
-The initial _role groups_ created during the GCP organization set up and their
-assigned _roles_ at the _organization level_ are:
+The initial role groups created during Google Cloud organization setup receive the following organization-level roles:
 
 | Role Group              | Description                                                                                                                          | Assigned Roles @ Org Level                                                                                                                                                                                                                                  |
 | :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -303,11 +296,9 @@ assigned _roles_ at the _organization level_ are:
 Not all above role groups are mandatory, and one GCP group can be mapped to
 multiple role groups.
 
-#### Additional Role Groups to Role Mapping
+##### Role group mappings
 
-Stellar Engine adds additional role groups and role mappings at the top node
-level (could be Organization or a Folder, depending on customer environment) and
-projects levels for custom groups.
+Stellar Engine configures additional role groups and role bindings at the top-level organization or folder node and across project hierarchies:
 
 | Group                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | :---------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -321,14 +312,11 @@ projects levels for custom groups.
 | gcp-developers          | Design, code, and test applications.                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | gcp-devops              | Create or manage end-to-end pipelines that support continuous integration and delivery, monitoring, and system provisioning.                                                                                                                                                                                                                                                                                                                                     |
 
-#### Application Specific Groups
+##### Application-specific groups
 
-There could be additional groups with role bindings for each tenant and/or
-service platforms. This is beyond the scope of Stellar Engine but worth
-mentioning here so that we can have a complete picture of the role group
-management.
+Tenant workloads and specialized service platforms often define additional groups outside the core Stellar Engine stages. Accounting for those workload groups provides a complete view of role group governance across the organization.
 
-For example, a secured data warehouse blueprint defines the following groups:
+For example, a secured data warehouse blueprint defines these workload groups:
 
 - Data analyst group
 - Data engineer group
@@ -336,66 +324,48 @@ For example, a secured data warehouse blueprint defines the following groups:
 - Security administrator group
 - Security analyst group
 
-Some above groups can be mapped to existing groups which Stellar Engine defines,
-but some new groups need to be created and managed.
+You can map several of these functions to existing Stellar Engine groups while creating dedicated groups for specialized application roles.
 
-### Service Accounts
+#### Service accounts
 
-Multiple service accounts are used across Stellar Engine. This is to maintain
-principles of least privilege and ensure service accounts are used for a
-singular purpose, so as not to make them overly permissive.
+Stellar Engine provisions dedicated, single-purpose service accounts across stages and workloads to enforce least privilege and prevent over-permissioned identities.
 
-Additional restrictions can be set to service accounts, including:
+Apply these organization policy restrictions to harden service accounts, where items marked with `*` represent core baseline recommendations:
 
-- Disable automatic role grants to default service accounts\*
+- Disable automatic role grants to default service accounts (`*`)
 - Disable service account creation
-- Disable service account key creation\*
-- Disable service account key upload\*
-- Disable attachment of service accounts to resources in other projects
-- Restrict removal of project liens when service accounts are used across
-  projects
+- Disable service account key creation (`*`)
+- Disable service account key upload (`*`)
+- Disable cross-project service account attachment
+- Restrict removal of project liens when service accounts operate across projects
 
-####
+##### Bootstrap service account
 
-Policies with (\*) are recommended.
+An administrator can execute Stage 0 bootstrap using an individual Google Cloud user account or by impersonating a bootstrap service account. Using a tightly controlled individual account assigned to the `gcp_org_admins` group is preferred, and you must disable that account when it is not actively executing bootstrap tasks.
 
-#### Initial Service Account in bootstrap phase
+To run the bootstrap phase through a service account at the organization root, grant these roles outside Terraform beforehand:
 
-A system administrator with an individual GCP account can run the bootstrap
-phase, or they can impersonate a service account to do so. The preferred and
-suggested method is to use an individual account with the gcp_org_admins group
-membership assigned to ensure the required privileges are assigned. This account
-should be tightly controlled and disabled when not in use.
+- Organization Admin on the Google Cloud organization when targeting the organization root node.
+- Organization Policy Admin on the organization to manage organization policy constraints.
+- Billing Account Administrator, or at minimum Billing Account User, to link newly created projects.
+- Folder Creator to create foundational and environment folders.
+- Access Context Manager Admin to configure VPC Service Controls policies.
+- Assured Workloads Admin to provision Assured Workloads folders.
 
-To run the bootstrap phase using the service account, grant the following roles
-outside of Terraform:
+To run the bootstrap phase scoped to an existing Assured Workloads folder, grant these minimum roles:
 
-- Organization Admin of the GCP Organization if the root node is the
-  Organization itself.
-- Organization Policy Admin of the GCP Organization, to manage organization
-  policies.
-- Billing Admin of the Billing Account, or at minimum the Billing User role,
-  to create projects.
-- Folder Creator, also to create folders and projects.
-- Access Context Manager Admin, to create VPC SC policies.
-- Assured Workloads Admin, to create assured workloads folders.
+- Organization Viewer to query organization-level metadata.
+- Organization Policy Admin to manage folder-scoped organization policies.
+- Billing Account User to link newly created projects to the billing account.
+- Folder Creator to create nested folders and projects.
+- Access Context Manager Admin to manage VPC Service Controls perimeters.
+- Security Admin to configure Security Command Center and security telemetry.
 
-The minimum set of roles needed to run the bootstrap phase in a given assured
-workloads folder are:
+#### IAM roles
 
-- Organization Viewer, to query organization level resources.
-- Organization Policy Admin, to manage organization policies.
-- Billing User of the Billing Account, to create new projects.
-- Folder Creator, also to create new folders and projects.
-- Access Context Manager, to create VPC SC policies.
-- Security Admin, to manage security command center and security events.
+Stellar Engine project and folder IAM bindings follow the Cloud Foundation Fabric design guidelines:
 
-### IAM roles
-
-Our IAM bindings for the Stellar Engine projects are taken from the Cloud
-Foundations Fabric guidelines. They are as follows:
-
-#### Organization _\[organization \#0\]_
+##### Organization node
 
 | <strong>members</strong>                                               | <strong>roles</strong>                                                                                                                                                                                                                                            |
 | :--------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -404,35 +374,35 @@ Foundations Fabric guidelines. They are as follows:
 | <strong>prod-resman-pf-0</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#orgpolicy.policyAdmin'>roles/orgpolicy.policyAdmin</a> +•                                                                                                                                          |
 | <strong>prod-resman-sec-0</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#cloudasset.viewer'>roles/cloudasset.viewer</a> +<br/><a href='https://cloud.google.com/iam/docs/understanding-roles#accesscontextmanager.policyAdmin'>roles/accesscontextmanager.policyAdmin</a> + |
 
-#### Folder _data platform/development_
+##### Data platform development folder
 
 | <strong>members</strong>                                              | <strong>roles</strong>                                                                                                                                                                                                          |
 | :-------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | <strong>dev-resman-dp-0</strong><br/><strong>serviceAccount</strong>  | organizations/[organization #0]/roles/serviceProjectNetworkAdmin<br/>roles/logging.admin<br/>roles/owner<br/>roles/resourcemanager.folderAdmin<br/>roles/resourcemanager.projectCreator                                         |
 | <strong>dev-resman-dp-0r</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderViewer'>roles/resourcemanager.folderViewer</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#viewer'>roles/viewer</a> |
 
-#### Folder _data platform/production_
+##### Data platform production folder
 
 | <strong>members</strong>                                               | <strong>roles</strong>                                                                                                                                                                                                          |
 | :--------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | <strong>prod-resman-dp-0</strong><br/><strong>serviceAccount</strong>  | organizations/[organization #0]/roles/serviceProjectNetworkAdmin<br/>roles/logging.admin<br/>roles/owner<br/>roles/resourcemanager.folderAdmin<br/>roles/resourcemanager.projectCreator                                         |
 | <strong>prod-resman-dp-0r</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderViewer'>roles/resourcemanager.folderViewer</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#viewer'>roles/viewer</a> |
 
-#### Folder _gke/development_
+##### GKE development folder
 
 | <strong>members</strong>                                               | <strong>roles</strong>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | :--------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | <strong>dev-resman-gke-0</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.xpnAdmin'>roles/compute.xpnAdmin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#logging.admin'>roles/logging.admin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#owner'>roles/owner</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderAdmin'>roles/resourcemanager.folderAdmin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.projectCreator'>roles/resourcemanager.projectCreator</a> |
 | <strong>dev-resman-gke-0r</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderViewer'>roles/resourcemanager.folderViewer</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#viewer'>roles/viewer</a>                                                                                                                                                                                                                                                                                                                                                                   |
 
-#### Folder _gke/production_
+##### GKE production folder
 
 | <strong>members</strong>                                                | <strong>roles</strong>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | :---------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | <strong>prod-resman-gke-0</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.xpnAdmin'>roles/compute.xpnAdmin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#logging.admin'>roles/logging.admin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#owner'>roles/owner</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderAdmin'>roles/resourcemanager.folderAdmin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.projectCreator'>roles/resourcemanager.projectCreator</a> |
 | <strong>prod-resman-gke-0r</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderViewer'>roles/resourcemanager.folderViewer</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#viewer'>roles/viewer</a>                                                                                                                                                                                                                                                                                                                                                                   |
 
-#### Folder _networking_
+##### Networking folder
 
 | <strong>members</strong>                                                | <strong>roles</strong>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | :---------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -440,7 +410,7 @@ Foundations Fabric guidelines. They are as follows:
 | <strong>prod-resman-net-0</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.xpnAdmin'>roles/compute.xpnAdmin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#logging.admin'>roles/logging.admin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#owner'>roles/owner</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderAdmin'>roles/resourcemanager.folderAdmin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.projectCreator'>roles/resourcemanager.projectCreator</a> |
 | <strong>prod-resman-net-0r</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderViewer'>roles/resourcemanager.folderViewer</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#viewer'>roles/viewer</a>                                                                                                                                                                                                                                                                                                                                                                   |
 
-#### Folder _networking/development_
+##### Networking development folder
 
 | <strong>members</strong>                                               | <strong>roles</strong>                                                                                                |
 | :--------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- |
@@ -451,7 +421,7 @@ Foundations Fabric guidelines. They are as follows:
 | <strong>dev-resman-pf-0</strong><br/><strong>serviceAccount</strong>   | organizations/[organization #0]/roles/serviceProjectNetworkAdmin                                                      |
 | <strong>dev-resman-pf-0r</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer'>roles/compute.networkViewer</a> |
 
-#### Folder _networking/production_
+##### Networking production folder
 
 | <strong>members</strong>                                                | <strong>roles</strong>                                                                                                |
 | :---------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- |
@@ -462,7 +432,7 @@ Foundations Fabric guidelines. They are as follows:
 | <strong>prod-resman-pf-0</strong><br/><strong>serviceAccount</strong>   | organizations/[organization #0]/roles/serviceProjectNetworkAdmin                                                      |
 | <strong>prod-resman-pf-0r</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer'>roles/compute.networkViewer</a> |
 
-#### Project _prod-iac-core-0_
+##### Core automation project
 
 | <strong>members</strong>                                                  | <strong>roles</strong>                                                                                                                          |
 | :------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -489,69 +459,35 @@ Foundations Fabric guidelines. They are as follows:
 | <strong>prod-resman-teams-0</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
 | <strong>prod-resman-test-3-0</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
 
-**Legend: + additive, \* conditional**
+Additive bindings use `+` and conditional bindings use `*`. These role definitions derive from the upstream [Cloud Foundation Fabric Stage 1 IAM reference](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/master/fast/stages/1-resman/IAM.md).
 
-IAM roles have been taken from the following Cloud Foundations Fabric document -
-<https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/master/fast/stages/1-resman/IAM.md>.
+### 3.3 Code control
 
-## 3.3 Code Control
+#### GitHub repositories
 
-### GitHub Projects
+Stellar Engine forks the open-source Cloud Foundation Fabric repository and maintains all stages, blueprints, and modules publicly on GitHub:
 
-Code has been forked off of the open-source Cloud Foundations Fabric (CFF)
-GitHub repository.
-The Stellar Engine project is fully open source and is maintained on GitHub.
+- [Cloud Foundation Fabric GitHub repository](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric)
+- [Google Public Sector Stellar Engine GitHub repository](https://github.com/google/stellar-engine)
 
-[Cloud Foundations Fabric
-GitHub](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric)
+#### Branching strategy
 
-[Google Public Sector Stellar Engine
-GitHub](https://github.com/google/stellar-engine)
+Contributors follow a trunk-based development model in which short-lived feature and bug-fix branches branch from `main` and merge back through reviewed pull requests; see [Trunk-Based Development](https://www.atlassian.com/continuous-delivery/continuous-integration/trunk-based-development) for workflow background. Aligning this branching strategy with upstream Cloud Foundation Fabric preserves clean upstream module synchronization.
 
-### Branches
+#### Pull request validation
 
-Our development process follows a trunk-based branching strategy. This entails
-having one main branch, with developers creating their own feature branches,
-which are then merged back into the main branch upon completion. For more
-information on trunk based branching, please see [Trunk Based
-Branching](https://www.atlassian.com/continuous-delivery/continuous-integration/trunk-based-development).
-Our branching strategy will follow Cloud Foundations Fabric’s branching strategy
-upon reintroduction of our project’s repository into the larger repository.
+Open a [pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) targeting `main` once feature or bug-fix changes pass local checks. Maintainers merge the branch into `main` after two reviewers complete code review and all review feedback is resolved.
 
-### Validation
+### 3.4 Infrastructure as Code
 
-Currently, development happens on feature and bug fix branches. When complete, a
-[pull request
-(PR)](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) can be opened
-targeting the main branch. After two reviewers have submitted comments, and
-their recommendations have been adjudicated (which can be an iterative process)
-the feature branch is merged into the main branch.
+Stellar Engine adopts the staged Terraform architecture from [Google Cloud Foundation Fabric](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric). Operators execute stages 0 through 3 sequentially to establish the foundational landing zone before deploying tenant workloads, storing stage state files inside centralized Cloud Storage backend buckets:
 
-## 3.4 Infrastructure-as-Code
+- Store all Terraform configurations in a version-controlled infrastructure repository restricted to platform administrators.
+- Gate every post-bootstrap configuration change through peer review in the infrastructure repository.
 
-Stellar Engine Terraform configuration is based on the deployment process from
-[Google Cloud Foundation
-Fabric](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric).
-Successful deployment requires prerequisite steps, labeled 0 through 3, to be
-completed before the deployment is ready for further development. The project’s
-state is managed by a single backend, but can use multiple state files within
-this backend.
+#### Repository layout
 
-- Terraform configuration is stored in an infrastructure code repository.
-  Repository access is limited to infrastructure administrators.
-- Once the initial bootstrap environment is created by infrastructure admins,
-  all configuration changes are gated by a code review in the infrastructure
-  repository.
-
-### File Structure
-
-Initial deployment/bootstrapping is achieved via the code in the
-**fast/stages** or **fast/stages-aw** folders. The **modules** folder contains a series of
-portable Terraform code designed to fast track the deployment of individual GCP
-services. The **blueprints** folder contains use cases of these modules, with
-the use case represented by the name of the corresponding subfolder, (for
-example, the **il5** folder is designed for deployments within an IL5
-environment.) A subset of the file structure containing IaC is listed below.
+Foundational bootstrap and landing zone code lives under `fast/stages` and `fast/stages-aw`. Reusable service modules live under `modules`, while compliance-scoped workload compositions live under `blueprints` organized by target regime subfolder such as `il5` and `fedramp-high`:
 
 - **blueprints**
   - **fedramp-high**
@@ -709,21 +645,13 @@ environment.) A subset of the file structure containing IaC is listed below.
   - **workflows**
   - **workstation-cluster**
 
-## 3.5 Infrastructure-as-Code Principles
+### 3.5 Terraform design principles
 
-### Terraform Configuration
+#### Environment partitioning
 
-Terraform configuration is partitioned into stand-alone, per-environment
-configuration modules. Additional customer tenants can be configured
-per-environment. To facilitate rapid iteration and collaboration across tenants,
-configuration is relatively static. Each combination of tenant and environment
-has a dedicated configuration module. Each configuration module relies on
-Terraform locals that reside in the same file.
+Terraform configurations partition infrastructure into standalone, per-environment root modules, allowing additional customer tenants to onboard per environment. Keeping each tenant-and-environment configuration explicit and local-driven minimizes blast radius so changes in one tenant or environment do not affect another.
 
-This approach leads to a lot of repetition but minimizes the opportunity for
-changes in one tenant or environment to impact any other.
-
-Example:
+Example configuration:
 
 ```hcl
 # project-specific locals
@@ -750,90 +678,33 @@ resource "google_folder" "bootstrap" {
 }
 ```
 
-## 3.6 Networking
+### 3.6 Networking
 
-### References:
+See the [Google Cloud security foundations networking guide](https://cloud.google.com/architecture/security-foundations/networking) for foundational enterprise network patterns.
 
-### <https://cloud.google.com/architecture/security-foundations/networking>
+#### Shared VPC topology
 
-### Flow Diagram
+Google Cloud connects Virtual Private Clouds privately across Google's backbone using VPC Network Peering and [Shared VPC](https://cloud.google.com/vpc/docs/shared-vpc). Centralizing Shared VPC subnets, routes, and firewall policies in dedicated host projects simplifies network governance while allowing service project teams to deploy and manage workload resources independently.
 
-Google Cloud offers a robust architecture for managing Virtual Private Clouds
-(VPCs) and facilitating communication among them using VPC Network Peering.
-[Shared VPC](https://cloud.google.com/vpc/docs/shared-vpc) is a networking
-construct that significantly reduces the amount of complexity in network design.
-With Shared VPC, network policy and control for all networking resources are
-centralized and easier to manage. Service project departments can configure and
-manage non-network resources, enabling a clear separation of responsibilities
-for different teams in the organization.
+Resources attached to Shared VPC networks communicate across project boundaries over internal IP addresses. Managing shared network constructs such as subnets, routes, and firewalls from a central host project enforces consistent network security policies across tenant projects.
 
-Resources in Shared VPC networks can communicate with each other securely and
-efficiently across project boundaries using internal IP addresses. You can
-manage shared network resources—such as subnets, routes, and firewalls—from a
-central host project, so you can enforce consistent network policies across
-projects.
+In the `example.com` reference model, each environment separates workloads across two Shared VPC host projects: a `base` Shared VPC for workloads handling non-sensitive data and a `restricted` Shared VPC protected by [VPC Service Controls](https://cloud.google.com/vpc-service-controls) for workloads handling sensitive data.
 
-As shown in the diagram below, the example.com architecture uses two Shared VPC
-networks, base and restricted, as the default networking construct for each
-environment. Each Shared VPC network is contained within a single project. The
-base VPC network is used for deploying services that contain non-sensitive data,
-and the restricted VPC network uses [VPC Service
-Controls](https://cloud.google.com/vpc-service-controls) to limit access to
-services that contain sensitive data.
+Deploying this dual-Shared-VPC model independently across the common, development, non-production, and production environments provides strict network segmentation between lifecycle tiers.
 
-You can implement the model described in the preceding section independently for
-each of the four environments (common, development, non-production, and
-production). This model provides the highest level of network segmentation
-between environments.
+In the hub-and-spoke variant, all environment spokes communicate with shared operational services in the common environment hub, such as CI/CD runners, directory services, and security tooling. A base Shared VPC hub connects the base spoke networks across development, non-production, and production, while a restricted Shared VPC hub connects the restricted spoke networks across those same environments. Select the restricted Shared VPC hub-and-spoke topology whenever workloads require VPC Service Controls data exfiltration protections.
 
-For the above scenario, all environments can directly communicate with shared
-resources in the common environment hub. The common environment can host tooling
-that requires connectivity to other environments, like CI/CD infrastructure,
-directories, and security and configuration management tools. As with the
-previous independent Shared VPC model, the hub-and-spoke scenario is also
-composed of base and restricted VPC networks. A base Shared VPC hub connects the
-base Shared VPC network spokes in development, non-production, and production,
-while the restricted Shared VPC hub connects the restricted Shared VPC network
-spokes in these same environments. The choice between base and restricted Shared
-VPC networks also depends on whether VPC Service Controls are required. For
-workloads with strong data exfiltration mitigation requirements, the
-hub-and-spoke associated with the restricted Shared VPC networks is preferred.
+#### Virtual Private Clouds
 
-###
+A VPC provides an isolated virtual network for Google Cloud resources with customizable IP address ranges, regional subnets, and routing tables. Evaluate your organization's segmentation requirements before allocating VPC boundaries across tenants.
 
-### VPCs
+VPC Network Peering connects VPC networks within the same project or across separate projects over internal IP addresses without external gateways or public internet traversal, keeping inter-VPC traffic entirely on Google's private network backbone.
 
-A VPC is a virtual network dedicated to a user's Google Cloud resources. It
-provides isolation from other networks and allows customization of IP address
-ranges, subnets, and routing tables. Consider if using a VPC to control traffic
-and access is appropriate within the customers GCP organization.
+#### Subnet allocations
 
-Google VPC Network Peering
+Subnet allocation divides a VPC primary CIDR block into regional IP segments for Compute Engine VMs, Google Kubernetes Engine clusters, and managed services. The reference subnet allocation scheme supports up to eight organizations, eight tenants per organization, and eight projects per tenant, for a maximum of 512 projects.
 
-Google Cloud offers a robust architecture for managing Virtual Private Clouds
-(VPCs) and facilitating communication among them using VPC Network Peering. VPC
-Network Peering allows VPCs within the same project or across different projects
-to communicate securely and efficiently using internal IPs. Peering connections
-do not require any additional gateways or routers; traffic remains within
-Google's backbone network, ensuring low latency and high reliability. VPC
-Network Peering allows VPCs to exchange traffic securely and privately using
-internal IP addresses. It facilitates communication between resources deployed
-in different VPCs without needing to traverse the public internet.
-
-###
-
-### Subnet Allocations
-
-Subnet allocation in Google Cloud involves the process of dividing the IP
-address range of a Virtual Private Cloud (VPC) into smaller segments called
-subnets. These subnets are then assigned to specific regions within GCP where
-resources such as virtual machine (VM) instances, Kubernetes clusters, and other
-services can be deployed. Our subnet allocation paradigm provides users the
-ability to host eight organizations, with eight tenants per organization, with
-eight projects per organization, for a maximum of 512 total projects.
-
-The Table below displays the four Subnets allocation for Project 1 with
-CIDR 10.200.2.0/23 having 512 IPs.
+The table below shows the four `/25` subnet allocations inside Project 1's `10.200.2.0/23` CIDR block (`512` total addresses):
 
 | <strong>Subnet Address</strong> | <strong>Range of Addresses</strong> | <strong>Useable IPs</strong> | <strong>Hosts</strong> |
 | :------------------------------ | :---------------------------------- | :--------------------------- | :--------------------- |
@@ -871,91 +742,57 @@ The Distribution of the CIDR as per Organization, Tenants and Projects
 | Project 4                  | 10.200.8.0/23         |                            |
 | Project 5                  | 10.200.10.0/23        |                            |
 
-Utilize the above table to create new projects with CIDRs. The 10.200.0.0/16 is
-a tenant subnet.
+Use the table above when allocating CIDRs for new projects within the `10.200.0.0/16` tenant range.
 
-### Google Private Access
+#### Private Google Access
 
-Access to Google-managed services, (e.g. AppEngine, CloudSQL, CloudFunctions,)
-will be routed through internal network space using [Google Private
-Access](https://cloud.google.com/vpc/docs/private-google-access). Access from
-Google-managed services to the VPC will be routed through internal network space
-using [Serverless VPC
-Access](https://cloud.google.com/vpc/docs/serverless-vpc-access). Google Private
-Access is enabled for subnets.
+Route traffic from VPC workloads to Google-managed APIs such as App Engine, Cloud SQL, and Cloud Functions over internal IP space using [Private Google Access](https://cloud.google.com/vpc/docs/private-google-access), which Stellar Engine enables across managed subnets. Route traffic from serverless Google-managed environments back into your VPC over internal IP space using [Serverless VPC Access](https://cloud.google.com/vpc/docs/serverless-vpc-access).
 
-### Interservice Communications
+#### Inter-service communication
 
-Direct network connections between microservices will be routed within the VPC
-using [Internal
-Load-Balancing](https://cloud.google.com/load-balancing/docs/l7-internal) or
-[Google Private Access](https://cloud.google.com/vpc/docs/private-google-access)
-for managed services. Interservice message quoting will utilize [Cloud
-Pub/Sub](https://cloud.google.com/pubsub) for asynchronous delivery.
+Route synchronous microservice-to-microservice traffic inside the VPC through [Internal Application Load Balancing](https://cloud.google.com/load-balancing/docs/l7-internal) or [Private Google Access](https://cloud.google.com/vpc/docs/private-google-access), and decouple asynchronous service messaging with [Cloud Pub/Sub](https://cloud.google.com/pubsub).
 
-### VPC Firewall Rules
+#### VPC firewall rules
 
-By default, no ingress traffic is allowed. By default, all egress traffic is
-allowed. Ingress/egress firewall policies can be defined
-in 2-networking-a-peering.The Google Cloud VPC (Virtual Private Cloud) firewall
-rules are used to control traffic in a VPC network. The Firewall rules in Google
-Cloud are defined at the network level (VPC network) and are stateful. Firewall
-rules are applied in priority order. The first rule that matches the traffic
-criteria (source IP, destination IP, protocol, port, etc.) is applied, and
-subsequent rules are not evaluated. Rules can specify which protocols (TCP, UDP,
-ICMP, etc.) and ports (such as 80 for HTTP or 443 for HTTPS) are allowed.
+By default, VPC networks deny all unsolicited ingress traffic and allow egress traffic unless overridden. Define ingress and egress firewall rules in `2-networking-a-peering` or your active Stage 2 networking configuration. Google Cloud VPC firewall rules are stateful and evaluate in numeric priority order: the highest-priority rule matching source IP, destination IP, protocol, and port governs the flow, and lower-priority rules are skipped.
 
-### Hub and Spoke architecture
+#### Hub-and-spoke topology
 
-Within Google Cloud, Stellar Engine uses either Network Connectivity Center (`STAR` preset topology) or VPC Network Peering to implement a Hub and Spoke architecture depending on the target compliance regime. In a Hub and Spoke design, centralized hub VPCs host shared DNS, hybrid connectivity gateways (Cloud VPN and Cloud Interconnect), and perimeter controls, while separate spoke VPCs represent isolated workload environments such as integration, testing, and production.
+Stellar Engine implements a hub-and-spoke network topology using either Network Connectivity Center with the `STAR` preset topology or VPC Network Peering depending on your target compliance regime. Centralized hub VPCs host shared DNS, Cloud VPN and Cloud Interconnect hybrid gateways, and perimeter inspection, while spoke VPCs isolate workload environments such as integration, testing, and production.
 
-### Hub and Spoke Architecture with Compliance Overlays
+#### Compliance regime overlays
 
-Stellar Engine provides two Hub and Spoke Stage 2 implementations tailored to specific compliance regimes (FedRAMP Moderate, FedRAMP High, DoD IL2, IL4, and IL5). Shared VPC is used across both patterns so network administration remains centralized in dedicated host projects while workload teams consume shared subnets from service projects.
+Stellar Engine provides two Stage 2 hub-and-spoke implementations tailored to FedRAMP Moderate, FedRAMP High, DoD IL2, IL4, and IL5 environments. Both stages use Shared VPC so network governance remains centralized in host projects while tenant teams deploy workloads into attached service projects:
 
-- **Network Connectivity Center `STAR` Hub (`2-networking-a-fedramp`)**: Connects the central `hub-0` Shared VPC (and optional `egress-0` Secure Web Proxy VPC) in the `center` group to environment `<env>-spoke-0` Shared VPCs in the `edge` group, enforcing environment-to-environment isolation without VPC peering limits.
-- **Virtual Datacenter Security Stack (`2-networking-b-il5-ngfw`)**: Uses a three-VPC VDSS layout (`Landing` trust VPC, `DMZ` untrust VPC, and `Mgmt` VPC) connected to spoke Shared VPCs over VPC Network Peering with inline Palo Alto Networks VM-Series Next-Generation Firewalls.
+- Stage `2-networking-a-fedramp` connects the central `hub-0` Shared VPC and optional `egress-0` Secure Web Proxy VPC in the Network Connectivity Center `center` group to environment `<env>-spoke-0` Shared VPCs in the `edge` group, enforcing spoke-to-spoke isolation without VPC peering scaling limits.
+- Stage `2-networking-b-il5-ngfw` deploys a three-VPC Virtual Datacenter Security Stack comprising `Landing` trust, `DMZ` untrust, and `Mgmt` VPCs peered to environment spoke Shared VPCs through inline Palo Alto Networks VM-Series Next-Generation Firewalls.
 
-Supported Implementations:
+##### FedRAMP High and Moderate pattern
 
-#### FedRAMP High and Moderate Pattern (2-networking-a-fedramp):
+Stage `2-networking-a-fedramp` implements the FedRAMP High, FedRAMP Moderate, and IL2 network architecture:
 
-- Topology: Central Hub VPC (`hub-0`), Network Connectivity Center (`STAR` hub), and an optional Secure Web Proxy Internet Egress VPC spoke (`egress-0`).
-- Perimeter Security: Combines folder-level hierarchical firewall policies with per-VPC global network firewall policies supporting Cloud NGFW Essentials, Standard, and Enterprise tiers, NCC `center` and `edge` group isolation between environment spokes, distributed Cloud NAT or centralized Secure Web Proxy next-hop ILB egress, and per-VPC Private Service Connect endpoints for Google APIs.
-- Implementation: Deploys a central `<prefix>-net-hub-host` Shared VPC host project for centralized DNS, inbound DNS forwarding, Private Service Connect `all-apis` or `vpc-sc` endpoints, and optional hybrid VPN or Interconnect transit, while connecting environment spoke Shared VPCs through the default `main` `STAR` NCC hub.
-- Regime Coverage, Regional Support, and IL2 Placement:
-  - FedRAMP Moderate, FedRAMP High, and IL2 consolidate onto `2-networking-a-fedramp` using NCC `STAR` group segmentation and hierarchical firewall governance (NIST SP 800-53 SC-7, AC-4), while `kms_protection_level` (`SOFTWARE` for Moderate and IL2 versus `HSM` for High) differentiates cryptographic key protection in downstream stages (SC-12, SC-13).
-  - Although the `FEDRAMP_MODERATE` organization policy template in Stage 0 permits non-`asia-east2` locations at the organization policy layer, `2-networking-a-fedramp` is designed and validated for US regions (`in:us-locations`, defaulting to `us-east4` and `us-west1` or `us-central1`) to align with Assured Workloads regional controls.
-  - DoD Impact Level 2 (`IL2`) deployments use the `2-networking-a-fedramp` stage (paired with `kms_protection_level = "SOFTWARE"`), whereas `IL4` and `IL5` deployments use `2-networking-b-il5-ngfw`.
+- The topology connects a central `hub-0` Shared VPC and an optional `egress-0` Secure Web Proxy internet egress spoke through a `STAR` Network Connectivity Center hub.
+- Perimeter security combines folder-level hierarchical firewall policies with per-VPC global network firewall policies supporting Cloud NGFW Essentials, Standard, and Enterprise tiers, `center` and `edge` NCC group isolation, distributed Cloud NAT or centralized Secure Web Proxy next-hop internal load balancer egress, and per-VPC Private Service Connect endpoints for Google APIs.
+- A central `<prefix>-net-hub-host` Shared VPC host project provides centralized Cloud DNS, inbound DNS forwarding, Private Service Connect `all-apis` or `vpc-sc` endpoints, and optional hybrid VPN or Interconnect transit across environment spokes attached to the `main` `STAR` hub.
+- FedRAMP Moderate, FedRAMP High, and IL2 consolidate onto `2-networking-a-fedramp` for NIST SP 800-53 SC-7 and AC-4 network segmentation, while `kms_protection_level` differentiates cryptographic key protection (`SOFTWARE` for Moderate and IL2 versus `HSM` for High) under SC-12 and SC-13.
+- Although the Stage 0 `FEDRAMP_MODERATE` organization policy template permits non-`asia-east2` locations at the organization policy layer, `2-networking-a-fedramp` is designed and validated for US regions (`in:us-locations`, defaulting to `us-east4` and `us-west1` or `us-central1`) to match Assured Workloads regional boundaries.
+- DoD Impact Level 2 (`IL2`) workloads deploy on `2-networking-a-fedramp` paired with `kms_protection_level = "SOFTWARE"`, whereas `IL4` and `IL5` workloads deploy on `2-networking-b-il5-ngfw`.
 
-#### IL5 Pattern (2-networking-b-il5-ngfw):
+##### IL5 pattern
 
-- Topology: VDSS (Landing + DMZ).
-- Perimeter Security: Uses Next-Generation Firewalls (NGFWs).
-- Implementation: Deploys a scalable cluster of Palo Alto Networks VM-Series
-  firewalls to provide advanced Layer 7 inspection, intrusion prevention
-  (IPS), and granular application-aware filtering required for IL5 compliance.
+Stage `2-networking-b-il5-ngfw` implements the DoD IL4 and IL5 Virtual Datacenter Security Stack architecture:
 
-# 4.0 Assured Workloads
+- The topology separates perimeter inspection across Landing and DMZ VPCs in a Virtual Datacenter Security Stack layout.
+- Inline Next-Generation Firewalls enforce perimeter and inter-zone traffic inspection.
+- A scalable cluster of Palo Alto Networks VM-Series firewalls provides Layer 7 inspection, intrusion prevention, and application-aware filtering required for IL5 accreditation.
 
-Assured workloads in GCP are a set of features that help you ensure the
-performance, availability, and security of your applications. Assured Workloads,
-using FedRAMP Moderate by default, is enabled on the Assured Workloads folder.
-All sub folders below the Assured Workloads folder will inherit policies and
-constraints according to the compliance program selected.
+## 4. Assured Workloads
 
-To support compliance with data residency requirements, Google Cloud provides
-you the ability to restrict the regions where data at rest can be stored.
+Google Cloud Assured Workloads enforces compliance guardrails across regulated folders, enabling FedRAMP Moderate by default on the Assured Workloads root folder so child folders and projects inherit the selected compliance constraints automatically.
 
-During the Assured Workloads setup, you create an environment and select your
-compliance regime. When you create resources in the environment, Assured
-Workloads restricts the regions you can select for those resources based on the
-compliance program chosen, using Organization Policies.
+When you provision an Assured Workloads environment and select a compliance regime, Assured Workloads applies regional `constraints/gcp.resourceLocations` organization policies to keep data at rest within authorized geographic regions.
 
-Projects in Stellar Engine are described via the terraform.tfvars file in
-the 1-resman stage. In order to create a new tenant folder with Assured
-Workloads configured. An example configuration for a tenant folder with an IL5
-Assured Workloads is as follows:
+Define tenant folders and compliance settings in the `1-resman` `terraform.tfvars` file. The following configuration defines an example tenant with IL5 Assured Workloads settings:
 
 ```hcl
 tenants = {
@@ -974,668 +811,284 @@ tenants = {
 }
 ```
 
-**Note: If the compliance field is not set, the tenant folder will be generated
-without an Assured Workloads configuration**. For a complete list of available
-compliance regimes, please refer to the [Terraform
-documentation](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/assured_workloads_workload#compliance_regime)
+Omitting the `compliance` block generates the tenant folder without an Assured Workloads configuration. See the [Terraform Assured Workloads documentation](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/assured_workloads_workload#compliance_regime) for supported compliance regimes.
 
-# 5.0 Information Security
+## 5. Information security
 
-The Stellar Engine information security strategy relies primarily on controlled
-access to resources and securing data.
+The Stellar Engine information security strategy enforces controlled access to cloud resources and cryptographic protection of data at rest and in transit.
 
-##
+### 5.1 Access control
 
-## 5.1 Access Control
+#### Account types
 
-### Account Types
+Manage human user identities through Google Identity Platform or Google Workspace, as described under Identity providers below.
 
-**Users - ** Users are created and managed through Google Identity Platform or
-Google Workspace. See the Identity Providers section below for more information.
+Assign workloads and automated services to dedicated service accounts rather than human user accounts. Each service account uses a unique email address as its principal identifier. Google Cloud supports three categories of service accounts:
 
-**Service Accounts -** A service account is a special kind of account typically
-used by an application or compute workload rather than a human. Its email
-address, which is unique to the account, identifies a service account.
+- Create and manage user-managed service accounts explicitly to serve as dedicated runtime identities for application and compute workloads.
+- Manage or restrict default service accounts that Google Cloud creates automatically when you enable certain APIs.
+- Allow Google-managed service accounts to execute background platform operations on your behalf.
 
-In Google Cloud, there are several different types of service accounts:
+Service account impersonation lets an authorized principal assume a service account's permissions temporarily to execute CLI commands or Terraform runs without exporting static keys, while blocking interactive Google Cloud console sign-in as the service account. Stellar Engine configures Terraform provider impersonation to provision projects and foundational resources.
 
-- **User-managed service accounts:** Service accounts that you create and
-  manage. These service accounts are often used as identities for workloads.
-- **Default service accounts:** User-managed service accounts that are created
-  automatically when you enable certain Google Cloud services. You are
-  responsible for managing these service accounts.
-- **Google-managed service accounts:** Google-created and Google-managed
-  service accounts that enable services to access resources on your behalf.
+#### Identity providers
 
-Impersonation is typically used to temporarily grant a user elevated access,
-because it allows users to assume the roles and permissions that the service
-account is assigned. A principal can use service account impersonation to run
-commands as a service account. However, a principal can't use service account
-impersonation to access the Google Cloud console. Within Stellar Engine,
-impersonation is set via Terraform and used to create projects and resources.
+Provide workforce and application identity through [Google Identity Platform](https://cloud.google.com/identity-platform) or [Cloud Identity](https://cloud.google.com/identity).
 
-### Identity Providers
+Google Identity Platform delivers customer identity and access management capabilities to protect application user accounts at scale on Google Cloud.
 
-Identity can be provided through [Google Identity
-Platform](https://cloud.google.com/identity-platform) or [Cloud
-Identity](https://cloud.google.com/identity).
-
-Google Identity Platform is a customer identity and access management (CIAM)
-platform. It helps organizations add identity and access management
-functionality to their applications, protect user accounts, and scale with
-confidence on Google Cloud.
-
-Cloud Identity is an Identity as a Service (IDaaS) solution that allows you to
-centrally manage users and groups who can access Google Cloud and Google
-Workspace resources. It is the same identity service that powers Google
-Workspace and can also be used as IdP for third-party applications (supports
-SAML and LDAP applications).
-
-### Multi-Factor Authentication (MFA)
-
-MFA enforcement is a best practice when administering users. Google.com accounts
-always require hardware-based multi-factor authentication. Google believes
-enabling MFA is the best way to protect accounts from phishing and recommends
-partners and customers always enable it.
-
-**Note:** By default, Stellar Engine does not enforce MFA for logistical
-reasons; however, in order to be fully compliant with IL5, the user _must_
-enforce MFA in their environment.
-
-### RBAC
-
-Role-based Access Control is defined in the IAM Section of this document.
-
-## 5.2 Data Security
-
-### GCP Platform security
-
-Google provides [many protections](https://cloud.google.com/security/) to GCP
-customers, however security of workloads running in GCP is a shared
-responsibility. All of the decisions reflected in this section are recommended
-to the Customer to implement.
-
-Customers are responsible for the following aspects of their applications'
-security. It should be noted that the following list is not intended to be
-exhaustive and care should be exercised on a case by case basis when deploying
-and configuring resources in GCP.
-
-### Data
-
-Google encrypts all data communication channels that it uses to transmit data
-between services. Customers are responsible for ensuring that the transmission
-of data is facilitated over an encrypted channel.
-
-Google encrypts all data on storage devices to prevent anyone with physical
-access to physical devices from being able to inspect the data contained on
-those devices. Customers can provide their own encryption keys for the
-encryption of Google Compute Engine Persistent Disks and Google Cloud Storage
-buckets.
-
-Data stored within databases are all encrypted at the storage level, however
-additional encryption is advisable at the application level to prevent customer
-users from accessing content and limiting spillage in the event of intrusion.
-
-A customer may load data which may include PII and PCI into BigQuery for
-analysis. Customers are responsible for being aware of and abiding by any
-regulations regarding the use and storage of this data and are responsible for
-developing their own aggregation capabilities.
-
-### Cloud KMS
-
-If a customer needs to encrypt data at the application level or manage their own
-encryption keys for compliance or regulatory reasons, they should consider at
-[Cloud Key Management Service (KMS)](https://cloud.google.com/kms/). Cloud KMS
-is a global cloud-hosted key management service that lets you manage encryption
-for your cloud services the same way you do on-premises.
-
-#### Best Practices
-
-- Key rotation - Regular rotation of the encryption key is encouraged. This
-  limits the amount of data protected by a single key. Automatic rotation can
-  be configured on a user defined schedule by using _gcloud_ or the GCP
-  Console.
-- Separation of duties - Cloud KMS should be run in its own project without an
-  owner at the project-level and instead being managed by an Org Admin. The
-  Org Admin is not able to manage or use keys, but they are able to set IAM
-  policies to restrict who has permissions for key management and usage.
-  Additionally, the ability to manage Cloud
-
-KMS should have role separation from the ability to perform encryption and
-decryption operations. Any user with management access should not be able to
-decrypt data.
-
-- Additional authenticated data (AAD) - We recommend AAD as an additional
-  integrity check as it can help protect your data from a [confused deputy
-  attack](https://en.wikipedia.org/wiki/Confused_deputy_problem). Additional
-  authenticated data is a string that you pass to Cloud KMS as part of an
-  encrypt or decrypt API call. Cloud KMS cannot decrypt ciphertext unless the
-  same AAD value is used for both encryption and decryption. By default an
-  empty string is used for the AAD value.
-
-### Google Cloud Storage
-
-Cloud Storage requests refer to buckets and objects by their names. As a result,
-even though ACLs will prevent unauthorized third parties from operating on
-buckets or objects, a third party can attempt requests with bucket or object
-names and determine their existence by observing the error responses. From the
-bucket name it might be possible to infer information present within the bucket
-itself, which might lead to leaks. If you are concerned about the privacy of
-your bucket or object names, you should take appropriate precautions, such as:
-
-- Choosing bucket and object names that are difficult to guess. For example, a
-  bucket named stellar-engine-mybucket-gxl3 is random enough that unauthorized
-  third parties cannot feasibly guess it or enumerate other bucket names from
-  it.
-- Before adding objects to a bucket, check that the [default object
-  ACLs](https://cloud.google.com/storage/docs/access-control#default) are set
-  to your requirements first. This could save you a lot of time updating ACLs
-  for individual objects.
-- Bucket and object ACLs are independent of each other, which means that the
-  ACLs on a bucket do not affect the ACLs on objects inside that bucket. It is
-  possible for a user without permissions for a bucket to have permissions for
-  an object inside the bucket. For example, you can create a bucket such that
-  only GroupA is granted permission to list the objects in the bucket, but
-  then upload an object into that bucket that allows GroupB READ access to the
-  object. GroupB will be able to read the object, but will not be able to view
-  the contents of the bucket or perform bucket-related tasks.
-- A simple yet effective approach is to keep private and public data separate
-  in different buckets and to label public buckets clearly, such as
-  stellar-engine-mybucket-public-3vxa.
-- The Cloud Storage access control system includes the ability to specify that
-  objects are publicly readable. Make sure you intend for any objects you
-  write with this permission to be public. Once "published", data on the
-  Internet can be copied to many places, so it's effectively impossible to
-  regain read control over an object written with this permission.
-- The Cloud Storage access control system includes the ability to specify that
-  buckets are publicly writable. While configuring a bucket this way can be
-  convenient for various purposes, we recommend against using this permission
-  - it can be abused for distributing illegal content, viruses, and other
-    malware, and the bucket owner is legally and financially responsible for the
-    content stored in their buckets.
-- If you need to make content available securely to users who don't have
-  Google accounts, we recommend you use [signed
-  URLs](https://cloud.google.com/storage/docs/access-control/signed-urls). For
-  example, with signed URLs you can provide a link to an object and your
-  application's customers do not need to authenticate with Cloud Storage to
-  access the object. When you create a signed URL you control the type (read,
-  write, delete) and duration of access.
-
-### Data Residency
-
-Google Cloud offers you the ability to control where your data is stored. When a
-Customer chooses to configure resources in any location, Google may store that
-Data at rest only in the selected Region. For that purpose we recommend using
-[Organization Policy
-constraints](https://cloud.google.com/resource-manager/docs/organization-policy/overview)
-which can be applied at the organization, folder, or project level. Customers
-can limit the physical location of a new resource with the Organization Policy
-Service [resource locations
-constraint](https://cloud.google.com/resource-manager/docs/organization-policy/defining-locations).
-When coupled with Cloud IAM configuration to enable or disable services for sets
-of users, you can prevent your employees from accidentally storing data in the
-wrong Google Cloud region.
-
-After you define resource locations, this limitation will apply only to
-newly-created resources. Resources you created before setting the resource
-locations constraint will continue to exist and perform their function.
-
-### Encryption-at-Rest
-
-All data stored in Google Cloud is encrypted at the storage level using AES256
-using
-[Google-managed](https://cloud.google.com/storage/docs/encryption/default-keys)
-data encryption keys
-([DEK](https://cloud.google.com/security/encryption/default-encryption#key_management)).
-Google uses a common cryptographic library which incorporates a FIPS 140-2
-validated module,
-[BoringCrypto](https://csrc.nist.gov/projects/cryptographic-module-validation-program/Certificate/3318).
-
-### Encryption-in-Transit
-
-Microservices will primarily use [Cloud
-Pub/Sub](https://cloud.google.com/pubsub/docs/encryption) and REST transmission
-methods within the project system. Both of these protocols leverage HTTPS.
-
-### TLS Version
-
-All web services utilizing Transport Layer Security are required to support
-version 1.2 or higher.
-
-The following two ciphers are disabled when using TLS.
-
-- TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA (0xc013)
-- TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA (0xc014)
-
-Organization policy gcp.restrictTLSVersion can be used to restrict the TLS
-versions.
-
-## 5.3 Logging & Auditing
-
-### Audit Logs
-
-The following are all [audit logs](https://cloud.google.com/logging/docs/audit)
-that are collected and stored within Google Cloud:
-
-**Activity Logs** - Admin Activity audit logs contain log entries for API calls
-or other actions that modify the configuration or metadata of resources. For
-example, these logs record when users create VM instances or change Identity and
-Access Management permissions.
-
-**Data Access Logs** -Data Access audit logs contain API calls that read the
-configuration or metadata of resources, as well as user-driven API calls that
-create, modify, or read user-provided resource data.
-
-**System Event Logs** - System Event audit logs contain log entries for Google
-Cloud actions that modify the configuration of resources. System Event audit
-logs are generated by Google systems; they aren't driven by direct user action.
-
-### Other Logging
-
-**VPC Flow Logs** - VPC Flow Logs record a sample of network flows sent from and
-received by VM instances, including instances used as GKE nodes. These logs can
-be used for network monitoring, forensics, real-time security analysis, and
-expense optimization.
-
-**Firewall Rule Logs** - Firewall Rules Logging lets you audit, verify, and
-analyze the effects of your firewall rules. For example, you can determine if a
-firewall rule designed to deny traffic is functioning as intended. Firewall
-Rules Logging is also useful if you need to determine how many connections are
-affected by a given firewall rule.
-
-**Access Transparency Logs** - Access Transparency logs include data about
-Google staff activity, including:
-
-- Actions by the Support team that you may have requested by phone
-- Basic engineering investigations into your support requests
-- Other investigations made for valid business purposes, such as recovering
-  from an outage
-
-### Log Destinations
-
-Audit logs and other logs do not expire and are sent to the following
-destinations:
-
-- BigQuery
-- Storage
-- Pub/Sub
-
-When the log destination is in a different project, we need to make sure the log
-writer identity service account of the log sink has the permission to write to
-the destination. If there is a VPC SC or other additional restrictions, we need
-to grant access to the log writer identity as well.
-
-## 5.4 Monitoring
-
-### Projects
-
-To access Cloud Monitoring for each environment a host project has been created
-to hold the dashboards and alerts. The folders and monitoring host projects are
-listed in the table below.
-
-| Folder   | Monitoring Project       |
-| :------- | :----------------------- |
-| Security | `<prefix>`-dev-sec-core-0  |
+Cloud Identity provides Identity as a Service to manage workforce users and groups accessing Google Cloud and Google Workspace resources, and also acts as an identity provider for third-party SAML and LDAP applications.
+
+#### Multi-factor authentication
+
+Enforce multi-factor authentication across all user accounts to defend against phishing and credential compromise. Google corporate accounts require hardware-backed multi-factor authentication, and customers and partners should enforce equivalent multi-factor policies across all identities.
+
+Stellar Engine cannot configure Workspace-level multi-factor authentication automatically during bootstrap, so you must enforce multi-factor authentication in your identity directory to meet IL5 compliance requirements.
+
+#### Role-based access control
+
+Role-based access control bindings and group hierarchies follow the design in section 3.2.
+
+### 5.2 Data security
+
+#### Platform security
+
+Google provides [foundational infrastructure security](https://cloud.google.com/security/) across Google Cloud, while securing customer workloads and data remains a shared responsibility. Review and tailor the controls below to each workload that you deploy on Google Cloud.
+
+#### Data protection
+
+Google encrypts all inter-service platform communication channels automatically; enforce encrypted transport across all client and application-level network connections.
+
+Google encrypts all data at rest across physical storage media to prevent unauthorized physical inspection, and you can supply Customer-Managed Encryption Keys for Compute Engine persistent disks and Cloud Storage buckets.
+
+Database services encrypt stored data automatically at the storage layer; add application-level encryption for sensitive columns to prevent privileged users from reading raw records and to limit exposure during an intrusion.
+
+When loading regulated datasets containing PII or PCI records into BigQuery, enforce applicable privacy and compliance controls and govern downstream query aggregation.
+
+#### Cloud KMS
+
+Use [Cloud Key Management Service](https://cloud.google.com/kms/) whenever workloads require application-layer encryption or customer-managed cryptographic keys to satisfy regulatory mandates.
+
+##### Key management practices
+
+- Rotate encryption keys regularly on an automated schedule through `gcloud`, Terraform, or the Google Cloud console to bound the data volume protected by each key version.
+- Enforce separation of duties by running Cloud KMS in a dedicated project without project-level Owner bindings and managing access through an Organization Administrator. Separate Cloud KMS administration roles from `cryptoKeyEncrypterDecrypter` permissions so administrators who set IAM policies cannot decrypt workload data.
+- Pass Additional Authenticated Data strings on Cloud KMS encrypt and decrypt API calls as an integrity check against [confused deputy attacks](https://en.wikipedia.org/wiki/Confused_deputy_problem). Cloud KMS refuses to decrypt ciphertext unless the caller supplies the exact Additional Authenticated Data string used during encryption, defaulting to an empty string when omitted.
+
+#### Cloud Storage
+
+Cloud Storage addresses buckets and objects by name, allowing external callers to infer bucket or object existence from error responses even when ACLs and IAM policies deny access. Apply these naming and access controls to protect bucket metadata and stored objects:
+
+- Include random suffixes in bucket names such as `stellar-engine-mybucket-gxl3` so unauthorized parties cannot guess or enumerate bucket names.
+- Configure [default object ACLs](https://cloud.google.com/storage/docs/access-control#default) or uniform bucket-level access before uploading objects to avoid retroactive per-object permission updates.
+- Account for independent bucket and object ACLs when legacy fine-grained ACLs are enabled, because granting `GroupA` bucket listing permissions and `GroupB` object read permissions lets `GroupB` read a known object without listing the bucket.
+- Segregate public assets into dedicated, clearly labeled buckets such as `stellar-engine-mybucket-public-3vxa` rather than mixing public and private objects.
+- Verify access controls carefully before marking any object publicly readable, because internet-published objects can be copied immediately outside your control.
+- Avoid granting public write permissions on Cloud Storage buckets, because publicly writable buckets invite abuse, malware distribution, and legal or financial liability for hosted content.
+- Issue [signed URLs](https://cloud.google.com/storage/docs/access-control/signed-urls) with explicit read, write, or delete scope and short expiration windows whenever external users without Google accounts need temporary access to specific objects.
+
+#### Data residency
+
+Control physical data placement by applying [Organization Policy constraints](https://cloud.google.com/resource-manager/docs/organization-policy/overview) across your organization, folders, or projects. Combine the [resource locations constraint](https://cloud.google.com/resource-manager/docs/organization-policy/defining-locations) with least-privilege IAM service permissions so operators cannot provision resources in unauthorized regions.
+
+Defining `constraints/gcp.resourceLocations` restricts newly created resources only; resources provisioned prior to policy enforcement remain active in their existing regions until migrated.
+
+#### Encryption at rest
+
+Google Cloud encrypts all stored data at rest using AES-256 with [Google-managed](https://cloud.google.com/storage/docs/encryption/default-keys) data encryption keys ([DEKs](https://cloud.google.com/security/encryption/default-encryption#key_management)) backed by Google's FIPS 140-2 validated cryptographic module, [BoringCrypto](https://csrc.nist.gov/projects/cryptographic-module-validation-program/Certificate/3318).
+
+#### Encryption in transit
+
+Microservices communicate primarily over [Cloud Pub/Sub](https://cloud.google.com/pubsub/docs/encryption) and HTTPS REST endpoints to maintain encryption in transit across project boundaries.
+
+#### TLS version
+
+Require TLS 1.2 or higher across all web services, disable the `TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA` (`0xc013`) and `TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA` (`0xc014`) cipher suites, and enforce minimum protocol versions with the `gcp.restrictTLSVersion` organization policy constraint.
+
+### 5.3 Logging and auditing
+
+#### Audit logs
+
+Google Cloud collects three categories of [Cloud Audit Logs](https://cloud.google.com/logging/docs/audit):
+
+- Admin Activity audit logs record API calls and administrative actions that modify resource configurations or metadata, such as creating VM instances or updating IAM bindings.
+- Data Access audit logs record API calls that read resource configurations or metadata as well as user-driven calls that create, modify, or read user-provided resource data.
+- System Event audit logs record automated Google Cloud actions that modify resource configurations independently of direct user requests.
+
+#### Network and access logs
+
+Enable network and provider access telemetry alongside Cloud Audit Logs:
+
+- VPC Flow Logs sample network flows sent from and received by Compute Engine VM instances and Google Kubernetes Engine nodes to support network monitoring, forensics, security analysis, and traffic optimization.
+- Firewall Rules Logging audits and verifies firewall rule behavior and tracks connection counts matching allow or deny rules.
+- Access Transparency logs record Google personnel activity during phone-initiated support actions, engineering support investigations, and platform recovery operations.
+
+#### Log destinations
+
+Export audit and network logs without expiration to centralized retention sinks in BigQuery, Cloud Storage, or Pub/Sub.
+
+When routing logs to a destination in another project, grant destination write permissions to the log sink writer identity service account, and authorize that writer identity in any VPC Service Controls perimeters or access policies protecting the destination project.
+
+### 5.4 Monitoring
+
+#### Host projects
+
+Dedicated security core projects host Cloud Monitoring workspaces, dashboards, and alerting policies for each environment:
+
+| Folder | Monitoring project |
+| :--- | :--- |
+| Security | `<prefix>`-dev-sec-core-0 |
 | Security | `<prefix>`-prod-sec-core-0 |
 
-### Groups
+#### Monitoring groups
 
-A group named gcp-monitoring-admins is created during the bootstrap process (See
-3.2 IAM).
+Stage 0 bootstrap provisions the `gcp-monitoring-admins` group described in section 3.2 to administer monitoring configurations.
 
-### Alerts
+#### Alerting policies
 
-Alerts can be created based on events and log metrics. Alerting gives timely
-awareness to problems in your cloud applications so you can resolve the problems
-quickly. Within Cloud Monitoring, an alerting policy describes the circumstances
-under which you want to be alerted and how you want to be notified.
+Configure Cloud Monitoring alerting policies on events and log-based metrics to specify trigger conditions and notification channels so operations teams detect and resolve service issues rapidly.
 
-### Dashboards
+#### Dashboards
 
-Cloud Monitoring automatically installs a dashboard when you create a resource
-in a Google Cloud project. These dashboards display metrics and general
-information about a single Google Cloud service. Custom dashboards are
-dashboards that you create or install. Unlike dashboards for Google Cloud
-services and those for your supported integrations, custom dashboards let you
-view and analyze data from different sources in the same context. For example,
-you can create a dashboard that displays metric data, alerting policies, and log
-entries.
+Cloud Monitoring installs default service dashboards automatically when you provision Google Cloud resources, and you can deploy custom dashboards to correlate metrics, alerting policies, and log entries from multiple services in a single view.
 
-###
+### 5.5 Security boundaries
 
-## 5.5 Security Boundaries
+In the reference boundary architecture, the authorization boundary encompasses the Assured Workloads folder hierarchy, shared networking and security host projects, and attached tenant service projects.
 
-In the above diagram, the dotted red line represents the intended Authorization
-Boundary of a Stellar Engine deployment.
+#### Organization policy inheritance
 
-### Cloud Organization Policy
+Child folders and projects inherit parent organization policies according to `inheritFromParent`. Setting `inheritFromParent = true` merges and reconciles the parent node's effective policy with local rules, whereas setting `inheritFromParent = false` reverts to the constraint's default behavior unless explicit allow or deny rules are defined on the child node.
 
-The customer’s GCP Cloud Organization may inherit its organizational policy
-restrictions. If a resource node has set inheritFromParent = true, then the
-effective Policy of the parent resource is inherited, merged, and reconciled to
-evaluate the resulting effective policy. If a resource hierarchy node has a
-policy that includes inheritFromParent = false, it doesn't inherit the
-organization policy from its parent. Instead, the node inherits the constraint's
-default behavior unless you set a policy with allowed or denied values.
+#### Project layout and VPC Service Controls
 
-### Project Layout
-
-All cross-project permission grants are controlled by Cloud IAM and defined in
-Terraform.
+Terraform manages all cross-project IAM bindings declaratively across the folder and project hierarchy described in section 3.1. Within the hub-and-spoke network topology, a default VPC Service Controls perimeter surrounds the project hosting the restricted Shared VPC.
 
-Details about the project layout are documented in the Cloud Project
-Organization section of this document. As a part of the hub and spoke network
-architecture, a default VPC service control perimeter is created around the
-project which hosts the restricted shared VPC.
+VPC Service Controls mitigate data exfiltration risks by wrapping specified Google Cloud services inside security perimeters that block data egress to unauthorized external IP addresses even when an attacker holds valid user or service account credentials. Combine VPC Service Controls with BeyondCorp Context-Aware Access policies to enforce IP-range and device-trust checks on requests originating outside privileged networks.
 
-VPC Service Controls
+### 5.6 Network security
 
-VPC Service Controls secure and improve the ability to mitigate the risk of data
-exfiltration from GCP services by defining controls. These controls include the
-creation of perimeters that protect resources and the data of services that are
-explicitly specified. We can enforce adaptive access control based on IP range
-or device trust (BeyondCorp) for GCP resource access from outside privileged
-networks.
+#### Shared VPC access control
 
-A VPC Service Control makes sure that data in most GCP services cannot exit the
-perimeter to an un-recognized network IP, even if they have the appropriate IAM
-credentials such as a user account or service account.
+Attach tenant service projects to centralized Shared VPC host networks and grant workload service accounts subnet-scoped [`compute.networkUser`](https://cloud.google.com/iam/docs/job-functions/networking) permissions so workloads can allocate internal IP addresses only in authorized subnets.
 
-## 5.6 Network Security
+#### Environment firewall rules
 
-### Network Control
-
-The customer project may be managed by the SharedVPC network. Each service
-project may have one or more subnets provisioned for its use by the customer.
-Service accounts can be granted
-[compute.networkUser](https://cloud.google.com/iam/docs/job-functions/networking)
-permissions within the specific subnet for each project to allow IP addresses to
-be created.
-
-### Firewall Rules
+Administer Shared VPC firewall rules centrally in the host project, enforcing default-deny ingress, managed egress, and environment-scoped policies across development, non-production, and production tiers.
 
-Firewall rules are set at the SharedVPC level and may be administered by the
-customer or personnel. By default, no ingress traffic is allowed. By default,
-all egress traffic is allowed. Ingress/egress policies can be defined at the
-environment (development, non-production and production) level.
-
-### DNS
-
-For DNS, Stellar Engine uses Google Cloud DNS, a recently provisionally approved
-first party service.
-
-## 5.7 Customer Security Practices
-
-The structure of the cloud projects, and method by which the application is
-developed and maintained, minimizes risk and allows for disparate teams to work
-using independent release schedules. Security is enforced through a separation
-of projects and IAM controls.
-
-### Security Command Center
-
-**Note: SCC is currently in the roadmap for IL5 but is not approved at this
-time.**
-
-Status: Manual Deployment Required
-
-Deployment Guide: [Stellar Engine - SCC Deployment Guide](./scc-deployment-guide.md)
-
-[Security Command Center
-(SCC](https://cloud.google.com/security-command-center/)) is a security and data
-risk database for GCP. It unifies assets, resources, policies, IAM,
-recommendations, and security/risk specific annotations in one place. These
-include:
-
-- Asset discovery and inventory with Cloud Inventory API
-- Sensitive data scanning for PII: GCS Buckets (note the
-  [regions](https://cloud.google.com/dlp/docs/locations) of Cloud DLP
-  deployment and possible regulatory declarations for offshore data analysis
-  needed)
-- Web app vulnerability scanning - XSS, insecure libraries
-- Notifications: Pub/Sub events on new/deleted/modified assets discovered
-
-Customers can optionally use Security Command Center with a Premium level
-license for all organizations which will leverage built-in security sources
-including:
-
-- [Event Threat
-  Detection](https://cloud.google.com/event-threat-detection/docs/)
-- [Cloud Anomaly
-  Detection](https://cloud.google.com/security-command-center/docs/how-to-view-vulnerabilities-threats#anomaly_detection)
-- [Security Health
-  Analytics](https://cloud.google.com/security-command-center/docs/how-to-manage-security-health-analytics)
-  - CIS Security Software
-    [Certified](https://www.cisecurity.org/partner/google-inc/) for the
-    following Benchmarks: CIS Benchmark for Google Cloud Platform Foundation
-    Benchmark, v1.0.0, Level 1 & 2.
-
-Additional compliance mappings are included for reference in [Security Health
-Analytics
-findings](https://cloud.google.com/security-command-center/docs/concepts-security-health-analytics-findings)
-but are neither provided or reviewed by the OWASP Foundation. Customers should
-review the guiding documentation of OWASP Top Ten, National Institute of
-Standards and Technology 800-53 (NIST 800-53), and International Organization
-for Standardization 27001 (ISO 27001) for how to check violations manually.
-
-Google also recommends using the list as a reference for Google Cloud security
-controls.
-
-| <strong>Google Recommendation</strong>:<br/><ol><li>Continuous Review: Regularly review risk reports and insights presented in the SCC dashboard.</li><li>Automation: Automate risk scanning using <a href='https://cloud.google.com/asset-inventory/docs/reference/rest'>Cloud Asset API</a> and implement custom detection logic (e.g., via Cloud Functions). Integrate outcomes of custom security analysis using results back into SCC through <a href='https://cloud.google.com/security-command-center/docs/how-to-api-create-manage-findings#creating_a_finding'>Findings API</a>.</li><li>SIEM Integration: Configure Pub/Sub exports for finding notifications to integrate with external SIEM systems.</li></ol> |
-| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-
-### Firewall Rules
-
-| <strong>Requirements:</strong><br/><ul><li>Default deny for ingress</li><li>Firewall rules to be managed using IAC</li><li>Need to be able to target specific resources, e.g. node pool within GKE cluster</li></ul> |
-| :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <strong>Design Constraints:</strong><br/><ul><li>None</li></ul>                                                                                                                                                      |
-| <strong>Assumptions:</strong><br/><ul><li>None</li></ul>                                                                                                                                                             |
-
-Each VPC network implements a distributed virtual firewall. Configure firewall
-rules that allow or deny traffic to and from the resources attached to the VPC,
-including Compute Engine VM instances and GKE clusters.
-
-Firewall rules are applied at the VPC level, so they help provide effective
-protection and traffic control regardless of the operating system your instances
-use. The firewall is stateful, which means that for flows that are permitted,
-return traffic is automatically allowed.
-
-Firewall rules are specific to a particular VPC network. The rules allow you to
-specify the type of traffic, such as ports and protocols, and the source or
-destination of the traffic, including IP addresses, subnets, tags, and service
-accounts. For example, you can create an ingress rule to allow any VM instance
-associated with a particular service account to accept TCP traffic on port 80
-that originated from a specific source IP address or CIDR range. Once created
-firewall rules cannot be renamed so consider your naming convention to support
-operational needs.
-
-**Figure:** Firewall rules assignment options
-
-Each VPC automatically includes default and implied firewall rules:
-
-- **Implied egress rule:** An egress rule whose action is ALLOW, destination
-  is 0.0.0.0/0, and priority is the lowest possible (65535) lets any instance
-  send traffic to any destination, except for traffic
-  [blocked](https://cloud.google.com/vpc/docs/firewalls#blockedtraffic) by
-  GCP. Outbound access may be restricted by creating a higher priority
-  firewall rule.
-- **Implied deny ingress rule:** An ingress rule whose action is DENY, source
-  is 0.0.0.0/0, and priority is the lowest possible (65535) protects all
-  instances by blocking incoming traffic to them. Incoming access may be
-  allowed by a higher priority rule.
-
-The implied rules cannot be removed, but they have the lowest possible
-priorities. Rules you create can override them as long as your rules have higher
-priorities (less than 65535).
-
-Firewall Rules Logging allows you to audit, verify, and analyze the effects of
-your firewall rules. For example, you can determine if a firewall rule designed
-to deny traffic is functioning as intended. Firewall Rules Logging is also
-useful if you need to determine how many connections are affected by a given
-firewall rule.
-
-You enable Firewall Rules Logging individually for each firewall rule whose
-connections you need to log. FirewaThe implied rules cannot be removed, but they
-have the lowest possible priorities. Rules you create can override them as long
-as your rules have higher priorities (less than 65535).
-
-Firewall Rules Logging allows you to audit, verify, and analyze the effects of
-your firewall rules. For example, you can determine if a firewall rule designed
-to deny traffic is functioning as intended. Firewall Rules Logging is also
-useful if you need to determine how many connections are affected by a given
-firewall rule.
-
-You enable Firewall Rules Logging individually for each firewall rule whose
-connections you need to log. Firewall Rules Logging is an option for any
-firewall rule, regardless of the action (allow or deny) or direction (ingress or
-egress) of the rule. Firewall Rules Logging is useful if you need to determine
-the effectiveness of a firewall rule and how many connections are affected by a
-given firewall rule. For information about viewing logs, see [Using Firewall
-Rules Logging](https://cloud.google.com/vpc/docs/using-firewall-rules-logging).
-
-When you enable logging for a firewall rule, Google Cloud creates an entry
-called a connection record each time the rule allows or denies traffic. Each
-connection record contains the source and destination IP addresses, the protocol
-and ports, date and time, and a reference to the firewall rule that applied to
-the traffic. You can view these records in Cloud Logging, and you can export
-logs to any destination that Cloud Logging export supports.
-
-In addition to firewall rules per VPC there is also the ability to create
-Hierarchical firewall policies which let you create and enforce a consistent
-firewall policy across the organization. You can assign hierarchical firewall
-policies to the organization as a whole or to individual folders.
-
-Hierarchical firewall policies are containers for firewall rules that can
-explicitly deny or allow connections. In addition, hierarchical firewall policy
-rules can delegate evaluation to lower-level policies or VPC network firewall
-rules if desired. Lower-level rules cannot override a rule from a higher place
-in the resource hierarchy. This lets organization-wide admins manage critical
-firewall rules in one place.
-
-All rules associated with the organization node are evaluated, followed by those
-of the first level of folders, and so on. However with Shared VPC the evaluation
-follows the resource path of the Shared VPC host project, not the service
-project. Hierarchical firewall policy rules can be targeted to specific VPC
-networks and VMs by using target resources. This lets you create exceptions for
-groups of VMs.ll Rules Logging is an option for any firewall rule, regardless of
-the action (allow or deny) or direction (ingress or egress[^1]) of the rule.
-Firewall Rules Logging is useful if you need to determine the effectiveness of a
-firewall rule and how many connections are affected by a given firewall rule.
-For information about viewing logs, see [Using Firewall Rules
-Logging](https://cloud.google.com/vpc/docs/using-firewall-rules-logging).
-
-When you enable logging for a firewall rule, Google Cloud creates an entry
-called a connection record each time the rule allows or denies traffic. Each
-connection record contains the source and destination IP addresses, the protocol
-and ports, date and time, and a reference to the firewall rule that applied to
-the traffic. You can view these records in Cloud Logging, and you can export
-logs to any destination that Cloud Logging export supports.
-
-In addition to firewall rules per VPC there is also the ability to create
-Hierarchical firewall policies which let you create and enforce a consistent
-firewall policy across the organization. You can assign hierarchical firewall
-policies to the organization as a whole or to individual folders.
-
-Hierarchical firewall policies are containers for firewall rules that can
-explicitly deny or allow connections. In addition, hierarchical firewall policy
-rules can delegate evaluation to lower-level policies or VPC network firewall
-rules if desired. Lower-level rules cannot override a rule from a higher place
-in the resource hierarchy. This lets organization-wide admins manage critical
-firewall rules in one place.
-
-All rules associated with the organization node are evaluated, followed by those
-of the first level of folders, and so on. However with Shared VPC the evaluation
-follows the resource path of the Shared VPC host project, not the service
-project. Hierarchical firewall policy rules can be targeted to specific VPC
-networks and VMs by using target resources. This lets you create exceptions for
-groups of VMs.
-
-| <strong>Google Recommendation:</strong><br/><ol><li>Create firewall rules leveraging service accounts as the source or target wherever possible, as this allows for more autonomy for applications teams to scale their resources without requiring additional firewall changes. In addition service accounts are specific to projects and can only be changed on VMs by stopping and starting. </li><li>Limit the use of firewall rules using tags as they can be invoked by simply adding a network tag to a VM and are not specific to any project. </li><li>Where more general firewall rules are required, using a specific subnet or a summarized IP CIDR range is recommended to reduce the complexity of the rules.</li><li>To improve security posture it is recommended to create an egress-deny rule with a higher priority than the implied rules to ensure that both ingress and egress traffic is managed. </li><li>Define a standard naming convention for firewall rules and make use of description metadata to allow those reviewing rules to better understand the intent or history of the rule. </li><li>Firewall rules created by GCP service accounts for the purpose of running services inside customers VPCs, e.g. Google Kubernetes Engine, should only be changed in accordance with the documentation for the service. Any changes outside of this may result in service failure and/or invalidation of SLAs.</li><li>Enable Firewall Rules Logging to allow the audit, verification, and analysis the effects of your firewall rules. </li><li>Leverage the Network Intelligence <a href='https://cloud.google.com/network-intelligence-center/docs/firewall-insights/concepts/overview'>Firewall Insights service</a> which provides visibility into firewall usage and detects firewall configuration issues. Related insights and metrics are also integrated into the Google Cloud Console for the Virtual Private Cloud (VPC) firewall.</li><li>Manage custom firewall rules and configuration centrally, using Infrastructure as Code and <a href='https://www.terraform.io/docs/providers/google/r/compute_firewall.html'>Terraform</a>. This provides development teams the ability to manage their rulesets which are approved as part of a CI/CD process by appropriate parties. In addition there is built in auditability and traceability in the process.</li><li>Investigate <a href='https://cloud.google.com/vpc/docs/firewall-policies'>Hierarchical firewall policies</a> to centralize general firewall rules across the organization and/or environments. At the time of writing this feature is in preview.</li></ol> |
-| :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-
-### Data Management
-
-#### Data Loss Prevention (DLP)
-
-To validate and understand where applications in Kubernetes might be logging
-PII, Google recommends the customer utilize DLP to regularly scan logs and
-create a report that details the presence of potentially sensitive data.
-
-## 5.8 Vulnerability Management
-
-Vulnerability management is currently a work in progress, as availability is
-limited in the IL5 enclave. The below section details our end-state goal for
-vulnerability management.
-
-### Security Command Center
-
-Security Command Center’s Premium offering has [Rapid Vulnerability
-Detection](https://cloud.google.com/security-command-center/docs/concepts-rapid-vulnerability-detection-overview#overview),
-a built-in service that finds critical vulnerabilities in several different scan
-targets.
-
-### Supported Scan Targets
+#### Cloud DNS
+
+Stellar Engine uses Google Cloud DNS to provide private and hybrid name resolution across Shared VPC networks.
+
+### 5.7 Customer security practices
+
+Separating workloads across isolated projects with least-privilege IAM boundaries minimizes blast radius and lets application teams ship on independent release schedules.
+
+#### Security Command Center
+
+Security Command Center remains on the IL5 authorization roadmap and is not yet approved for IL5 production workloads; manual deployment is required where supported. Follow the [Security Command Center deployment guide](./scc-deployment-guide.md) to activate the service.
+
+[Security Command Center](https://cloud.google.com/security-command-center/) centralizes asset inventory, policy posture, and threat detection across Google Cloud:
+
+- Discovers and tracks cloud resources through the Cloud Asset Inventory API.
+- Scans Cloud Storage buckets for sensitive PII using Cloud Data Loss Prevention; verify [Cloud DLP regional availability](https://cloud.google.com/dlp/docs/locations) and regulatory data residency requirements before scanning.
+- Scans web applications for cross-site scripting flaws and outdated libraries.
+- Publishes Pub/Sub notifications when assets are created, modified, or deleted.
+
+Activating the Security Command Center Premium tier enables built-in managed detection services:
+
+- [Event Threat Detection](https://cloud.google.com/event-threat-detection/docs/)
+- [Cloud Anomaly Detection](https://cloud.google.com/security-command-center/docs/how-to-view-vulnerabilities-threats#anomaly_detection)
+- [Security Health Analytics](https://cloud.google.com/security-command-center/docs/how-to-manage-security-health-analytics), which holds [CIS Security Software Certification](https://www.cisecurity.org/partner/google-inc/) for the CIS Google Cloud Platform Foundation Benchmark v1.0.0 Levels 1 and 2.
+
+[Security Health Analytics findings](https://cloud.google.com/security-command-center/docs/concepts-security-health-analytics-findings) also include reference mappings to OWASP Top Ten, NIST SP 800-53, and ISO 27001 controls; review each standard's primary guidance when validating compliance manually.
+
+Apply these operational practices when running Security Command Center:
+
+1. Review risk reports and posture findings regularly in the Security Command Center dashboard.
+2. Automate asset scanning with the [Cloud Asset API](https://cloud.google.com/asset-inventory/docs/reference/rest) and publish custom analyzer results back into Security Command Center through the [Findings API](https://cloud.google.com/security-command-center/docs/how-to-api-create-manage-findings#creating_a_finding).
+3. Configure Pub/Sub finding exports to stream alerts into your external SIEM platform.
+
+#### VPC and hierarchical firewall governance
+
+| Aspect | Specification |
+| :--- | :--- |
+| Requirements | Enforce default-deny ingress, manage all firewall rules through Terraform Infrastructure as Code, and target specific workload identities or node pools such as GKE node pools. |
+| Design constraints | None. |
+| Assumptions | None. |
+
+Each VPC network enforces a distributed, stateful virtual firewall at the host network layer across Compute Engine VMs and GKE clusters independently of guest operating systems, allowing return traffic automatically for permitted flows.
+
+VPC firewall rules match traffic by protocol, port, direction, and source or destination CIDRs, subnets, network tags, or service accounts. Because firewall rules cannot be renamed after creation, adopt a consistent naming convention before provisioning rules.
+
+Every VPC network includes two built-in implied firewall rules at priority `65535`:
+
+- The implied allow egress rule (`ALLOW`, destination `0.0.0.0/0`, priority `65535`) permits outbound traffic from any instance except traffic [blocked by Google Cloud](https://cloud.google.com/vpc/docs/firewalls#blockedtraffic), unless a higher-priority rule restricts egress.
+- The implied deny ingress rule (`DENY`, source `0.0.0.0/0`, priority `65535`) blocks unsolicited inbound connections to all instances unless a higher-priority rule explicitly allows ingress.
+
+You cannot delete the implied rules, so override them with explicit rules at higher priorities (`0` through `65534`).
+
+Enable Firewall Rules Logging individually on each allow or deny rule whose traffic you need to audit. When enabled, Google Cloud writes a connection record containing source and destination IP addresses, protocol, ports, timestamp, and matched rule reference to Cloud Logging for viewing or export; see [Using Firewall Rules Logging](https://cloud.google.com/vpc/docs/using-firewall-rules-logging) for details.
+
+Alongside VPC-level firewall rules, hierarchical firewall policies enforce consistent allow, deny, or `goto_next` delegation rules at the organization node or individual folders so lower-level VPC rules cannot override organization-wide security controls. Evaluation starts at the organization node and proceeds down folder levels; for Shared VPC workloads, policy inheritance follows the Shared VPC host project's folder path rather than the service project's folder path, and `targetResources` can scope rules to specific VPC networks.
+
+Apply these firewall governance recommendations across environments:
+
+1. Scope rules by dedicated workload service accounts rather than network tags wherever possible, because service accounts are project-specific and changing a VM's service account requires stopping and restarting the instance.
+2. Restrict network tag-based firewall rules tightly because any user able to edit VM metadata can attach an arbitrary network tag across projects.
+3. Use specific subnet ranges or summarized CIDR blocks when broader network-level rules are required.
+4. Create an explicit high-priority egress-deny catch-all rule ahead of the implied `65535` allow-egress rule so both ingress and egress traffic require explicit authorization.
+5. Enforce a deterministic firewall naming convention and populate rule descriptions to preserve audit context.
+6. Modify firewall rules managed automatically by Google Cloud service agents such as Google Kubernetes Engine only as documented by that service to avoid cluster disruptions or SLA invalidation.
+7. Enable Firewall Rules Logging on security-relevant allow and deny rules for continuous verification.
+8. Use Network Intelligence Center [Firewall Insights](https://cloud.google.com/network-intelligence-center/docs/firewall-insights/concepts/overview) to identify shadowed rules, overly permissive ranges, and unused rulesets.
+9. Manage all custom firewall rules centrally in [Terraform](https://www.terraform.io/docs/providers/google/r/compute_firewall.html) through peer-reviewed CI/CD pipelines for full audit traceability.
+10. Use [hierarchical firewall policies](https://cloud.google.com/vpc/docs/firewall-policies) to enforce organization-wide baseline rules above individual project administrators.
+
+#### Data management
+
+##### Sensitive data inspection
+
+Use Cloud Data Loss Prevention to scan application and Kubernetes container logs on a recurring schedule and generate reports identifying any inadvertently logged PII or sensitive tokens.
+
+### 5.8 Vulnerability management
+
+Vulnerability management tooling has limited service availability inside IL5 enclaves; this section documents the target architecture where Security Command Center scanning services are supported.
+
+#### Rapid Vulnerability Detection
+
+Security Command Center Premium includes [Rapid Vulnerability Detection](https://cloud.google.com/security-command-center/docs/concepts-rapid-vulnerability-detection-overview#overview) to identify critical exposures across public-facing endpoints.
+
+#### Supported scan targets
 
 - Compute Engine
-- Cloud Load Balancing (External)
+- External Cloud Load Balancing
 - Google Kubernetes Engine ingress
 - Cloud Run
 - App Engine
 
-### Scans
+#### Managed scans
 
-Rapid Vulnerability Detection runs managed scans that
-[detect](https://cloud.google.com/security-command-center/docs/concepts-rapid-vulnerability-detection-overview#scan_findings_and_remediations):
+Rapid Vulnerability Detection runs automated weekly scans using [Cloud Asset Inventory](https://cloud.google.com/asset-inventory/docs/overview#features) discovery without requiring manual target URL lists to [detect](https://cloud.google.com/security-command-center/docs/concepts-rapid-vulnerability-detection-overview#scan_findings_and_remediations):
 
 - Weak credentials
-- Exposed interface findings
+- Exposed network interfaces
 - Incomplete software installations
-- Vulnerable software findings
-- Exposed administrator user interfaces
+- Known vulnerable software versions
+- Exposed administrative user interfaces
 
-When enabled, Security Command Center automatically configures and manages the
-service scans without a need to provide target URLs or manually start scans.
-Rapid Vulnerability Detection uses [Cloud Asset
-Inventory](https://cloud.google.com/asset-inventory/docs/overview#features) to
-retrieve information about new VMs and applications in projects and runs scans
-once a week to find public endpoints and detect vulnerabilities.
+#### Service enablement
 
-### Enablement
+Enable [Rapid Vulnerability Detection](https://cloud.google.com/security-command-center/docs/how-to-use-rapid-vulnerability-detection#enabling) on the Security Command Center Services page in the Google Cloud console. Initial scans run automatically within 24 hours of activation and repeat weekly thereafter.
 
-[Rapid Vulnerability
-Detection](https://cloud.google.com/security-command-center/docs/how-to-use-rapid-vulnerability-detection#enabling)
-can be enabled via Google Cloud Console on the Services page.
+##### Testing
 
-The scans start automatically within 24 hours after first enabling Rapid
-Vulnerability Detection. After the first scan, Rapid Vulnerability Detection
-runs managed scans weekly.
+Deploy the open-source [Tsunami Security Scanner Testbed](https://github.com/google/tsunami-security-scanner-testbed/tree/master/truepositives/secure) in a non-production sandbox to generate sample vulnerability findings and validate alerting pipelines.
 
-#### Test
+##### Reviewing findings
 
-For testing, open source [Testbed for Tsunami
-Security](https://github.com/google/tsunami-security-scanner-testbed/tree/master/truepositives/secure)
-can be used. This is available on GitHub to generate findings for
-vulnerabilities.
+Review project-level vulnerability findings in the Security Command Center console dashboard or query them programmatically through the [Security Command Center API](https://cloud.google.com/security-command-center/docs/how-to-api-list-findings#list_all_findings).
 
-#### Review
+##### Viewing findings
 
-Findings contain detected vulnerabilities and information about affected
-projects. Vulnerabilities are reported for projects, not specific scan targets
-(endpoints and application software) or VMs contained within projects.
-
-Findings can be viewed in the Security Command Center dashboard or by using
-[Security Command Center
-API.](https://cloud.google.com/security-command-center/docs/how-to-api-list-findings#list_all_findings)
-
-#### Display
-
-Rapid Vulnerability Detection generates [vulnerability
-findings](https://cloud.google.com/security-command-center/docs/concepts-vulnerabilities-findings)
-that are available in the Security Command Center. When they are enabled in the
-Security Command Center, integrated services, like VM Manager, also generate
-vulnerability findings.
-
-Displaying all findings for a port or IP address can be done via Google Cloud
-Console under
-[Findings](https://cloud.google.com/security-command-center/docs/how-to-use-rapid-vulnerability-detection#display-findings-for-port-or-ip)
-and via [Security Command Center
-API](https://cloud.google.com/security-command-center/docs/how-to-api-list-findings#list_all_findings).
+Inspect Rapid Vulnerability Detection and integrated VM Manager [vulnerability findings](https://cloud.google.com/security-command-center/docs/concepts-vulnerabilities-findings) filtered by IP address or port in the Google Cloud console under [Findings](https://cloud.google.com/security-command-center/docs/how-to-use-rapid-vulnerability-detection#display-findings-for-port-or-ip) or through the [Security Command Center API](https://cloud.google.com/security-command-center/docs/how-to-api-list-findings#list_all_findings).
