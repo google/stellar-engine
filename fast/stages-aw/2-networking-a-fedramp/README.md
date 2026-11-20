@@ -61,6 +61,35 @@ spokes:
         - projects/my-hub-project/regions/us-east4/vpnTunnels/onprem-1
 ```
 
+## 6 Host project OS Login
+
+OS Login stays enabled on the hub and spoke host projects (`<prefix>-net-hub-host` and `<prefix>-<env>-net-host`) for CIS Compute Engine benchmark 4.4 and NIST SP 800-53r5 AC-2 and AC-17, either through the `compute.requireOsLogin` organization policy constraint or through an `enable-oslogin = "true"` metadata key that this stage sets.
+
+- Stage 0 enforces `compute.requireOsLogin` for every regime except `IL4` and `IL5`, on the organization or on the Assured Workloads folder when `deploy_org_resources.org_policies` is `false`. Under that constraint Compute Engine writes `enable-oslogin = "true"` to each new project and rejects requests that remove the key, so the stage does not set the key for those regimes, which include `FEDRAMP_MODERATE`, `FEDRAMP_HIGH`, and `IL2`. Setting it again fails with `key "enable-oslogin" already present in metadata`.
+- When `assured_workloads.regime` is `IL4`, `IL5`, or unset, the stage sets the key through `google_compute_project_metadata_item.oslogin`, keyed `hub` and by lowercase environment name.
+- The constraint does not add the key to projects that already exist. Set `manage_oslogin_metadata = true` when the host projects exist, or are created, without the constraint in force, for example when Stage 0 last ran with `bootstrap_user` set or with `compute.requireOsLogin` removed from its policy data.
+- Set `manage_oslogin_metadata = false` on an `IL4` or `IL5` deployment only when another policy on an ancestor already enforces `compute.requireOsLogin`.
+- After the stage has set the key, a change that stops managing it plans to delete the key. Run `terraform state rm google_compute_project_metadata_item.oslogin` before that apply to keep OS Login enabled.
+- Confirm the result on each host project with `gcloud compute project-info describe --project=<host-project-id> --format="value(commonInstanceMetadata[items][enable-oslogin])"`, which prints `true`.
+
+Earlier releases set the key through `compute_metadata` on the host project modules, so an existing state can track it at `module.hub-project.google_compute_project_metadata_item.default["enable-oslogin"]` and at the matching `module.env-spoke-projects["<Env>"]` addresses.
+
+- The stage releases those addresses from state without deleting the key for the hub and for the default `Prod`, `Int`, and `Test` environments. The first plan after the upgrade lists them as objects that Terraform no longer manages and plans no change to project metadata.
+- For any other `envs_folders` key, run `terraform state rm 'module.env-spoke-projects["<Env>"].google_compute_project_metadata_item.default["enable-oslogin"]'` before the first apply. Without it Terraform plans to delete the key, which fails under `compute.requireOsLogin` and disables OS Login where the constraint is absent.
+- When the stage sets the key on a host project that already carries it, add one `import` block per host project before the apply, because the provider does not overwrite an existing key.
+
+```hcl
+import {
+  to = google_compute_project_metadata_item.oslogin["hub"]
+  id = "projects/<prefix>-net-hub-host/meta-data/enable-oslogin"
+}
+
+import {
+  to = google_compute_project_metadata_item.oslogin["prod"]
+  id = "projects/<prefix>-prod-net-host/meta-data/enable-oslogin"
+}
+```
+
 <p align="center">
   <img src="/fast/stages-aw/2-networking-a-fedramp/images/Stellar-Engine-Network-FedRAMP.png" alt="Networking diagram">
 </p>
@@ -71,6 +100,7 @@ spokes:
 - [3 Private Google APIs access](#3-private-google-apis-access)
 - [4 Centralized internet egress](#4-centralized-internet-egress)
 - [5 NCC hub factory](#5-ncc-hub-factory)
+- [6 Host project OS Login](#6-host-project-os-login)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
@@ -84,10 +114,10 @@ spokes:
 | [billing_account](variables.tf#L41) | Billing account id. If billing account is not part of the same org set `is_org_level` to false. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [envs_folders](variables.tf#L166) | List of environments to be created for projects to go into. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [folder_ids](variables.tf#L328) | Folders to be used for the networking resources in folders/nnnnnnnnnnn format. If null, folder will be created. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [organization](variables.tf#L467) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [prefix](variables.tf#L483) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
-| [regions](variables.tf#L550) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [tenant_accounts](variables.tf#L622) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [organization](variables.tf#L473) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [prefix](variables.tf#L489) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
+| [regions](variables.tf#L556) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [tenant_accounts](variables.tf#L628) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [assured_workloads](variables.tf#L22) | Configuration for Assured Workloads. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [billing_override](variables.tf#L54) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [centralized_egress](variables.tf#L63) | Optional centralized Internet Egress VPC spoke running Secure Web Proxy in next-hop routing mode with Cloud NAT. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
@@ -106,16 +136,17 @@ spokes:
 | [groups](variables.tf#L347) | IAM groups mapping. | <code>any</code> |  | <code>null</code> |
 | [kms_protection_level](variables.tf#L353) | Cloud KMS protection level from 0-bootstrap outputs. This stage creates no KMS keys and does not read this value today; it retains the variable for compatibility with the `0-bootstrap.auto.tfvars.json` file and uses it only if the stage creates KMS keys again. | <code>string</code> |  | <code>null</code> |
 | [logging](variables.tf#L361) | Logging configuration. | <code>any</code> |  | <code>null</code> |
-| [ncc_hubs](variables.tf#L367) | Network Connectivity Center hubs, groups, and spokes in hub_name => config format, merged with YAML definitions from factories_config.ncc_hubs. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [outputs_location](variables.tf#L477) | Path where providers and tfvars files for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
-| [proxy_subnets](variables.tf#L494) | VPC proxy-only subnet CIDRs keyed by environment. One entry per key of envs_folders is required: every environment spoke gets a proxy-only subnet in regions.primary. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [psa_ranges](variables.tf#L507) | Optional Private Services Access (PSA) IP ranges keyed by environment name (for example prod, int, or test) for services that do not use Private Service Connect. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [psc_google_apis](variables.tf#L523) | Private Service Connect endpoints for Google APIs created in the central hub VPC, environment spoke VPCs, and optional centralized egress VPC. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [regime_mapping](variables.tf#L544) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
-| [security_profile_group_ids](variables.tf#L559) | Optional Cloud NGFW Enterprise security profile group IDs in logical_key => //networksecurity.googleapis.com/<id> format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [service_accounts](variables.tf#L566) | Automation service accounts in name => email format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [spoke_project_iam](variables.tf#L580) | Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [subnets](variables.tf#L587) | VPC subnet configurations keyed by network name. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [manage_oslogin_metadata](variables.tf#L367) | Set the `enable-oslogin` metadata key on the hub and spoke host projects from this stage. Null sets it only when `assured_workloads.regime` is `IL4`, `IL5`, or unset, because Stage 0 enforces `compute.requireOsLogin` for every other regime and that constraint sets the key on new projects. | <code>bool</code> |  | <code>null</code> |
+| [ncc_hubs](variables.tf#L373) | Network Connectivity Center hubs, groups, and spokes in hub_name => config format, merged with YAML definitions from factories_config.ncc_hubs. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [outputs_location](variables.tf#L483) | Path where providers and tfvars files for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
+| [proxy_subnets](variables.tf#L500) | VPC proxy-only subnet CIDRs keyed by environment. One entry per key of envs_folders is required: every environment spoke gets a proxy-only subnet in regions.primary. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [psa_ranges](variables.tf#L513) | Optional Private Services Access (PSA) IP ranges keyed by environment name (for example prod, int, or test) for services that do not use Private Service Connect. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [psc_google_apis](variables.tf#L529) | Private Service Connect endpoints for Google APIs created in the central hub VPC, environment spoke VPCs, and optional centralized egress VPC. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [regime_mapping](variables.tf#L550) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
+| [security_profile_group_ids](variables.tf#L565) | Optional Cloud NGFW Enterprise security profile group IDs in logical_key => //networksecurity.googleapis.com/<id> format. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [service_accounts](variables.tf#L572) | Automation service accounts in name => email format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [spoke_project_iam](variables.tf#L586) | Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [subnets](variables.tf#L593) | VPC subnet configurations keyed by network name. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 
