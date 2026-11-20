@@ -1,54 +1,63 @@
-# Cloud Translation
+# Cloud Translation blueprint
 
 <!-- BEGIN TOC -->
-- [Introduction to Google Cloud Translation](#introduction-to-google-cloud-translation)
-- [Cloud Translatation Blueprint](#cloud-translatation-blueprint)
-- [Disclaimer](#disclaimer)
-- [Deployment Steps](#deployment-steps)
-- [Verification of a successful deployment](#verification-of-a-successful-deployment)
-- [Demo](#demo)
+- [1 Cloud Translation overview](#1-cloud-translation-overview)
+- [2 Blueprint scope](#2-blueprint-scope)
+- [3 Compliance scope](#3-compliance-scope)
+- [4 Deployment steps](#4-deployment-steps)
+- [5 Deployment verification](#5-deployment-verification)
+- [6 Batch translation demo](#6-batch-translation-demo)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Introduction to Google Cloud Translation
-Google Cloud Translation provides a comprehensive set of AI-powered services for breaking down language barriers. Its core Cloud Translation API offers Text, Document, and Batch Translation for converting content in various formats, complemented by Language Detection. For managing complex translation workflows, Translation Hub offers a centralized portal with human-in-the-loop capabilities. Users can also achieve higher accuracy for specialized content by training custom models with AutoML Translation and ensuring consistent terminology across all translations using Glossaries.
+## 1 Cloud Translation overview
 
-## Cloud Translatation Blueprint
-The deployment of a Cloud Translation blueprint delivers scalable translation capabilities, encompassing real-time text conversion alongside asynchronous batch and document processing. It can be built to incorporate the creation of AutoML Translation models to achieve domain-specific accuracy, a process that necessitates dedicated data management and training pipelines. Simultaneously, the establishment of Glossaries provides consistent terminology application across all translation tasks. Integrating Translation Hub establishes a managed portal for human-machine translation workflows, streamlining operational processes. The overall impact ranges from immediate global communication and content localization to optimized security, cost management, and efficient, customized translation pipelines.
+Google Cloud Translation provides real-time text translation, document and batch translation, language detection, custom AutoML Translation models, and terminology glossaries across supported languages.
 
-## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workdloads within the Google Cloud Platform (GCP) organization. The Translation API must be enabled in the GCP in order for the workloads to be viewed.
+## 2 Blueprint scope
 
-## Deployment Steps
-1. Copy the contents of the terraform.tfvars.sample file into your own terraform.tfvars file, then update the variables in this file. For reference update the following variables:
+This blueprint enables the Cloud Translation API, creates input and output Cloud Storage buckets, and deploys a `translate-workflow` Workflows pipeline with optional CMEK encryption for asynchronous batch translation.
 
-- ```project``` with the GCP project id<br />
-- ```region``` with the GCP Location <br />
-- ```deletion_protection``` to set deletion protection on the created workflow<br />
-- ```src_lang``` with the [language](https://cloud.google.com/translate/docs/languages) of your input documents<br />
-- ```target_lang``` with the [language](https://cloud.google.com/translate/docs/languages) you would like your documents to be translated into<br />
+## 3 Compliance scope
 
-2. The usual terraform commands will be used to deploy the processor. To provision this example, run the following from within this directory:
+- Deploy this blueprint inside a FedRAMP High Assured Workloads folder within your Google Cloud organization, and ensure the Cloud Translation API is enabled on `main_project_id`.
 
-```terraform init ```<br />
-```terraform plan``` to see the infrastructure plan<br />
-```terraform apply``` to apply the infrastructure build<br />
-```terraform destroy``` only if you wish to destroy the built infrastructure<br />
+## 4 Deployment steps
 
-## Verification of a successful deployment
-Use the GCP console to verify if the workflows are created. You can confirm by first clicking try translation API on the GCP translation API link, https://cloud.google.com/translate. There will be a button that either says manage or enable. If it does not say manage it means that the API is not enabled, after enabling and clicking into manage the workloads will become visible. You should see a newly created workflow named "translate-workflow". Next, check for buckets named "(YOUR-PROJECT-ID)-translate-input" and "(YOUR-PROJECT-ID)-translate-output".
+1. Copy `terraform.tfvars.sample` to `terraform.tfvars` and configure your input values:
+   - Set `main_project_id` to the target Google Cloud project ID.
+   - Set `region` to the target Google Cloud region.
+   - Set `deletion_protection` to control workflow deletion protection.
+   - Set `src_lang` and `target_lang` to [supported language codes](https://cloud.google.com/translate/docs/languages).
+2. Initialize and apply the Terraform configuration from this directory:
 
-## Demo
-If you would like to use the Translation LLM directly from the Google Cloud Console, follow this [link](https://console.cloud.google.com/vertex-ai/studio/translation).
+```bash
+terraform init
+terraform plan
+terraform apply
+```
 
-To use the created workflow for batch translations, continue to the following steps:
-1. If you would like to see how the Translation API handles long-form content, download an example text file from [Project Gutenberg](https://www.gutenberg.org/). Either choose a book yourself, or use the following command to download Crime and Punishment:<br />
-```curl https://www.gutenberg.org/cache/epub/2554/pg2554.txt > ./samples/crime-and-punishment.txt```
-2. Upload the files from the local samples folder to the input bucket.
-3. Go to workflows, and click on your newly created "translate-workflow".
-4. Click "Execute", then click "Execute" again.
-5. After the workflow executes, look at the output bucket to view your translated documents.
+Run `terraform destroy` if you need to tear down the deployed resources.
+
+## 5 Deployment verification
+
+Verify in the Google Cloud console that the [Cloud Translation API](https://cloud.google.com/translate) is enabled, the `translate-workflow` workflow exists in Workflows, and the `<main_project_id>-translate-input` and `<main_project_id>-translate-output` buckets exist in Cloud Storage.
+
+## 6 Batch translation demo
+
+To test interactive translation directly in the console, open [Vertex AI Studio Translation](https://console.cloud.google.com/vertex-ai/studio/translation). To run the batch translation workflow:
+
+1. Download a sample text file from [Project Gutenberg](https://www.gutenberg.org/) or fetch an example file directly:
+
+```bash
+curl https://www.gutenberg.org/cache/epub/2554/pg2554.txt > ./samples/crime-and-punishment.txt
+```
+
+2. Upload the sample files from `./samples/` to `<main_project_id>-translate-input`.
+3. Open `translate-workflow` in Workflows and select Execute twice to start the run.
+4. Inspect the translated documents inside `<main_project_id>-translate-output` once execution completes.
+
 <!-- BEGIN TFDOC -->
 ## Variables
 

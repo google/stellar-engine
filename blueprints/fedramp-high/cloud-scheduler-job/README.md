@@ -1,106 +1,88 @@
-# Cloud Scheduler Job Blueprint
-This blueprint schedules a cron job to publish messages to an *existing* Google Cloud Pub/Sub topic.
+# Cloud Scheduler job blueprint
+
+This blueprint schedules a managed Cloud Scheduler cron job that publishes messages to an existing Pub/Sub topic.
 
 <!-- BEGIN TOC -->
-- [Introduction](#introduction)
-- [Disclaimer](#disclaimer)
-- [Prerequisites](#prerequisites)
-- [Deployment Steps](#deployment-steps)
-- [Verification](#verification)
-- [Important Notes](#important-notes)
+- [1 Cloud Scheduler overview](#1-cloud-scheduler-overview)
+- [2 Compliance scope](#2-compliance-scope)
+- [3 Prerequisites](#3-prerequisites)
+- [4 Deployment steps](#4-deployment-steps)
+- [5 Deployment verification](#5-deployment-verification)
+- [6 Operational notes](#6-operational-notes)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Introduction
-Google Cloud Scheduler is a fully managed enterprise-grade cron job service. It allows you to schedule virtually any batch job, big data job, cloud operation, or even trigger App Engine, Cloud Pub/Sub, or HTTP endpoints.
+## 1 Cloud Scheduler overview
 
-This blueprint specifically focuses on creating a Cloud Scheduler job that publishes a message to an *existing* Cloud Pub/Sub topic on a defined schedule. This approach leverages your existing Pub/Sub infrastructure and aligns with decoupled service patterns.
+Cloud Scheduler is a managed cron service that triggers batch jobs, App Engine handlers, HTTP endpoints, and Pub/Sub topics on a recurring schedule. Publishing scheduled messages to an existing Pub/Sub topic decouples job scheduling from downstream consumers.
 
-## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in either a FedRAMP-High or IL5 (Impact Level 5) environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
-- Assured Workloads in both environments ensures that sensitive data and workloads in GCP adhere to the rigorous security standards mandated by the DoD, making it suitable for government agencies.
+## 2 Compliance scope
 
-## Prerequisites
-Before deploying this blueprint, ensure the following are in place:
+- Deploy this blueprint inside a FedRAMP High or IL5 Assured Workloads folder within your Google Cloud organization.
+- Assured Workloads enforces regional data residency and encryption guardrails required for federal and defense workloads.
 
-1.  **Google Cloud Projects:**
-    * A **main project** (`var.main_project_id`) where the Cloud Scheduler job will be created.
-    * The Pub/Sub topic you intend to use may reside in this project or a separate project.
-    * If the Pub/Sub topic uses CMEK, your KMS key is assumed to be in a `core_project_id`.
-2.  **Existing Pub/Sub Topic:**
-    * A Pub/Sub topic must already exist to which the Cloud Scheduler job will publish messages. This blueprint **consumes an existing topic**; it does not create it.
-    * You will need its full resource path (e.g., `projects/<PROJECT_ID>/topics/<TOPIC_NAME>`).
-    * You can provision a Pub/Sub topic using the `blueprints/fedramp-high/pub-sub-project` blueprint.
-3.  **Existing Cloud KMS Key (if Pub/Sub Topic uses CMEK):**
-    * If your existing Pub/Sub topic uses Customer-Managed Encryption Keys (CMEK), you must have the corresponding Cloud KMS CryptoKey provisioned.
-    * This blueprint will grant the Pub/Sub service account (`gcp-sa-pubsub.iam.gserviceaccount.com`) permissions on this KMS key.
-4.  **Permissions:** The service account or user deploying this blueprint must have:
-    * `roles/owner` or sufficient granular permissions (e.g., `cloudscheduler.admin`, `pubsub.publisher`, `serviceusage.serviceUsageAdmin`, `resourcemanager.projectIamAdmin`) in the `main_project_id`.
-    * If the Pub/Sub topic uses CMEK, `roles/cloudkms.cryptoKeyEncrypterDecrypter` should be granted to the Pub/Sub service account (`service-PROJECT_NUMBER@gcp-sa-pubsub.iam.gserviceaccount.com`) on the specific KMS key. This blueprint handles that grant.
-    * The `Cloud Scheduler API` (`cloudscheduler.googleapis.com`) and `Cloud Pub/Sub API` (`pubsub.googleapis.com`) enabled in the `main_project_id`. This blueprint attempts to enable the Cloud Scheduler API automatically.
+## 3 Prerequisites
 
-## Deployment Steps
-1.  **Configure Variables:**
-    * Copy the sample variables file:
-        ```bash
-        cp terraform.tfvars.sample terraform.tfvars
-        ```
-    * Open `terraform.tfvars` and update the placeholder values (`xxxx-xxxx-main-0`, `YOUR_PUBSUB_PROJECT_ID`, etc.) with your actual project IDs, existing Pub/Sub topic path, and KMS key path (if applicable).
+Verify that the following resources and permissions exist before running Terraform:
 
-2.  **Initialize Terraform:**
-    ```bash
-    terraform init
-    ```
+- Provision a target workload project (`main_project_id`) to host the Cloud Scheduler job, plus `core_project_id` if the target Pub/Sub topic uses a Cloud KMS key in a separate security project.
+- Provision the target Pub/Sub topic ahead of time, such as through `blueprints/fedramp-high/pub-sub-project`, and record its full resource path `projects/<project-id>/topics/<topic-name>`.
+- If the Pub/Sub topic uses CMEK, record the Cloud KMS CryptoKey path in `kms_key_name` so Terraform can grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` to the Pub/Sub service agent.
+- Grant the deploying identity `roles/cloudscheduler.admin`, `roles/pubsub.publisher`, `roles/serviceusage.serviceUsageAdmin`, and `roles/resourcemanager.projectIamAdmin` on `main_project_id`, and ensure `cloudscheduler.googleapis.com` and `pubsub.googleapis.com` can be enabled.
 
-3.  **Review Plan:**
-    ```bash
-    terraform plan
-    ```
-    Carefully review the proposed infrastructure (Cloud Scheduler job and IAM) changes before applying.
+## 4 Deployment steps
 
-4.  **Apply Changes:**
-    ```bash
-    terraform apply
-    ```
-    Type `yes` when prompted to confirm the deployment.
+1. Copy the sample variables file and update `terraform.tfvars` with your project ID, region, schedule, existing Pub/Sub topic path, and optional KMS key path:
 
-5.  **Destroy Infrastructure (Optional):**
-    If you wish to remove the deployed Cloud Scheduler job:
-    ```bash
-    terraform destroy
-    ```
-    Type `yes` when prompted to confirm.
-    *Note: This will NOT destroy the underlying Pub/Sub topic or KMS key; only the Cloud Scheduler job.*
+```bash
+cp terraform.tfvars.sample terraform.tfvars
+```
 
-## Verification
-To verify a successful deployment:
+2. Initialize the Terraform working directory:
 
-1.  **Google Cloud Console:**
-    * Navigate to **Operations** > **Cloud Scheduler** in your `main_project_id`.
-    * Confirm that your job (`var.name`) has been created and its status is healthy.
-    * You can manually "RUN NOW" to trigger the job immediately.
-    * To verify the Pub/Sub message: Subscribe a test subscriber to your target Pub/Sub topic and observe if messages are received after the job executes.
+```bash
+terraform init
+```
 
-2.  **`gcloud` CLI:**
-    * **List Jobs:**
-        ```bash
-        gcloud scheduler jobs list --project=<MAIN_PROJECT_ID> --location=<REGION>
-        ```
-    * **Describe a Job:**
-        ```bash
-        gcloud scheduler jobs describe <JOB_NAME> --location=<REGION> --project=<MAIN_PROJECT_ID>
-        ```
-    * **Manually Run Job:**
-        ```bash
-        gcloud scheduler jobs run <JOB_NAME> --location=<REGION> --project=<MAIN_PROJECT_ID>
-        ```
+3. Review the execution plan to verify the Cloud Scheduler job and IAM bindings:
 
-## Important Notes
--   This blueprint explicitly uses an **existing Pub/Sub topic** as its target. It does not create new Pub/Sub topics.
--   The `schedule` variable uses the [Crontab format](https://en.wikipedia.org/wiki/Cron#CRON_expression).
--   Cloud Scheduler jobs are **regional resources**. Ensure `var.gcp_region` matches your desired deployment region.
--   This blueprint configures a **Pub/Sub target**. Cloud Scheduler also supports HTTP and App Engine targets, which would require modifications to the `main.tf` if desired.
+```bash
+terraform plan
+```
+
+4. Apply the configuration to create the Cloud Scheduler job:
+
+```bash
+terraform apply
+```
+
+5. If you need to remove the Cloud Scheduler job without affecting the existing Pub/Sub topic or KMS key, run `terraform destroy`:
+
+```bash
+terraform destroy
+```
+
+## 5 Deployment verification
+
+Verify the scheduled job in the Google Cloud console or with the `gcloud` CLI:
+
+- In the Google Cloud console, open Cloud Scheduler in `main_project_id`, confirm the job configured by `name` is enabled, trigger a manual run, and verify message delivery on a test Pub/Sub subscription.
+- List and inspect the job from the command line, then trigger an on-demand execution:
+
+```bash
+gcloud scheduler jobs list --project=<MAIN_PROJECT_ID> --location=<REGION>
+gcloud scheduler jobs describe <JOB_NAME> --location=<REGION> --project=<MAIN_PROJECT_ID>
+gcloud scheduler jobs run <JOB_NAME> --location=<REGION> --project=<MAIN_PROJECT_ID>
+```
+
+## 6 Operational notes
+
+- This blueprint targets an existing Pub/Sub topic and does not create new topics.
+- Set `schedule` using standard [crontab syntax](https://en.wikipedia.org/wiki/Cron#CRON_expression).
+- Cloud Scheduler jobs are regional resources, so match `gcp_region` to your Assured Workloads deployment region.
+- Update `main.tf` if your workload requires HTTP or App Engine targets instead of Pub/Sub targets.
+
 <!-- BEGIN TFDOC -->
 ## Variables
 

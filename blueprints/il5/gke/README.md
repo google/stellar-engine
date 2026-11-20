@@ -1,98 +1,86 @@
-# GKE Cluster with Shared VPC and KMS Blueprint
+# GKE cluster blueprint
 
 <!-- BEGIN TOC -->
-- [Purpose](#purpose)
-- [Prerequisites](#prerequisites)
-- [Disclaimer](#disclaimer)
-- [Usage](#usage)
-  - [Node Pool Strategy](#node-pool-strategy)
-  - [Testing the Cluster](#testing-the-cluster)
+- [1 Purpose](#1-purpose)
+- [2 Prerequisites](#2-prerequisites)
+- [3 Compliance scope](#3-compliance-scope)
+- [4 Deployment steps](#4-deployment-steps)
+  - [Node pool strategy](#node-pool-strategy)
+  - [Cluster verification](#cluster-verification)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Purpose
+## 1 Purpose
 
-This blueprint deploys a Google Kubernetes Engine (GKE) Standard cluster designed for enterprise environments that require a separation of duties. It follows security best practices by consuming pre-existing network and encryption resources from separate, dedicated Google Cloud projects.
+This blueprint deploys a private Google Kubernetes Engine Standard cluster and bastion VM in a dedicated workload service project while consuming Shared VPC networking and Cloud KMS encryption keys from central platform projects:
 
-The key feature of this blueprint is its **decoupling** from the underlying infrastructure. It does not create its own VPC network or KMS keys. Instead, it securely connects to and utilizes:
-* A **Shared VPC** from a central landing zone project.
-* A **Customer-Managed Encryption Key (CMEK)** from a central core/security project for node boot disk encryption.
+- Consumes an existing Shared VPC subnet and secondary Pod and Service CIDR ranges from `landing_project_id`.
+- Encrypts node boot disks and bastion disks with an existing Customer-Managed Encryption Key from `core_project_id`.
 
-This allows platform teams to manage the network and security resources centrally while enabling application teams to deploy GKE clusters in their own service projects.
+Separating network, encryption, and cluster projects lets platform teams govern VPC and KMS controls centrally while application teams manage GKE workloads in isolated service projects.
 
-## Prerequisites
+## 2 Prerequisites
 
-Before running this blueprint, the following resources and permissions must be in place:
+Ensure the following projects, network ranges, keys, and IAM bindings exist before running Terraform:
 
-1.  **Three distinct Google Cloud projects** with billing enabled:
-    * A **Main Project** to host the GKE cluster.
-    * A **Landing Zone / Host Project** that contains the Shared VPC.
-    * A **Core / Security Project** that contains the Cloud KMS key.
-2.  **Shared VPC Configuration**: The Main Project must be attached to the Host Project's Shared VPC as a service project.
-3.  **Network Resources**: The subnetwork within the Shared VPC must have at least **two secondary IP ranges** available. GKE requires one dedicated range for Pods and a separate range for Services.
-4.  **KMS Resources**: A Cloud KMS Key Ring and CryptoKey must exist in the Core Project.
-5.  **Permissions**: The user or service account running `terraform apply` needs specific permissions in all three projects. The necessary roles are:
-    * **On the Main Project:**
-        * `roles/container.admin`: To create and manage the GKE cluster.
-        * `roles/iam.serviceAccountAdmin`: To create the GKE service account.
-    * **On the Host Project:**
-        * `roles/compute.networkUser`: Must be assigned to the **GKE Service Agent**, **Google APIs Service Agent**, and **Compute Engine Service Agent** of the Main Project.
-        * `roles/container.hostServiceAgentUser`: Must be assigned to the **GKE Service Agent** of the Main Project.
-    * **On the Core Project:**
-        * `roles/cloudkms.cryptoKeyEncrypterDecrypter`: Must be assigned to the **GKE Service Agent** and the **Compute Engine Service Agent** of the Main Project.
+- Provision three billing-enabled Google Cloud projects: `main_project_id` for the GKE cluster, `landing_project_id` for the Shared VPC host network, and `core_project_id` for the Cloud KMS key ring and CryptoKey.
+- Attach `main_project_id` to `landing_project_id` as a Shared VPC service project.
+- Configure the target Shared VPC subnet with two secondary IP CIDR ranges dedicated to GKE Pods and GKE Services.
+- Provision the Cloud KMS key ring and CryptoKey in `core_project_id` in the target `gcp_region`.
+- Grant required IAM roles across all three projects:
+  - On `main_project_id`, grant the deploying identity `roles/container.admin` and `roles/iam.serviceAccountAdmin`.
+  - On `landing_project_id`, grant `roles/compute.networkUser` on the target subnet to the `main_project_id` GKE service agent, Google APIs service agent, and Compute Engine service agent, and grant `roles/container.hostServiceAgentUser` to the `main_project_id` GKE service agent.
+  - On `core_project_id`, grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` on the KMS CryptoKey to the `main_project_id` GKE service agent and Compute Engine service agent.
 
-## Disclaimer
-The present GCP Terraform Module in this project is set up and intended to be implemented in either a FedRAMP-High or IL5 (Impact Level 5) environment using the Assured Workloads within the Google Cloud Platform (GCP) organization. Assured Workloads in both environments ensures that sensitive data and workloads in GCP adhere to the rigorous security standards mandated by the DoD, making it suitable for government agencies.
+## 3 Compliance scope
 
-## Usage
+- Deploy this blueprint inside a FedRAMP High or IL5 Assured Workloads folder within your Google Cloud organization.
+- Assured Workloads enforces regional data residency and encryption guardrails required for federal and defense workloads.
 
-1.  **Configure Variables**: Create a `terraform.tfvars` file and provide values for all the required input variables. See the auto-generated Inputs section below for details.
+## 4 Deployment steps
 
-2.  **Initialize Terraform**:
-    ```bash
-    terraform init
-    ```
+1. Copy `terraform.tfvars.sample` to `terraform.tfvars` and populate all required input variables listed in [Variables](#variables).
+2. Initialize the Terraform working directory:
 
-3.  **Plan and Apply**:
-    ```bash
-    terraform plan
-    terraform apply
-    ```
+```bash
+terraform init
+```
 
-### Node Pool Strategy
+3. Review the execution plan and apply the configuration:
 
-This blueprint creates two node pools by default: `default-pool` and a separate custom node pool (e.g., `gke-nodepool-name-00`). This is an intentional design choice and a GKE best practice.
+```bash
+terraform plan
+terraform apply
+```
 
-* **`default-pool`**: This pool is created automatically by GKE and is suitable for running system components. By default, this blueprint keeps it.
-* **Custom Node Pool**: This pool is created by the `cluster-nodepool` module and is intended for your specific applications.
+### Node pool strategy
 
-Using separate node pools allows you to optimize performance, security, and cost by running different types of applications on different kinds of machines. Key benefits include:
+By default, `remove_default_node_pool = true` removes GKE's initial `default-pool` after creating a dedicated custom node pool via `modules/gke-nodepool`, and you can set `remove_default_node_pool = false` if you want to retain `default-pool` for system workloads. Separating workloads across custom node pools provides four operational advantages:
 
-* **Specialized Hardware**: Create pools with high-CPU, high-memory, or GPU-enabled machines for specific workloads.
-* **Security & Isolation**: Run sensitive applications on dedicated nodes with unique service accounts or network tags.
-* **Cost Optimization**: Use cheaper machine types or fault-tolerant Spot VMs for batch jobs or CI/CD workloads.
-* **Controlled Upgrades**: Upgrade your cluster one node pool at a time, testing on less critical workloads first.
+- Select high-CPU, high-memory, or GPU machine types tailored to specific workloads.
+- Isolate sensitive workloads onto dedicated nodes with distinct service accounts and network tags.
+- Run fault-tolerant batch or CI/CD workloads on lower-cost machine families.
+- Upgrade node pools incrementally to validate Kubernetes version upgrades before rolling out to critical pools.
 
-If you wish to only use a single custom node pool, you can set the `remove_default_node_pool` variable to `true`.
+See the [GKE node pools documentation](https://cloud.google.com/kubernetes-engine/docs/concepts/node-pools) for sizing and lifecycle guidance.
 
-This approach is a documented best practice for production clusters. For more information, you can refer to the official [Google Cloud documentation on Node Pools](https://cloud.google.com/kubernetes-engine/docs/concepts/node-pools).
+### Cluster verification
 
-### Testing the Cluster
+Connect to the private GKE control plane from the deployed bastion host VM in `main_project_id`:
 
-A bastion host VM is deployed in the Main Project to provide a secure way to access and test the GKE cluster.
+1. Open an SSH session to the bastion VM:
 
-1.  **SSH to the bastion host**:
-    ```bash
-    gcloud compute ssh [BASTION_VM_NAME] --zone [BASTION_VM_ZONE] --project [MAIN_PROJECT_ID]
-    ```
+```bash
+gcloud compute ssh <BASTION_VM_NAME> --zone <BASTION_VM_ZONE> --project <MAIN_PROJECT_ID>
+```
 
-2.  **Configure `kubectl`**: Follow the on-screen instructions inside the bastion host's `toolbox` environment to install the necessary tools and get cluster credentials.
+2. Fetch cluster credentials inside the bastion `toolbox` container environment and verify node readiness:
 
-3.  **Test the connection**:
-    ```bash
-    kubectl get nodes
-    ```
+```bash
+kubectl get nodes
+```
+
 <!-- BEGIN TFDOC -->
 ## Variables
 

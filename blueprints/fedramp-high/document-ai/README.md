@@ -1,61 +1,60 @@
-# Document AI
+# Document AI blueprint
 
 <!-- BEGIN TOC -->
-- [Introduction to Document AI](#introduction-to-document-ai)
-- [Document AI Blueprint](#document-ai-blueprint)
-- [Disclaimer](#disclaimer)
-- [Deployment Steps](#deployment-steps)
-- [Verification of a successful deployment](#verification-of-a-successful-deployment)
-- [Demo](#demo)
+- [1 Document AI overview](#1-document-ai-overview)
+- [2 Blueprint scope](#2-blueprint-scope)
+- [3 Compliance notes](#3-compliance-notes)
+- [4 Deployment steps](#4-deployment-steps)
+- [5 Deployment verification](#5-deployment-verification)
+- [6 Processor demo](#6-processor-demo)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Introduction to Document AI
-Document AI is a document processing and understanding platform that takes unstructured data from documents and transforms it into structured data (specific fields, suitable for a database), making it easier to understand, analyze, and consume. Document AI is built on top of products within Vertex AI with generative AI to help you create scalable, end-to-end, cloud-based document processing applications without specialized machine learning expertise.
+## 1 Document AI overview
 
-## Document AI Blueprint
-This blueprint demonstrates how to create Processors in Document AI on Google Cloud Platform (GCP) by activating the Document AI API to utilize its diverse, Processors—encompassing. This includes both pre-trained Specialized Processors and Custom Processors developed with Document AI Workbench. This foundational setup enables online or batch document processing, transforming unstructured input into structured JSON for storage or database integration. Facilitating seamless application and workflow automation through API access and orchestration services, this blueprint ultimately enhances operational efficiency, mitigates manual errors, and bolsters compliance by converting document data into actionable insights within a secure Google Cloud environment.
-Refer to the [Document AI documentation](https://cloud.google.com/document-ai/docs/send-request#documentai_batch_process_document-python) to learn how to use your processor through various client libraries. If you would like to continue using workflows, then you can view the [documentation](https://cloud.google.com/workflows/docs/create-workflow-terraform) here.
+Document AI extracts structured JSON fields from unstructured documents using pre-trained and custom Vertex AI models so applications and databases can ingest document data without custom machine learning pipelines.
 
-## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workdloads within the Google Cloud Platform (GCP) organization.
-- KMS/CMEK is not currently working for Document AI in Terraform as a cyclical dependency is created; the processor instance creates the Document AI Service Account, but the Service Account must have proper KMS permissions prior to the instance creation. If you would still like to use CMEKs with Document AI, you can manually create a processor first so that the Document AI Service Account will exist.
+## 2 Blueprint scope
 
-## Deployment Steps
-1. Copy the contents of the terraform.tfvars.sample file into your own terraform.tfvars file, then update the variables in this file. For reference update the following variables:
+This blueprint enables the Document AI API, provisions a Document AI processor alongside input and output Cloud Storage buckets, and deploys a Workflows pipeline for batch document processing.
 
-- ```name```  with the name of your processor<br />
-- ```project``` with the GCP project id<br />
-- ```region``` with the GCP Location <br />
-- ```type``` with the type of [Document AI processor](https://cloud.google.com/document-ai/docs/processors-list) you wish to create <br />
+See the [Document AI batch processing guide](https://cloud.google.com/document-ai/docs/send-request#documentai_batch_process_document-python) for client library usage and the [Workflows Terraform guide](https://cloud.google.com/workflows/docs/create-workflow-terraform) for workflow orchestration details.
 
-2. The usual terraform commands will be used to deploy the processor. To provision this example, run the following from within this directory:
+## 3 Compliance notes
 
-```terraform init ```<br />
-```terraform plan``` to see the infrastructure plan<br />
-```terraform apply``` to apply the infrastructure build<br />
-```terraform destroy``` only if you wish to destroy the built infrastructure<br />
+- Deploy this blueprint inside a FedRAMP High Assured Workloads folder within your Google Cloud organization.
+- Provisioning a Document AI processor with CMEK in a single Terraform pass triggers a circular dependency because the Document AI service agent is created during first processor creation, after Cloud KMS IAM grants would need to exist. To use CMEK with Document AI, pre-create a processor or service identity first so the Document AI service agent can receive Cloud KMS permissions before processor creation.
 
-## Verification of a successful deployment
-Use GCP console to verify if the resources have been created. Go to [Document AI](https://console.cloud.google.com/ai/document-ai), then click on "My processors" in the side bar. From here, you will be able to view your newly created processor.
-https://console.cloud.google.com/ai/document-ai
+## 4 Deployment steps
 
-## Demo
-This demo is meant to work with the default "OCR_PROCESSOR".
-1. Manual file upload.
-- Start by clicking on your newly created processor to pull up the "Processor Details" page. 
-- At the bottom of this page, you should see an "Upload Test Document" button.
-- Use this button to upload the sample file "Winnie_the_Pooh_3_Pages.pdf".
-- View the output of the processor.
-2. Batch processing.
-- View your cloud storage buckets.
-- Upload the sample document to "(your-project)-docai-input-bucket".
-- View your workflows and click on "docai-workflow"
-- Click the "execute" button and change your logging level if desired.
-- Click "execute" at the bottom of the screen to start the workflow.
-- After the workflow executes, view your buckets again.
-- Click on "(your-project)-docai-output-bucket" to view the json output.
+1. Copy `terraform.tfvars.sample` to `terraform.tfvars` and configure your input values:
+   - Set `name` to the Document AI processor display name.
+   - Set `main_project_id` to the target Google Cloud project ID.
+   - Set `kms_key_name` to the Cloud KMS CryptoKey resource ID for bucket and workflow encryption.
+   - Set `region` to the target Google Cloud location.
+   - Set `type` to a supported [Document AI processor type](https://cloud.google.com/document-ai/docs/processors-list).
+2. Initialize and apply the Terraform configuration from this directory:
+
+```bash
+terraform init
+terraform plan
+terraform apply
+```
+
+Run `terraform destroy` if you need to tear down the deployed resources.
+
+## 5 Deployment verification
+
+Open [Document AI](https://console.cloud.google.com/ai/document-ai) in the Google Cloud console and select `My processors` in the navigation menu to confirm your processor appears.
+
+## 6 Processor demo
+
+Test the default `OCR_PROCESSOR` deployment using either single-document upload or batch workflow execution:
+
+1. For manual single-file testing, open the processor details page, select Upload Test Document, upload `samples/Winnie_the_Pooh_3_Pages.pdf`, and inspect the parsed fields.
+2. For batch processing, upload the sample PDF to `<main_project_id>-docai-input-bucket` in Cloud Storage, open `docai-workflow` in Workflows, select Execute, and inspect the generated JSON output in `<main_project_id>-docai-output-bucket`.
+
 <!-- BEGIN TFDOC -->
 ## Variables
 

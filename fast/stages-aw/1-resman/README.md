@@ -1,72 +1,59 @@
-# Resource Hierarchy
+# Resource hierarchy
 
-This stage provisions Int, Test, and Prod Google Cloud Folders, and Google Cloud Projects contained within, for tenants. In addition, it lays the framework for the subsequent network and security stages by creating the Google Cloud Folder structure for both. There is substantial modification from the original CFF structure, as all Google Cloud Projects MUST reside within the scope of an Assured Workloads Google Cloud Folder.
-
-# Table of Contents
+Stage 1 provisions environment folders (`Int`, `Test`, and `Prod`), tenant projects, and the `Networking` and `Security` folders consumed by downstream stages. Unlike upstream Cloud Foundation Fabric, every folder and project resides beneath the Stage 0 Assured Workloads folder to keep all workloads and audit logs inside the compliance boundary.
 
 <!-- BEGIN TOC -->
-- [Table of Contents](#table-of-contents)
-- [Design Overview and Choices](#design-overview-and-choices)
-- [How to Run This Stage](#how-to-run-this-stage)
-  - [Impersonating the Automation Service Account](#impersonating-the-automation-service-account)
+- [1 Design overview](#1-design-overview)
+- [2 Stage deployment](#2-stage-deployment)
+  - [Service account impersonation](#service-account-impersonation)
   - [Lightweight multitenancy](#lightweight-multitenancy)
-  - [Team Google Cloud Folders](#team-google-cloud-folders)
-  - [IAM](#iam)
-  - [Additional Google Cloud Folders](#additional-google-cloud-folders)
+  - [Team folders](#team-folders)
+  - [IAM bindings](#iam-bindings)
+  - [Additional folders](#additional-folders)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Design Overview and Choices
+## 1 Design overview
 
-The design of this stage ensures that all parts of a Stellar Engine deployment reside within an Assured Workloads Google Cloud Folder; this prevents things like logs from living outside a compliant domain.
+Placing the entire resource hierarchy inside the Assured Workloads folder ensures every tenant project, host network, and log sink inherits regional data residency and compliance guardrails automatically.
 
-## How to Run This Stage
+## 2 Stage deployment
 
-For detailed information on prerequisites and steps to deploy this stage, please see the latest [Detailed Deployment Guide (DDG)](/docs/ddg.md) If you do not have access, you will have to request it.
+Follow the [Detailed Deployment Guide](/docs/ddg.md) for prerequisites and step-by-step deployment commands.
 
-### Impersonating the Automation Service Account
+### Service account impersonation
 
-The preconfigured provider file uses impersonation to run with this stage's automation service account's credentials. The `gcp-devops` and `organization-admins` groups have the necessary IAM bindings in place to do that, so make sure the current user is a member of one of those groups.
+The generated provider configuration impersonates the Stage 1 automation service account. Ensure your active user identity belongs to `gcp-devops` or `organization-admins`, both of which receive impersonation permissions in Stage 0.
 
 ### Lightweight multitenancy
 
-If the organization needs to support tenants without the full complexity and separation offered by our full multitenant support, this stage offers a simplified setup which is suitable for cases where tenants have less autonomy, and don't need to implement FAST stages inside their reserved partition.
+When your organization requires tenant isolation without separate per-tenant FAST pipelines, define lightweight tenants in the `tenants` variable and shared tenant IAM settings in the `tenants_config` variable.
 
-This mode is activated by defining tenants in the `tenants` variable, while IAM configurations that apply to every tenant can be optionally set in the `tenants_config` variable.
+This configuration creates a `Tenants` folder branch containing one folder per tenant, split into centrally managed `core` folders and tenant-managed folders with dedicated automation buckets and service accounts. Downstream stages can provision centralized networking for each tenant while tenant administrators manage their own application projects.
 
-The resulting setup provides a new "Tenants" branch in the Google Cloud Folder hierarchy with one second-level Google Cloud Folder for each tenant, and additional Google Cloud Folders inside it to host tenant resources managed from the central team, and tenant resources managed by the tenant itself. Automation resources are provided for both teams.
+Stage 1 binds default IAM roles across three folder levels for each tenant:
 
-This allows subsequent Terraform stages to create network resources for each tenant which are centrally managed and connected to central networking, and tenants themselves to optionally manage their own networking and application Google Cloud Projects.
+- Top-level tenant folder bindings for the core IaC service account:
+  - `roles/cloudasset.owner`
+  - `roles/compute.xpnAdmin`
+  - `roles/logging.admin`
+  - `roles/resourcemanager.folderAdmin`
+  - `roles/resourcemanager.projectCreator`
+  - `roles/resourcemanager.tagUser`
+- Centrally managed `core` folder bindings:
+  - `roles/owner` for the core IaC service account
+  - `roles/viewer` for the tenant admin group and tenant IaC service account
+- Tenant-managed folder bindings for the tenant admin group and tenant IaC service account:
+  - `roles/cloudasset.owner`
+  - `roles/compute.xpnAdmin`
+  - `roles/logging.admin`
+  - `roles/resourcemanager.folderAdmin`
+  - `roles/resourcemanager.projectCreator`
+  - `roles/resourcemanager.tagUser`
+  - `roles/owner`
 
-The default roles applied on tenant Google Cloud Folders are
-
-- on the top-level Google Cloud Folder for each tenant
-  - for the core IaC service account
-    - `roles/cloudasset.owner`
-    - `roles/compute.xpnAdmin`
-    - `roles/logging.admin`
-    - `roles/resourcemanager.folderAdmin`
-    - `roles/resourcemanager.projectCreator`
-    - `roles/resourcemanager.tagUser`
-- on the core Google Cloud Folder for each tenant
-  - for the core IaC service account
-    - `roles/owner`
-  - for the tenant admin group and IaC service account
-    - `roles/viewer`
-- on the tenant Google Cloud Folder for each tenant
-  - for the tenant admin group and IaC service account
-    - `roles/cloudasset.owner`
-    - `roles/compute.xpnAdmin`
-    - `roles/logging.admin`
-    - `roles/resourcemanager.folderAdmin`
-    - `roles/resourcemanager.projectCreator`
-    - `roles/resourcemanager.tagUser`
-    - `roles/owner`
-
-Further customization is possible via the `tenants_config` variable.
-
-This is a high level diagram of the design described above.
+Customize these role grants through the `tenants_config` variable.
 
 ```mermaid
 %%{init: {'theme':'base'}}%%
@@ -118,7 +105,7 @@ classDiagram
     }
 ```
 
-This is a list of the variables that need edited to set the Tenant name.
+Replace the tenant keys and descriptions in `terraform.tfvars` with your tenant identifiers:
 
 ```tfvars
 tenants = {
@@ -141,7 +128,7 @@ tenants = {
 }
 ```
 
-This is an example that shows a configured variable block with two example Tenants named `wingarch` and  `fuselagerd`.
+The following example configures two tenants named `wingarch` and `fuselagerd`, generating dedicated provider and `.tfvars` files for each tenant:
 
 ```tfvars
 tenants = {
@@ -164,13 +151,9 @@ wingarch = {
 }
 ```
 
-Providers and tfvars files will be created for each tenant.
+### Team folders
 
-### Team Google Cloud Folders
-
-This stage provides a single built-in customization that offers a minimal (but usable) implementation of the "application" or "business" grouping for resources discussed above. The `team_folders` variable allows you to specify a map of team name and groups, that will result in Google Cloud Folders, automation service accounts, and IAM policies applied.
-
-Consider the following example in a `tfvars` file using the same example teams from above:
+Set the `team_folders` variable to group workloads by application or business unit under a `Teams` folder branch with dedicated automation service accounts and IAM bindings:
 
 ```tfvars
 team_folders = {
@@ -194,33 +177,23 @@ team_folders = {
 }
 ```
 
-This will result in
+Applying this configuration provisions the team resources required to delegate folder management to a CI/CD pipeline or team administrator group:
 
-- a "wingarch" Google Cloud Folder under the "Teams" Google Cloud Folder
-- one GCS bucket in the automation `Google Cloud Project`
-- one service account in the automation `Google Cloud Project` with the correct IAM policies on the Google Cloud Folder and bucket
-- a IAM policy on the Google Cloud Folder that assigns `roles/viewer` to the `wingarch` group
-- a IAM policy on the service account that allows `wingarch` to impersonate it
-- one GCS bucket with KMS CMEK encryption to meet the IL5 requirements
-- one service account in the automation `Google Cloud Project` with the correct IAM policies on the Google Cloud Folder and bucket
-- a IAM policy on the Google Cloud Folder that assigns `roles/viewer` to the `fuselagerd` group
-- a IAM policy on the service account that allows `fuselagerd` to impersonate it
-- one default KMS CMEK for use by the main tenant `Google Cloud Project`(s)
+- Team folders (`wingarch` and `fuselagerd`) under the `Teams` folder with `roles/viewer` bound to each team's configured group.
+- CMEK-encrypted Cloud Storage state buckets in the automation project that satisfy IL5 encryption requirements.
+- Per-team automation service accounts in the automation project with folder and bucket IAM bindings and group impersonation policies.
+- Default Cloud KMS keys for tenant projects.
 
+### IAM bindings
 
-This allows to centralize the minimum set of resources to delegate control of each team's Google Cloud Folder to a pipeline, and/or to the team group. This can be used as a starting point for scenarios that implement more complex requirements (e.g. environment Google Cloud Folders per team, etc.).
+Use the `folder_iam` variable to manage authoritative IAM bindings on top-level folders. For finer-grained adjustments, edit the `iam`, `iam_bindings`, and `iam_bindings_additive` module inputs in the corresponding `branch-*.tf` file following the human-versus-machine principal pattern documented in the [Stage 0 customizations](../0-bootstrap/README.md#3-customizations) section.
 
-### IAM
+See [IAM.md](./IAM.md) for the full list of IAM roles managed by this stage.
 
-The `folder_iam` variable can be used to manage authoritative bindings for all top-level Google Cloud Folders. For additional control, IAM roles can be easily edited in the relevant `branch-xxx.tf` file, following the best practice outlined in the [bootstrap stage](../0-bootstrap#customizations) documentation of separating user-level and service-account level IAM policies throuth the IAM-related variables (`iam`, `iam_bindings`, `iam_bindings_additive`) of the relevant modules.
+### Additional folders
 
-A full reference of IAM roles managed by this stage [is available here](./IAM.md).
+Clone an existing `branch-*.tf` file and update its module names and folder identifiers to add a new top-level hierarchy branch, such as shared GKE clusters.
 
-### Additional Google Cloud Folders
-
-Due to its simplicity, this stage lends itself easily to customizations: adding a new top-level branch (e.g. for shared GKE clusters) is as easy as cloning one of the `branch-xxx.tf` files, and changing names.
-
----
 <!-- BEGIN TFDOC -->
 ## Variables
 

@@ -1,57 +1,55 @@
-# App Engine
+# App Engine blueprint
 
 <!-- BEGIN TOC -->
-- [Introduction to App Engine](#introduction-to-app-engine)
-- [App Engine Blueprint](#app-engine-blueprint)
-- [Disclaimer](#disclaimer)
-- [Deployment Steps](#deployment-steps)
-- [Verification of a succesful deployment](#verification-of-a-succesful-deployment)
-- [Deployer Permissions](#deployer-permissions)
-  - [Impersonated Deployment Configuration](#impersonated-deployment-configuration)
+- [1 App Engine overview](#1-app-engine-overview)
+- [2 Blueprint scope](#2-blueprint-scope)
+- [3 Deletion behavior](#3-deletion-behavior)
+- [4 Deployment steps](#4-deployment-steps)
+- [5 Deployment verification](#5-deployment-verification)
+- [6 Deployer permissions](#6-deployer-permissions)
+  - [Service account impersonation](#service-account-impersonation)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
 
-## Introduction to App Engine
-App Engine is a platform-as-a-service (PaaS) application to develop and host serverless web applications in Google Cloud. It has various built in libraries, framework and languages that provide resource to building the application. With real time analysis on demand, will take care of provisioning services and app scaling. 
+## 1 App Engine overview
 
-## App Engine Blueprint
-This blueprint demonstrates how to deploy App Engine to begin building an application on Google Cloud Platform (GCP). It provides a baseline with built in features ranging from security to handling web requests. After deployment, based on complexity of the application, services will be created as the overarching grouping for the version(s) of the application code. 
+App Engine is a managed serverless platform for hosting web applications and APIs on Google Cloud with built-in runtime libraries, automatic instance scaling, and versioned service routing.
 
-App engine will create instance classes inside of the services where requests will be processed. Each of the different instances will have varying levels of resources to fit the requirement of the application. As the app grows, the instances automatically scale to accommodate for fluctuating traffic and update configurations of each service. 
+## 2 Blueprint scope
 
-## Disclaimer
-App Engine applications cannot be deleted once they're created; you have to delete the entire project to delete the application. Terraform will report the application has been successfully deleted; this is a limitation of Terraform, and will go away in the future. Terraform is not able to delete App Engine applications. https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/app_engine_application
+This blueprint initializes a regional App Engine application inside `main_project_id` so application teams can deploy versioned services with managed instance classes that scale automatically with request traffic.
 
-## Deployment Steps
-You should see this README and some terraform files.
-1. Run cp terraform.tfvars.sample terraform.tfvars to copy the sample variables to your own tfvars file.
+## 3 Deletion behavior
 
-2. Update the variables as necessary in your tfvars file.
-3. The usual terraform commands will do the work. To provision this example, run the following from within this directory:
+Google Cloud does not support deleting an App Engine application without deleting its parent project. Running `terraform destroy` removes the resource from Terraform state without deleting the underlying App Engine application, as documented in the [`google_app_engine_application` provider reference](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/app_engine_application).
 
-```terraform init ```<br />
-```terraform plan``` to see the infrastructure plan<br />
-```terraform apply``` to apply the infrastructure build<br />
-```terraform destroy``` to destroy the built infrastructure<br />
+## 4 Deployment steps
 
-## Verification of a succesful deployment
-Use the GCP consule to verify if the resources have been created. 
+1. Run `cp terraform.tfvars.sample terraform.tfvars` to create your local variable file.
+2. Set `main_project_id` and `region` in `terraform.tfvars`.
+3. Initialize and apply the Terraform configuration from this directory:
 
-```To verify the creation of Instance classes: Go to Instances in your landing project``` <br />
+```bash
+terraform init
+terraform plan
+terraform apply
+```
 
-## Deployer Permissions
+## 5 Deployment verification
 
-The service account or identity deploying this blueprint requires the following roles:
-- **Workload Project (`main_project_id`):**
-  - `roles/appengine.appCreator` or `roles/appengine.appAdmin`
-  - `roles/serviceusage.serviceUsageAdmin`
+Open App Engine in the Google Cloud console for `main_project_id` and inspect the Dashboard and Instances views to confirm the application is initialized in the configured `region`.
 
-### Impersonated Deployment Configuration
+## 6 Deployer permissions
 
-When deploying through service account impersonation, the Terraform `google` and `google-beta` providers must specify `user_project_override = true` and `billing_project` set to the workload project. Without this setting, provider-level quota and API enablement checks resolve against the deploying service account's project rather than the target workload project, leading to false `SERVICE_DISABLED` errors.
+Grant the deploying service account or user identity the following IAM roles on the workload project (`main_project_id`):
 
-Example provider configuration:
+- `roles/appengine.appCreator` or `roles/appengine.appAdmin`
+- `roles/serviceusage.serviceUsageAdmin`
+
+### Service account impersonation
+
+When deploying via service account impersonation, configure `user_project_override = true` and set `billing_project` to the workload project on both the `google` and `google-beta` providers so quota and API enablement checks evaluate against `main_project_id` rather than the automation service account project:
 
 ```hcl
 provider "google" {
@@ -70,6 +68,7 @@ provider "google-beta" {
   billing_project             = "<workload-project-id>"
 }
 ```
+
 <!-- BEGIN TFDOC -->
 ## Variables
 
