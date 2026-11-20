@@ -1,136 +1,148 @@
-# Incident Response Runbook: Customer Managed Encryption Keys (CMEK) Compromise or Loss
+# CMEK compromise response runbook
 
-## Document Control
+Use this runbook to identify, contain, and recover from the compromise, accidental destruction, or access loss of Customer-Managed Encryption Keys in Cloud KMS across Stellar Engine environments on Google Cloud.
+
 | Attribute | Detail |
 | :--- | :--- |
-| **Runbook ID** | IR-CMEK-001 |
-| **Last Updated** | YYYY-MM-DD |
-| **Owner** | Security Operations / Cloud Platform Team |
-| **Target SLA** | Triage: 15m \| Containment: 30m \| Recovery: 4h - 24h (depending on re-encryption volume) |
+| Runbook ID | IR-CMEK-001 |
+| Last updated | YYYY-MM-DD |
+| Owner | Security Operations / Cloud Platform Team |
+| Target SLA | Triage: 15m \| Containment: 30m \| Recovery: 4h to 24h based on re-encryption volume |
 
-## 1. Objective
-This runbook provides a structured, actionable process for Security Operators and Incident Responders to identify, contain, and recover from incidents involving the compromise, accidental deletion, or loss of access to Customer Managed Encryption Keys (CMEK) managed via Cloud KMS within the Stellar architecture on Google Cloud Platform (GCP).
+## 1. Runbook objective
 
-## 2. Target Audience & Prerequisites
-**Audience:**
-* Security Operations Center (SOC) Analysts
-* Incident Responders
-* Cloud Infrastructure/Platform Engineers
+This runbook guides security operators and incident responders through identifying, containing, and recovering from compromised, scheduled-for-destruction, or inaccessible Customer-Managed Encryption Keys managed in Cloud KMS across Stellar Engine landing zones on Google Cloud.
 
-**Prerequisites for Responders:**
-* `roles/logging.viewer` to analyze audit logs.
-* `roles/cloudkms.viewer` to inspect key states and configurations.
-* `roles/cloudkms.admin` (via Break-Glass/Emergency Access) to disable, restore, or rotate keys during containment.
-* Familiarity with the Stellar framework's GitOps repository to revert unauthorized Infrastructure as Code (IaC) changes.
+## 2. Audience and prerequisites
 
-## 3. Scope
-This runbook applies to all environments deployed using Stellar, including FedRAMP High, FedRAMP Moderate, and IL5 landing zones, where CMEK is mandated for data at rest. It covers:
-* Compromise of Cloud KMS symmetric or asymmetric keys.
-* Malicious or accidental scheduling of key destruction.
-* Loss of access due to improper IAM bindings on keys or key rings.
-* (Optional) External Key Manager (EKM) connectivity failures, if applicable to the Stellar deployment.
+### 2.1 Target audience
 
----
+- Security Operations Center analysts
+- Incident responders
+- Cloud infrastructure and platform engineers
 
-## Phase 4: Identification & Scoping
+### 2.2 Responder prerequisites
 
-### 4.1 Detection Sources
-Monitor for the following indicators of compromise or loss:
-* **Cloud Logging:** Administrative actions on `cloudkms.googleapis.com`.
-* **Security Command Center (SCC):** Alerts for anomalous KMS activity, excessive administrative actions, or policy violations.
-* **Service Disruption (Availability Impact):** Automated alerts for widespread HTTP 500s, applications failing to start, or Cloud Storage/BigQuery returning `Permission Denied` or `FAILED_PRECONDITION` (Key Disabled) errors.
-* **Key Access Justifications (KAJ):** For IL5/FedRAMP High/Moderate environments, unusual justification codes logged during key access.
+- The `roles/logging.viewer` role to inspect Cloud Audit Logs.
+- The `roles/cloudkms.viewer` role to inspect key rings, key versions, and rotation settings.
+- The `roles/cloudkms.admin` role via break-glass emergency access to disable, restore, or rotate keys during containment.
+- Working access to the Stellar Engine GitOps repository to reconcile unauthorized Terraform changes.
 
-### 4.2 Initial Assessment & Log Extraction
-1. **Locate the Log Entry:** Find the specific KMS log entry causing the alert.
-    * **Log Explorer Query Example (Destructive Actions):**
-        ```text
-        logName="organizations/[ORG_ID]/logs/cloudaudit.googleapis.com%2Factivity"
-        AND resource.type="cloudkms_cryptokeyversion"
-        AND protoPayload.methodName:("DestroyCryptoKeyVersion" OR "DisableCryptoKeyVersion" OR "UpdateCryptoKeyPrimaryVersion" OR "SetIamPolicy")
-        ```
-2. **Extract Key Details:** Identify the following from the logs:
-    * `principalEmail`: The identity that performed the action.
-    * `resourceName`: The full path to the affected key version (e.g., `projects/.../locations/.../keyRings/.../cryptoKeys/.../cryptoKeyVersions/1`).
-    * `methodName`: The exact API call executed.
-3. **Determine the Nature of the Incident (Severity):**
-    * **SEV 1 (Key Destruction/Compromise):** A key in active use is scheduled for destruction or confirmed compromised. Immediate risk of permanent data loss or unauthorized data decryption.
-    * **SEV 2 (Access Loss / Disabled):** A key is disabled or IAM policies were wiped, causing an immediate production outage, but the key material is intact.
-    * **SEV 3 (Anomalous Admin Activity):** Unexpected key rotation or IAM changes with no immediate outage or proven compromise.
+## 3. Operational scope
 
----
+This runbook applies to all Stellar Engine landing zones, including FedRAMP High, FedRAMP Moderate, IL4, and IL5 environments where CMEK protects data at rest, covering four scenarios:
 
-## Phase 5: Containment
+- Compromise of symmetric or asymmetric Cloud KMS keys.
+- Unauthorized or accidental scheduling of key version destruction.
+- Loss of workload access caused by revoked IAM bindings on keys or key rings.
+- External Key Manager connectivity failures in deployments that use external key custody.
 
-**Goal:** Prevent further unauthorized decryption of data, stop rogue destruction of keys, and preserve the current state for recovery.
+## 4. Identification and scoping
 
-### 5.1 Immediate Actions (If Key is Compromised)
-*Warning: Disabling a key version immediately breaks all GCP services actively relying on it for read/write operations. Coordinate with system owners if possible, but prioritize disabling if active data exfiltration is confirmed.*
-1. **Disable the Compromised Key Version:** Prevent further unauthorized use.
-    ```bash
-    gcloud kms keys versions disable [VERSION] \
-        --key=[KEY_NAME] \
-        --keyring=[KEYRING_NAME] \
-        --location=[LOCATION] \
-        --project=[KMS_PROJECT_ID]
-    ```
-2. **Contain the Compromised Identity:** Immediately execute **IR-IAM-001 (Compromised IAM Credentials)** to suspend the user or disable the service account that leaked the key access.
+### 4.1 Detection sources
 
-### 5.2 Immediate Actions (If Key is Scheduled for Destruction)
-*Crucial GCP Fact: When a key version is destroyed via API or console, it enters a "Scheduled for Destruction" state. By default, there is a 24-hour soft-delete window before the key material is permanently and irretrievably wiped.*
-1. **Restore Key Version:** Cancel the destruction immediately.
-    ```bash
-    gcloud kms keys versions restore [VERSION] \
-        --key=[KEY_NAME] \
-        --keyring=[KEYRING_NAME] \
-        --location=[LOCATION] \
-        --project=[KMS_PROJECT_ID]
-    ```
+Monitor these telemetry sources for indicators of CMEK compromise or loss:
 
-### 5.3 Immediate Actions (If Access Lost via IAM)
-1. **Halt Automated Pipelines:** If a malformed Terraform deployment stripped KMS IAM roles, pause the CI/CD pipeline to prevent it from reapplying the bad state.
-2. **Restore IAM Permissions:** Temporarily re-apply the `roles/cloudkms.cryptoKeyEncrypterDecrypter` role to the necessary service accounts directly via `gcloud` or the console to restore immediate service availability.
+- Cloud Logging administrative audit entries targeting the `cloudkms.googleapis.com` service.
+- Security Command Center alerts reporting anomalous Cloud KMS activity, unexpected administrative calls, or policy violations.
+- Availability alerts showing widespread HTTP 500 status codes, failed workload startups, or Cloud Storage and BigQuery `PERMISSION_DENIED` and `FAILED_PRECONDITION` errors caused by a disabled key.
+- Key Access Justifications audit logs containing unexpected justification codes in FedRAMP High, FedRAMP Moderate, IL4, and IL5 environments.
 
----
+### 4.2 Initial log assessment
 
-## Phase 6: Eradication and Recovery
+1. Locate the triggering Cloud KMS administrative event in Logs Explorer:
+   ```text
+   logName="organizations/[ORG_ID]/logs/cloudaudit.googleapis.com%2Factivity"
+   AND resource.type="cloudkms_cryptokeyversion"
+   AND protoPayload.methodName:("DestroyCryptoKeyVersion" OR "DisableCryptoKeyVersion" OR "UpdateCryptoKeyPrimaryVersion" OR "SetIamPolicy")
+   ```
+2. Record the key attributes from the audit log entry:
+   - Record the `principalEmail` field to identify the principal that executed the change.
+   - Record the `resourceName` field for the full path to the affected key version, such as `projects/my-kms-project/locations/us-east4/keyRings/my-keyring/cryptoKeys/my-key/cryptoKeyVersions/1`.
+   - Record the `methodName` field for the exact Cloud KMS API method invoked.
+3. Assign incident severity based on key state and data impact:
+   - Assign SEV 1 critical severity when an active key version is compromised or scheduled for destruction, creating an immediate risk of unauthorized decryption or permanent data loss.
+   - Assign SEV 2 high severity when a key version is disabled or required IAM bindings are removed, causing a production outage while the key material remains intact.
+   - Assign SEV 3 medium severity for unexpected key rotation or administrative IAM changes with no outage or confirmed compromise.
 
-**Goal:** Restore normal operations securely, re-encrypt affected data, and reconcile Infrastructure as Code (IaC).
+## 5. Threat containment
 
-### 6.1 Key Rotation
-1. **Generate New Key Version:** If the primary key was compromised, manually rotate it to generate new cryptographic material.
-    ```bash
-    gcloud kms keys versions create --key=[KEY_NAME] --keyring=[KEYRING_NAME] --location=[LOCATION] --project=[KMS_PROJECT_ID]
-    # Set the new version as primary
-    gcloud kms keys update [KEY_NAME] --keyring=[KEYRING_NAME] --location=[LOCATION] --project=[KMS_PROJECT_ID] --primary-version=[NEW_VERSION]
-    ```
+Stop unauthorized data decryption, cancel destructive key operations, and preserve key state for recovery.
 
-### 6.2 Data Re-encryption (The Hard Part)
-*Crucial GCP Fact: Rotating a CMEK key in GCP only ensures that **new** data is encrypted with the new key version. Existing data at rest remains encrypted with the compromised/old key version until it is rewritten.*
-1. **Identify Affected Resources:** Determine which Cloud Storage buckets, BigQuery tables, or Persistent Disks are protected by the compromised key.
-2. **Rewrite/Copy Data:**
-    * **Cloud Storage:** Use the `rewrite` command to re-encrypt objects in place with the new primary key version.
-      ```bash
-      gcloud storage rewrite gs://[BUCKET_NAME]/** --encryption-key=[NEW_KEY_RESOURCE_PATH]
-      ```
-    * **BigQuery:** Run a `SELECT *` query and write the output to a new table encrypted with the new key, or use the BigQuery table copy function.
-    * **Compute Engine:** Create a snapshot of the disk using the new key, and recreate the instance/disk from that snapshot.
-3. **Destroy Old Material:** Once 100% of the data has been verified as successfully re-encrypted with the new key version, schedule the compromised key version for destruction.
+### 5.1 Compromised key containment
 
-### 6.3 Reconcile IaC State (Stellar GitOps)
-1. **Update Terraform:** Ensure that the new KMS IAM bindings, key rotation schedules, or key states are accurately reflected in the Stellar FAST repositories.
-2. **Apply State:** Run `terraform apply` through the trusted CI/CD pipeline to ensure the emergency manual changes are permanently codified and won't be overwritten on the next automated run.
+Disabling a key version immediately interrupts read and write operations on every Google Cloud service encrypted with that version. Coordinate with workload owners when possible, and disable the version immediately if active data exfiltration is confirmed:
 
----
+1. Disable the compromised Cloud KMS key version to block further decryption calls:
+   ```bash
+   gcloud kms keys versions disable [VERSION] \
+       --key=[KEY_NAME] \
+       --keyring=[KEYRING_NAME] \
+       --location=[LOCATION] \
+       --project=[KMS_PROJECT_ID]
+   ```
+2. Execute the [IR-IAM-001](compromised-iam-credentials.md) runbook immediately to suspend the user or disable the service account that exposed key access.
 
-## Phase 7: Lessons Learned
+### 5.2 Scheduled destruction recovery
 
-### 7.1 Post-Incident Review (PIR)
-1. Conduct a PIR with Security, Platform, and Data owners within 5 business days.
-2. **Identify Root Cause:** How did the compromise or accidental deletion occur? (e.g., compromised admin credentials, misconfigured Terraform module, lack of IAM guardrails).
+Destroying a Cloud KMS key version through the API or Google Cloud console places the version in a scheduled-for-destruction state with a default 24-hour soft-delete window before Google Cloud permanently erases the key material:
 
-### 7.2 Preventative Measures & Remediation
-1. **Organization Policies:** Ensure GCP Organization Policies are in place to restrict KMS administration.
-2. **Terraform Guardrails:** Implement Terraform `lifecycle { prevent_destroy = true }` blocks on all critical `google_kms_crypto_key` resources within the Stellar codebase.
-3. **Separation of Duties:** Ensure the identities that *administer* keys (KMS Admins) are strictly separated from the identities that *use* keys (Encrypter/Decrypters).
-4. **Alerting:** Tune SCC or SIEM alerts to immediately page the on-call engineer for any `DestroyCryptoKeyVersion` events in production projects.
+1. Restore the scheduled key version immediately before the destruction window expires:
+   ```bash
+   gcloud kms keys versions restore [VERSION] \
+       --key=[KEY_NAME] \
+       --keyring=[KEYRING_NAME] \
+       --location=[LOCATION] \
+       --project=[KMS_PROJECT_ID]
+   ```
+
+### 5.3 IAM access restoration
+
+1. Pause automated Terraform CI/CD pipelines when a misconfigured deployment strips Cloud KMS IAM bindings so the pipeline does not reapply the broken state.
+2. Re-grant the `roles/cloudkms.cryptoKeyEncrypterDecrypter` role to the affected service agents and workload service accounts through `gcloud` or the Google Cloud console to restore immediate service availability.
+
+## 6. Eradication and recovery
+
+Generate clean cryptographic material, re-encrypt affected data at rest, and align Terraform state.
+
+### 6.1 Key rotation
+
+1. Create a new Cloud KMS key version and promote it to primary after confirming compromise of the previous primary version:
+   ```bash
+   gcloud kms keys versions create --key=[KEY_NAME] --keyring=[KEYRING_NAME] --location=[LOCATION] --project=[KMS_PROJECT_ID]
+   # Set the new version as primary
+   gcloud kms keys update [KEY_NAME] --keyring=[KEYRING_NAME] --location=[LOCATION] --project=[KMS_PROJECT_ID] --primary-version=[NEW_VERSION]
+   ```
+
+### 6.2 Data re-encryption
+
+Rotating a Cloud KMS key encrypts new writes with the new primary key version, while existing data at rest remains encrypted under the previous version until rewritten:
+
+1. Inventory all Cloud Storage buckets, BigQuery tables, and Compute Engine persistent disks protected by the compromised key version.
+2. Rewrite existing data so Google Cloud re-encrypts every object, table, and disk under the new primary key version:
+   - Rewrite Cloud Storage objects in place under the new key version:
+     ```bash
+     gcloud storage rewrite gs://[BUCKET_NAME]/** --encryption-key=[NEW_KEY_RESOURCE_PATH]
+     ```
+   - Copy BigQuery tables or write `SELECT *` query results into destination tables configured with the new key version.
+   - Snapshot Compute Engine persistent disks using the new key version and recreate instances and disks from those snapshots.
+3. Schedule the compromised key version for destruction only after verifying that all affected resources use the new key version.
+
+### 6.3 Terraform state reconciliation
+
+1. Update the KMS IAM bindings, rotation periods, and key configurations in the Stellar Engine landing zone repositories.
+2. Run `terraform apply` from the trusted CI/CD pipeline so emergency manual changes are codified and preserved on subsequent pipeline runs.
+
+## 7. Lessons learned
+
+### 7.1 Post-incident review
+
+1. Conduct a post-incident review within 5 business days with security, platform, and data owners.
+2. Identify the root cause of the compromise or outage, such as compromised administrator credentials, a misconfigured Terraform change, or missing IAM guardrails.
+
+### 7.2 Preventative controls
+
+1. Enforce Google Cloud organization policies that restrict Cloud KMS administration and enforce key rotation intervals.
+2. Configure Terraform `lifecycle { prevent_destroy = true }` blocks on critical `google_kms_crypto_key` resources.
+3. Separate Cloud KMS administrative principals strictly from principals granted encrypter and decrypter roles.
+4. Configure Security Command Center and SIEM alerts to page the on-call responder immediately on any `DestroyCryptoKeyVersion` event in production projects.

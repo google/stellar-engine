@@ -1,142 +1,144 @@
-# Incident Response Runbook: Compute Resource Compromise
+# Compute resource compromise runbook
 
-## Document Control
+Use this runbook to identify, contain, analyze, and recover from compromised Compute Engine virtual machines and Google Kubernetes Engine workloads in Stellar Engine environments on Google Cloud.
+
 | Attribute | Detail |
 | :--- | :--- |
-| **Runbook ID** | IR-COMP-001 |
-| **Last Updated** | YYYY-MM-DD |
-| **Owner** | Security Operations / Cloud Platform Team |
-| **Target SLA** | Triage: 15m \| Containment: 45m \| Forensics: 2h \| Recovery: 4h |
+| Runbook ID | IR-COMP-001 |
+| Last updated | YYYY-MM-DD |
+| Owner | Security Operations / Cloud Platform Team |
+| Target SLA | Triage: 15m \| Containment: 45m \| Forensics: 2h \| Recovery: 4h |
 
-## 1. Objective
-This runbook provides a structured, actionable process for Security Operators and Incident Responders to identify, contain, analyze, and recover from incidents involving the compromise of compute resources—specifically Google Kubernetes Engine (GKE) Pods/Nodes or Compute Engine (GCE) Virtual Machines—within the Stellar architecture on Google Cloud Platform (GCP).
+## 1. Runbook objective
 
-## 2. Target Audience & Prerequisites
-**Audience:**
-* Security Operations Center (SOC) Analysts (L1/L2/L3)
-* Incident Responders
-* Platform / DevOps Engineers
+This runbook guides security operators and incident responders through identifying, containing, analyzing, and recovering from compromised Google Kubernetes Engine pods or nodes and Compute Engine virtual machines in Stellar Engine landing zones on Google Cloud.
 
-**Prerequisites for Responders:**
-* `roles/compute.viewer` and `roles/container.viewer` for scoping.
-* `roles/compute.securityAdmin` to modify network tags and firewalls for VM containment.
-* `roles/container.developer` or equivalent RBAC `ClusterRole` to manipulate Pods and apply NetworkPolicies.
-* `roles/compute.storageAdmin` to snapshot disks for forensics.
+## 2. Audience and prerequisites
 
-## 3. Scope
-This runbook applies to all environments deployed using the Stellar framework, including FedRAMP High, FedRAMP Moderate, and IL5 landing zones. It assumes the use of modern GCP compute paradigms, including Shielded VMs, OS Login, Workload Identity, and immutable infrastructure.
+### 2.1 Target audience
 
----
+- Tier 1, tier 2, and tier 3 Security Operations Center analysts
+- Incident responders
+- Platform and DevOps engineers
 
-## Phase 1: Identification & Scoping
+### 2.2 Responder prerequisites
 
-### 1.1 Detection Sources
-Monitor for the following indicators of compromise (IoCs):
-* **Security Command Center (SCC):** High-severity alerts from Event Threat Detection (ETD) or Container Threat Detection (CTD), such as `Malicious Process execution`, `Cryptomining Domain DNS Request`, or `Reverse Shell`.
-* **Cloud IDS / NGFW:** Intrusion detection alerts showing lateral movement, C2 beacons, or data exfiltration.
-* **Billing Anomalies:** Sudden spikes in Compute Engine CPU usage or network egress costs.
-* **Third-Party EDR/XDR:** Alerts from host-based agents deployed on the VMs or GKE nodes.
+- The `roles/compute.viewer` and `roles/container.viewer` roles for resource scoping.
+- The `roles/compute.securityAdmin` role to modify network tags and firewall rules during virtual machine containment.
+- The `roles/container.developer` role or an equivalent Kubernetes RBAC `ClusterRole` binding to relabel pods and apply `NetworkPolicy` resources.
+- The `roles/compute.storageAdmin` role to snapshot persistent disks for forensic analysis.
 
-### 1.2 Verification & Initial Triage
-1. **Locate the Resource:** Identify the exact GCP resource implicated.
-2. **Gather Context:**
-    * **For VMs:** Project ID, Instance Name, Zone, Internal IP, attached Service Account, and current Network Tags.
-    * **For GKE:** Project ID, Cluster Name, Namespace, Pod Name, Node Name, and associated Workload Identity.
-3. **Review Audit and System Logs:**
-    * Use Log Explorer to check for recent `cloudaudit.googleapis.com` admin activity on the resource (e.g., who created/modified it).
-    * Look at OS/Application logs routed to Cloud Logging.
-    * **Query Example (VM OS Logs):**
-      ```text
-      resource.type="gce_instance"
-      AND resource.labels.instance_id="[INSTANCE_ID]"
-      AND logName="projects/[PROJECT_ID]/logs/syslog"
-      ```
+## 3. Operational scope
 
----
+This runbook applies to all Stellar Engine environments, including FedRAMP High, FedRAMP Moderate, IL4, and IL5 landing zones. The procedures assume Shielded VMs, OS Login, Workload Identity, and immutable infrastructure managed through Terraform.
 
-## Phase 2: Containment
+## 4. Identification and scoping
 
-**Goal:** Isolate the compromised resource to prevent lateral movement or data exfiltration *without* destroying volatile memory (RAM) or disk state needed for forensics. 
+### 4.1 Detection sources
 
-### 2.1 Containment for Compute Engine VMs
-1. **Do NOT Terminate or Restart:** This destroys volatile memory (RAM) and temporary files.
-2. **Isolate Network (Quarantine):** Apply a strict network tag that isolates the VM.
-    * *Prerequisite:* Ensure a VPC Firewall Rule exists that explicitly DENIES all ingress/egress for the tag `ir-quarantine`, priority `1`.
-    * **Command:**
-      ```bash
-      gcloud compute instances add-tags [INSTANCE_NAME] --zone=[ZONE] --project=[PROJECT_ID] --tags=ir-quarantine
-      ```
-    * Remove the instance from any target pools or backend services to stop it from receiving legitimate traffic.
-3. **Revoke OS Level Access:** Block new SSH connections via OS Login.
-4. **Disable Attached Service Account:** If the VM uses a dedicated Service Account, disable it to prevent the attacker from using the VM's identity to access other GCP APIs.
+Monitor these telemetry sources for indicators of compute compromise:
 
-### 2.2 Containment for GKE Pods
-1. **Do NOT Delete the Pod:** Deleting the pod destroys the container filesystem and memory state.
-2. **Remove from Service Routing:** Modify the pod's labels so it no longer matches the `Service` selector. This instantly stops it from receiving load-balanced user traffic.
-    ```bash
-    kubectl label pod [POD_NAME] -n [NAMESPACE] app- # Removes the 'app' label (adjust to match your routing labels)
-    kubectl label pod [POD_NAME] -n [NAMESPACE] incident-response=quarantined
-    ```
-3. **Isolate via NetworkPolicy:** Apply a default-deny `NetworkPolicy` specifically targeting the quarantined pod to block all ingress and egress.
-4. **Cordon the Node:** Prevent the scheduler from placing new, healthy workloads on the potentially compromised underlying node.
-    ```bash
-    kubectl cordon [NODE_NAME]
-    ```
+- High-severity Security Command Center findings from Event Threat Detection or Container Threat Detection, such as `Malicious Process execution`, `Cryptomining Domain DNS Request`, and `Reverse Shell`.
+- Cloud IDS and Next-Generation Firewall alerts showing lateral movement, command-and-control beacons, or outbound data exfiltration.
+- Cloud Billing anomalies showing sudden spikes in Compute Engine CPU utilization or network egress charges.
+- Host-based endpoint detection alerts from agents running on virtual machines or GKE nodes.
 
----
+### 4.2 Verification and triage
 
-## Phase 3: Forensics and Analysis
+1. Identify the exact Google Cloud resource implicated in the alert.
+2. Record the resource deployment context:
+   - Record the project ID, instance name, zone, internal IP address, attached service account, and network tags for a Compute Engine virtual machine.
+   - Record the project ID, cluster name, namespace, pod name, node name, and bound Workload Identity principal for a GKE workload.
+3. Inspect Cloud Audit Logs and operating system logs in Logs Explorer to review recent `cloudaudit.googleapis.com` administrative changes and host activity:
+   ```text
+   resource.type="gce_instance"
+   AND resource.labels.instance_id="[INSTANCE_ID]"
+   AND logName="projects/[PROJECT_ID]/logs/syslog"
+   ```
 
-**Goal:** Collect immutable evidence to understand the attack vector, persistence mechanisms, and blast radius.
+## 5. Threat containment
 
-### 3.1 Forensics for VMs
-1. **Create Disk Snapshots:** Take a snapshot of all attached persistent disks for offline digital forensics and incident response (DFIR).
-    ```bash
-    gcloud compute disks snapshot [DISK_NAME] \
-        --zone=[ZONE] \
-        --snapshot-names=ir-snap-[INSTANCE_NAME]-[TIMESTAMP] \
-        --project=[PROJECT_ID]
-    ```
-2. **Memory Acquisition:** If required for a SEV-1 incident, deploy a memory capture tool (like LiME or Volatility) via the serial console or a dedicated DFIR sidecar before pulling the plug.
-3. **Export Metadata:** Capture the instance metadata to check for injected SSH keys or malicious startup scripts.
+Isolate the compromised workload to stop lateral movement and data exfiltration without destroying volatile memory or disk state required for forensic collection.
 
-### 3.2 Forensics for GKE Pods
-1. **Capture Pod State:** Save the full YAML definition of the pod to identify environmental variables, secrets, or image hashes.
-    ```bash
-    kubectl get pod [POD_NAME] -n [NAMESPACE] -o yaml > ir-pod-state.yaml
-    ```
-2. **Extract Logs:** Retrieve stdout/stderr logs from the container.
-    ```bash
-    kubectl logs [POD_NAME] -n [NAMESPACE] > ir-container-logs.txt
-    ```
-3. **Snapshot the Node:** If the host node is compromised (container escape), perform a disk snapshot of the GKE node's boot disk following the VM forensics process above.
+### 5.1 Virtual machine containment
 
----
+1. Keep the compromised virtual machine running rather than stopping or restarting it so volatile memory and temporary files remain intact for forensic capture.
+2. Quarantine the instance on the network after confirming that a VPC firewall rule at priority `1` denies all ingress and egress traffic for the `ir-quarantine` network tag:
+   ```bash
+   gcloud compute instances add-tags [INSTANCE_NAME] --zone=[ZONE] --project=[PROJECT_ID] --tags=ir-quarantine
+   ```
+3. Remove the instance from load balancer target pools and backend services so it stops receiving production traffic.
+4. Block new SSH sessions through OS Login.
+5. Disable the attached dedicated service account so the attacker cannot use the virtual machine identity to call Google Cloud APIs.
 
-## Phase 4: Eradication and Recovery
+### 5.2 GKE pod containment
 
-**Goal:** Destroy the threat actor's foothold, patch the root vulnerability, and restore secure operations via GitOps.
+1. Keep the compromised pod running rather than deleting it so the container filesystem and memory state remain available for inspection.
+2. Strip routing labels from the pod so it no longer matches the Kubernetes `Service` selector and stops receiving load-balanced traffic:
+   ```bash
+   kubectl label pod [POD_NAME] -n [NAMESPACE] app- # Removes the 'app' label (adjust to match your routing labels)
+   kubectl label pod [POD_NAME] -n [NAMESPACE] incident-response=quarantined
+   ```
+3. Apply a default-deny `NetworkPolicy` resource targeting the `incident-response=quarantined` label to block all pod ingress and egress traffic.
+4. Cordon the underlying GKE node so the scheduler places no new workloads on the potentially affected host:
+   ```bash
+   kubectl cordon [NODE_NAME]
+   ```
 
-### 4.1 Eradication (Immutable Infrastructure)
-Because Stellar relies on Infrastructure as Code (IaC) and immutable infrastructure, **do not attempt to patch or clean the compromised resource in place.**
-1. **Destroy the Evidence (Post-Forensics):** Once snapshots and logs are secured, delete the compromised VM or GKE Node/Pod.
-    * GKE Pods: `kubectl delete pod [POD_NAME] -n [NAMESPACE]`
-    * VMs: `gcloud compute instances delete [INSTANCE_NAME] --zone=[ZONE]`
-2. **Identify the Vulnerability:** Analyze the forensic data to determine the root cause (e.g., unpatched CVE in the container image, SSRF vulnerability in the web app, leaked credentials).
+## 6. Forensics and analysis
 
-### 4.2 Recovery
-1. **Patch the Source:** Update the Dockerfile, `requirements.txt`, or base VM image to patch the vulnerability. 
-2. **Commit and Redeploy:** Push the fix to the Stellar GitOps repository. Allow the CI/CD pipeline (e.g., Cloud Build, ArgoCD) to build a new, clean artifact and deploy it.
-3. **Verify Integrity:** Monitor the newly deployed resources heavily via Cloud Monitoring and SCC for 72 hours to ensure the threat actor has not returned.
+Collect immutable evidence from the isolated workload to determine the initial attack vector, persistence mechanisms, and blast radius.
 
----
+### 6.1 Virtual machine forensics
 
-## Phase 5: Lessons Learned
+1. Snapshot every persistent disk attached to the instance for offline digital forensics analysis:
+   ```bash
+   gcloud compute disks snapshot [DISK_NAME] \
+       --zone=[ZONE] \
+       --snapshot-names=ir-snap-[INSTANCE_NAME]-[TIMESTAMP] \
+       --project=[PROJECT_ID]
+   ```
+2. Capture volatile memory on SEV 1 incidents using a memory acquisition tool such as LiME or Volatility over the serial console or a dedicated forensic sidecar before terminating the instance.
+3. Export the instance metadata to inspect for injected SSH keys or unauthorized startup scripts.
 
-### 5.1 Post-Incident Review (PIR)
-1. Schedule a PIR within 5 business days with Security, DevOps, and Application owners.
-2. **Evaluate Defenses:** Did SCC or the WAF catch the attack? If not, why?
-3. **Remediation Items:**
-    * **GKE:** Enforce Binary Authorization to ensure only signed, scanned images are deployed. Implement stricter Pod Security Admission (PSA) standards to prevent privileged containers.
-    * **VMs:** Ensure OS Patch Management is aggressively scheduled. Implement IAP (Identity-Aware Proxy) for SSH access instead of public IP exposure.
-4. **Update Runbooks:** Document any missing commands or tools in this playbook.
+### 6.2 GKE pod forensics
+
+1. Export the full pod YAML manifest to capture environment variables, mounted secrets, and container image digests:
+   ```bash
+   kubectl get pod [POD_NAME] -n [NAMESPACE] -o yaml > ir-pod-state.yaml
+   ```
+2. Export standard output and standard error logs from the compromised container:
+   ```bash
+   kubectl logs [POD_NAME] -n [NAMESPACE] > ir-container-logs.txt
+   ```
+3. Snapshot the GKE node boot disk using the virtual machine disk snapshot procedure whenever evidence indicates a container escape to the host node.
+
+## 7. Eradication and recovery
+
+Destroy the compromised compute resource after securing forensic artifacts, patch the underlying vulnerability, and redeploy clean workloads through GitOps.
+
+### 7.1 Immutable infrastructure eradication
+
+Replace compromised resources completely rather than attempting in-place cleanup because Stellar Engine enforces immutable infrastructure through Terraform:
+
+1. Delete the compromised pod, node, or virtual machine once disk snapshots and logs are preserved:
+   - Delete a GKE pod with `kubectl delete pod [POD_NAME] -n [NAMESPACE]`.
+   - Delete a Compute Engine instance with `gcloud compute instances delete [INSTANCE_NAME] --zone=[ZONE]`.
+2. Analyze the collected forensic artifacts to pinpoint the root vulnerability, such as an unpatched container CVE, a server-side request forgery flaw, or leaked credentials.
+
+### 7.2 Workload recovery
+
+1. Patch the vulnerability in source control by updating the `Dockerfile`, dependency manifest such as `requirements.txt`, or base virtual machine image.
+2. Commit the fix to the GitOps repository so the trusted CI/CD pipeline, such as Cloud Build or Argo CD, builds and deploys a clean artifact.
+3. Monitor the redeployed resources in Cloud Monitoring and Security Command Center for 72 hours to confirm that unauthorized activity does not recur.
+
+## 8. Lessons learned
+
+### 8.1 Post-incident review
+
+1. Conduct a post-incident review within 5 business days with security, DevOps, and application owners.
+2. Evaluate whether Security Command Center and web application firewall rules detected the intrusion promptly, and identify any detection gaps.
+3. Harden workload defenses based on the affected compute platform:
+   - Enforce Binary Authorization on GKE clusters so only signed, vulnerability-scanned container images deploy, and apply Pod Security Admission policies to block privileged containers.
+   - Enforce automated OS Patch Management schedules on Compute Engine virtual machines and require Identity-Aware Proxy TCP forwarding for SSH rather than public IP addresses.
+4. Update this runbook with any additional commands or forensic tooling used during the incident.
