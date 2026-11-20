@@ -71,10 +71,12 @@ module "pubsub" {
   ]
 }
 
+# Pub/Sub encrypts and decrypts messages through its service agent, so only the
+# service agent needs the key. The publisher and subscriber service accounts get
+# no access to the key. The for_each key stays the member string, so that the
+# grant keeps its state address on existing deployments.
 resource "google_kms_crypto_key_iam_member" "kms_access" {
   for_each = toset([
-    google_service_account.subscriber.member,
-    google_service_account.publisher.member,
     "serviceAccount:service-${data.google_project.current.number}@gcp-sa-pubsub.iam.gserviceaccount.com"
   ])
   crypto_key_id = data.google_kms_crypto_key.default.id
