@@ -13,6 +13,8 @@
 # limitations under the License.
 
 mock_provider "google" {}
+mock_provider "google-beta" {}
+mock_provider "time" {}
 
 override_data {
   target = data.google_project.current
@@ -44,10 +46,26 @@ variables {
   pubsub_topic     = "my-topic"
 }
 
-# The service accounts do not exist yet on a first plan, so their member
-# attribute is unknown. The plan must not need it to build a for_each key.
+# The service accounts and Pub/Sub service agent do not exist yet on a first
+# plan, so their member attributes are unknown. The plan must not need them to
+# build a for_each key.
 run "plan_fresh_deployment" {
   command = plan
+
+  assert {
+    condition     = google_project_service_identity.pubsub_sa.service == "pubsub.googleapis.com"
+    error_message = "Expected the blueprint to create the Pub/Sub service agent."
+  }
+
+  assert {
+    condition     = google_project_service_identity.pubsub_sa.project == "my-project"
+    error_message = "Expected the Pub/Sub service agent in the main project."
+  }
+
+  assert {
+    condition     = time_sleep.pubsub_sa_propagation.create_duration == "60s"
+    error_message = "Expected a 60 second wait after the Pub/Sub service agent is created."
+  }
 
   # Existing deployments address the grant by this member string, so the key
   # must not change.
