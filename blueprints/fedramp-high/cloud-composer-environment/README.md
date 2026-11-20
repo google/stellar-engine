@@ -5,6 +5,7 @@
 - [Cloud Composer Blueprint](#cloud-composer-blueprint)
 - [Disclaimer](#disclaimer)
 - [Prerequisites](#prerequisites)
+- [IAM bindings](#iam-bindings)
 - [Deployment Steps](#deployment-steps)
 - [Verification of a successful deployment](#verification-of-a-successful-deployment)
 - [Variables](#variables)
@@ -22,6 +23,17 @@ The present GCP Terraform Module in this project is set up and intended to be im
 
 ## Prerequisites
 1. Service Account User role (roles/iam.serviceAccountUser) for deploying user.
+2. The `compute.subnetworks.setIamPolicy` permission on the Shared VPC subnetwork for deploying user, because the blueprint grants a role on that subnetwork.
+
+## IAM bindings
+The blueprint grants each role on the narrowest resource it can confirm that Cloud Composer supports.
+
+| role | principal | resource | rationale |
+|---|---|---|---|
+| `roles/composer.worker` | Environment service account | Main project | The permissions span several services, and Composer creates the resources they apply to while it creates the environment. |
+| Role in `service_agent_version` | Composer service agent | Main project | The caller selects the role, so the blueprint cannot assume that it is grantable on the environment service account alone. |
+| `roles/compute.networkUser` | Composer service agent | Environment subnetwork | The role only needs to cover the subnetwork that the environment uses. |
+| `roles/composer.sharedVpcAgent` | Composer service agent | Shared VPC host project | Private IP environments need the role on the host project, and it carries network-scoped permissions that a subnetwork binding cannot grant. |
 
 
 ## Deployment Steps
