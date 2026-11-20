@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+locals {
+  # Cloud Run functions names the Cloud Run service behind a function after
+  # the function, in lowercase and with hyphens in place of underscores.
+  function_service_name = lower(replace(var.function_name, "_", "-"))
+}
+
 data "google_project" "current" {
   project_id = var.main_project_id
 }
@@ -39,16 +45,24 @@ resource "google_project_service" "cloud_functions_apis" {
   disable_on_destroy = false
 }
 
+# Cloud Build does not support IAM policies on builds, so the project is the
+# narrowest resource that accepts this role. The role also carries
+# project-wide Cloud Storage object and Artifact Registry write permissions.
 resource "google_project_iam_member" "cloud_build" {
   project = var.main_project_id
   role    = "roles/cloudbuild.builds.builder"
   member  = module.service-account-runner.iam_email
 }
 
-resource "google_project_iam_member" "cloud_invoker" {
-  project = var.main_project_id
-  role    = "roles/run.invoker"
-  member  = module.service-account-runner.iam_email
+# The Cloud Run service behind the function exists only after the gcloud
+# deployment, so the binding waits for it.
+resource "google_cloud_run_v2_service_iam_member" "cloud_invoker" {
+  project    = var.main_project_id
+  location   = var.region
+  name       = local.function_service_name
+  role       = "roles/run.invoker"
+  member     = module.service-account-runner.iam_email
+  depends_on = [null_resource.cloud_function_deploy]
 }
 
 resource "google_kms_crypto_key_iam_member" "cloud_storage" {
@@ -65,35 +79,15 @@ resource "google_kms_crypto_key_iam_member" "cloud_storage" {
 }
 
 moved {
-  from = google_project_iam_member.artifactregistry_createOnPushWriter
-  to   = google_project_iam_member.artifactregistry_create_on_push_writer
-}
-
-resource "google_project_iam_member" "artifactregistry_create_on_push_writer" {
-  project = var.main_project_id
-  role    = "roles/artifactregistry.createOnPushWriter"
-  member  = module.service-account-runner.iam_email
-}
-
-moved {
   from = google_project_iam_member.logging_logWriter
   to   = google_project_iam_member.logging_log_writer
 }
 
+# Cloud Logging authorizes log entry writes against the project that receives
+# them, so the project is the narrowest resource that accepts this role.
 resource "google_project_iam_member" "logging_log_writer" {
   project = var.main_project_id
   role    = "roles/logging.logWriter"
-  member  = module.service-account-runner.iam_email
-}
-
-moved {
-  from = google_project_iam_member.storage_objectUser
-  to   = google_project_iam_member.storage_object_user
-}
-
-resource "google_project_iam_member" "storage_object_user" {
-  project = var.main_project_id
-  role    = "roles/storage.objectUser"
   member  = module.service-account-runner.iam_email
 }
 
@@ -150,6 +144,9 @@ module "bucket" {
   name           = var.bucket_name
   location       = var.region
   encryption_key = var.kms_key_name
+  # The deployment stages the function source with the deploying identity and
+  # the build service account, not with the runner, so the runner needs no
+  # project-level Cloud Storage role in addition to this bucket-level grant.
   iam = {
     "roles/storage.objectUser" = [
       module.service-account-runner.iam_email,
@@ -170,6 +167,14 @@ module "registry-docker" {
       standard = {
         immutable_tags = true
       }
+    }
+  }
+  # The repository exists before the first push, so the runner does not need
+  # the project-level roles/artifactregistry.createOnPushWriter role.
+  iam_bindings_additive = {
+    artifactregistry-writer-runner = {
+      member = module.service-account-runner.iam_email
+      role   = "roles/artifactregistry.writer"
     }
   }
   depends_on = [google_kms_crypto_key_iam_member.cloud_storage]
