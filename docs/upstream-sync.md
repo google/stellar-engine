@@ -78,6 +78,7 @@ Stellar Engine keeps these changes on top of the upstream modules and tracked pa
 | `gke-cluster-standard`, `gke-cluster-standard-se` | Shielded GKE Nodes default to on. |
 | `pubsub` | The module keeps the `name` output. |
 | `net-vpc-peering` | Variable descriptions are more detailed. |
+| `managed-kafka` | The `rebalance_config` block reads the declared `rebalance_mode` variable, and the `tests/plan.tftest.hcl` file plans the module with the mode set and unset. |
 | `tools/tfdoc.py` | The script follows the repository Python style, creates missing parser contexts, matches the README markers non-greedily, and escapes pipes in output descriptions. |
 | `tools/check_documentation.py` | The labels name each failure, the description, order, period and type checks run only on READMEs with tables, and output description failures report their own state. |
 | `tests/examples/utils.py` | The parser follows the repository Python style and drops unused imports. |
