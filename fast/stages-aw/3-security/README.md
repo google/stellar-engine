@@ -206,6 +206,8 @@ After running `sa_lockdown.sh`, verify that the deployment service accounts in t
 ./validation.sh
 ```
 
+The script checks the same accounts that `sa_lockdown.sh` disables by default, which are the apply accounts, the read-only plan accounts, the Stage 1 branch accounts, and the `team-<name>` accounts. Run the script from this directory so that it also checks the accounts listed in the tfvars files that `sa_lockdown.sh` reads.
+
 When multiple `-prod-iac-core-0` projects exist in the same organization (multi-tenant or multi-enclave deployments), target a single enclave using one of the following mutually exclusive flags:
 
 - `--prefix PREFIX`: filters project discovery to `^<PREFIX>-prod-iac-core-0$`.
@@ -215,6 +217,10 @@ When multiple `-prod-iac-core-0` projects exist in the same organization (multi-
 ./validation.sh --prefix myencl
 ./validation.sh --project myencl-prod-iac-core-0
 ```
+
+With either flag, the script skips the tfvars accounts that are not in the selected project and prints a warning for them.
+
+The script exits with status `0` only when every checked account is disabled. It exits with status `1` when an account is still enabled, when it finds no account to check, or when a `gcloud` or `jq` call fails, so a pipeline can stop on an incomplete lockdown.
 
 ### Deleting the bootstrap project
 
