@@ -20,6 +20,7 @@ import unittest
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 _MODULE_DIR = _REPO_ROOT / "modules/access-context-manager"
+_BLUEPRINT_DIR = _REPO_ROOT / "blueprints/fedramp-high/access-context-manager"
 _ACCESS_LEVEL = (
     'resource "google_access_context_manager_access_level" "access_levels"'
 )
@@ -80,6 +81,48 @@ class TestAccessLevelConditions(unittest.TestCase):
             self.assertRegex(
                 variable, rf"\n\s*{attribute}\s*=\s*{attribute_type}\n"
             )
+
+
+class TestProviderConfiguration(unittest.TestCase):
+    """The calling root configures the providers, not the module."""
+
+    def test_module_declares_no_provider_blocks(self):
+        # A module with provider blocks rejects count, for_each and
+        # depends_on, and ignores the providers that the caller passes.
+        for path in sorted(_MODULE_DIR.glob("*.tf")):
+            with self.subTest(path=path.name):
+                self.assertNotRegex(
+                    path.read_text(encoding="utf-8"), r'(?m)^provider\s+"'
+                )
+
+    def test_module_declares_its_required_providers(self):
+        versions_tf = (_MODULE_DIR / "versions.tf").read_text(encoding="utf-8")
+        required = _top_block(versions_tf, "terraform")
+        for source in ("hashicorp/google", "hashicorp/google-beta"):
+            self.assertRegex(required, rf'source\s*=\s*"{source}"')
+
+    def test_module_has_no_project_or_region_input(self):
+        # Access Context Manager resources are organization scoped.
+        for name in ("main.tf", "outputs.tf", "variables.tf"):
+            text = (_MODULE_DIR / name).read_text(encoding="utf-8")
+            with self.subTest(path=name):
+                self.assertNotRegex(text, r'variable "(project_id|region)"')
+                self.assertNotRegex(text, r"var\.(project_id|region)\b")
+
+    def test_blueprint_configures_the_providers_at_the_root(self):
+        provider_tf = (_BLUEPRINT_DIR / "provider.tf").read_text(
+            encoding="utf-8"
+        )
+        for provider in ("google", "google-beta"):
+            with self.subTest(provider=provider):
+                block = _top_block(provider_tf, f'provider "{provider}"')
+                self.assertRegex(block, r"billing_project\s*=\s*var\.")
+                self.assertRegex(block, r"user_project_override\s*=\s*true")
+
+    def test_blueprint_passes_no_removed_input(self):
+        main_tf = (_BLUEPRINT_DIR / "main.tf").read_text(encoding="utf-8")
+        module = _top_block(main_tf, 'module "access-context-manager"')
+        self.assertNotRegex(module, r"\n\s*(project_id|region)\s*=")
 
 
 if __name__ == "__main__":

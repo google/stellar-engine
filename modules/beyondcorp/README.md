@@ -3,9 +3,23 @@
 This module simplifies the deployment and configuration of BeyondCorp.
 
 <!-- BEGIN TOC -->
+- [Provider configuration](#provider-configuration)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
+
+## Provider configuration
+
+This module declares no `provider` blocks. It inherits the `google` provider configuration of the calling root module, or the configuration that you pass through the `providers` argument. Every project-scoped resource reads the project from the `project_id` variable, so the module takes no region input.
+
+When you authenticate with user Application Default Credentials, the Access Context Manager API needs a quota project. Set `billing_project` and `user_project_override` on the provider in the root module:
+
+```hcl
+provider "google" {
+  billing_project       = "my-project"
+  user_project_override = true
+}
+```
 <!-- BEGIN TFDOC -->
 ## Variables
 
@@ -17,7 +31,6 @@ This module simplifies the deployment and configuration of BeyondCorp.
 | [oauth_client_secret](variables.tf#L30) | OAuth Client Secret for IAP. | <code>string</code> | ✓ |  |
 | [organization_id](variables.tf#L36) | GCP Organization ID. | <code>string</code> | ✓ |  |
 | [project_id](variables.tf#L47) | GCP Project ID. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L52) | Region. | <code>string</code> | ✓ |  |
 | [policy_title](variables.tf#L41) | Title for the Access Context Manager Policy. | <code>string</code> |  | <code>&#34;BeyondCorp Policy&#34;</code> |
 
 ## Outputs
