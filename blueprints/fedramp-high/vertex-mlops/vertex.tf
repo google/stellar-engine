@@ -74,7 +74,8 @@ resource "google_workbench_instance" "playground" {
 
   instance_owners = var.notebooks[each.key].owner == null ? null : [var.notebooks[each.key].owner]
 
+  # the project module grants the Notebooks service agent access to the subnet
   depends_on = [
-    google_project_iam_member.shared_vpc,
+    module.project,
   ]
 }

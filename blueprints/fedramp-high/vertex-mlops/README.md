@@ -5,6 +5,7 @@ This blueprint demonstrates how to create a Vertex AI Workbench on Google Cloud 
 - [Introduction to Vertex AI](#introduction-to-vertex-ai)
 - [Disclaimer](#disclaimer)
 - [Architecture](#architecture)
+- [IAM](#iam)
 - [Instructions](#instructions)
   - [Deploy the experimentation environment](#deploy-the-experimentation-environment)
 - [Demo](#demo)
@@ -27,6 +28,22 @@ The blueprint will deploy all the required resources to have a fully functional 
 1. GCS buckets to host Vertex AI and Cloud Build Artifacts. By default the buckets will be regional and should match the Vertex AI region for the different resources (i.e. Vertex Managed Dataset) and processes (i.e. Vertex trainining).
 1. BigQuery Dataset where the training data will be stored. This is optional, since the training data could be already hosted in an existing BigQuery dataset.
 
+## IAM
+The blueprint creates the `sa-mlops` and `notebook-sa` service accounts, and binds each role on the narrowest resource that the service supports.
+
+| Role | Principal | Bound on |
+|---|---|---|
+| `roles/compute.networkUser` | Notebooks service agent | The Shared VPC subnet named by `network_config.subnetwork_name` in `region`. |
+| `roles/storage.objectViewer`, `roles/storage.objectCreator` | `sa-mlops`, `notebook-sa` | The `bucket_name` bucket and the Cloud Build bucket. |
+| `storage_iam` custom role | `notebook-sa` | The `bucket_name` bucket and the Cloud Build bucket. |
+| `roles/bigquery.dataEditor` | `sa-mlops`, `notebook-sa` | The `dataset_name` dataset. |
+| `roles/iam.serviceAccountUser` | `sa-mlops`, Cloud Build service agent | The `sa-mlops` service account. |
+| `roles/iam.serviceAccountUser` | `notebook-sa` | The `notebook-sa` service account. |
+
+The other roles stay on the project, because the service has no narrower resource or the workload creates the resource at run time. The comments in the `main.tf` file state the reason for each role.
+
+The service accounts have no access to a bucket, dataset, subnet or service account that the blueprint does not create or receive as a variable. Grant that access outside the blueprint when a workload needs it, for example `roles/bigquery.dataEditor` on an existing dataset when `dataset_name` is not set.
+
 ## Instructions
 ### Deploy the experimentation environment
 - Create a `terraform.tfvars` file and specify the variables to match your desired configuration. You can use the provided `terraform.tfvars.sample` as reference.
@@ -37,7 +54,7 @@ The blueprint will deploy all the required resources to have a fully functional 
 - Every entry in the `notebooks` variable creates a Vertex AI Workbench instance. The `type` attribute accepts only `USER_MANAGED`, because Google-managed notebooks reached end of life and Google provider 8 removed the `google_notebooks_runtime` resource.
 
 ## Demo
-To try out the new notebook, you can use the provided code sample (the .ipynb file), adapted from [here](https://github.com/GoogleCloudPlatform/vertex-ai-samples/blob/main/notebooks/community/model_garden/model_garden_pytorch_flux.ipynb). Alternatively, you can view the list of [Vertex AI code samples](https://cloud.google.com/vertex-ai/docs/samples) to find one that you like. Simply open the Google Cloud Console and navigate to Vertex AI workbenches. Under the list of instances, you should see your newly created workbench instance. Click on the button that says "Open JupyterLab" to use your workbench. Within JupyterLab, you should see the option to upload files. Upload a demo notebook, then update the variables as necessary (in the provided demo, you will have to update BUCKET_URI, REGION, and PROJECT_ID).
+To try out the new notebook, you can use the provided code sample (the .ipynb file), adapted from [here](https://github.com/GoogleCloudPlatform/vertex-ai-samples/blob/main/notebooks/community/model_garden/model_garden_pytorch_flux.ipynb). Alternatively, you can view the list of [Vertex AI code samples](https://cloud.google.com/vertex-ai/docs/samples) to find one that you like. Simply open the Google Cloud Console and navigate to Vertex AI workbenches. Under the list of instances, you should see your newly created workbench instance. Click on the button that says "Open JupyterLab" to use your workbench. Within JupyterLab, you should see the option to upload files. Upload a demo notebook, then update the variables as necessary (in the provided demo, you will have to update BUCKET_URI, REGION, and PROJECT_ID). The demo deploys the model as the `notebook-sa` service account, which is the only service account that a notebook can act as.
 <!-- BEGIN TFDOC -->
 ## Variables
 
