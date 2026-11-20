@@ -33,7 +33,7 @@ VALID_NAMES=(
   "gke-dev" "gke-dev-r" "gke-prod" "gke-prod-r"
   "project-factory-dev" "project-factory-dev-r"
   "project-factory-prod" "project-factory-prod-r"
-  "sandbox" "teams"
+  "envs" "sandbox" "teams"
 )
 
 # 1-resman also writes one "team-<name>" key for each entry in team_folders
@@ -48,6 +48,7 @@ TEAM_PREFIX="team-"
 # pattern misses.
 SA_ID_PATTERN='(bootstrap-0r?'
 SA_ID_PATTERN+='|resman-0r?'
+SA_ID_PATTERN+='|prod-resman-envs-0'
 SA_ID_PATTERN+='|security-0'
 SA_ID_PATTERN+='|prod-resman-net-0r?'
 SA_ID_PATTERN+='|prod-resman-sec-0r'

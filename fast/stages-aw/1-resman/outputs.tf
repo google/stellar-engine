@@ -326,6 +326,7 @@ locals {
       data-platform-dev-r    = try(module.branch-dp-dev-r-sa[0].email, null)
       data-platform-prod     = try(module.branch-dp-prod-sa[0].email, null)
       data-platform-prod-r   = try(module.branch-dp-prod-r-sa[0].email, null)
+      envs                   = try(module.branch-envs-sa[0].email, null)
       gcve-dev               = try(module.branch-gcve-dev-sa[0].email, null)
       gcve-dev-r             = try(module.branch-gcve-dev-r-sa[0].email, null)
       gcve-prod              = try(module.branch-gcve-prod-sa[0].email, null)
