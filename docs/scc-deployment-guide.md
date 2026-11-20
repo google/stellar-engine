@@ -1,74 +1,62 @@
-# Stellar Engine: Security Command Center (SCC) Deployment Guide
+# Security Command Center deployment guide
 
-Procedures to deploy Security Command Center into a Stellar Engine deployment
+Follow these procedures to enable Google Cloud Security Command Center in a Stellar Engine organization.
 
-## 1.0 - Getting Started
+## 1. Getting started
 
-This document follows the information and steps as outlined in the following Google Cloud Security Command Center articles to enable SCC for a Stellar Engine Deployment.
+Review the Google Cloud Security Command Center documentation before activating the service at the organization level:
 
-- [Security Command Center Overview](https://cloud.google.com/security-command-center/docs/security-command-center-overview)
-- [Overview of Organization-Level Activation](https://cloud.google.com/security-command-center/docs/activate-scc-overview#overview_of_organization-level_activation)
-- [Activate the Security Command Center Standard/Premium Tier for an Organization](https://cloud.google.com/security-command-center/docs/activate-scc-for-an-organization)
+- [Security Command Center overview](https://cloud.google.com/security-command-center/docs/security-command-center-overview)
+- [Organization-level activation overview](https://cloud.google.com/security-command-center/docs/activate-scc-overview#overview_of_organization-level_activation)
+- [Activate Security Command Center for an organization](https://cloud.google.com/security-command-center/docs/activate-scc-for-an-organization)
 
-## 2.0 - Grant IAM Permissions
+## 2. Grant IAM permissions
 
-Grant the appropriate IAM roles to set up the Security Command Center service.
+Grant the required organization-level IAM roles before activating Security Command Center.
 
-1. Navigate to [IAM & Admin](https://console.cloud.google.com/iam-admin/iam)
-2. In the **Project Selector**, select your organization
-3. If not already added, add your user to the following GCP groups that have the appropriate IAM roles already assigned:
+1. Open [IAM and Admin](https://console.cloud.google.com/iam-admin/iam) in the Google Cloud console.
+2. Select your organization in the **Project Selector**.
+3. Add your user account to the Google Cloud groups that hold the required Security Command Center activation roles, as documented in [Set Up Permissions](https://cloud.google.com/security-command-center/docs/activate-scc-for-an-organization#set_up_permissions).
 
-**Resources**
-- [Set Up Permissions](https://cloud.google.com/security-command-center/docs/activate-scc-for-an-organization#set_up_permissions)
+## 3. Modify service usage policy
 
-## 3.0 - Modify Resource Service Usage Policy
+Apply this policy override only when evaluating Security Command Center in an IL5 environment, because Security Command Center is not yet approved for the IL5 compliance regime.
 
-**Note**: This step is for evaluating SCC within an IL5 environment since SCC is not yet approved for the IL5 compliance regime.
+Allow the Security Command Center APIs on the **StellarEngine-\<prefix\>** folder under the Restrict Resource Service Usage organization policy:
 
-Enable the Security Command Center APIs for the **StellarEngine-<prefix>** folder under the Restrict Resource Service Usage Organizational Policy.
+1. Open [Restrict Resource Service Usage](https://console.cloud.google.com/iam-admin/orgpolicies/gcp-restrictServiceUsage) in the Google Cloud console.
+2. Select the **StellarEngine-\<prefix\>** folder in the **Project Selector**.
+3. Click **Manage Policy**.
+4. Verify that the policy source remains set to **Override Parent's Policy** and policy enforcement remains set to **Replace** instead of **Merge with Parent**.
+5. Scroll to the **Rules** section and expand the **Allow** list.
+6. Click **Add Value** twice.
+7. Enter these API service names into the two text fields:
+   - `securitycenter.googleapis.com`
+   - `securitycentermanagement.googleapis.com`
+8. Click **Done**.
+9. Click **Set Policy**.
 
-1. Navigate to [Organizational Policies - Restrict Resource Service Usage](https://console.cloud.google.com/iam-admin/orgpolicies/gcp-restrictServiceUsage)
-2. In the **Project Selector**, select the **StellarEngine-<prefix>** folder
-3. Click **Manage Policy**
-4. Ensure not to modify the radio buttons as the following should already be selected:
-    - **Policy Source**: Override Parent’s Policy
-    - **Policy Enforcement**: Replace
+## 4. Activate Security Command Center
 
-**IMPORTANT**: Ensure that **Replace** is selected instead of **Merge with Parent**
+Activate Security Command Center for your organization and enforce data residency:
 
-5. Scroll down to the **Rules** section and expand the **Allow** list
-6. Scroll down to the bottom and click **Add Value** twice (x2)
-7. Copy and paste the following APIs into each of the text fields:
-    - `securitycenter.googleapis.com`
-    - `securitycentermanagement.googleapis.com`
-8. Click **Done**
-9. Click **Set Policy**
+1. Open [Security Command Center](https://console.cloud.google.com/marketplace/product/google-cloud-platform/cloud-security-command-center-premium) in the Google Cloud console.
+2. Select your organization in the **Project Selector**.
+3. Click **Go to Security Command Center**.
+4. Click **Get Security Command Center**.
+5. Select your target tier, such as the **Premium** tier.
+6. Click **Next**.
+7. Keep all default services enabled and click **Next**.
+8. Select **Enable Data Residency** under **Data Residency**, which is required for FedRAMP High compliance.
+9. Select the **Grant Roles Automatically** radio button and click **Grant Roles**.
+10. Click **Next** after Google Cloud finishes granting the roles.
+11. Click **Finish** on the **Ready to Complete Setup** screen.
+12. Open [Compliance](https://console.cloud.google.com/security/command-center/compliance) and select your organization in the **Project Selector**.
+13. Wait approximately 24 hours for the initial scans to finish and generate compliance reports.
 
-## 4.0 - Activate Security Command Center
+## 5. Reference documentation
 
-1. Navigate to [Security Command Center](https://console.cloud.google.com/marketplace/product/google-cloud-platform/cloud-security-command-center-premium)
-2. In the **Project Selector**, select your organization
-3. Click **Go to Security Command Center**
-4. Click **Get Security Command Center**
-5. Select a tier
-    - We have been evaluating the Premium tier
-6. Click **Next**
-7. Accept the default services. All services are enabled by default.
-8. Click **Next**
-9. Under Data Residency, select **Enable Data Residency**
-    - **IMPORTANT: Data Residency is required for FedRAMP High compliance**
-10. Select the **Grant Roles Automatically** radio button
-11. Click **Grant Roles**
-12. Click **Next** once the roles have successfully been granted.
-13. Click **Finish** once you have reached the **Ready to Complete Setup** screen
-14. Navigate to [Compliance Center](https://console.cloud.google.com/security/command-center/compliance)
-15. In the **Project Selector**, select your organization
-16. Wait about **24 hours** for the scans to complete and for the reports to be generated
-
-## Appendix
-
-### Resources
-- [Security Command Center Overview](https://cloud.google.com/security-command-center/docs/security-command-center-overview)
-- [Overview of Organization-Level Activation](https://cloud.google.com/security-command-center/docs/activate-scc-overview#overview_of_organization-level_activation)
-- [Activate the Security Command Center Standard/Premium Tier for an Organization](https://cloud.google.com/security-command-center/docs/activate-scc-for-an-organization)
+- [Security Command Center overview](https://cloud.google.com/security-command-center/docs/security-command-center-overview)
+- [Organization-level activation overview](https://cloud.google.com/security-command-center/docs/activate-scc-overview#overview_of_organization-level_activation)
+- [Activate Security Command Center for an organization](https://cloud.google.com/security-command-center/docs/activate-scc-for-an-organization)
 - [Set Up Permissions](https://cloud.google.com/security-command-center/docs/activate-scc-for-an-organization#set_up_permissions)

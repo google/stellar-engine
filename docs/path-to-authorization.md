@@ -1,254 +1,133 @@
-# Path to Authorization
+# Path to authorization
 
-_Impact Level 5 (H-H-X) and FedRAMP High Authorization Package Baselines (with FedRAMP Moderate Landing Zone Support)_
+This guide outlines how to achieve an Authorization to Operate on Google Cloud using the NIST Risk Management Framework alongside Stellar Engine Infrastructure as Code and authorization package baselines for Impact Level 5 H-H-X and FedRAMP High, with landing zone support for FedRAMP Moderate.
 
-**Created Date:**
+| Field | Value |
+| :--- | :--- |
+| Google contact | stellar-engine@google.com |
+| Version | 1.0 |
 
-**Last Modified:**
+## 1. Background
 
-**Google POC(s):** stellar-engine@google.com
+The NIST Risk Management Framework provides a repeatable seven-step lifecycle for managing organizational information security and privacy risk. Completing all seven steps is essential to achieving and maintaining system authorization.
 
-**Version:** 1.0
+Stellar Engine accelerates Google Cloud deployments for public sector agencies and Independent Software Vendors by pairing reusable Terraform landing zone stages with pre-mapped cybersecurity documentation. Combining the Risk Management Framework with Stellar Engine reduces manual compliance engineering and shortens the timeline to an Authorization to Operate.
 
-**Purpose:** The purpose of this document is to discuss the path to
-authorization through the use of the Risk Management Framework along with
-Stellar Engine and ATO-Ready Deployment Blueprints.
+## 2. Risk Management Framework
 
-**Background:** The Risk Management Framework (RMF) provides a comprehensive,
-flexible, and repeatable seven-step process designed to help organizations
-manage their specific information security and privacy risks. All seven steps
-are essential for the successful implementation of the RMF.
+Each step below highlights key Risk Management Framework activities, linked authorization submission artifacts, and Authorizing Official responsibilities.
 
-Stellar Engine accelerates Google Cloud deployments for Public Sector customers
-by providing reusable Infrastructure as Code (IaC) and cybersecurity
-documentation. This enables both customers and Independent Software Vendors
-(ISVs) to deploy solutions more quickly and achieve Authorization to Operate
-(ATO) on Google Cloud with greater efficiency.
+### Step 0 prepare
 
-By leveraging the RMF alongside Stellar Engine’s tools, organizations can
-streamline their security and compliance efforts, ensuring faster, more secure
-deployments in the cloud.
+Complete the [Prepare](https://csrc.nist.gov/Projects/risk-management/about-rmf/prepare-step) activities to ready your organization for managing security and privacy risks:
 
-**RMF & Stellar Engine**:
+- Designate internal or external personnel responsible for executing the Risk Management Framework across the system lifecycle.
+- Publish an organizational [risk management strategy](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-39.pdf) that defines your risk tolerance:
+  - Document operational assumptions, constraints, risk tolerances, priorities, and trade-offs.
+  - Establish executive governance for cybersecurity and privacy risk decisions across different loss or compromise scenarios.
+- Establish an organizational [continuous monitoring strategy](https://nvlpubs.nist.gov/nistpubs/legacy/sp/nistspecialpublication800-137.pdf) that specifies control monitoring methods and frequencies.
+- Define the system authorization boundary to scope the resources protected, managed, and authorized for operation:
+  - Request the [Impact Level 5 Authorization Boundary](https://forms.gle/zdv7Gip4opmdhBqk7) template.
+  - Request the [FedRAMP High Authorization Boundary](https://forms.gle/zdv7Gip4opmdhBqk7) template, which provides the FedRAMP High baseline while the FedRAMP Moderate boundary template is planned.
+- Assess security and privacy risks at both the organization and system levels and update risk assessment results continuously.
 
-The source document used color to distinguish major ATO submission artifacts
-from Authorizing Official (AO) actions. This Markdown version uses explicit
-section labels, linked artifact names, and AO wording instead of color-only
-cues.
+### Step 1 categorize
 
-[**Step 0;
-Prepare**](https://csrc.nist.gov/Projects/risk-management/about-rmf/prepare-step)**:**
-Essential activities to **prepare** the organization to manage security and
-privacy risks
+[Categorize](https://csrc.nist.gov/Projects/risk-management/about-rmf/categorize-step) the system and the information it processes, stores, and transmits based on an impact analysis:
 
-- Designate an individual, or individuals, who will be assigned the task of
-  executing the Risk Management Framework.
-  - Roles and responsibilities may be assigned to personnel internal or
-    external to your organization.
-- Create a [risk management
-  strategy](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-39.pdf)
-  for the organization that articulates your organizational risk tolerance.
-  - Understand and document specific assumptions, constraints, risk
-    tolerances, priorities, and trade-offs.
-  - Make strategic-level decisions on how to manage cybersecurity and
-    privacy risk.
-  - There is no “correct level” of risk tolerance. The degree of risk
-    tolerance is generally based on organizational culture, could be
-    different for different types of losses or compromises, and can be
-    influenced by risk tolerance of executives.
-- Implement a [continuous monitoring
-  strategy](https://nvlpubs.nist.gov/nistpubs/legacy/sp/nistspecialpublication800-137.pdf)
-  for your organization to monitor security and privacy risk posture.
-  - The strategy articulates frequency of control monitoring and how
-    monitoring is to be conducted.
-- Determine the scope of protection for the system and what falls into that
-  scope.
-  - Authorization boundaries establish the scope of systems to be protected,
-    managed, and authorized for operation or use.
-  - [Impact Level 5 Authorization
-    Boundary](https://forms.gle/zdv7Gip4opmdhBqk7)
-  - [FedRAMP High Authorization
-    Boundary](https://forms.gle/zdv7Gip4opmdhBqk7) (FedRAMP High baseline; FedRAMP Moderate authorization boundary template is planned)
-- Regularly assess the security and privacy risks at the organization level
-  and system level. Update risk assessment results on an on-going basis.
+- Determine the system security categorization under [NIST SP 800-60](https://csrc.nist.gov/pubs/sp/800/60/v1/r1/final) according to the organizational impact of a loss of confidentiality, integrity, or availability:
+  - Review the [Categorization References](/docs/artifacts/categorization-references/).
+  - Request the [System Security Plan Templates](https://forms.gle/zdv7Gip4opmdhBqk7) for IL5 H-H-X and FedRAMP High baselines; the FedRAMP Moderate template is planned.
 
-[**Step 1;
-Categorize**](https://csrc.nist.gov/Projects/risk-management/about-rmf/categorize-step):
-**Categorize** the system and information processed, stored, and transmitted
-based on the impact analysis
+### Step 2 select
 
-- [Categorize](https://csrc.nist.gov/pubs/sp/800/60/v1/r1/final) each system
-  based on the impact to the organization if the confidentiality,
-  availability, or integrity were to become compromised.
-  - [Categorization References](/docs/artifacts/categorization-references/)
-  - [System Security Plan
-    Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
-    (IL5 H-H-X and FedRAMP High Baselines; FedRAMP Moderate template is planned)
+[Select](https://csrc.nist.gov/Projects/risk-management/about-rmf/select-step) the NIST SP 800-53 control baseline that protects the system according to your risk assessment:
 
-[**Step 2;
-Select**](https://csrc.nist.gov/Projects/risk-management/about-rmf/select-step):
-**Select** the set of NIST SP 800-53 controls to protect the system based on
-risk assessment(s)
+- Choose a control baseline that satisfies your regulatory, contractual, and strategic security and privacy requirements:
+  - Identify the specific security and privacy controls needed to mitigate organizational risk.
+  - Decide whether to adopt a predefined control baseline or assemble a custom initial control set.
+- Tailor the selected control baseline to match your organization's operational environment and risk posture.
+- Define a system-level continuous monitoring strategy that specifies change monitoring, ongoing risk assessments, and reporting cadences:
+  - Evaluate the effectiveness of implemented controls and set the monitoring frequency for each control family.
+  - Request the [Security Control Traceability Matrix Templates](https://forms.gle/zdv7Gip4opmdhBqk7) for IL5 H-H-X and FedRAMP High baselines; the FedRAMP Moderate template is planned.
+  - Request the [Policies and Procedures Templates](https://forms.gle/zdv7Gip4opmdhBqk7) for IL5 H-H-X and FedRAMP High baselines; the FedRAMP Moderate templates are planned.
 
-- Now that you have categorized the systems and assets, select the appropriate
-  controls needed for protection.
-  - The control baseline is a set of controls you can implement to meet
-    strategic, legal, regulatory, or contractual security and privacy
-    requirements and manage risk.
-  - What security and privacy controls are needed to satisfy the
-    organization’s security and privacy requirements and to adequately
-    manage risk?
-  - For our initial selection of controls, should we use a baseline
-    (pre-defined) control selection approach, or should we select our own
-    controls?
-- After selecting an appropriate control baseline, tailor the controls to
-  address the specific security and privacy requirements for the organization.
-- Develop and implement a system-level strategy for monitoring control
-  effectiveness.
-  - This strategy defines how changes to the system and environment of
-    operation are to be monitored, how risk assessments are conducted, and
-    the reporting requirements.
-  - How effective are the controls we have implemented? What is the
-    frequency in which the controls are monitored?
-  - [Security Control Traceability Matrix (SCTM)
-    Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
-    (IL5 H-H-X and FedRAMP High Baselines; FedRAMP Moderate baseline template is planned)
-  - [Policies and Procedures
-    Templates](https://forms.gle/zdv7Gip4opmdhBqk7)
-    (IL5 H-H-X and FedRAMP High Baselines; FedRAMP Moderate baseline templates are planned)
+### Step 3 implement
 
-[**Step 3;
-Implement**](https://csrc.nist.gov/Projects/risk-management/about-rmf/implement-step):
-**Implement **the controls and document how controls are deployed
+[Implement](https://csrc.nist.gov/Projects/risk-management/about-rmf/implement-step) the selected controls and document how each control operates in your environment:
 
-- Now that you have categorized systems by their risks and have selected
-  appropriate controls, now is the time to implement the controls.
-  - Have the security and privacy controls been implemented or is there an
-    implementation plan in place?
-- Update security and privacy plans to document necessary changes.
-  - It’s not always feasible to implement controls as planned. Document
-    necessary revisions that reflect how the control is implemented.
+- Deploy the selected security and privacy controls or establish a documented implementation plan for pending controls.
+- Update your security and privacy plans to reflect the actual implementation details whenever operational constraints require deviations from the initial design.
 
-[**Step 4;
-Assess**](https://csrc.nist.gov/Projects/risk-management/about-rmf/assess-step):
-**Assess** to determine if the controls are in place, operating as intended, and
-producing the desired results
+### Step 4 assess
 
-- Select an individual or team responsible for conducting a control
-  assessment.
-  - Organizations can conduct self-assessments of controls or obtain the
-    services of an independent assessor.
-- Develop, review, and approve plans to assess implemented controls.
-- Once plans are approved, conduct control assessments using the assessment
-  plans.
-- Prepare an assessment report documenting the findings and recommendations,
-  such as plans for correcting deficiencies.
-- Prepare the plan of action and milestones, which details remediation plans
-  based on the findings and recommendations of the assessment report.
+[Assess](https://csrc.nist.gov/Projects/risk-management/about-rmf/assess-step) the implemented controls to verify that they operate as intended and produce the required security outcomes:
 
-[**Step 5;
-Authorize**](https://csrc.nist.gov/Projects/risk-management/about-rmf/authorize-step):
-Senior official makes a risk-based decision to **authorize** the system (to
-operate). Authorizing Officials (AOs) are executive-level leaders with demanding
-schedules, which is why they typically rely on a team for information system
-security. Each AO has a unique perspective on risk tolerance and while they are
-not always technical subject matter experts, they are experts in the business or
-mission area. To engage effectively, it’s important to translate security
-controls in a way that aligns with and supports the success of their mission.
+- Assign an internal assessment team or engage an independent third-party assessor to evaluate control implementation.
+- Develop, review, and approve security and privacy assessment plans before testing begins.
+- Execute control assessments according to the approved assessment plans.
+- Produce a Security Assessment Report documenting findings and remediation recommendations.
+- Draft a Plan of Action and Milestones detailing remediation schedules and corrective actions for open findings.
 
-- Assemble the authorization package and submit it to the authorizing official
-  for an authorization decision.
-  - If security and privacy controls are being implemented by an external
-    provider, ensure the provider makes available the information needed for
-    your organization to make risk-based decisions.
-- The authorizing official analyzes the information in the authorization
-  package and finalizes the determination of risk to the organization.
-- The authorizing official issues an authorization decision for the
-  information system, indicating whether the system is authorized to operate
-  or not.
+### Step 5 authorize
 
-[**Step 6;
-Monitor**](https://csrc.nist.gov/Projects/risk-management/about-rmf/monitor-step):
-Continuously **monitor** control implementation and risks to the system
+Submit the completed package so a senior official can make a risk-based decision to [Authorize](https://csrc.nist.gov/Projects/risk-management/about-rmf/authorize-step) system operation. Authorizing Officials rely on their security teams to translate technical control implementations into mission and business risk terms.
 
-- Monitor the system and environment of operation for changes that impact
-  security and privacy.
-- Using the results of the ongoing monitoring activities, risk assessments,
-  and outstanding items in plans of action and milestones, determine the
-  appropriate risk response and implement.
-- Maintain ongoing communication with organizational leadership to convey the
-  current security and privacy posture of the organization.
+- Assemble the complete authorization package, including inherited control documentation from external cloud service providers, and submit it to the Authorizing Official.
+- Support the Authorizing Official during package review and organizational risk determination.
+- Obtain the formal authorization decision granting or denying approval to operate the information system.
 
-**Additional Artifacts for an ATO:**
+### Step 6 monitor
 
-- [Privacy Impact Assessment
-  (PIA)](/docs/artifacts/PIA-PCIL-SORN/)
-- [PII Confidentiality Impact Level
-  (PCIL)](/docs/artifacts/PIA-PCIL-SORN/)
-- [System of Records Notice
-  (SORN)](/docs/artifacts/PIA-PCIL-SORN/)
-- [Hardware
-  List](/docs/artifacts/hw-sw-list/)
-- [Software
-  List](/docs/artifacts/hw-sw-list/)
-- [Ports, Protocols, and Services Management
-  (PPSM)](/docs/artifacts/ppsms/)
+Continuously [Monitor](https://csrc.nist.gov/Projects/risk-management/about-rmf/monitor-step) control effectiveness and environmental changes across the system lifecycle:
 
-**Things to Consider:**
+- Track infrastructure, software, and operational changes that affect system security or privacy posture.
+- Execute ongoing risk responses based on continuous monitoring metrics, updated risk assessments, and open Plan of Action and Milestones items.
+- Report current security and privacy posture regularly to organizational leadership and the Authorizing Official.
 
-- Team members should be U.S. Citizens.
-- In addition to documentation, you may be required to ensure compliance with
-  STIGs and ACAS scans.
-- ATOs are for a set time frame with a max of 3 years, but that does not mean
-  the work stops; packages will need to be maintained throughout the lifecycle
-  of the ATO. Without continuous updates, there will be a herculean effort to
-  make updates to address major changes, security requirement updates, or
-  CVEs.
-- An ATO with one agency/program does not necessarily transfer to another
-  agency program. ATOs are agency specific, however, there is potential for
-  reciprocity. Many AOs will accept reciprocity if the application, system, or
-  component of the system was authorized by another government official,
-  especially within the same agency or within DoD.
+## 3. Additional ATO artifacts
 
-**Example Work Breakdown Structure (WBS) for ATO:**
+Include these supporting artifacts in your authorization package as required by your authorizing agency:
 
-| <strong>WBS #:</strong> | <strong>Action:</strong>                                                                                               |
-| :---------------------- | :--------------------------------------------------------------------------------------------------------------------- |
-| <strong>1.0</strong>    | Conduct kick-off meetings with stakeholders, including the Authorizing Official and their team.                        |
-| <strong>1.1</strong>    | Roadmap with schedule , milestones, and responsibilities for the process                                               |
-| <strong>1.2</strong>    | Obtain access to system accounts (networks, eMASS, etc.).                                                              |
-| <strong>1.3</strong>    | Build ATO Deliverables                                                                                                 |
-| <strong>1.3.1</strong>  | Build Initial Artifacts: Architecture Diagram; HW/SW List; System Security Plan                                        |
-| <strong>1.3.2</strong>  | Determine categorization per FIPS 199                                                                                  |
-| <strong>1.3.3</strong>  | Select controls based upon NIST SP 800-53 rev 4 or rev 5                                                               |
-| <strong>1.3.4</strong>  | Assist team with implementation of controls                                                                            |
-| <strong>1.3.5</strong>  | Write policies and procedures (Configuration Management, Incident Response Plan, Continuous Monitoring Strategy, etc.) |
-| <strong>1.3.6</strong>  | Perform self-assessment, draft POA&M                                                                                   |
-| <strong>1.3.7</strong>  | Submit package to AO, answer questions, and provide support as needed                                                  |
-| <strong>1.4</strong>    | AO awards ATO                                                                                                          |
+- [Privacy Impact Assessment](/docs/artifacts/PIA-PCIL-SORN/)
+- [PII Confidentiality Impact Level](/docs/artifacts/PIA-PCIL-SORN/)
+- [System of Records Notice](/docs/artifacts/PIA-PCIL-SORN/)
+- [Hardware List](/docs/artifacts/hw-sw-list/)
+- [Software List](/docs/artifacts/hw-sw-list/)
+- [Ports, Protocols, and Services Management](/docs/artifacts/ppsms/)
 
-**References**
+## 4. Operational considerations
 
-- [NIST SP 800-37 rev 2](https://csrc.nist.gov/pubs/sp/800/37/r2/final), _Risk
-  Management Framework for Information Systems and Organizations: A System
-  Life Cycle Approach for Security and Privacy_
-  - Describes the RMF and provides guidelines for apply the RMF to
-    information systems and organizations
-- [Federal Information Processing Standards
-  (FIPS) 199](https://csrc.nist.gov/pubs/fips/199/final), _Standards for
-  Security Categorization of Federal Information and Information Systems_
-  - Standard for categorizing information systems according to concerns for
-    confidentiality, integrity, and availability. Used with SP 800-60, Guide
-    for Mapping Types of Information and Information Systems to Security
-    Categories
-- [FIPS 200](https://csrc.nist.gov/pubs/fips/200/final), _Minimum Security
-  Requirements for Federal Information and Information Systems_
-  - Provides a risk-based process for selecting the security controls
-    necessary to satisfy the minimum requirements for information and an
-    information system
-- NIST SP 800-53 [rev 4](https://csrc.nist.gov/pubs/sp/800/53/r4/upd3/final)
-  and [rev 5](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final), _Security
-  and Privacy Controls for Federal Information Systems and Organizations_
-  - Catalog of security and privacy controls for information systems and
-    organizations to protect against a diverse set of threats and risks.
-- [Stellar Engine Technical Design Document](tdd.md)
+Account for personnel, scanning, maintenance, and reciprocity requirements early in your authorization timeline:
+
+- Assign U.S. citizens to administrative and authorization team roles when required by your target compliance regime.
+- Validate workload compliance against Defense Information Systems Agency Security Technical Implementation Guides and Assured Compliance Assessment Solution scans alongside package documentation.
+- Maintain authorization artifacts continuously throughout the ATO period, which typically spans up to three years, so major architecture changes, updated security mandates, and vulnerability remediations do not accumulate into a disruptive reauthorization effort.
+- Plan for agency-specific authorization boundaries. While an ATO issued by one agency does not transfer automatically to another program, Authorizing Officials within the same agency or across the Department of Defense frequently accept reciprocity for previously authorized components.
+
+## 5. Work breakdown structure
+
+Use this example Work Breakdown Structure to sequence key milestones across an Authorization to Operate engagement:
+
+| WBS | Action |
+| :--- | :--- |
+| 1.0 | Conduct kick-off meetings with stakeholders, including the Authorizing Official and security engineering leads. |
+| 1.1 | Establish the authorization roadmap, schedule, milestones, and team responsibilities. |
+| 1.2 | Obtain access to required governance and compliance accounts such as networks and eMASS. |
+| 1.3 | Build the core Authorization to Operate deliverables. |
+| 1.3.1 | Draft initial boundary artifacts including the architecture diagram, hardware and software lists, and System Security Plan. |
+| 1.3.2 | Determine the system security categorization under FIPS 199. |
+| 1.3.3 | Select the security control baseline under NIST SP 800-53 Revision 4 or Revision 5. |
+| 1.3.4 | Implement technical and procedural controls with the platform and application teams. |
+| 1.3.5 | Author system policies and procedures covering configuration management, incident response, and continuous monitoring. |
+| 1.3.6 | Perform a control self-assessment and draft the Plan of Action and Milestones. |
+| 1.3.7 | Submit the authorization package to the Authorizing Official and resolve review questions. |
+| 1.4 | Receive the formal Authorization to Operate decision from the Authorizing Official. |
+
+## 6. References
+
+- [NIST SP 800-37 Revision 2](https://csrc.nist.gov/pubs/sp/800/37/r2/final), *Risk Management Framework for Information Systems and Organizations: A System Life Cycle Approach for Security and Privacy*, defines the seven-step Risk Management Framework lifecycle.
+- [FIPS 199](https://csrc.nist.gov/pubs/fips/199/final), *Standards for Security Categorization of Federal Information and Information Systems*, establishes confidentiality, integrity, and availability impact categories alongside NIST SP 800-60.
+- [FIPS 200](https://csrc.nist.gov/pubs/fips/200/final), *Minimum Security Requirements for Federal Information and Information Systems*, specifies the risk-based process for selecting baseline security controls.
+- NIST SP 800-53 [Revision 4](https://csrc.nist.gov/pubs/sp/800/53/r4/upd3/final) and [Revision 5](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final), *Security and Privacy Controls for Federal Information Systems and Organizations*, catalog federal security and privacy controls.
+- [Stellar Engine Technical Design Document](tdd.md) documents the reference landing zone architecture.
