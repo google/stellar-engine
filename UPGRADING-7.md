@@ -116,13 +116,27 @@ Execute each stage in strict dependency order:
 
 Stage `1-resman` automatically releases `module.tenant-core-folders-iam` and `module.tenant-self-folders-iam` via built-in `removed` blocks in `branch-tenants.tf`, and Stage `2-networking-a-fedramp` automatically releases `enable-oslogin` state addresses for `hub`, `Prod`, `Int`, and `Test` across all regimes via `oslogin.tf`. Apply the remaining manual migrations below before `terraform apply`.
 
-- In `0-bootstrap` when `deploy_org_resources.org_policies = false`, list policies on your Assured Workloads folder via `gcloud org-policies list --folder=123456789012 --format="value(constraint)"` and import matching constraints into `module.root-folder-config[0].google_org_policy_policy.default["<constraint>"]` in `migrations.tf`:
+- In `0-bootstrap` when `deploy_org_resources.org_policies = false`, `module.root-folder-config` automatically excludes the 12 Assured Workloads baseline list and boolean constraints in `local.aw_managed_policies` when `assured_workloads.regime != "COMPLIANCE_REGIME_UNSPECIFIED"`, namely `compute.disableGlobalCloudArmorPolicy`, `compute.disableGlobalLoadBalancing`, `compute.setNewProjectDefaultToZonalDNSOnly`, `compute.skipDefaultNetworkCreation`, `gcp.resourceLocations`, `gcp.restrictCmekCryptoKeyProjects`, `gcp.restrictNonCmekServices`, `gcp.restrictServiceUsage`, `gcp.restrictTLSVersion`, `iam.automaticIamGrantsForDefaultServiceAccounts`, `iam.disableServiceAccountKeyCreation`, and `storage.publicAccessPrevention`. Do not import those 12 constraints, release any previously imported excluded constraints from `module.root-folder-config[0].google_org_policy_policy.default["<constraint>"]` via `moved` and `removed` with `lifecycle { destroy = false }` in `migrations.tf`, and list existing folder policies via `gcloud org-policies list --folder=123456789012 --format="value(constraint)"` to import only remaining non-excluded constraints that `module.root-folder-config` still manages:
 
   ```hcl
   # fast/stages-aw/0-bootstrap/migrations.tf
   import {
     to = module.root-folder-config[0].google_org_policy_policy.default["compute.requireOsLogin"]
     id = "folders/123456789012/policies/compute.requireOsLogin"
+  }
+
+  # Include both blocks below only when releasing a previously imported AW-managed constraint.
+  moved {
+    from = module.root-folder-config[0].google_org_policy_policy.default["gcp.resourceLocations"]
+    to   = google_org_policy_policy.aw_managed_released["gcp.resourceLocations"]
+  }
+
+  removed {
+    from = google_org_policy_policy.aw_managed_released
+
+    lifecycle {
+      destroy = false
+    }
   }
   ```
 
