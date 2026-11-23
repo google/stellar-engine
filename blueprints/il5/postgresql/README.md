@@ -1,3 +1,8 @@
+# PostgreSQL blueprint
+
+Deploys a Cloud SQL for PostgreSQL instance through `modules/cloudsql-instance`. The instance has no public IP address and is encrypted with the customer-managed Cloud KMS key in `kms_key_name`.
+
+<!--
 Copyright 2023 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +16,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+-->
 
 ## Requirements
 1. Private connectivity for the instance on the target network (`network_name` / `network_project_id`). The default is an existing Private Services Access (PSA) connection on that network, and `psc_config` selects Private Service Connect (PSC) instead. See [Private connectivity](#private-connectivity).

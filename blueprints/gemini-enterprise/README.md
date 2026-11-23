@@ -12,7 +12,7 @@
 2.  [Architecture & Diagrams](#2-architecture--diagrams)
 3.  [IAM Permissions & Prerequisites](#3-iam-permissions--prerequisites)
 4.  [Stellar Engine Integration (Brownfield)](#4-stellar-engine-integration-brownfield)
-5.  [Internal Ingress Deployment Guide](#5-internal-deployment-guide)
+5.  [Internal Ingress Deployment Guide](#5-internal-ingress-deployment-guide)
 6.  [Stage 0: Infrastructure Foundation](#6-stage-0-infrastructure-foundation)
 7.  [The gem4gov CLI Tool](#7-the-gem4gov-cli-tool)
 8.  [Stage 1: Application Frontend](#8-stage-1-application-frontend)
@@ -778,7 +778,7 @@ Before applying this Terraform module, ensure the following manual steps and con
     - If identity provider is Third-Party Identity Provider (i.e. Microsoft Entra, Okta, etc.)...
       - [Setup Workforce Identity Federation](https://docs.cloud.google.com/iam/docs/configuring-workforce-identity-federation) at the GCP Organization-level
       - Ensure Group IDs are being passed to the Secure Token Service API and the attribute-mapping in the Workforce Identity Provider maps the list of Group IDs to `google.groups` (i.e. `google.groups=assertion.groups`)
-        - [Microsoft Entra] (https://learn.microsoft.com/en-us/entra/identity-platform/optional-claims?tabs=appui#configure-groups-optional-claims)
+        - [Microsoft Entra](https://learn.microsoft.com/en-us/entra/identity-platform/optional-claims?tabs=appui#configure-groups-optional-claims)
         - [Okta](https://developer.okta.com/docs/guides/customize-tokens-groups-claim/main/)
 
 3.  **OAuth Consent Screen:**
