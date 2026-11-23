@@ -321,9 +321,12 @@ variable "subnets" {
       metadata             = optional(string)
       metadata_fields      = optional(list(string))
     }))
-    secondary_ip_ranges = optional(map(string))
-    iam                 = optional(map(list(string)), {})
-    tenant              = optional(string)
+    secondary_ip_ranges = optional(map(object({
+      ip_cidr_range           = optional(string)
+      reserved_internal_range = optional(string)
+    })))
+    iam    = optional(map(list(string)), {})
+    tenant = optional(string)
   })))
   default  = {}
   nullable = false

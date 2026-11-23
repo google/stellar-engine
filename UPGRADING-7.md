@@ -1,6 +1,6 @@
-# Upgrade to v7.0.0
+# Upgrade to v7.x
 
-Use this guide to deploy Stellar Engine v7.0.0 from scratch or upgrade an existing v6.0.0 deployment while preserving stateful Google Cloud resources. Review [CHANGELOG.md](CHANGELOG.md) and release pull request [#415](https://github.com/google/stellar-engine/pull/415) alongside these steps before running Terraform.
+Use this guide to deploy the latest Stellar Engine v7.x release from scratch or upgrade an existing v6.0.0 deployment while preserving stateful Google Cloud resources. Review [CHANGELOG.md](CHANGELOG.md) and release pull request [#415](https://github.com/google/stellar-engine/pull/415) alongside these steps before running Terraform.
 
 <!-- BEGIN TOC -->
 - [1 Deploy from scratch](#1-deploy-from-scratch)
@@ -38,14 +38,14 @@ Review these updates to [docs/ddg.md](docs/ddg.md) across Stages 0 through 3, ne
 - Setting `deploy_org_resources = { org_policies = false }` in `fast/stages-aw/0-bootstrap` now attaches baseline Stage 0 policies to the Assured Workloads enclave folder via `module.root-folder-config[0]`, and `custom.restrictFirewallRanges` blocks classic VPC ingress allow rules containing `0.0.0.0/0` alongside narrower CIDRs or `::/0`.
 - Stage 1 resolves per-tenant KMS and Cloud Storage regions from `tenants[*].locations` instead of `var.regions.primary`, consolidates tenant folder IAM into `module.tenant-top-folders-iam`, and outputs `team_cicd_repositories[*].service_account` as an `{ apply, plan }` map.
 - Operators returning from v5.x training should note that [fast/stages-aw/2-networking-a-fedramp](fast/stages-aw/2-networking-a-fedramp/README.md) now deploys `<prefix>-net-hub-host`, a `STAR` Network Connectivity Center hub, `BEFORE_CLASSIC_FIREWALL` Cloud NGFW policies under `var.firewall_policy_rules`, PSC Google APIs endpoints, Cloud NAT or `var.centralized_egress` Secure Web Proxy, object-typed `secondary_ip_ranges`, and opt-in `var.psa_ranges`; on FedRAMP Moderate, FedRAMP High, and IL2 it leaves `enable-oslogin` metadata to `compute.requireOsLogin`.
-- [fast/stages-aw/2-networking-b-il5-ngfw](fast/stages-aw/2-networking-b-il5-ngfw/README.md) emits lowercase `{ <env> = "<project-id>" }` strings in `output.host_project_ids`, skips `default-peering` PSA creation when `var.psa_ranges` covers an environment, writes NGFW return routes for all spoke primary, secondary, and proxy-only CIDRs, and enforces Suite-B-GCM-256 default IPsec profiles.
+- [fast/stages-aw/2-networking-b-il5-ngfw](fast/stages-aw/2-networking-b-il5-ngfw/README.md) emits lowercase `{ <env> = "<project-id>" }` strings in `output.host_project_ids`, accepts object-typed `secondary_ip_ranges` maps, skips `default-peering` PSA creation when `var.psa_ranges` covers an environment, writes NGFW return routes for all spoke primary, secondary, and proxy-only CIDRs, and enforces Suite-B-GCM-256 default IPsec profiles.
 - Stage 3 `sa_lockdown.sh` and fail-closed `validation.sh`, which accepts the `--prefix` and `--project` flags, cover all 27 static `VALID_NAMES` accounts including `<prefix>-prod-resman-envs-0` plus `team-<name>` accounts, while `vpc_sc.perimeter_default.dry_run_spec` trials perimeter edits without dropping active enforcement.
 - `cloud-run`, `cnap`, `pub-sub-project`, `vertex-mlops`, `cloud-workstations`, `cloud-functions`, and `cloud-composer-environment` bind IAM roles to individual resources rather than entire projects; populate `var.subscriptions` in `pub-sub-project` to grant subscriber access and `var.image_repository` in `cloud-workstations` when pulling private images.
 - `postgresql` drops its untargeted host-project firewall rule and adds opt-in `var.psc_config` Private Service Connect; `cnap` via `var.cloud_armor_request_body_limit` plus `cloud-armor` in `rules.yaml` block HTTP bodies over 8 KB; `gemini-enterprise` adds the same 8 KB limit at priority 90 in preview mode until a rule in `cloudarmor.yaml` disables `preview`; `il5/gke` and `fedramp-high/gke` enforce `access_config.private_nodes = true`; `fedramp-high/gitlab` runs GKE nodes on a dedicated node account; `beyondcorp` requires encrypted Endpoint Verification devices; and `cloud-spanner` plus `cloud-composer-environment` add optional `var.kms_key_name` CMEK inputs.
 
 ### 1.3 Retired classroom workarounds
 
-Stop applying the legacy v5.x and v6.0.0 workarounds below because v7.0.0 resolves each defect directly in code.
+Stop applying the legacy v5.x and v6.0.0 workarounds below because v7.x resolves each defect directly in code.
 
 | Component | Workaround no longer needed |
 | --- | --- |
@@ -60,47 +60,7 @@ Stop applying the legacy v5.x and v6.0.0 workarounds below because v7.0.0 resolv
 
 ### 1.4 Known open issues
 
-Apply the active workarounds below when open GitHub issues affect fresh v7.0.0 deployments or Day-2 operations.
-
-> [!WARNING]
-> Stage 2b in [fast/stages-aw/2-networking-b-il5-ngfw](fast/stages-aw/2-networking-b-il5-ngfw/README.md) currently fails every `terraform plan` run due to [#512](https://github.com/google/stellar-engine/issues/512) and [#513](https://github.com/google/stellar-engine/issues/513) until you update `bastion.tf` and `variables.tf` locally.
-
-Before planning `fast/stages-aw/2-networking-b-il5-ngfw`, replace `data` and `data_config` on both `ngfw-ssh-private-key` and `ngfw-ssh-public-key` in `bastion.tf` and change `secondary_ip_ranges` on line 324 of `variables.tf` to an object map:
-
-```hcl
-# fast/stages-aw/2-networking-b-il5-ngfw/bastion.tf
-ngfw-ssh-private-key = {
-  # Keep existing global_replica_locations and iam blocks.
-  versions = {
-    latest = {
-      enabled = true
-      data = {
-        value      = tls_private_key.ngfw_ssh.private_key_openssh
-        wo_version = 1
-      }
-    }
-  }
-}
-
-ngfw-ssh-public-key = {
-  # Keep existing global_replica_locations and iam blocks.
-  versions = {
-    latest = {
-      enabled = true
-      data = {
-        value      = tls_private_key.ngfw_ssh.public_key_openssh
-        wo_version = 1
-      }
-    }
-  }
-}
-
-# fast/stages-aw/2-networking-b-il5-ngfw/variables.tf line 324
-secondary_ip_ranges = optional(map(object({
-  ip_cidr_range           = optional(string)
-  reserved_internal_range = optional(string)
-})))
-```
+Apply the active workarounds below when open GitHub issues affect fresh v7.x deployments or Day-2 operations.
 
 | Issue | Component | Symptom and workaround |
 | --- | --- | --- |
@@ -146,7 +106,7 @@ gcloud auth application-default set-quota-project acme-prod-iac-core-0
 
 Execute each stage in strict dependency order:
 
-1. Verify a clean `terraform plan` on v6.0.0, unlock stage accounts from `fast/stages-aw/3-security` with `./sa_lockdown.sh --enable`, and check out v7.0.0.
+1. Verify a clean `terraform plan` on v6.0.0, unlock stage accounts from `fast/stages-aw/3-security` with `./sa_lockdown.sh --enable`, and check out the latest v7.x release tag.
 2. Upgrade `0-bootstrap`, `1-resman`, `2-networking-a-fedramp` or `2-networking-b-il5-ngfw`, `3-security`, optional Stage 3 branches, and `blueprints/` in order.
 3. In each downstream stage, run `bash ../../stage-links.sh gs://<prefix>-prod-iac-core-outputs-0` or pass an absolute `var.outputs_location` path because relative paths break symlinks, apply the printed copy or symlink commands using `gcloud storage cp` if needed, and run `terraform init -upgrade`.
 4. Add temporary `migrations.tf` blocks from Section 2.2, review `upgrade.tfplan` with the operator, run `terraform apply upgrade.tfplan` after approval, remove `upgrade.tfplan` and temporary `migrations.tf`, and re-run `terraform plan` to confirm zero drift.
@@ -187,7 +147,7 @@ Stage `1-resman` automatically releases `module.tenant-core-folders-iam` and `mo
   }
   ```
 
-- In `2-networking-b-il5-ngfw`, apply the Section 1.4 HCL fixes first, update external consumers of `host_project_ids["<Env>"].project_id` to lowercase `host_project_ids["<env>"]`, and check `terraform state list` for `google_service_networking_connection.default["<Env>"]`; for every environment covered by `var.psa_ranges` including the `var.psa_ranges.dev` fallback across non-`Prod` environments, detach the duplicate connection in `migrations.tf` and detach `google_compute_global_address.private_service_connect_ip["<Env>"]` if producer services already use `default-peering`:
+- In `2-networking-b-il5-ngfw`, convert any string-valued `subnets[*][*].secondary_ip_ranges` entries in `terraform.tfvars` to `{ ip_cidr_range = "<cidr>" }` objects, expect a one-time `google_secret_manager_secret_version.default` replacement on `ngfw-ssh-private-key` and `ngfw-ssh-public-key` when Secret Manager switches to write-only data, update external consumers of `host_project_ids["<Env>"].project_id` to lowercase `host_project_ids["<env>"]`, and check `terraform state list` for `google_service_networking_connection.default["<Env>"]`; for every environment covered by `var.psa_ranges` including the `var.psa_ranges.dev` fallback across non-`Prod` environments, detach the duplicate connection in `migrations.tf` and detach `google_compute_global_address.private_service_connect_ip["<Env>"]` if producer services already use `default-peering`:
 
   ```hcl
   # fast/stages-aw/2-networking-b-il5-ngfw/migrations.tf
@@ -242,7 +202,7 @@ Schedule maintenance windows for the changes below because each triggers instanc
 
 ### 2.4 Multi-pass Terraform applies
 
-Plan for multiple `terraform apply` passes or targeted runs across these v7.0.0 upgrade scenarios.
+Plan for multiple `terraform apply` passes or targeted runs across these v7.x upgrade scenarios.
 
 1. Run stages sequentially with `fast/stage-links.sh` refreshes so `0-bootstrap` exports `automation.kms_keys.gcs` to `1-resman`, `1-resman` exports `service_accounts.envs` and GKE or GCVE accounts to `3-security`, and `2-networking-*` creates spoke projects and `host_project_ids` for `3-security` and Stage 3 branches.
 2. Apply resource-scoped IAM bindings using the `-target` flag before running a full `terraform apply` that deletes legacy project bindings when minimizing authorization gaps:
@@ -258,5 +218,5 @@ Plan for multiple `terraform apply` passes or targeted runs across these v7.0.0 
    | `cloud-composer-environment` | Target `google_compute_subnetwork_iam_member.composer_network_user` |
 
 3. Re-run `terraform apply` once in `2-networking-b-il5-ngfw` if deleting an unused `google_compute_global_address.private_service_connect_ip["<Env>"]` races `psa_connection` updating `reserved_peering_ranges`.
-4. Run a two-pass GKE rebuild when setting variable `gke_cluster_enable_private_endpoint = false` forces cluster replacement while variable `enable_deletion_protection = true` is active: apply `enable_deletion_protection = false` on v6.0.0 first, then upgrade to v7.0.0.
+4. Run a two-pass GKE rebuild when setting variable `gke_cluster_enable_private_endpoint = false` forces cluster replacement while variable `enable_deletion_protection = true` is active: apply `enable_deletion_protection = false` on v6.0.0 first, then upgrade to the latest v7.x release.
 5. Apply custom `modules/access-context-manager` or `modules/beyondcorp` upgrades once before removing a `module` block in a second apply, and re-run `1-resman` once if custom `roles/browser` tenant folder bindings hit a delete-after-create race.

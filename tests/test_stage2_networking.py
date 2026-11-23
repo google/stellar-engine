@@ -323,7 +323,16 @@ class TestStage2Networking(unittest.TestCase):
         self.assertIn(
             "(var.regions.primary) = module.kms.keys.default.id", bastion_tf
         )
-        self.assertIn("data_config = { write_only_version = 1 }", bastion_tf)
+        self.assertNotIn("data_config", bastion_tf)
+        self.assertNotIn("write_only_version", bastion_tf)
+        self.assertEqual(bastion_tf.count("wo_version = 1"), 2)
+        for key_attr in ("private_key_openssh", "public_key_openssh"):
+            self.assertRegex(
+                bastion_tf,
+                r"data = \{\s+"
+                rf"value\s+=\s+tls_private_key\.ngfw_ssh\.{key_attr}\s+"
+                r"wo_version\s+=\s+1\s+\}",
+            )
         self.assertIn(
             "module.vdss-host-project.service_agents.secretmanager.iam_email",
             ngfw_tf,
@@ -331,6 +340,27 @@ class TestStage2Networking(unittest.TestCase):
         self.assertNotIn('resource "local_file" "rsa-out"', outputs_tf)
         self.assertIn('output "ngfw_ssh_private_key_secret_id"', outputs_tf)
         self.assertIn("--secret=ngfw-ssh-private-key", readme_md)
+
+    def test_il5_subnets_secondary_ip_ranges_match_net_vpc_object_type(self):
+        il5_vars = (_IL5_NET_DIR / "variables.tf").read_text(encoding="utf-8")
+        fedramp_vars = (_FEDRAMP_NET_DIR / "variables.tf").read_text(
+            encoding="utf-8"
+        )
+        net_vpc_vars = (_REPO_ROOT / "modules/net-vpc/variables.tf").read_text(
+            encoding="utf-8"
+        )
+        expected_block = (
+            "    secondary_ip_ranges = optional(map(object({\n"
+            "      ip_cidr_range           = optional(string)\n"
+            "      reserved_internal_range = optional(string)\n"
+            "    })))"
+        )
+        self.assertNotIn(
+            "secondary_ip_ranges = optional(map(string))", il5_vars
+        )
+        self.assertIn(expected_block, il5_vars)
+        self.assertIn(expected_block, fedramp_vars)
+        self.assertIn(expected_block, net_vpc_vars)
 
     def test_ngfw_landing_gateway_and_samples_follow_configured_region(self):
         ngfw_tf = (_IL5_NET_DIR / "ngfw.tf").read_text(encoding="utf-8")
