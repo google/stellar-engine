@@ -140,15 +140,11 @@ The following example configures an organization-level Workforce Identity pool:
 
 ```hcl
 # stage 0 wif tfvars
-workforce_identity_providers = {
-  test = {
-    issuer       = "azuread"
-    display_name = "wif-provider"
-    description  = "Workforce Identity pool"
-    saml         = {
-      idp_metadata_xml = "<?xml version=\"1.0\" encoding=\"utf-8\"?>..."
-    }
-  }
+workforce_identity_pool = {
+  display_name     = "Bootstrap workforce pool"
+  description      = "Workforce Identity pool"
+  disabled         = false
+  session_duration = "3600s"
 }
 ```
 
@@ -250,14 +246,15 @@ project_deletion_policies = {
 
 Configure a Workload Identity Federation pool and OIDC providers at any point in Stage 0 through `federated_identity_providers`. Stage 0 exports configured provider names in generated `.auto.tfvars.json` files for Stage 1 and `cicd_repositories`.
 
-The `identity-providers.tf` file includes built-in issuer definitions for GitHub and GitLab, and you can extend it to support additional OIDC providers. For self-hosted GitHub Enterprise or GitLab instances, configure `custom_settings`:
+The `workload-identity.tf` file includes built-in issuer definitions for GitHub and GitLab, and you can extend it to support additional OIDC providers. For self-hosted GitHub Enterprise or GitLab instances used with `cicd_repositories`, keep `issuer` set to `"github"` or `"gitlab"` so both Stage 0 and Stage 1 inherit the default attribute mappings and principal templates, and configure `custom_settings`:
 
 - Set `issuer_uri` to override the public platform issuer URL.
 - Set `audiences` to override the default [Workload Identity Federation provider audience](https://cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation#provider-audience).
 - Set `jwks_json` to upload custom signing keys.
+- Set `attribute_condition` on multi-tenant providers such as public GitHub or GitLab to restrict authentication to your organization or namespace and exclude `pull_request_target` workflows where applicable.
 
 ```tfvars
-workload_identity_providers = {
+federated_identity_providers = {
   # Use the public GitHub and specify an attribute condition
   github-public-sample = {
     attribute_condition = "attribute.repository_owner==\"my-github-org\""
@@ -290,21 +287,21 @@ Configure external CI/CD repository impersonation and workflow generation throug
 ```tfvars
 cicd_repositories = {
   bootstrap = {
-    branch            = null
-    identity_provider = "github-sample"
+    branch            = "main"
+    identity_provider = "github-public-sample"
     name              = "my-gh-org/fast-bootstrap"
     type              = "github"
   }
   resman = {
     branch            = "main"
-    identity_provider = "github-sample"
+    identity_provider = "github-public-sample"
     name              = "my-gh-org/fast-resman"
     type              = "github"
   }
 }
 ```
 
-Set `type` to `github`, `gitlab`, or `sourcerepo`. Applying Stage 0 writes pre-configured workflow files that authenticate via Workload Identity Federation using a dedicated CI/CD service account per repository.
+Set `type` to `github`, `gitlab`, or `sourcerepo`. For external repositories, `branch` scopes Workload Identity Federation impersonation of the `-1` apply service account to that branch; leaving `branch` set to `null` grants no Workload Identity Federation binding on the apply service account while still allowing pull-request plans through the `-1r` read-only account. Applying Stage 0 writes pre-configured workflow files that authenticate via Workload Identity Federation using a dedicated CI/CD service account per repository.
 
 Complete the repository setup manually after `terraform apply`:
 
@@ -327,7 +324,6 @@ Feature toggles in `fast_features` are experimental and not officially supported
 - The `project_factory` toggle provisions prerequisites for the [3-project-factory](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/3-project-factory) stage.
 - The `sandbox` toggle creates a top-level `Sandbox` folder with relaxed policies for experimentation.
 - The `teams` toggle creates a top-level `Teams` folder for the [Stage 1 teams feature](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/1-resman#team-folders).
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
@@ -336,36 +332,36 @@ Feature toggles in `fast_features` are experimental and not officially supported
 | [alert_email](variables.tf#L17) | Email to receive log alerts. | <code>string</code> | ✓ |  |
 | [billing_account](variables.tf#L35) | Billing account id. If billing account is not part of the same org set `is_org_level` to `false`. To disable handling of billing IAM roles set `no_iam` to `true`. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [bootstrap_project](variables.tf#L63) | Bootstrap project ID. | <code>string</code> | ✓ |  |
-| [kms_protection_level](variables.tf#L251) | KMS protection level. | <code>string</code> | ✓ |  |
-| [organization](variables.tf#L339) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [prefix](variables.tf#L354) | Prefix used for resources that need unique names. Use 7 characters or less. | <code>string</code> | ✓ |  |
+| [kms_protection_level](variables.tf#L289) | KMS protection level. | <code>string</code> | ✓ |  |
+| [organization](variables.tf#L377) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [prefix](variables.tf#L392) | Prefix used for resources that need unique names. Use 7 characters or less. | <code>string</code> | ✓ |  |
 | [assured_workloads](variables.tf#L22) | Configuration for Assured Workloads. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
 | [billing_budget_amount](variables.tf#L45) | Optional Budget configuration for the AW folder. Includes amount and optional threshold rules (defaults to 0.5, 0.75, 0.9). If null, no budget will be created. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [billing_override](variables.tf#L54) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [bootstrap_user](variables.tf#L68) | Email of the nominal user running this stage for the first time. | <code>string</code> |  | <code>null</code> |
 | [cicd_repositories](variables.tf#L74) | CI/CD repository configuration. Identity providers reference keys in the `federated_identity_providers` variable. Set to null to disable, or set individual repositories to null if not needed. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [custom_roles](variables.tf#L120) | Map of role names => list of permissions to additionally create at the organization level. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [deploy_org_resources](variables.tf#L127) | Selective control for deploying organization-level resources. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [essential_contacts](variables.tf#L142) | Email or map of emails to notification category lists used for essential contacts, unset if null or empty. | <code>any</code> |  | <code>&#123;&#125;</code> |
-| [factories_config](variables.tf#L156) | Configuration for the resource factories or external data. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [fast_features](variables.tf#L168) | Selective control for top-level FAST features. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [federated_identity_providers](variables.tf#L183) | Workload Identity Federation providers. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [force_destroy](variables.tf#L200) | Toggles force_destroy for GCS buckets. | <code>bool</code> |  | <code>false</code> |
-| [groups](variables.tf#L206) | Group names or IAM-format principals to grant organization-level permissions. If just the name is provided, the 'group:' principal and organization domain are interpolated. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [iam](variables.tf#L222) | Organization-level custom IAM settings in role => [principal] format. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [iam_bindings_additive](variables.tf#L229) | Organization-level custom additive IAM bindings. Keys are arbitrary. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [iam_by_principals](variables.tf#L244) | Authoritative IAM binding in {PRINCIPAL => [ROLES]} format. Principals need to be statically defined to avoid cycle errors. Merged internally with the `iam` variable. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [locations](variables.tf#L257) | Optional locations for GCS, BigQuery, and logging buckets created here. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [log_sinks](variables.tf#L273) | Org-level log sinks, in name => {type, filter} format. Valid types: 'logging' (routes to Cloud Logging bucket with 365-day default retention), 'pubsub' (routes to Pub/Sub topic with 7-day default retention; requires an active consumer to avoid log loss), 'storage' (routes to GCS bucket), 'bigquery' (routes to BigQuery dataset). | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
-| [logging_bucket_retention](variables.tf#L309) | Retention period (in days) for the Cloud Logging buckets created for organization log exports. | <code>number</code> |  | <code>365</code> |
-| [logging_kms_key](variables.tf#L315) | value of the KMS key used for logging. | <code>string</code> |  | <code>null</code> |
-| [org_policies_config](variables.tf#L321) | Organization policies customization. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [outputs_location](variables.tf#L348) | Enable writing provider, tfvars and CI/CD workflow files to local filesystem. Leave null to disable. | <code>string</code> |  | <code>null</code> |
-| [project_deletion_policies](variables.tf#L363) | Deletion policy of each Stage 0 project. Use ABANDON for projects that you create outside Terraform and import, so terraform destroy leaves them in place. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [project_parent_ids](variables.tf#L381) | Optional parents for projects created here in folders/nnnnnnn format. Null values will use the organization as parent. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [regime_mapping](variables.tf#L392) | Mapping of compliance regime names to short codes. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
-| [regions](variables.tf#L425) | Region definitions. Must be specified in terraform.tfvars. Example: us-east4 for FedRAMP High compliance. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
-| [workforce_identity_pool](variables.tf#L436) | Workforce Identity Federation pool configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [custom_roles](variables.tf#L141) | Map of role names => list of permissions to additionally create at the organization level. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [deploy_org_resources](variables.tf#L148) | Selective control for deploying organization-level resources. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [essential_contacts](variables.tf#L163) | Email or map of emails to notification category lists used for essential contacts, unset if null or empty. | <code>any</code> |  | <code>&#123;&#125;</code> |
+| [factories_config](variables.tf#L177) | Configuration for the resource factories or external data. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [fast_features](variables.tf#L189) | Selective control for top-level FAST features. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [federated_identity_providers](variables.tf#L204) | Workload Identity Federation providers. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [force_destroy](variables.tf#L238) | Toggles force_destroy for GCS buckets. | <code>bool</code> |  | <code>false</code> |
+| [groups](variables.tf#L244) | Group names or IAM-format principals to grant organization-level permissions. If just the name is provided, the 'group:' principal and organization domain are interpolated. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [iam](variables.tf#L260) | Organization-level custom IAM settings in role => [principal] format. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [iam_bindings_additive](variables.tf#L267) | Organization-level custom additive IAM bindings. Keys are arbitrary. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [iam_by_principals](variables.tf#L282) | Authoritative IAM binding in {PRINCIPAL => [ROLES]} format. Principals need to be statically defined to avoid cycle errors. Merged internally with the `iam` variable. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [locations](variables.tf#L295) | Optional locations for GCS, BigQuery, and logging buckets created here. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [log_sinks](variables.tf#L311) | Org-level log sinks, in name => {type, filter} format. Valid types: 'logging' (routes to Cloud Logging bucket with 365-day default retention), 'pubsub' (routes to Pub/Sub topic with 7-day default retention; requires an active consumer to avoid log loss), 'storage' (routes to GCS bucket), 'bigquery' (routes to BigQuery dataset). | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [logging_bucket_retention](variables.tf#L347) | Retention period (in days) for the Cloud Logging buckets created for organization log exports. | <code>number</code> |  | <code>365</code> |
+| [logging_kms_key](variables.tf#L353) | value of the KMS key used for logging. | <code>string</code> |  | <code>null</code> |
+| [org_policies_config](variables.tf#L359) | Organization policies customization. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [outputs_location](variables.tf#L386) | Enable writing provider, tfvars and CI/CD workflow files to local filesystem. Leave null to disable. | <code>string</code> |  | <code>null</code> |
+| [project_deletion_policies](variables.tf#L401) | Deletion policy of each Stage 0 project. Use ABANDON for projects that you create outside Terraform and import, so terraform destroy leaves them in place. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [project_parent_ids](variables.tf#L419) | Optional parents for projects created here in folders/nnnnnnn format. Null values will use the organization as parent. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [regime_mapping](variables.tf#L430) | Mapping of compliance regime names to short codes. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [regions](variables.tf#L463) | Region definitions. Must be specified in terraform.tfvars. Example: us-east4 for FedRAMP High compliance. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [workforce_identity_pool](variables.tf#L474) | Workforce Identity Federation pool configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 
 ## Outputs
 
