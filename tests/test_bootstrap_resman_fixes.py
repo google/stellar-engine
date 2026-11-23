@@ -280,6 +280,21 @@ class TestBootstrapResmanFixes(unittest.TestCase):
                     self.assertIsInstance(parsed, dict)
                     self.assertTrue(parsed)
 
+    def test_billing_export_omits_bigquerydatatransfer_on_il4_il5(self):
+        billing_tf = (_BOOTSTRAP_DIR / "billing.tf").read_text(encoding="utf-8")
+        self.assertIn('"bigquery.googleapis.com"', billing_tf)
+        self.assertIn('"storage.googleapis.com"', billing_tf)
+        self.assertRegex(
+            billing_tf, r"services\s*=\s*local\.billing_export_services"
+        )
+        for regime in (
+            '"IL4"',
+            '"IL5"',
+            '"DATA_BOUNDARY_FOR_IL4"',
+            '"DATA_BOUNDARY_FOR_IL5"',
+        ):
+            self.assertIn(regime, billing_tf)
+
 
 if __name__ == "__main__":
     unittest.main()

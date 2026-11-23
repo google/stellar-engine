@@ -30,6 +30,27 @@ locals {
     module.automation-tf-resman-r-sa.iam_email
   ]
 
+  # Standard and Detailed Cloud Billing exports to BigQuery require only
+  # bigquery.googleapis.com. Omit bigquerydatatransfer.googleapis.com on IL4
+  # and IL5 regimes to minimize API surface where Data Transfer connectors
+  # carry compliance restrictions.
+  billing_export_services = concat(
+    [
+      # "cloudresourcemanager.googleapis.com",
+      # "iam.googleapis.com",
+      # "serviceusage.googleapis.com",
+      "bigquery.googleapis.com",
+      "storage.googleapis.com",
+    ],
+    (
+      contains(
+        ["IL4", "IL5", "DATA_BOUNDARY_FOR_IL4", "DATA_BOUNDARY_FOR_IL5"],
+        var.assured_workloads.regime
+      )
+      ? []
+      : ["bigquerydatatransfer.googleapis.com"]
+    )
+  )
   billing_mode = (
     var.billing_account.no_iam
     ? null
@@ -57,14 +78,7 @@ module "billing-export-project" {
     "roles/owner"  = [module.automation-tf-bootstrap-sa.iam_email]
     "roles/viewer" = [module.automation-tf-bootstrap-r-sa.iam_email]
   }
-  services = [
-    # "cloudresourcemanager.googleapis.com",
-    # "iam.googleapis.com",
-    # "serviceusage.googleapis.com",
-    "bigquery.googleapis.com",
-    "bigquerydatatransfer.googleapis.com",
-    "storage.googleapis.com"
-  ]
+  services   = local.billing_export_services
   depends_on = [module.organization-logging]
 }
 
