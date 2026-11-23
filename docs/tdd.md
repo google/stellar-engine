@@ -576,7 +576,6 @@ Foundational bootstrap and landing zone code lives under `fast/stages` and `fast
   - **cloud-function-v2**
   - **cloud-identity-group**
   - **cloud-run-v2**
-  - **cloud-run-v2-se**
   - **cloud-scheduler**
   - **cloudsql-instance**
   - **compute-mig**

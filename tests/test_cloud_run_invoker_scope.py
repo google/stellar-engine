@@ -20,7 +20,7 @@ import unittest
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 _MAIN_TF = _REPO_ROOT / "blueprints/fedramp-high/cloud-run/main.tf"
-_MODULE_OUTPUTS_TF = _REPO_ROOT / "modules/cloud-run-v2-se/outputs.tf"
+_MODULE_OUTPUTS_TF = _REPO_ROOT / "modules/cloud-run-v2/outputs.tf"
 _SERVICE_ACCOUNT = "google_service_account.cloud_run_service_account"
 
 

@@ -83,8 +83,6 @@ Stellar Engine keeps these changes on top of the upstream modules and tracked pa
 | `tools/check_documentation.py` | The labels name each failure, the description, order, period and type checks run only on READMEs with tables, and output description failures report their own state. |
 | `tests/examples/utils.py` | The parser follows the repository Python style and drops unused imports. |
 
-The `cloud-run-v2-se` copy matches the upstream `cloud-run-v2` module since the v59.2.0 sync, so a later change can point its callers to `modules/cloud-run-v2/` and remove the copy.
-
 ## 5. Weekly workflow
 
 The `.github/workflows/cff-sync.yml` workflow runs the sync every Monday against the latest Fabric release and keeps one pull request open on the `chore/cff-sync` branch.
