@@ -2817,7 +2817,7 @@ deploy_stage_0() {
     echo -e "${YELLOW}IMPORTANT NEXT STEPS:${NC}"
     
     if [[ "$DEPLOY_TYPE" != "none" ]]; then
-        echo -e "1. Setup DNS A Record that points the desired Gemini Enterprise subdomain (i.e. gemini.yourdomain.com) to the provisioned Load Balancer IP address (${GEMINI_IP})."
+        echo -e "1. Setup DNS A Record that points the desired Gemini Enterprise subdomain (i.e. gemini.example.com) to the provisioned Load Balancer IP address (${GEMINI_IP})."
         if [[ "$CERT_CHOICE" == "google_managed" ]]; then
             DNS_RECORDS=$(terraform -chdir=gemini-stage-0 output -json dns_auth_records 2>/dev/null)
             DNS_NAME=$(echo "$DNS_RECORDS" | jq -r '.[0].name // empty')
@@ -2937,7 +2937,7 @@ configure_gemini_apps() {
 
     echo ""
     echo -e "${YELLOW}IMPORTANT NEXT STEPS:${NC}"
-    echo -e "1. Setup DNS A Record that points the desired Gemini Enterprise subdomain (i.e. gemini.yourdomain.com) to the provisioned Load Balancer IP address (${GEMINI_IP})."
+    echo -e "1. Setup DNS A Record that points the desired Gemini Enterprise subdomain (i.e. gemini.example.com) to the provisioned Load Balancer IP address (${GEMINI_IP})."
     echo -e "2. Prepare a valid SSL Certificate (.crt/.pem and private .key) for your domain so Stage 1 can provision it via Terraform (or pre-upload one via ${YELLOW}Helper Functions > Upload SSL Certificate${NC})."
     echo -e "3. From the Main Menu select ${BLUE}Step 2 - Configure & Deploy Load Balancer / Access Policies (gemini-stage-1)${NC}."
     pause

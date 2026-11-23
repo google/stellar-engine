@@ -17,7 +17,7 @@ stage_0_state_bucket = "sedev-gemini-enterprise-tf-state-sedev-test-mike-iac-cor
 
 # Domain / subdomain that you will distribute to your end-users to access Gemini for Government.
 # This domain will point to the Load Balancer's IP Address
-gemini_enterprise_domain = "gemini.yourdomain.gov"
+gemini_enterprise_domain = "gemini.example.com"
 
 # Google Cloud Self-Managed SSL Cert Name
 ssl_certificate_name = "your-cert-name-here"

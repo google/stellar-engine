@@ -37,8 +37,8 @@ acl_idp_type = "GSUITE"
 
 # If GSUITE, provide the Google Group name using IAM syntax (i.e. "group:[GROUP_NAME]@[DOMAIN]")
 # If THIRD_PARTY, provide the Workforce Identity Federation principalSet (i.e. "principalSet://iam.googleapis.com/locations/global/workforcePools/[WORKFORCE_POOL_ID]/group/[GROUP_ID]")
-admin_group = "group:gcp-gemini-enterprise-admins@customer-domain.com"
-user_groups = ["group:gcp-gemini-enterprise-users@customer-domain.com"]
+admin_group = "group:gcp-gemini-enterprise-admins@example.com"
+user_groups = ["group:gcp-gemini-enterprise-users@example.com"]
 
 # Security
 # Enable Chrome Enterprise Premium (Zero Trust) features
@@ -85,8 +85,8 @@ deployment_type = "external"
 # in Cloud Armor rules and Access Context Manager access policies
 # to deny access to all traffic outside of these ranges
 # allowed_ip_ranges = [
-#   "000.000.000.000/24",
-#   "111.111.111.111/24"
+#   "203.0.113.0/24",
+#   "198.51.100.0/24"
 # ]
 
 # OPTIONAL: Business start/end times and start/end days of the week

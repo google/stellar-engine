@@ -22,16 +22,16 @@ iam = {
   "secret-id-one" = {
     "roles/secretmanager.secretAccessor" = [
       # "serviceAccount:sa-one@<MAIN-PROJECT-ID>.iam.gserviceaccount.com",
-      # "group:admins@domain.com"
+      # "group:admins@example.com"
     ],
     "roles/viewer" = [
-      # "group:admins@domain.com"
+      # "group:admins@example.com"
     ]
   },
   "secret-id-two" = {
     "roles/secretmanager.secretAccessor" = [
       # "serviceAccount:sa-two@<MAIN-PROJECT-ID>.iam.gserviceaccount.com"
-      # "group:admins@domain.com"
+      # "group:admins@example.com"
     ]
   }
 }

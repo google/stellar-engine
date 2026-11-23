@@ -160,16 +160,16 @@ team_folders = {
   wingarch = {
     descriptive_name = "Wing Architect Research Group"
     iam_by_principals = {
-      "group:team-a@gcp-pso-italy.net" = [
+      "group:team-a@example.com" = [
         "roles/viewer"
       ]
     }
-    impersonation_principals = ["group:team-a-admins@gcp-pso-italy.net"]
+    impersonation_principals = ["group:team-a-admins@example.com"]
   }
   fuselagerd = {
     descriptive_name = "Fuselage Research & Development Group"
     iam_by_principals = {
-      "group:team-a@gcp-pso-us.net" = [
+      "group:team-b@example.com" = [
         "roles/viewer"
       ]
     }

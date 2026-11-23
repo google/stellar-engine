@@ -797,7 +797,7 @@ Define tenant folders and compliance settings in the `1-resman` `terraform.tfvar
 ```hcl
 tenants = {
   dino-runner = {
-    admin_principal  = "group:gcp-devops@dino-runner.cloud"
+    admin_principal  = "group:gcp-devops@example.com"
     descriptive_name = "dino-runner"
     compliance = {
       regime   = "IL5"

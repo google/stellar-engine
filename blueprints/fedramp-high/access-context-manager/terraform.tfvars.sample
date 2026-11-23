@@ -1,5 +1,5 @@
 organization_id = "1234567890"
-domain          = "your-company.com"
+domain          = "example.com"
 region          = "us-central1"
 
 main_project_id = "xxxx-xxxx-xxxx-main-0"
@@ -12,8 +12,8 @@ access_levels = [
     description = "Access only from the company network."
     conditions = [
       {
-        ip_subnetworks = ["x.x.x.x/24"]
-        members        = ["user:john.doe@your-company.com", "group:engineering@your-company.com"]
+        ip_subnetworks = ["203.0.113.0/24"]
+        members        = ["user:john.doe@example.com", "group:engineering@example.com"]
         negate         = false
         device_policy  = {
           require_screen_lock = true
