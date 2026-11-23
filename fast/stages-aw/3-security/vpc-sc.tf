@@ -136,7 +136,7 @@ locals {
         restricted_services = v.restricted_services
         resources = distinct(concat(
           v.resources,
-          var.vpc_sc.resource_discovery.enabled != true ? [] : [
+          !local._vpc_sc_discovery_enabled ? [] : [
             for n in module.vpc-sc-discovery[0].project_numbers :
             "projects/${n}"
           ]
@@ -144,15 +144,22 @@ locals {
       }
     }
   )
+  _vpc_sc_discovery_enabled = (
+    try(var.vpc_sc.resource_discovery.enabled, false) == true
+  )
+  _vpc_sc_discovery_parent = coalesce(
+    try(var.vpc_sc.resource_discovery.parent, null),
+    "organizations/${var.organization.id}"
+  )
 }
 
 module "vpc-sc-discovery" {
   source           = "../../../modules/projects-data-source"
-  count            = var.vpc_sc.resource_discovery.enabled == true ? 1 : 0
-  parent           = "organizations/${var.organization.id}"
-  ignore_folders   = var.vpc_sc.resource_discovery.ignore_folders
-  ignore_projects  = var.vpc_sc.resource_discovery.ignore_projects
-  include_projects = var.vpc_sc.resource_discovery.include_projects
+  count            = local._vpc_sc_discovery_enabled ? 1 : 0
+  parent           = local._vpc_sc_discovery_parent
+  ignore_folders   = try(var.vpc_sc.resource_discovery.ignore_folders, [])
+  ignore_projects  = try(var.vpc_sc.resource_discovery.ignore_projects, [])
+  include_projects = try(var.vpc_sc.resource_discovery.include_projects, [])
 }
 
 
@@ -160,11 +167,13 @@ module "vpc-sc" {
   source = "../../../modules/vpc-sc"
   # only enable if the default perimeter is defined
   count         = var.vpc_sc.perimeter_default == null ? 0 : 1
-  access_policy = null
-  access_policy_create = {
-    parent = "organizations/${var.organization.id}"
-    title  = "default"
-  }
+  access_policy = var.vpc_sc.access_policy
+  access_policy_create = (
+    var.vpc_sc.access_policy != null ? null : {
+      parent = "organizations/${var.organization.id}"
+      title  = "default"
+    }
+  )
   access_levels   = var.vpc_sc.access_levels
   egress_policies = local._vpc_sc_egress_policies
   ingress_policies = merge(
@@ -176,6 +185,7 @@ module "vpc-sc" {
     egress_policies  = var.factories_config.vpc_sc.egress_policies
     ingress_policies = var.factories_config.vpc_sc.ingress_policies
   }
+  project_id_search_scope = var.vpc_sc.project_id_search_scope
   perimeters = {
     default = {
       spec = (
