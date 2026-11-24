@@ -299,10 +299,28 @@ variable "vpc_sc" {
         ingress_policies    = optional(list(string))
         resources           = optional(list(string))
         restricted_services = optional(list(string))
+        vpc_accessible_services = optional(object({
+          allow_all_restricted_services = optional(bool, true)
+          allowed_service_patterns = optional(map(object({
+            x_goog_allowed_resources   = optional(string)
+            x_googapps_allowed_domains = optional(string)
+          })))
+          allowed_services   = optional(list(string), [])
+          enable_restriction = optional(bool, true)
+        }))
       }))
       egress_policies  = optional(list(string), [])
       ingress_policies = optional(list(string), [])
       resources        = optional(list(string), [])
+      vpc_accessible_services = optional(object({
+        allow_all_restricted_services = optional(bool, true)
+        allowed_service_patterns = optional(map(object({
+          x_goog_allowed_resources   = optional(string)
+          x_googapps_allowed_domains = optional(string)
+        })))
+        allowed_services   = optional(list(string), [])
+        enable_restriction = optional(bool, true)
+      }))
     }))
     project_id_search_scope = optional(string)
     resource_discovery = optional(object({

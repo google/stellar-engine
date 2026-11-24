@@ -334,7 +334,7 @@ The `vpc_sc` variable has the following attributes
 
 - `access_levels`, `egress_policies`, `ingress_policies` define the corresponding objects, internally merged with any data coming from the YAML factories
 - `access_policy` specifies the numeric ID of an existing Access Context Manager policy without the `accessPolicies/` prefix so the stage reuses it instead of creating a new organization-level policy; in folder-scoped deployments, bind `roles/accesscontextmanager.policyAdmin` on `accessPolicies/<id>` or at the organization level
-- `perimeter_default` configures the single organization-wide perimeter by referencing access levels and policies by key, setting included Google Cloud Projects, and allowing to turn on dry run mode
+- `perimeter_default` configures the single organization-wide perimeter by referencing access levels and policies by key, setting included Google Cloud Projects, optionally restricting `vpc_accessible_services`, and allowing to turn on dry run mode
 - `project_id_search_scope` sets an organization `organizations/<id>` or folder `folders/<id>` Cloud Asset Inventory scope so the `vpc-sc` module translates `projects/<project-id>` references to project numbers
 - `resource_discovery` controls automatic discovery of Google Cloud Projects via Asset Inventory, including an optional `parent` scope in `organizations/<id>` or `folders/<id>` format that defaults to the organization, plus inclusion and exclusion lists
 
@@ -376,9 +376,10 @@ vpc_sc = {
 
 The `dry_run_spec` attribute of `perimeter_default` lets you trial a change to an enforced perimeter before you enforce it. The enforced status keeps the `perimeter_default` configuration, the dry-run spec receives the candidate, and VPC Service Controls logs the requests that the candidate would deny without blocking them.
 
-- each `dry_run_spec` attribute you set replaces the matching enforced value in the dry-run spec only, and an empty list clears that value
+- each `dry_run_spec` attribute you set replaces the matching enforced value in the dry-run spec only, and an empty list clears a list attribute
+- setting `vpc_accessible_services = {}` enables restriction with `RESTRICTED-SERVICES` because `enable_restriction` defaults to `true`; to disable restriction in `dry_run_spec`, set `{ enable_restriction = false }`
 - each attribute you omit or set to `null` inherits the enforced value
-- `access_levels`, `egress_policies`, `ingress_policies`, and `resources` override the `perimeter_default` attributes with the same names, and `restricted_services` overrides the list in the restricted services YAML file
+- `access_levels`, `egress_policies`, `ingress_policies`, `resources`, and `vpc_accessible_services` override the `perimeter_default` attributes with the same names, and `restricted_services` overrides the list in the restricted services YAML file
 - the dry-run spec still receives the log sink ingress policy and the discovered Google Cloud Projects
 - the stage rejects `dry_run_spec` when `dry_run` is `true`, and rejects a `dry_run_spec` that sets no attribute
 
