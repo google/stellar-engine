@@ -233,26 +233,26 @@ state.
 **`fast/stages-aw/0-bootstrap/terraform.tfvars`**
 
 ```hcl
-# use `gcloud beta billing accounts list`
+# use `gcloud billing accounts list`
 billing_account = {
- id = "`<billing_account_id>`" # taken from Google Cloud Console Billing Accounts -> Manage Billing Account
+ id = "<billing_account_id>" # taken from Google Cloud Console Billing Accounts -> Manage Billing Account
 }
 # region configuration - this will automatically populate locations for GCS, BigQuery, KMS, and logging buckets
 # Default to us-east4 for IL5/FedRAMP High/Moderate compliance - adjust as needed
 regions = {
- primary = "`<region>`"
+ primary = "<region>"
 }
 # KMS protection level: "HSM" for FedRAMP High and IL5 compliance; "SOFTWARE" permitted for FedRAMP Moderate. Required by every stage that creates keys.
 kms_protection_level = "HSM"
 # use `gcloud organizations list`
 organization = {
- domain = "`<domain>`" # DISPLAY_NAME
- id = "`<organization_id>`"
- customer_id = "`<customer_id>`"
+ domain = "<domain>" # DISPLAY_NAME
+ id = "<organization_id>"
+ customer_id = "<customer_id>"
 }
 outputs_location = "~/fast-config"
 # use something unique and no longer than 7 characters
-prefix = "`<prefix>`" # full project names must be globally unique
+prefix = "<prefix>" # full project names must be globally unique
 log_sinks = {
  audit-logs = {
  filter = "logName:\"/logs/cloudaudit.googleapis.com%2Factivity\" OR logName:\"/logs/cloudaudit.googleapis.com%2Fsystem_event\" OR protoPayload.metadata.@type=\"type.googleapis.com/google.cloud.audit.TransparencyLog\""
@@ -283,11 +283,11 @@ fast_features = {
 
 #regime must be in ALL CAPS
 assured_workloads = {
- regime = "`<compliance_regime>`"  #"IL4, IL5, FEDRAMP_HIGH, etc... if you wish to not use assured_workloads, set this value to COMPLIANCE_REGIME_UNSPECIFIED"
- location = "`<region>`" # Uses the same region as other resources for consistency - change to match your regions.primary if different
+ regime = "<compliance_regime>"  #"IL4, IL5, FEDRAMP_HIGH, etc... if you wish to not use assured_workloads, set this value to COMPLIANCE_REGIME_UNSPECIFIED"
+ location = "<region>" # Uses the same region as other resources for consistency - change to match your regions.primary if different
 }
-bootstrap_project = "`<bootstrap_project_id>`"
-alert_email = "`<alert_email>`"
+bootstrap_project = "<bootstrap_project_id>"
+alert_email = "<alert_email>"
 
 ```
 
