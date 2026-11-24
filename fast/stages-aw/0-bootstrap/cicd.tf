@@ -21,14 +21,20 @@ locals {
     for k, v in google_iam_workload_identity_pool_provider.default :
     k => {
       audiences = concat(
-        v.oidc[0].allowed_audiences,
+        try(v.oidc[0].allowed_audiences, null) == null
+        ? []
+        : v.oidc[0].allowed_audiences,
         ["https://iam.googleapis.com/${v.name}"]
       )
-      issuer           = local.workload_identity_providers[k].issuer
-      issuer_uri       = try(v.oidc[0].issuer_uri, null)
-      name             = v.name
-      principal_branch = local.workload_identity_providers[k].principal_branch
-      principal_repo   = local.workload_identity_providers[k].principal_repo
+      issuer     = local.workload_identity_providers[k].issuer
+      issuer_uri = try(v.oidc[0].issuer_uri, null)
+      name       = v.name
+      principal_branch = try(
+        local.workload_identity_providers[k].principal_branch, null
+      )
+      principal_repo = try(
+        local.workload_identity_providers[k].principal_repo, null
+      )
     }
   }
   cicd_repositories = {
@@ -48,6 +54,45 @@ locals {
       fileexists(
         format("${path.module}/templates/workflow-%s.yaml", try(v.type, ""))
       )
+    )
+  }
+  _cicd_sa_iam = {
+    for k, v in local.cicd_repositories : k => (
+      v.type == "sourcerepo"
+      # used directly from the cloud build trigger for source repos
+      ? {}
+      # impersonated via workload identity federation for external repos
+      : {
+        "roles/iam.workloadIdentityUser" = (
+          v.branch == null
+          ? []
+          : [
+            format(
+              local.cicd_providers[v.identity_provider].principal_branch,
+              google_iam_workload_identity_pool.default[0].name,
+              v.name,
+              v.branch
+            )
+          ]
+        )
+      }
+    )
+  }
+  _cicd_r_sa_iam = {
+    for k, v in local.cicd_repositories : k => (
+      v.type == "sourcerepo"
+      # build trigger for read-only SA is optionally defined by users
+      ? {}
+      # impersonated via workload identity federation for external repos
+      : {
+        "roles/iam.workloadIdentityUser" = [
+          format(
+            local.cicd_providers[v.identity_provider].principal_repo,
+            google_iam_workload_identity_pool.default[0].name,
+            v.name
+          )
+        ]
+      }
     )
   }
   cicd_workflow_providers = {
@@ -112,28 +157,7 @@ module "automation-tf-cicd-sa" {
   name         = "${each.key}-1"
   display_name = "Terraform CI/CD ${each.key} service account."
   prefix       = local.prefix
-  iam = (
-    each.value.type == "sourcerepo"
-    # used directly from the cloud build trigger for source repos
-    ? {}
-    # impersonated via workload identity federation for external repos
-    : {
-      "roles/iam.workloadIdentityUser" = [
-        each.value.branch == null
-        ? format(
-          local.workload_identity_providers_defs[each.value.type].principal_repo,
-          google_iam_workload_identity_pool.default[0].name,
-          each.value.name
-        )
-        : format(
-          local.workload_identity_providers_defs[each.value.type].principal_branch,
-          google_iam_workload_identity_pool.default[0].name,
-          each.value.name,
-          each.value.branch
-        )
-      ]
-    }
-  )
+  iam          = local._cicd_sa_iam[each.key]
   iam_project_roles = {
     (module.automation-project.project_id) = ["roles/logging.logWriter"]
   }
@@ -149,21 +173,7 @@ module "automation-tf-cicd-r-sa" {
   name         = "${each.key}-1r"
   display_name = "Terraform CI/CD ${each.key} service account (read-only)."
   prefix       = local.prefix
-  iam = (
-    each.value.type == "sourcerepo"
-    # build trigger for read-only SA is optionally defined by users
-    ? {}
-    # impersonated via workload identity federation for external repos
-    : {
-      "roles/iam.workloadIdentityUser" = [
-        format(
-          local.workload_identity_providers_defs[each.value.type].principal_repo,
-          google_iam_workload_identity_pool.default[0].name,
-          each.value.name
-        )
-      ]
-    }
-  )
+  iam          = local._cicd_r_sa_iam[each.key]
   iam_project_roles = {
     (module.automation-project.project_id) = ["roles/logging.logWriter"]
   }

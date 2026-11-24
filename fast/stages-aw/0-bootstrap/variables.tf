@@ -115,6 +115,27 @@ variable "cicd_repositories" {
     ])
     error_message = "Invalid repository type, supported types: 'github' 'gitlab' or 'sourcerepo'."
   }
+  validation {
+    condition = alltrue([
+      for _, v in coalesce(var.cicd_repositories, {}) : (
+        v == null ||
+        try(v.type, null) == "sourcerepo" ||
+        try(v.identity_provider, null) == null ||
+        !contains(
+          keys(var.federated_identity_providers),
+          v.identity_provider
+        ) ||
+        contains(
+          ["github", "gitlab"],
+          try(
+            var.federated_identity_providers[v.identity_provider].issuer,
+            ""
+          )
+        )
+      )
+    ])
+    error_message = "CI/CD repositories must reference a 'github' or 'gitlab' federated_identity_providers entry; for self-hosted instances set issuer to 'github' or 'gitlab' and override custom_settings.issuer_uri."
+  }
 }
 
 variable "custom_roles" {
@@ -195,6 +216,23 @@ variable "federated_identity_providers" {
   }))
   default  = {}
   nullable = false
+  validation {
+    condition = alltrue([
+      for _, v in var.federated_identity_providers : (
+        v.issuer == null ||
+        v.issuer == "" ||
+        (
+          v.attribute_mapping == null &&
+          contains(["github", "gitlab"], v.issuer)
+        ) ||
+        (
+          v.attribute_mapping != null &&
+          contains(keys(v.attribute_mapping), "google.subject")
+        )
+      )
+    ])
+    error_message = "Custom OIDC providers and custom attribute_mapping overrides must define a 'google.subject' entry."
+  }
 }
 
 variable "force_destroy" {
@@ -442,4 +480,22 @@ variable "workforce_identity_pool" {
     session_duration = optional(string)
   })
   default = null
+  validation {
+    condition = (
+      try(var.workforce_identity_pool.display_name, null) == null ||
+      length(var.workforce_identity_pool.display_name) <= 32
+    )
+    error_message = "workforce_identity_pool.display_name must not exceed 32 characters."
+  }
+  validation {
+    condition = (
+      try(var.workforce_identity_pool.session_duration, null) == null ||
+      (
+        can(regex("^[1-9][0-9]*s$", var.workforce_identity_pool.session_duration)) &&
+        try(tonumber(trimsuffix(var.workforce_identity_pool.session_duration, "s")), 0) >= 900 &&
+        try(tonumber(trimsuffix(var.workforce_identity_pool.session_duration, "s")), 0) <= 43200
+      )
+    )
+    error_message = "workforce_identity_pool.session_duration must be between 900s and 43200s."
+  }
 }
