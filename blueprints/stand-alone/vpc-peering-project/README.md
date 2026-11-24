@@ -69,7 +69,7 @@ Confirm the VPC networks and `ACTIVE` peering state in the Google Cloud console 
 - List peering connections and inspect both VPC networks from the command line:
 
 ```bash
-gcloud compute network-peering list --project=<MAIN_PROJECT_ID>
+gcloud compute networks peerings list --project=<MAIN_PROJECT_ID>
 gcloud compute networks describe <VPC_NAME> --project=<PROJECT_ID>
 ```
 

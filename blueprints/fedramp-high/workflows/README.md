@@ -66,6 +66,6 @@ This blueprint explicitly provisions the Workflows service agent `service-<proje
 | [description](variables.tf#L7) | Description of the workflow. | <code>string</code> |  | <code>null</code> |
 | [env_vars](variables.tf#L13) | Environment variables made available to your workflow execution. | <code>map&#40;string&#41;</code> |  | <code>null</code> |
 | [file](variables.tf#L19) | File path to the instructions for the workflow (e.g., example.yaml). | <code>string</code> |  | <code>&#34;code&#47;example.yaml&#34;</code> |
-| [logging_level](variables.tf#L25) | Logging level of workflow executions. Options: CALL_LOG_LEVEL_UNSPECIFIED, LOG_ALL_CALLS, LOG_ERRORS_ONLY, LOG_NONE. | <code>string</code> |  | <code>&#34;LOG_ERRORS_ONLY&#34;</code> |
+| [logging_level](variables.tf#L25) | Logging level of workflow executions. Options: LOG_ALL_CALLS, LOG_ERRORS_ONLY. | <code>string</code> |  | <code>&#34;LOG_ERRORS_ONLY&#34;</code> |
 | [workflow_service_account_id](variables.tf#L61) | The ID for the custom service account created for the workflow (e.g., 'my-workflow-sa'). | <code>string</code> |  | <code>&#34;workflows-sa&#42;</code> |
 

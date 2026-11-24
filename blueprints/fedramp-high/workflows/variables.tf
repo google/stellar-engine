@@ -38,7 +38,7 @@ variable "file" {
 }
 
 variable "logging_level" {
-  description = "Logging level of workflow executions. Options: CALL_LOG_LEVEL_UNSPECIFIED, LOG_ALL_CALLS, LOG_ERRORS_ONLY, LOG_NONE."
+  description = "Logging level of workflow executions. Options: LOG_ALL_CALLS, LOG_ERRORS_ONLY."
   type        = string
   default     = "LOG_ERRORS_ONLY"
 

@@ -4,7 +4,7 @@ core_project_id     = "xxxx-xxxx-iac-core-0" # project where KMS keys reside
 name                = "workflow-name-00"
 description         = "workflow-description-01" # Optional
 file                = "code/example.yaml"
-logging_level       = "LOG_ERRORS_ONLY" # Defaults to LOG_ERRORS_ONLY, other options are CALL_LOG_LEVEL_UNSPECIFIED, LOG_ALL_CALLS, and LOG_NONE
+logging_level       = "LOG_ERRORS_ONLY" # Defaults to LOG_ERRORS_ONLY, the other option is LOG_ALL_CALLS
 
 env_vars = { # Optional
   url = "https://timeapi.io/api/time/current/zone?timeZone=America%2FDetroit", #url used by the example.yaml file
