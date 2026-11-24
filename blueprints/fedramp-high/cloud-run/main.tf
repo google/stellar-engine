@@ -76,7 +76,7 @@ moved {
 }
 
 module "cloud-run" {
-  source         = "../../../modules/cloud-run-v2-se/"
+  source         = "../../../modules/cloud-run-v2/"
   project_id     = var.main_project_id
   name           = var.name
   region         = var.region
