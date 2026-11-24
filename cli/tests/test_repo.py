@@ -752,9 +752,21 @@ def test_custom_roles_parses_repo_definitions(repo):
     assert roles["organization_iam_admin.yaml"].role_id == (
         "organizationIamAdmin"
     )
+    assert "tag_editor.yaml" not in roles
     assert [role.role_id for role in repo.custom_roles()] == (
         repo.custom_role_ids()
     )
+
+    all_roles = {
+        role.filename: role for role in repo.custom_roles(include_optional=True)
+    }
+    assert set(roles).issubset(all_roles)
+    assert all_roles["tag_editor.yaml"].role_id == "tagEditor"
+    assert all_roles["tenant_key_manager.yaml"].role_id == "tenantKeyManager"
+    assert (
+        all_roles["tenant_project_admin.yaml"].role_id == "tenantProjectAdmin"
+    )
+    assert all_roles["tenant_readonly.yaml"].role_id == "tenantReadOnly"
 
 
 def test_custom_roles_handles_missing_and_invalid_files(tmp_path):

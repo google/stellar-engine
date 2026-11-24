@@ -604,17 +604,18 @@ def _role_results(ctx):
 def check_custom_roles(ctx):
     """Validates Stage 0 custom IAM role YAML permissions against the org.
 
-    Each YAML file under `fast/stages-aw/0-bootstrap/data/custom-roles/`
-    declares `includedPermissions` that Stage 0 creates as organization
-    custom roles. Checking every permission against `queryTestablePermissions`
-    catches unsupported or typoed permissions before `terraform apply`.
+    Each YAML file under `fast/stages-aw/0-bootstrap/data/custom-roles/` and
+    `data/custom-roles-sod/` declares `includedPermissions` that Stage 0
+    creates as organization custom roles. Checking every permission against
+    `queryTestablePermissions` catches unsupported or typoed permissions
+    before `terraform apply`.
     """
     check_id = "iam.custom_roles"
     title = "Custom IAM role permissions"
     if ctx.org is None:
         return [_skip(check_id, Category.IAM, title, "--org")]
     try:
-        roles = ctx.repo.custom_roles()
+        roles = ctx.repo.custom_roles(include_optional=True)
     except repo_lib.RepoError as error:
         return [
             CheckResult(
@@ -625,7 +626,8 @@ def check_custom_roles(ctx):
                 str(error),
                 remedy=(
                     "Fix the YAML syntax or `includedPermissions` list under "
-                    "fast/stages-aw/0-bootstrap/data/custom-roles/."
+                    "fast/stages-aw/0-bootstrap/data/custom-roles/ or "
+                    "data/custom-roles-sod/."
                 ),
                 doc=DOC_IAM,
             )
@@ -682,7 +684,8 @@ def check_custom_roles(ctx):
                 remedy=(
                     "Remove or fix the unsupported permissions in "
                     "fast/stages-aw/0-bootstrap/data/custom-roles/*.yaml "
-                    "before running terraform apply."
+                    "or data/custom-roles-sod/*.yaml before running "
+                    "terraform apply."
                 ),
                 doc=DOC_IAM,
             )

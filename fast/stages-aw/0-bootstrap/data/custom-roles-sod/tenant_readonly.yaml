@@ -1,0 +1,247 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: tenantReadOnly
+title: "Tenant Technical Read-Only"
+description: "Read-only metadata access to infrastructure configurations, network topology, analytics pipelines, and telemetry without object payload, table data, or secret version access."
+stage: "GA"
+includedPermissions:
+  # Resource Manager, service discovery, and IAM metadata
+  - resourcemanager.hierarchyNodes.listEffectiveTags
+  - resourcemanager.hierarchyNodes.listTagBindings
+  - resourcemanager.projects.get
+  - resourcemanager.projects.getIamPolicy
+  - resourcemanager.tagHolds.list
+  - resourcemanager.tagKeys.get
+  - resourcemanager.tagKeys.getIamPolicy
+  - resourcemanager.tagKeys.list
+  - resourcemanager.tagValues.get
+  - resourcemanager.tagValues.getIamPolicy
+  - resourcemanager.tagValues.list
+  - iam.roles.get
+  - iam.roles.list
+  - iam.serviceAccounts.get
+  - iam.serviceAccounts.list
+  - serviceusage.services.get
+  - serviceusage.services.list
+  - cloudasset.assets.searchAllResources
+
+  # Compute and networking metadata
+  - compute.addresses.get
+  - compute.addresses.list
+  - compute.backendBuckets.get
+  - compute.backendBuckets.list
+  - compute.backendServices.get
+  - compute.backendServices.list
+  - compute.disks.get
+  - compute.disks.list
+  - compute.firewalls.get
+  - compute.firewalls.list
+  - compute.forwardingRules.get
+  - compute.forwardingRules.list
+  - compute.globalAddresses.get
+  - compute.globalAddresses.list
+  - compute.healthChecks.get
+  - compute.healthChecks.list
+  - compute.images.get
+  - compute.images.getFromFamily
+  - compute.images.list
+  - compute.instanceGroupManagers.get
+  - compute.instanceGroupManagers.list
+  - compute.instanceGroups.get
+  - compute.instanceGroups.list
+  - compute.instances.get
+  - compute.instances.list
+  - compute.machineImages.get
+  - compute.machineImages.list
+  - compute.networks.get
+  - compute.networks.list
+  - compute.projects.get
+  - compute.regions.get
+  - compute.regions.list
+  - compute.routers.get
+  - compute.routers.list
+  - compute.routes.get
+  - compute.routes.list
+  - compute.subnetworks.get
+  - compute.subnetworks.list
+  - compute.zones.get
+  - compute.zones.list
+  - dns.managedZones.get
+  - dns.managedZones.list
+  - dns.policies.get
+  - dns.policies.list
+  - dns.resourceRecordSets.get
+  - dns.resourceRecordSets.list
+
+  # Container, serverless, and workstation configurations
+  - container.clusters.get
+  - container.clusters.list
+  - container.nodes.get
+  - container.nodes.list
+  - container.operations.get
+  - container.operations.list
+  - gkehub.features.get
+  - gkehub.features.list
+  - gkehub.memberships.get
+  - gkehub.memberships.list
+  - gkehub.operations.get
+  - gkehub.operations.list
+  - run.executions.get
+  - run.executions.list
+  - run.jobs.get
+  - run.jobs.list
+  - run.locations.list
+  - run.operations.get
+  - run.revisions.get
+  - run.revisions.list
+  - run.services.get
+  - run.services.list
+  - run.tasks.get
+  - run.tasks.list
+  - workstations.workstationClusters.get
+  - workstations.workstationClusters.list
+  - workstations.workstationConfigs.get
+  - workstations.workstationConfigs.list
+  - workstations.workstations.get
+  - workstations.workstations.list
+
+  # CI/CD and build metadata
+  - artifactregistry.files.get
+  - artifactregistry.files.list
+  - artifactregistry.packages.get
+  - artifactregistry.packages.list
+  - artifactregistry.repositories.get
+  - artifactregistry.repositories.getIamPolicy
+  - artifactregistry.repositories.list
+  - artifactregistry.tags.get
+  - artifactregistry.tags.list
+  - artifactregistry.versions.get
+  - artifactregistry.versions.list
+  - cloudbuild.builds.get
+  - cloudbuild.builds.list
+
+  # Data stores, caches, and analytics metadata
+  - storage.buckets.get
+  - storage.buckets.getIamPolicy
+  - storage.buckets.list
+  - storage.objects.list
+  - cloudsql.backupRuns.get
+  - cloudsql.backupRuns.list
+  - cloudsql.databases.get
+  - cloudsql.databases.list
+  - cloudsql.instances.get
+  - cloudsql.instances.list
+  - cloudsql.users.list
+  - spanner.backups.get
+  - spanner.backups.list
+  - spanner.databases.get
+  - spanner.databases.list
+  - spanner.instances.get
+  - spanner.instances.list
+  - bigquery.datasets.get
+  - bigquery.datasets.getIamPolicy
+  - bigquery.jobs.get
+  - bigquery.jobs.list
+  - bigquery.tables.get
+  - bigquery.tables.list
+  - bigquery.transfers.get
+  - composer.environments.get
+  - composer.environments.list
+  - composer.operations.get
+  - composer.operations.list
+  - dataflow.jobs.get
+  - dataflow.jobs.list
+  - dataflow.messages.list
+  - dataflow.metrics.get
+  - dataproc.batches.get
+  - dataproc.batches.list
+  - dataproc.clusters.get
+  - dataproc.clusters.list
+  - dataproc.jobs.get
+  - dataproc.jobs.list
+  - dataproc.operations.get
+  - dataproc.operations.list
+  - dataproc.workflowTemplates.get
+  - dataproc.workflowTemplates.list
+  - datafusion.instances.get
+  - datafusion.instances.list
+  - datapipelines.pipelines.get
+  - datapipelines.pipelines.list
+  - pubsub.subscriptions.get
+  - pubsub.subscriptions.getIamPolicy
+  - pubsub.subscriptions.list
+  - pubsub.topics.get
+  - pubsub.topics.getIamPolicy
+  - pubsub.topics.list
+  - redis.instances.get
+  - redis.instances.list
+
+  # Queues, events, and secret metadata without payload access
+  - cloudtasks.queues.get
+  - cloudtasks.queues.list
+  - cloudtasks.tasks.get
+  - cloudtasks.tasks.list
+  - eventarc.channels.get
+  - eventarc.channels.list
+  - eventarc.enrollments.get
+  - eventarc.enrollments.list
+  - eventarc.googleChannelConfigs.get
+  - eventarc.operations.get
+  - eventarc.operations.list
+  - eventarc.triggers.get
+  - eventarc.triggers.list
+  - secretmanager.secrets.get
+  - secretmanager.secrets.getIamPolicy
+  - secretmanager.secrets.list
+  - secretmanager.versions.get
+  - secretmanager.versions.list
+
+  # Data governance and service directory metadata
+  - dlp.deidentifyTemplates.get
+  - dlp.deidentifyTemplates.list
+  - dlp.inspectTemplates.get
+  - dlp.inspectTemplates.list
+  - dlp.jobTriggers.get
+  - dlp.jobTriggers.list
+  - dlp.jobs.get
+  - dlp.jobs.list
+  - dlp.storedInfoTypes.get
+  - dlp.storedInfoTypes.list
+  - speech.recognizers.get
+  - speech.recognizers.list
+  - servicedirectory.endpoints.get
+  - servicedirectory.endpoints.list
+  - servicedirectory.namespaces.get
+  - servicedirectory.namespaces.list
+  - servicedirectory.services.get
+  - servicedirectory.services.list
+
+  # Logging and monitoring metadata
+  - logging.logMetrics.get
+  - logging.logMetrics.list
+  - logging.logs.list
+  - logging.views.get
+  - logging.views.list
+  - monitoring.alertPolicies.get
+  - monitoring.alertPolicies.list
+  - monitoring.dashboards.get
+  - monitoring.dashboards.list
+  - monitoring.groups.get
+  - monitoring.groups.list
+  - monitoring.metricDescriptors.get
+  - monitoring.metricDescriptors.list
+  - monitoring.monitoredResourceDescriptors.get
+  - monitoring.monitoredResourceDescriptors.list
+  - monitoring.timeSeries.list

@@ -256,7 +256,29 @@ class TestCustomRoles:
         found = by_id(checks.check_custom_roles(resolved(make_ctx)))
         item = found["iam.custom_roles"]
         assert item.status == Status.PASS
-        assert f"{len(repo.custom_roles())} custom roles" in item.detail
+        expected_count = len(repo.custom_roles(include_optional=True))
+        assert f"{expected_count} custom roles" in item.detail
+
+    def test_sod_custom_role_unsupported_permission_fails(
+        self, make_ctx, cloud, tmp_path
+    ):
+        sod_dir = tmp_path / "fast/stages-aw/0-bootstrap/data/custom-roles-sod"
+        sod_dir.mkdir(parents=True)
+        (sod_dir / "tenant_key_manager.yaml").write_text(
+            "name: tenantKeyManager\nincludedPermissions:\n"
+            "  - cloudkms.keyRings.get\n"
+            "  - cloudkms.keyRings.fakePermission\n",
+            encoding="utf-8",
+        )
+        cloud.org_testable = {"cloudkms.keyRings.get"}
+        ctx = resolved(make_ctx)
+        ctx.repo = repo_lib.Repo(tmp_path)
+        found = by_id(checks.check_custom_roles(ctx))
+        item = found["iam.custom_roles"]
+        assert item.status == Status.FAIL
+        assert "tenant_key_manager.yaml" in item.detail
+        assert "cloudkms.keyRings.fakePermission" in item.detail
+        assert "custom-roles-sod/*.yaml" in remedy(item)
 
     def test_unsupported_permission_fails_with_filename(
         self, make_ctx, cloud, tmp_path

@@ -103,6 +103,27 @@ locals {
     keys(local._iam)
   ))
 
+  _sod_custom_roles_path = "${path.module}/data/custom-roles-sod"
+  _sod_custom_roles_raw = (
+    var.deploy_org_resources.custom_roles && var.enable_tenant_sod_roles
+    ? {
+      for f in try(fileset(local._sod_custom_roles_path, "*.yaml"), []) :
+      replace(f, ".yaml", "") => yamldecode(
+        file("${local._sod_custom_roles_path}/${f}")
+      )
+    }
+    : {}
+  )
+  _sod_custom_roles = {
+    for k, v in local._sod_custom_roles_raw :
+    k => {
+      name        = lookup(v, "name", k)
+      title       = try(v.title, null)
+      description = try(v.description, null)
+      stage       = try(v.stage, null)
+      permissions = v["includedPermissions"]
+    }
+  }
   _org_policy_factory_path = pathexpand(coalesce(var.factories_config.org_policy, "-"))
   # Some of the org policies require templating to construct, they have been moved to data/custom-org-policies
   # load org policy yaml files from a subdirectory
@@ -282,7 +303,13 @@ locals {
   }
   custom_roles = (
     var.deploy_org_resources.custom_roles
-    ? module.organization.custom_role_id
+    ? merge(
+      module.organization.custom_role_id,
+      {
+        for k, v in google_organization_iam_custom_role.sod :
+        k => "organizations/${var.organization.id}/roles/${local._sod_custom_roles[k].name}"
+      }
+    )
     : {}
   )
   deploy_root_folder_config = (
@@ -317,6 +344,16 @@ module "branch-common-services-folder" {
   depends_on = [module.organization-logging]
 }
 
+
+resource "google_organization_iam_custom_role" "sod" {
+  for_each    = local._sod_custom_roles
+  org_id      = tostring(var.organization.id)
+  role_id     = each.value.name
+  title       = coalesce(each.value.title, "Custom role ${each.value.name}")
+  description = coalesce(each.value.description, "Terraform-managed.")
+  stage       = each.value.stage
+  permissions = each.value.permissions
+}
 
 module "organization" {
   source          = "../../../modules/organization-se"
