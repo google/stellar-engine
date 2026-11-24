@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,65 +19,59 @@ on:
     branches:
       - main
     types:
-      - closed
       - opened
       - synchronize
+      - reopened
+  push:
+    branches:
+      - main
+
+permissions: {}
 
 env:
-  FAST_SERVICE_ACCOUNT: ${service_accounts.apply}
-  FAST_SERVICE_ACCOUNT_PLAN: ${service_accounts.plan}
   FAST_WIF_PROVIDER: ${identity_provider}
   SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-  TF_PROVIDERS_FILE: ${tf_providers_files.apply}
-  TF_PROVIDERS_FILE_PLAN: ${tf_providers_files.plan}
-  TF_VERSION: 1.6.5
+  TF_VERSION: 1.13.3
 
 jobs:
-  fast-pr:
+  fast-plan:
+    if: github.event_name == 'pull_request'
+    concurrency:
+      group: fast-${stage_name}-plan-$${{ github.event.pull_request.number || github.run_id }}
+      cancel-in-progress: $${{ github.event_name == 'pull_request' }}
     permissions:
       contents: read
       id-token: write
       issues: write
       pull-requests: write
+    env:
+      FAST_SERVICE_ACCOUNT_PLAN: ${service_accounts.plan}
+      TF_PROVIDERS_FILE_PLAN: ${tf_providers_files.plan}
     runs-on: ubuntu-latest
     steps:
       - id: checkout
         name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # set up SSH key authentication to the modules repository
-
+      # Configure SSH key authentication to the modules repository
       - id: ssh-config
         name: Configure SSH authentication
+        env:
+          CICD_MODULES_KEY: $${{ secrets.CICD_MODULES_KEY }}
         run: |
-          ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
-          ssh-add - <<< "$${{ secrets.CICD_MODULES_KEY }}"
+          umask 077
+          if [ -n "$CICD_MODULES_KEY" ]; then
+            ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
+            ssh-add - <<< "$CICD_MODULES_KEY"
+          fi
 
-      # set up step variables for plan / apply
-
-      - id: vars-plan
-        if: github.event.pull_request.merged != true && success()
-        name: Set up plan variables
-        run: |
-          echo "plan_opts=-lock=false" >> "$GITHUB_ENV"
-          echo "provider_file=$${{env.TF_PROVIDERS_FILE_PLAN}}" >> "$GITHUB_ENV"
-          echo "service_account=$${{env.FAST_SERVICE_ACCOUNT_PLAN}}" >> "$GITHUB_ENV"
-
-      - id: vars-apply
-        if: github.event.pull_request.merged == true && success()
-        name: Set up apply variables
-        run: |
-          echo "provider_file=$${{env.TF_PROVIDERS_FILE}}" >> "$GITHUB_ENV"
-          echo "service_account=$${{env.FAST_SERVICE_ACCOUNT}}" >> "$GITHUB_ENV"
-
-      # set up authentication via Workload identity Federation and gcloud
-
+      # Authenticate read-only plan SA via Workload Identity Federation
       - id: gcp-auth
-        name: Authenticate to Google Cloud
+        name: Authenticate to Google Cloud (plan)
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: $${{env.FAST_WIF_PROVIDER}}
-          service_account: $${{env.service_account}}
+          workload_identity_provider: $${{ env.FAST_WIF_PROVIDER }}
+          service_account: $${{ env.FAST_SERVICE_ACCOUNT_PLAN }}
           access_token_lifetime: 900s
 
       - id: gcp-sdk
@@ -86,13 +80,13 @@ jobs:
         with:
           install_components: alpha
 
-      # copy provider file
-
+      # Copy read-only Terraform provider file and stage tfvars
       - id: tf-config-provider
         name: Copy Terraform provider file
         run: |
+          umask 077
           gcloud alpha storage cp -r \
-            "gs://${outputs_bucket}/providers/$${{env.provider_file}}" ./
+            "gs://${outputs_bucket}/providers/$${{ env.TF_PROVIDERS_FILE_PLAN }}" ./
           %{~ for f in tf_var_files ~}
           gcloud alpha storage cp -r \
             "gs://${outputs_bucket}/tfvars/${f}" ./
@@ -100,39 +94,38 @@ jobs:
 
       - id: tf-setup
         name: Set up Terraform
-        uses: hashicorp/setup-terraform@v2.0.3
+        uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: $${{env.TF_VERSION}}
+          terraform_version: $${{ env.TF_VERSION }}
 
-      # run Terraform init/validate/plan
-
+      # Run read-only Terraform init, validate, and plan
       - id: tf-init
         name: Terraform init
         continue-on-error: true
         run: |
-          terraform init -no-color
+          umask 077
+          terraform init -input=false -no-color
 
       - id: tf-validate
-        continue-on-error: true
         name: Terraform validate
+        continue-on-error: true
         run: terraform validate -no-color
 
       - id: tf-plan
         name: Terraform plan
         continue-on-error: true
         run: |
-          terraform plan -input=false -out ../plan.out -no-color $${{env.plan_opts}}
+          umask 077
+          set +e
+          terraform plan -input=false -no-color -lock=false -detailed-exitcode
+          plan_exit=$?
+          set -e
+          if [ "$plan_exit" -eq 0 ] || [ "$plan_exit" -eq 2 ]; then
+            exit 0
+          fi
+          exit "$plan_exit"
 
-      - id: tf-apply
-        if: github.event.pull_request.merged == true && success()
-        name: Terraform apply
-        continue-on-error: true
-        run: |
-          terraform apply -input=false -auto-approve -no-color ../plan.out
-
-      # PR comment with Terraform result from previous steps
-      # length is checked and trimmed for length so as to stay within the limit
-
+      # Post PR comment with Terraform output passed safely through env vars
       - id: pr-comment
         name: Post comment to Pull Request
         continue-on-error: true
@@ -141,11 +134,15 @@ jobs:
         env:
           PLAN: $${{steps.tf-plan.outputs.stdout}}\n$${{steps.tf-plan.outputs.stderr}}
           VALIDATE: $${{steps.tf-validate.outputs.stdout}}
+          TF_INIT_OUTCOME: $${{steps.tf-init.outcome}}
+          TF_VALIDATE_OUTCOME: $${{steps.tf-validate.outcome}}
+          TF_PLAN_OUTCOME: $${{steps.tf-plan.outcome}}
+          WORKFLOW_NAME: $${{github.workflow}}
         with:
           script: |
-            const output = `### Terraform Initialization \`$${{steps.tf-init.outcome}}\`
+            const output = `### Terraform Initialization \`$${process.env.TF_INIT_OUTCOME}\`
 
-            ### Terraform Validation \`$${{steps.tf-validate.outcome}}\`
+            ### Terraform Validation \`$${process.env.TF_VALIDATE_OUTCOME}\`
 
             <details><summary>Validation Output</summary>
 
@@ -155,21 +152,19 @@ jobs:
 
             </details>
 
-            ### Terraform Plan \`$${{steps.tf-plan.outcome}}\`
+            ### Terraform Plan \`$${process.env.TF_PLAN_OUTCOME}\`
 
             <details><summary>Show Plan</summary>
 
             \`\`\`\n
-            $${process.env.PLAN.split('\n').filter(l => l.match(/^([A-Z\s].*|)$$/)).join('\n')}
+            $${process.env.PLAN.split('\n').filter(l => l.match(/^([A-Z\s].*|)$/)).join('\n')}
             \`\`\`
 
             </details>
 
-            ### Terraform Apply \`$${{steps.tf-apply.outcome}}\`
+            *Pusher: @$${context.actor}, Action: \`$${context.eventName}\`, Workflow: \`$${process.env.WORKFLOW_NAME}\`*`;
 
-            *Pusher: @$${{github.actor}}, Action: \`$${{github.event_name}}\`, Working Directory: \`$${{env.tf_actions_working_dir}}\`, Workflow: \`$${{github.workflow}}\`*`;
-
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -180,29 +175,36 @@ jobs:
         name: Post comment to Pull Request (abbreviated)
         uses: actions/github-script@v6
         if: github.event_name == 'pull_request' && steps.pr-comment.outcome != 'success'
+        env:
+          TF_INIT_OUTCOME: $${{steps.tf-init.outcome}}
+          TF_VALIDATE_OUTCOME: $${{steps.tf-validate.outcome}}
+          TF_PLAN_OUTCOME: $${{steps.tf-plan.outcome}}
+          WORKFLOW_NAME: $${{github.workflow}}
         with:
           script: |
-            const output = `### Terraform Initialization \`$${{steps.tf-init.outcome}}\`
+            const output = `### Terraform Initialization \`$${process.env.TF_INIT_OUTCOME}\`
 
-            ### Terraform Validation \`$${{steps.tf-validate.outcome}}\`
+            ### Terraform Validation \`$${process.env.TF_VALIDATE_OUTCOME}\`
 
-            ### Terraform Plan \`$${{steps.tf-plan.outcome}}\`
+            ### Terraform Plan \`$${process.env.TF_PLAN_OUTCOME}\`
 
             Plan output is in the action log.
 
-            ### Terraform Apply \`$${{steps.tf-apply.outcome}}\`
+            *Pusher: @$${context.actor}, Action: \`$${context.eventName}\`, Workflow: \`$${process.env.WORKFLOW_NAME}\`*`;
 
-            *Pusher: @$${{github.actor}}, Action: \`$${{github.event_name}}\`, Working Directory: \`$${{env.tf_actions_working_dir}}\`, Workflow: \`$${{github.workflow}}\`*`;
-
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: output
             })
 
-      # exit on error from previous steps
+      - id: cleanup
+        if: always()
+        name: Clean up temporary SSH socket
+        run: rm -f "$SSH_AUTH_SOCK"
 
+      # Fail job if init, validate, or plan errored
       - id: check-init
         name: Check init failure
         if: steps.tf-init.outcome != 'success'
@@ -218,7 +220,104 @@ jobs:
         if: steps.tf-plan.outcome != 'success'
         run: exit 1
 
-      - id: check-apply
-        name: Check apply failure
-        if: github.event.pull_request.merged == true && steps.tf-apply.outcome != 'success'
-        run: exit 1
+  fast-apply:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: fast-${stage_name}-apply
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      FAST_SERVICE_ACCOUNT: ${service_accounts.apply}
+      TF_PROVIDERS_FILE: ${tf_providers_files.apply}
+    runs-on: ubuntu-latest
+    steps:
+      - id: checkout
+        name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Configure SSH key authentication to the modules repository
+      - id: ssh-config
+        name: Configure SSH authentication
+        env:
+          CICD_MODULES_KEY: $${{ secrets.CICD_MODULES_KEY }}
+        run: |
+          umask 077
+          if [ -n "$CICD_MODULES_KEY" ]; then
+            ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
+            ssh-add - <<< "$CICD_MODULES_KEY"
+          fi
+
+      # Authenticate apply SA via Workload Identity Federation (main push only)
+      - id: gcp-auth
+        name: Authenticate to Google Cloud (apply)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: $${{ env.FAST_WIF_PROVIDER }}
+          service_account: $${{ env.FAST_SERVICE_ACCOUNT }}
+          access_token_lifetime: 900s
+
+      - id: gcp-sdk
+        name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          install_components: alpha
+
+      # Copy apply Terraform provider file and stage tfvars
+      - id: tf-config-provider
+        name: Copy Terraform provider file
+        run: |
+          umask 077
+          gcloud alpha storage cp -r \
+            "gs://${outputs_bucket}/providers/$${{ env.TF_PROVIDERS_FILE }}" ./
+          %{~ for f in tf_var_files ~}
+          gcloud alpha storage cp -r \
+            "gs://${outputs_bucket}/tfvars/${f}" ./
+          %{~ endfor ~}
+
+      - id: tf-setup
+        name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: $${{ env.TF_VERSION }}
+
+      # Run Terraform init, validate, saved plan, and apply
+      - id: tf-init
+        name: Terraform init
+        run: |
+          umask 077
+          terraform init -input=false -no-color
+
+      - id: tf-validate
+        name: Terraform validate
+        run: terraform validate -no-color
+
+      - id: tf-plan
+        name: Terraform plan
+        run: |
+          umask 077
+          set +e
+          terraform plan -input=false -no-color -detailed-exitcode -out=tfplan.binary
+          plan_exit=$?
+          set -e
+          if [ "$plan_exit" -eq 0 ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          elif [ "$plan_exit" -eq 2 ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exit "$plan_exit"
+
+      - id: tf-apply
+        if: steps.tf-plan.outputs.has_changes == 'true'
+        name: Terraform apply
+        run: |
+          umask 077
+          terraform apply -input=false -no-color -auto-approve tfplan.binary
+
+      - id: cleanup
+        if: always()
+        name: Clean up temporary plan and SSH files
+        run: rm -f tfplan.binary "$SSH_AUTH_SOCK"
