@@ -293,7 +293,6 @@ Terraform builds `return_routes` from every spoke subnet, secondary range, and p
 ## 6 Redeployment
 
 Run `pre-redeploy.sh` before redeploying this stage with the same `prefix` to import retained resources cleanly.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
@@ -307,7 +306,7 @@ Run `pre-redeploy.sh` before redeploying this stage with the same `prefix` to im
 | [organization](variables.tf#L219) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [prefix](variables.tf#L235) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
 | [regions](variables.tf#L279) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [tenant_accounts](variables.tf#L353) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [tenant_accounts](variables.tf#L356) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [assured_workloads](variables.tf#L22) | Configuration for Assured Workloads. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [billing_override](variables.tf#L54) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [cidrs](variables.tf#L63) | Named CIDR ranges to use in firewall rules. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
@@ -330,7 +329,7 @@ Run `pre-redeploy.sh` before redeploying this stage with the same `prefix` to im
 | [service_accounts](variables.tf#L287) | Automation service accounts in name => email format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [spoke_project_iam](variables.tf#L301) | Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [subnets](variables.tf#L308) | VPC subnet configurations keyed by network name. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [vmseries_image](variables.tf#L367) | The image name from which to boot an instance, including a license type (bundle/flex) and version. | <code>string</code> |  | <code>&#34;vmseries-112&#34;</code> |
+| [vmseries_image](variables.tf#L370) | The image name from which to boot an instance, including a license type (bundle/flex) and version. | <code>string</code> |  | <code>&#34;vmseries-112&#34;</code> |
 
 ## Outputs
 
