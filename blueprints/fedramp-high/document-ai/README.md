@@ -53,7 +53,7 @@ Open [Document AI](https://console.cloud.google.com/ai/document-ai) in the Googl
 Test the default `OCR_PROCESSOR` deployment using either single-document upload or batch workflow execution:
 
 1. For manual single-file testing, open the processor details page, select Upload Test Document, upload `samples/Winnie_the_Pooh_3_Pages.pdf`, and inspect the parsed fields.
-2. For batch processing, upload the sample PDF to `<main_project_id>-docai-input-bucket` in Cloud Storage, open `docai-workflow` in Workflows, select Execute, and inspect the generated JSON output in `<main_project_id>-docai-output-bucket`.
+2. For batch processing, upload the sample PDF to `<main_project_id>-doc-ai-input` in Cloud Storage, open `doc-ai-workflow` in Workflows, select Execute, and inspect the generated JSON output in `<main_project_id>-doc-ai-output`.
 
 <!-- BEGIN TFDOC -->
 ## Variables
