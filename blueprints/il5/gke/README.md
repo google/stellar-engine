@@ -17,6 +17,7 @@ This blueprint deploys a private Google Kubernetes Engine Standard cluster and b
 
 - Consumes an existing Shared VPC subnet and secondary Pod and Service CIDR ranges from `landing_project_id`.
 - Encrypts node boot disks and bastion disks with an existing Customer-Managed Encryption Key from `core_project_id`.
+- Encrypts Kubernetes Secrets in etcd (`database_encryption`, application-layer secrets encryption) with the same Cloud KMS key.
 
 Separating network, encryption, and cluster projects lets platform teams govern VPC and KMS controls centrally while application teams manage GKE workloads in isolated service projects.
 
@@ -72,8 +73,10 @@ Connect to the private GKE control plane from the deployed bastion host VM in `m
 1. Open an SSH session to the bastion VM:
 
 ```bash
-gcloud compute ssh <BASTION_VM_NAME> --zone <BASTION_VM_ZONE> --project <MAIN_PROJECT_ID>
+gcloud compute ssh <BASTION_VM_NAME> --zone <BASTION_VM_ZONE> --tunnel-through-iap --project <MAIN_PROJECT_ID>
 ```
+
+The bastion VM has no external IP address (its network interface does not set `nat`), so the SSH session has to go through Identity-Aware Proxy.
 
 2. Fetch cluster credentials inside the bastion `toolbox` container environment and verify node readiness:
 
