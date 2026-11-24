@@ -1,4 +1,4 @@
-# Copyright 2025 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,37 +13,97 @@
 # limitations under the License.
 
 locals {
+  _all_regions = merge(
+    {
+      region1 = var.region1
+      region2 = var.region2
+    },
+    var.additional_regions
+  )
+  _cidr_newbits = length(var.additional_regions) == 0 ? 1 : 2
+  _ordered_subnet_keys = concat(
+    ["subnet1", "subnet2"],
+    sort([
+      for k in keys(var.subnet_configs) : k
+      if !contains(["subnet1", "subnet2"], k)
+    ])
+  )
+
   router_configs = var.router_configs
   subnet_configs = var.subnet_configs
 
+  network_id = (
+    var.create_vpc
+    ? google_compute_network.vpc_network[0].id
+    : data.google_compute_network.existing_vpc[0].id
+  )
+  network_self_link = (
+    var.create_vpc
+    ? google_compute_network.vpc_network[0].self_link
+    : data.google_compute_network.existing_vpc[0].self_link
+  )
+
   router_names = {
-    router1 = google_compute_router.routers["router1"].name
-    router2 = google_compute_router.routers["router2"].name
+    for k, router in google_compute_router.routers : k => router.name
   }
 
   router_regions = {
-    router1 = var.region1
-    router2 = var.region2
+    for k, v in var.router_configs : k => (
+      v.region != null
+      ? lookup(local._all_regions, v.region, v.region)
+      : coalesce(
+        k == "router1" ? var.region1 : null,
+        k == "router2" ? var.region2 : null,
+        lookup(
+          var.additional_regions,
+          replace(k, "/^router/", "region"),
+          null
+        ),
+        lookup(var.additional_regions, k, null),
+        lookup(var.additional_regions, trimprefix(k, "router_"), null),
+        lookup(var.additional_regions, trimprefix(k, "router-"), null)
+      )
+    )
   }
 
   subnet_regions = {
-    subnet1 = var.region1
-    subnet2 = var.region2
+    for k, v in var.subnet_configs : k => (
+      v.region != null
+      ? lookup(local._all_regions, v.region, v.region)
+      : coalesce(
+        k == "subnet1" ? var.region1 : null,
+        k == "subnet2" ? var.region2 : null,
+        lookup(
+          var.additional_regions,
+          replace(k, "/^subnet/", "region"),
+          null
+        ),
+        lookup(var.additional_regions, k, null),
+        lookup(var.additional_regions, trimprefix(k, "subnet_"), null),
+        lookup(var.additional_regions, trimprefix(k, "subnet-"), null)
+      )
+    )
   }
 
   dod_split_cidr_blocks = {
-    subnet1 = cidrsubnet(var.dod_base_cidr_block, 1, 0)
-    subnet2 = cidrsubnet(var.dod_base_cidr_block, 1, 1)
+    for idx, k in local._ordered_subnet_keys :
+    k => cidrsubnet(var.dod_base_cidr_block, local._cidr_newbits, idx)
   }
 
   dod_advertised_ip_ranges = {
-    for k_subnet_key, v_subnet_config in var.subnet_configs :
-    local.dod_split_cidr_blocks[k_subnet_key] => "DoD-Assigned-Subnet-${v_subnet_config.name}"
+    for k, v in var.subnet_configs :
+    local.dod_split_cidr_blocks[k] => "DoD-Assigned-Subnet-${v.name}"
   }
 }
 
-# VPC Network (x1)
+moved {
+  from = google_compute_network.vpc_network
+  to   = google_compute_network.vpc_network[0]
+}
+
+# VPC Network (created when create_vpc is true)
 resource "google_compute_network" "vpc_network" {
+  count                   = var.create_vpc ? 1 : 0
   project                 = var.hub_project_id
   name                    = var.network_name
   auto_create_subnetworks = false
@@ -52,14 +112,20 @@ resource "google_compute_network" "vpc_network" {
   description             = "VPC Network for BCAP deployment"
 }
 
-# VPC Subnets (x2)
+data "google_compute_network" "existing_vpc" {
+  count   = var.create_vpc ? 0 : 1
+  project = var.hub_project_id
+  name    = var.network_name
+}
+
+# VPC Subnets (2 /25 subnets or 4 /26 subnets)
 resource "google_compute_subnetwork" "bcap_subnets" {
   for_each = var.subnet_configs
 
   project                  = var.hub_project_id
   name                     = each.value.name
   ip_cidr_range            = local.dod_split_cidr_blocks[each.key]
-  network                  = google_compute_network.vpc_network.self_link
+  network                  = local.network_self_link
   region                   = local.subnet_regions[each.key]
   private_ip_google_access = var.subnet_private_ip_google_access
   description              = each.value.description
@@ -73,17 +139,15 @@ resource "google_compute_subnetwork" "bcap_subnets" {
       filter_expr          = "true"
     }
   }
-
-  depends_on = [google_compute_network.vpc_network]
 }
 
-# Cloud Routers (x2)
+# Cloud Routers (2 or 4 regions)
 resource "google_compute_router" "routers" {
   for_each = local.router_configs
 
   project = var.hub_project_id
   name    = each.value.name
-  network = google_compute_network.vpc_network.self_link
+  network = local.network_self_link
   region  = local.router_regions[each.key]
   bgp {
     asn            = var.router_google_asn
@@ -103,7 +167,7 @@ resource "google_compute_router" "routers" {
   depends_on = [google_compute_subnetwork.bcap_subnets]
 }
 
-# VLAN Attachments (x4)
+# VLAN Attachments (4 or 8 Partner Interconnect attachments)
 resource "google_compute_interconnect_attachment" "attachments" {
   for_each = var.attachment_configs
 
