@@ -1,0 +1,85 @@
+project_id  = "my-net-hub-0"
+network     = "projects/my-net-hub-0/global/networks/my-vpc-hub-0"
+region      = "us-east4"
+name_prefix = "ha-vpn"
+router_asn  = 64514
+stack_type  = "IPV4_ONLY"
+
+advertise_dns_forwarding_range = true
+
+custom_advertised_ip_ranges = {
+  "10.84.0.0/14" = "Primary workload pod range"
+}
+
+peers = {
+  aws = {
+    description     = "External AWS Site-to-Site VPN gateway"
+    redundancy_type = "FOUR_IPS_REDUNDANCY"
+    external_interfaces = [
+      "198.51.100.1",
+      "198.51.100.2",
+      "198.51.100.3",
+      "198.51.100.4",
+    ]
+    tunnels = {
+      tun-0 = {
+        bgp_peer_address                = "169.254.21.1"
+        bgp_peer_asn                    = 64512
+        bgp_session_range               = "169.254.21.2/30"
+        peer_external_gateway_interface = 0
+        psk_secret_id                   = "vpn-aws-tun-0-psk"
+        vpn_gateway_interface           = 0
+      }
+      tun-1 = {
+        bgp_peer_address                = "169.254.21.5"
+        bgp_peer_asn                    = 64512
+        bgp_session_range               = "169.254.21.6/30"
+        peer_external_gateway_interface = 1
+        psk_secret_id                   = "vpn-aws-tun-1-psk"
+        vpn_gateway_interface           = 0
+      }
+      tun-2 = {
+        bgp_peer_address                = "169.254.21.9"
+        bgp_peer_asn                    = 64512
+        bgp_session_range               = "169.254.21.10/30"
+        peer_external_gateway_interface = 2
+        psk_secret_id                   = "vpn-aws-tun-2-psk"
+        vpn_gateway_interface           = 1
+      }
+      tun-3 = {
+        bgp_peer_address                = "169.254.21.13"
+        bgp_peer_asn                    = 64512
+        bgp_session_range               = "169.254.21.14/30"
+        peer_external_gateway_interface = 3
+        psk_secret_id                   = "vpn-aws-tun-3-psk"
+        vpn_gateway_interface           = 1
+      }
+    }
+  }
+  azure = {
+    description     = "External Azure active-active VPN gateway"
+    redundancy_type = "TWO_IPS_REDUNDANCY"
+    external_interfaces = [
+      "203.0.113.1",
+      "203.0.113.2",
+    ]
+    tunnels = {
+      tun-0 = {
+        bgp_peer_address                = "169.254.22.2"
+        bgp_peer_asn                    = 65515
+        bgp_session_range               = "169.254.22.1/30"
+        peer_external_gateway_interface = 0
+        psk_secret_id                   = "vpn-azure-tun-0-psk"
+        vpn_gateway_interface           = 0
+      }
+      tun-1 = {
+        bgp_peer_address                = "169.254.22.6"
+        bgp_peer_asn                    = 65515
+        bgp_session_range               = "169.254.22.5/30"
+        peer_external_gateway_interface = 1
+        psk_secret_id                   = "vpn-azure-tun-1-psk"
+        vpn_gateway_interface           = 1
+      }
+    }
+  }
+}
