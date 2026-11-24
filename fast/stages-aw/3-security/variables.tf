@@ -287,6 +287,7 @@ variable "vpc_sc" {
   description = "VPC SC configuration. Setting `perimeter_default.dry_run_spec` keeps the perimeter enforced and trials the overridden attributes in the dry-run spec."
   type = object({
     access_levels    = optional(map(any), {})
+    access_policy    = optional(string)
     egress_policies  = optional(map(any), {})
     ingress_policies = optional(map(any), {})
     perimeter_default = optional(object({
@@ -303,11 +304,13 @@ variable "vpc_sc" {
       ingress_policies = optional(list(string), [])
       resources        = optional(list(string), [])
     }))
+    project_id_search_scope = optional(string)
     resource_discovery = optional(object({
       enabled          = optional(bool, true)
       ignore_folders   = optional(list(string), [])
       ignore_projects  = optional(list(string), [])
       include_projects = optional(list(string), [])
+      parent           = optional(string)
     }), {})
   })
   default  = {}
@@ -328,5 +331,32 @@ variable "vpc_sc" {
       ])
     )
     error_message = "Set at least one attribute in `perimeter_default.dry_run_spec`, or omit it."
+  }
+  validation {
+    condition = (
+      var.vpc_sc.access_policy == null ||
+      can(regex("^[0-9]+$", var.vpc_sc.access_policy))
+    )
+    error_message = "Set `access_policy` to a numeric Access Policy ID without the `accessPolicies/` prefix, or omit it."
+  }
+  validation {
+    condition = (
+      var.vpc_sc.project_id_search_scope == null ||
+      can(regex(
+        "^(organizations|folders)/[0-9]+$",
+        var.vpc_sc.project_id_search_scope
+      ))
+    )
+    error_message = "Set `project_id_search_scope` in `organizations/<id>` or `folders/<id>` format, or omit it."
+  }
+  validation {
+    condition = (
+      try(var.vpc_sc.resource_discovery.parent, null) == null ||
+      can(regex(
+        "^(organizations|folders)/[0-9]+$",
+        var.vpc_sc.resource_discovery.parent
+      ))
+    )
+    error_message = "Set `resource_discovery.parent` in `organizations/<id>` or `folders/<id>` format, or omit it."
   }
 }

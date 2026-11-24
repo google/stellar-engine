@@ -333,8 +333,10 @@ The `vpc_sc` variable controls VPC-SC configuration and project auto-discovery v
 The `vpc_sc` variable has the following attributes
 
 - `access_levels`, `egress_policies`, `ingress_policies` define the corresponding objects, internally merged with any data coming from the YAML factories
+- `access_policy` specifies the numeric ID of an existing Access Context Manager policy without the `accessPolicies/` prefix so the stage reuses it instead of creating a new organization-level policy; in folder-scoped deployments, bind `roles/accesscontextmanager.policyAdmin` on `accessPolicies/<id>` or at the organization level
 - `perimeter_default` configures the single organization-wide perimeter by referencing access levels and policies by key, setting included Google Cloud Projects, and allowing to turn on dry run mode
-- `resource_discovery` controls automatic discovery of Google Cloud Projects via Asset Inventory, and allows defining inclusion and exclusions lists
+- `project_id_search_scope` sets an organization `organizations/<id>` or folder `folders/<id>` Cloud Asset Inventory scope so the `vpc-sc` module translates `projects/<project-id>` references to project numbers
+- `resource_discovery` controls automatic discovery of Google Cloud Projects via Asset Inventory, including an optional `parent` scope in `organizations/<id>` or `folders/<id>` format that defaults to the organization, plus inclusion and exclusion lists
 
 A few things to note on the default perimeter
 
@@ -342,7 +344,7 @@ A few things to note on the default perimeter
 - the perimeter is brought up in enforced mode by default
 - setting `dry_run` to `true` configures only the dry-run spec and removes the enforced configuration, so nothing is enforced
 - setting `dry_run_spec` keeps the perimeter enforced and trials a candidate configuration in the dry-run spec, as the next section describes
-- Google Cloud Project discovery is turned on by default and includes all Google Cloud Projects in the Google Cloud Organization
+- Google Cloud Project discovery is turned on by default and includes all Google Cloud Projects in the Google Cloud Organization unless `resource_discovery.parent` scopes discovery to a folder
 - the stage resolves access level names in `perimeter_default` and in policies defined through the `vpc_sc` variable, while ingress and egress policy YAML files reference access levels as `$access_levels:<name>`
 
 The following example configures the default perimeter, with a single broad geo-based access level. Refer to the [vpc-sc module](../../../modules/vpc-sc/) for details on how to configure ingress/egress policies, and how to leverage the YAML factories. The perimeter is set to enforced mode and leverages auto discovery of Google Cloud Projects.

@@ -216,7 +216,7 @@ class TestSecurityVpcScDryRun(unittest.TestCase):
             )
         ]
         self.assertEqual(
-            conditions,
+            conditions[:2],
             [
                 # dry_run drops the status, so it never combines with a trial
                 f"( try({_DRY_RUN_SPEC}, null) == null || "
@@ -226,6 +226,7 @@ class TestSecurityVpcScDryRun(unittest.TestCase):
                 f"for v in try(values({_DRY_RUN_SPEC}), []) : v != null ]) )",
             ],
         )
+        self.assertEqual(len(conditions), 5)
 
     def test_stage_has_no_keep_enforced_flag(self):
         for name in ("README.md", "variables.tf", "vpc-sc.tf"):
