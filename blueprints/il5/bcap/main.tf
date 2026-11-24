@@ -116,7 +116,12 @@ resource "google_compute_interconnect_attachment" "attachments" {
   type                     = "PARTNER"
   edge_availability_domain = each.value.edge_availability_domain
   mtu                      = each.value.mtu
-  vlan_tag8021q            = each.value.vlan_id
+  candidate_cloud_router_ip_address = (
+    each.value.candidate_cloud_router_ip_address
+  )
+  candidate_customer_router_ip_address = (
+    each.value.candidate_customer_router_ip_address
+  )
 
   admin_enabled = true
 

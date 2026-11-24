@@ -13,14 +13,16 @@
 # limitations under the License.
 
 variable "attachment_configs" {
-  description = "Configuration map for the four Partner VLAN attachments required for 99.99% availability. The region for each attachment is derived from its associated `router_key`."
+  description = "Configuration map for the four Partner VLAN attachments required for 99.99% availability. The region for each attachment is derived from its associated `router_key`. For Layer 2 Partner Interconnect, optionally specify paired `candidate_cloud_router_ip_address` and `candidate_customer_router_ip_address` IPv4 CIDRs."
   type = map(object({
-    name                     = string
-    description              = optional(string, "BCAP VLAN Attachment")
-    router_key               = string
-    edge_availability_domain = string
-    mtu                      = optional(number, 1440)
-    vlan_id                  = optional(number, null)
+    candidate_cloud_router_ip_address    = optional(string)
+    candidate_customer_router_ip_address = optional(string)
+    description                          = optional(string, "BCAP VLAN Attachment")
+    edge_availability_domain             = string
+    mtu                                  = optional(number, 1440)
+    name                                 = string
+    router_key                           = string
+    vlan_id                              = optional(number, null)
   }))
   validation {
     condition     = length(keys(var.attachment_configs)) == 4
@@ -43,6 +45,139 @@ variable "attachment_configs" {
       for k, v in var.attachment_configs : "${v.router_key}-${v.edge_availability_domain}"
     ])) == 4
     error_message = "The four attachments must cover all four unique (router_key, edge_availability_domain) combinations for 99.99% SLA."
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.attachment_configs : v.vlan_id == null
+    ])
+    error_message = "vlan_id cannot be set on PARTNER interconnect attachments because Google and the partner assign the 802.1Q VLAN tag."
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.attachment_configs : (
+        (v.candidate_cloud_router_ip_address == null) ==
+        (v.candidate_customer_router_ip_address == null)
+      )
+    ])
+    error_message = "candidate_cloud_router_ip_address and candidate_customer_router_ip_address must both be set or both omitted."
+  }
+  validation {
+    condition = alltrue([
+      for _, v in var.attachment_configs : (
+        v.candidate_cloud_router_ip_address == null ||
+        v.candidate_customer_router_ip_address == null
+        ? true
+        : (
+          can(cidrhost(v.candidate_cloud_router_ip_address, 0)) &&
+          can(cidrhost(v.candidate_customer_router_ip_address, 0)) &&
+          !can(regex(":", v.candidate_cloud_router_ip_address)) &&
+          !can(regex(":", v.candidate_customer_router_ip_address)) &&
+          try(
+            split("/", v.candidate_cloud_router_ip_address)[1] ==
+            split("/", v.candidate_customer_router_ip_address)[1],
+            false
+          ) &&
+          (
+            try(
+              cidrsubnet(
+                format("%s/16", split("/", v.candidate_cloud_router_ip_address)[0]),
+                0,
+                0
+              ) == "169.254.0.0/16",
+              false
+            )
+            ? try(tonumber(split("/", v.candidate_cloud_router_ip_address)[1]) == 29, false)
+            : try(contains([29, 30], tonumber(split("/", v.candidate_cloud_router_ip_address)[1])), false)
+          ) &&
+          try(
+            cidrsubnet(v.candidate_cloud_router_ip_address, 0, 0) ==
+            cidrsubnet(v.candidate_customer_router_ip_address, 0, 0),
+            false
+          ) &&
+          try(
+            split("/", v.candidate_cloud_router_ip_address)[0] !=
+            cidrhost(v.candidate_cloud_router_ip_address, 0) &&
+            split("/", v.candidate_cloud_router_ip_address)[0] !=
+            cidrhost(v.candidate_cloud_router_ip_address, -1) &&
+            split("/", v.candidate_customer_router_ip_address)[0] !=
+            cidrhost(v.candidate_customer_router_ip_address, 0) &&
+            split("/", v.candidate_customer_router_ip_address)[0] !=
+            cidrhost(v.candidate_customer_router_ip_address, -1),
+            false
+          ) &&
+          alltrue([
+            for blk in [
+              "0.0.0.0/8",
+              "10.0.0.0/8",
+              "100.64.0.0/10",
+              "127.0.0.0/8",
+              "172.16.0.0/12",
+              "192.0.0.0/24",
+              "192.0.2.0/24",
+              "192.88.99.0/24",
+              "192.168.0.0/16",
+              "198.18.0.0/15",
+              "198.51.100.0/24",
+              "203.0.113.0/24",
+              "224.0.0.0/4",
+              "240.0.0.0/4",
+              ] : try(
+              cidrsubnet(
+                format(
+                  "%s/%s",
+                  split("/", v.candidate_cloud_router_ip_address)[0],
+                  split("/", blk)[1]
+                ),
+                0,
+                0
+              ) != blk,
+              false
+            )
+          ]) &&
+          v.candidate_cloud_router_ip_address !=
+          v.candidate_customer_router_ip_address
+        )
+      )
+    ])
+    error_message = "Candidate BGP IPs must be distinct non-network, non-broadcast IPv4 host CIDRs in the same non-private /29 or /30 subnet (/29 only within 169.254.0.0/16)."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for k1, v1 in var.attachment_configs : [
+        for k2, v2 in var.attachment_configs : (
+          k1 == k2 ||
+          v1.candidate_cloud_router_ip_address == null ||
+          v2.candidate_cloud_router_ip_address == null ||
+          try(
+            cidrsubnet(
+              format(
+                "%s/%d",
+                split("/", v1.candidate_cloud_router_ip_address)[0],
+                min(
+                  tonumber(split("/", v1.candidate_cloud_router_ip_address)[1]),
+                  tonumber(split("/", v2.candidate_cloud_router_ip_address)[1])
+                )
+              ),
+              0,
+              0
+              ) != cidrsubnet(
+              format(
+                "%s/%d",
+                split("/", v2.candidate_cloud_router_ip_address)[0],
+                min(
+                  tonumber(split("/", v1.candidate_cloud_router_ip_address)[1]),
+                  tonumber(split("/", v2.candidate_cloud_router_ip_address)[1])
+                )
+              ),
+              0,
+              0
+            ),
+            true
+          )
+        )
+      ]
+    ]))
+    error_message = "Each attachment specifying candidate BGP IPs must use a non-overlapping subnet."
   }
 }
 
