@@ -251,6 +251,106 @@ class TestIamRoles:
         assert found == {"iam.roles": Status.SKIP}
 
 
+class TestCustomRoles:
+    def test_all_valid_passes(self, make_ctx, repo):
+        found = by_id(checks.check_custom_roles(resolved(make_ctx)))
+        item = found["iam.custom_roles"]
+        assert item.status == Status.PASS
+        assert f"{len(repo.custom_roles())} custom roles" in item.detail
+
+    def test_unsupported_permission_fails_with_filename(
+        self, make_ctx, cloud, tmp_path
+    ):
+        custom_dir = tmp_path / "fast/stages-aw/0-bootstrap/data/custom-roles"
+        custom_dir.mkdir(parents=True)
+        (custom_dir / "bad_role.yaml").write_text(
+            "name: badRole\nincludedPermissions:\n"
+            "  - storage.buckets.get\n"
+            "  - storage.buckets.typoPermission\n",
+            encoding="utf-8",
+        )
+        cloud.org_testable = {"storage.buckets.get"}
+        ctx = resolved(make_ctx)
+        ctx.repo = repo_lib.Repo(tmp_path)
+        found = by_id(checks.check_custom_roles(ctx))
+        item = found["iam.custom_roles"]
+        assert item.status == Status.FAIL
+        assert "bad_role.yaml" in item.detail
+        assert "storage.buckets.typoPermission" in item.detail
+        assert "storage.buckets.get" not in item.detail
+        assert "custom-roles/*.yaml" in remedy(item)
+
+    def test_missing_custom_roles_dir_passes(self, make_ctx, tmp_path):
+        ctx = resolved(make_ctx)
+        ctx.repo = repo_lib.Repo(tmp_path)
+        found = by_id(checks.check_custom_roles(ctx))
+        item = found["iam.custom_roles"]
+        assert item.status == Status.PASS
+        assert "No Stage 0 custom role definitions" in item.detail
+
+    def test_empty_custom_roles_dir_passes(self, make_ctx, tmp_path):
+        custom_dir = tmp_path / "fast/stages-aw/0-bootstrap/data/custom-roles"
+        custom_dir.mkdir(parents=True)
+        ctx = resolved(make_ctx)
+        ctx.repo = repo_lib.Repo(tmp_path)
+        found = by_id(checks.check_custom_roles(ctx))
+        assert found["iam.custom_roles"].status == Status.PASS
+
+    def test_invalid_yaml_fails_cleanly(self, make_ctx, tmp_path):
+        custom_dir = tmp_path / "fast/stages-aw/0-bootstrap/data/custom-roles"
+        custom_dir.mkdir(parents=True)
+        (custom_dir / "broken.yaml").write_text(
+            "includedPermissions: [unclosed\n", encoding="utf-8"
+        )
+        ctx = resolved(make_ctx)
+        ctx.repo = repo_lib.Repo(tmp_path)
+        found = by_id(checks.check_custom_roles(ctx))
+        item = found["iam.custom_roles"]
+        assert item.status == Status.FAIL
+        assert "broken.yaml" in item.detail
+
+    def test_skipped_without_org(self, make_ctx):
+        found = statuses(checks.check_custom_roles(make_ctx()))
+        assert found == {"iam.custom_roles": Status.SKIP}
+
+    def test_not_supported_in_custom_roles_fails(
+        self, make_ctx, cloud, tmp_path
+    ):
+        custom_dir = tmp_path / "fast/stages-aw/0-bootstrap/data/custom-roles"
+        custom_dir.mkdir(parents=True)
+        (custom_dir / "strict_role.yaml").write_text(
+            "name: strictRole\nincludedPermissions:\n"
+            "  - storage.buckets.get\n"
+            "  - iam.serviceAccounts.actAs\n",
+            encoding="utf-8",
+        )
+        # Testable on the org for predefined roles, but NOT_SUPPORTED in
+        # custom roles.
+        cloud.org_testable = {
+            "storage.buckets.get",
+            "iam.serviceAccounts.actAs",
+        }
+        cloud.org_custom_role_perms = {"storage.buckets.get"}
+        ctx = resolved(make_ctx)
+        ctx.repo = repo_lib.Repo(tmp_path)
+        found = by_id(checks.check_custom_roles(ctx))
+        item = found["iam.custom_roles"]
+        assert item.status == Status.FAIL
+        assert "strict_role.yaml" in item.detail
+        assert "iam.serviceAccounts.actAs" in item.detail
+        assert "storage.buckets.get" not in item.detail
+
+    def test_cloud_error_fails(self, make_ctx, cloud):
+        def broken(full_resource_name):
+            raise api.AccessDeniedError("iam denied")
+
+        cloud.custom_role_permissions = broken
+        found = by_id(checks.check_custom_roles(resolved(make_ctx)))
+        item = found["iam.custom_roles"]
+        assert item.status == Status.FAIL
+        assert "iam denied" in item.detail
+
+
 class TestBilling:
     def test_pass(self, make_ctx):
         found = statuses(checks.check_billing(resolved_roles(make_ctx)))

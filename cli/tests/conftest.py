@@ -105,6 +105,7 @@ class FakeCloud:
     )
     role_perms: dict = dataclasses.field(default_factory=dict)
     org_testable: set | None = None
+    org_custom_role_perms: set | None = None
     billing_testable: set | None = None
     denied_org_perms: set = dataclasses.field(default_factory=set)
     denied_billing_perms: set = dataclasses.field(default_factory=set)
@@ -131,6 +132,7 @@ class FakeCloud:
     org_policies: object = dataclasses.field(default_factory=list)
     groups: object = None
     calls: list = dataclasses.field(default_factory=list)
+    transport: str = live.TRANSPORT_GRPC
 
     @staticmethod
     def _value(value):
@@ -155,9 +157,18 @@ class FakeCloud:
         if "cloudbilling" in full_resource_name:
             if self.billing_testable is not None:
                 return self.billing_testable
-        elif self.org_testable is not None:
+            return {p for perms in self._all_role_perms() for p in perms}
+        if self.org_testable is not None:
             return self.org_testable
-        return {p for perms in self._all_role_perms() for p in perms}
+        perms = {p for group in self._all_role_perms() for p in group}
+        for role in repo_lib.Repo(REPO_ROOT).custom_roles():
+            perms.update(role.permissions)
+        return perms
+
+    def custom_role_permissions(self, full_resource_name):
+        if self.org_custom_role_perms is not None:
+            return self.org_custom_role_perms
+        return self.testable_permissions(full_resource_name)
 
     def _all_role_perms(self):
         roles = repo_lib.Repo(REPO_ROOT).required_roles()
@@ -272,8 +283,14 @@ def fake_cloud(cloud, fake_tools, monkeypatch):
         The FakeCloud that the commands use.
     """
     del fake_tools  # Only its patch matters.
-    monkeypatch.setattr(live, "LiveCloudApi", lambda: cloud)
+
+    def _make_cloud(transport=None, **_kwargs):
+        cloud.transport = live.resolve_transport(transport)
+        return cloud
+
+    monkeypatch.setattr(live, "LiveCloudApi", _make_cloud)
     monkeypatch.delenv("GOOGLE_IMPERSONATE_SERVICE_ACCOUNT", raising=False)
+    monkeypatch.delenv(live.TRANSPORT_ENV_VAR, raising=False)
     return cloud
 
 

@@ -355,3 +355,13 @@ def test_init_requires_bootstrap_user_in_the_bootstrap_phase(
     assert "bootstrap_user is required while stage0_phase is bootstrap" in (
         outcome.output
     )
+
+
+def test_init_interactive_invalid_transport_exits_2(
+    cli_runner, fake_cloud, monkeypatch
+):
+    monkeypatch.setattr(common, "stdin_is_tty", lambda: True)
+    monkeypatch.setenv("STELLAR_GCP_TRANSPORT", "bogus")
+    outcome = helpers.invoke(cli_runner, "init", "--prefix", "tst")
+    assert outcome.exit_code == 2
+    assert "Error: Invalid transport" in outcome.output

@@ -158,6 +158,10 @@ class CloudApi(Protocol):
         """Returns the permissions that can be tested on a resource."""
         ...
 
+    def custom_role_permissions(self, full_resource_name: str) -> set[str]:
+        """Returns permissions supported in custom roles on a resource."""
+        ...
+
     def granted_org_permissions(
         self, org_id: str, permissions: list[str]
     ) -> set[str]:
