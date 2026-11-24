@@ -92,6 +92,42 @@ variable "dns" {
   nullable = false
 }
 
+variable "dns_forwarding_zones" {
+  description = "Optional hybrid Cloud DNS forwarding zones created in the VDSS host project, keyed by zone name suffix. Root domain '.' is forbidden because it breaks Compute Engine internal DNS."
+  type = map(object({
+    domain          = string
+    forwarders      = map(string)
+    description     = optional(string, "Terraform-managed hybrid forwarding zone.")
+    client_networks = optional(list(string))
+  }))
+  default  = {}
+  nullable = false
+  validation {
+    condition = alltrue([
+      for k, v in var.dns_forwarding_zones :
+      trimspace(v.domain) != "." &&
+      endswith(v.domain, ".") &&
+      length(trimspace(v.domain)) > 1
+    ])
+    error_message = "Each dns_forwarding_zones domain must end with '.' and must not be the root zone '.'."
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.dns_forwarding_zones : length(v.forwarders) > 0
+    ])
+    error_message = "Each dns_forwarding_zones entry must specify at least one forwarder IPv4 address."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.dns_forwarding_zones : [
+        for ip, path in v.forwarders :
+        can(cidrhost("${ip}/32", 0)) && contains(["default", "private"], path)
+      ]
+    ]))
+    error_message = "Each dns_forwarding_zones forwarder key must be a valid IPv4 address with a forwarding_path of default or private."
+  }
+}
+
 variable "dns_policy_rules" {
   description = "DNS response policy rules in name => rule format."
   type = map(object({
@@ -133,6 +169,7 @@ variable "factories_config" {
     data_dir              = optional(string, "data")
     dns_policy_rules_file = optional(string, "data/dns-policy-rules.yaml")
     firewall_policy_name  = optional(string)
+    ncc_hubs              = optional(string)
   })
   default = {
     data_dir = "data"
@@ -216,6 +253,257 @@ variable "logging" {
   default     = null
 }
 
+variable "ncc_hubs" {
+  description = "Network Connectivity Center hubs, groups, and spokes in hub_name => config format, merged with YAML definitions from factories_config.ncc_hubs."
+  type = map(object({
+    project_id      = optional(string)
+    description     = optional(string)
+    export_psc      = optional(bool)
+    policy_mode     = optional(string)
+    preset_topology = optional(string)
+    labels          = optional(map(string), {})
+    groups = optional(map(object({
+      description = optional(string)
+      labels      = optional(map(string), {})
+      auto_accept = optional(list(string), [])
+    })), {})
+    spokes = optional(object({
+      vpcs = optional(map(object({
+        vpc                   = optional(string)
+        name                  = optional(string)
+        project_id            = optional(string)
+        group                 = optional(string)
+        description           = optional(string, "Terraform-managed.")
+        labels                = optional(map(string), {})
+        exclude_export_ranges = optional(list(string))
+        include_export_ranges = optional(list(string))
+      })), {})
+      tunnels = optional(map(object({
+        uris                       = list(string)
+        name                       = optional(string)
+        location                   = optional(string)
+        project_id                 = optional(string)
+        group                      = optional(string)
+        description                = optional(string, "Terraform-managed.")
+        labels                     = optional(map(string), {})
+        site_to_site_data_transfer = optional(bool, false)
+        include_import_ranges      = optional(list(string), ["ALL_IPV4_RANGES"])
+      })), {})
+      vlan_attachments = optional(map(object({
+        uris                       = list(string)
+        name                       = optional(string)
+        location                   = optional(string)
+        project_id                 = optional(string)
+        group                      = optional(string)
+        description                = optional(string, "Terraform-managed.")
+        labels                     = optional(map(string), {})
+        site_to_site_data_transfer = optional(bool, false)
+        include_import_ranges      = optional(list(string), ["ALL_IPV4_RANGES"])
+      })), {})
+      router_appliances = optional(map(object({
+        instances = list(object({
+          ip_address      = string
+          virtual_machine = string
+        }))
+        name                       = optional(string)
+        location                   = optional(string)
+        project_id                 = optional(string)
+        group                      = optional(string)
+        description                = optional(string, "Terraform-managed.")
+        labels                     = optional(map(string), {})
+        site_to_site_data_transfer = optional(bool, false)
+        include_import_ranges      = optional(list(string), ["ALL_IPV4_RANGES"])
+      })), {})
+    }), {})
+  }))
+  default  = {}
+  nullable = false
+  validation {
+    condition = alltrue([
+      for k, v in var.ncc_hubs :
+      v.policy_mode == null || contains(["CUSTOM", "PRESET"], v.policy_mode)
+    ])
+    error_message = "Each hub policy_mode must be null, CUSTOM, or PRESET."
+  }
+  validation {
+    condition = alltrue([
+      for k, v in var.ncc_hubs :
+      v.preset_topology == null || (
+        coalesce(v.policy_mode, "PRESET") == "PRESET" &&
+        contains(["MESH", "STAR"], v.preset_topology)
+      )
+    ])
+    error_message = "Each hub preset_topology must be MESH or STAR when policy_mode is PRESET, and null when policy_mode is CUSTOM."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.ncc_hubs : [
+        for gk, _ in v.groups : contains(["default", "center", "edge"], gk)
+      ]
+    ]))
+    error_message = "Each group key in ncc_hubs must be default, center, or edge."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.ncc_hubs : [
+        for gk, gv in v.groups : [
+          for p in gv.auto_accept : trimspace(p) != "*"
+        ]
+      ]
+    ]))
+    error_message = "NCC group auto_accept must list explicit project IDs and cannot contain wildcard '*'."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.ncc_hubs : [
+        for sk, sv in v.spokes.vpcs : (
+          !contains(
+            [
+              "mgmt", "mgmt-vpc", "vdss-mgmt-0",
+              "$vpcs:mgmt", "$networks:mgmt"
+            ],
+            lower(coalesce(sv.vpc, sk))
+          ) &&
+          !endswith(lower(coalesce(sv.vpc, sk)), "/networks/vdss-mgmt-0")
+        )
+      ]
+    ]))
+    error_message = "Management VPC (mgmt-vpc / vdss-mgmt-0) must never be attached to a data-plane NCC hub."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for k, v in var.ncc_hubs : [
+        for sk, sv in v.spokes.router_appliances : length(sv.instances) > 0
+      ]
+    ]))
+    error_message = "Each router_appliances spoke must specify at least one instance."
+  }
+}
+
+variable "ngfw_admin_password_secret" {
+  description = "Optional regional CMEK-encrypted Secret Manager secret storing the NGFW administrator password using write-only secret versions. When enabled, the legacy ngfw_password output returns null."
+  type = object({
+    enabled          = optional(bool, false)
+    secret_id        = optional(string, "ngfw-admin-password")
+    wo_version       = optional(number, 1)
+    accessor_members = optional(list(string), [])
+    deletion_policy  = optional(string, "DELETE")
+  })
+  default  = {}
+  nullable = false
+  validation {
+    condition     = var.ngfw_admin_password_secret.wo_version >= 1
+    error_message = "ngfw_admin_password_secret.wo_version must be at least 1."
+  }
+  validation {
+    condition = contains(
+      ["DELETE", "DISABLE", "ABANDON"],
+      var.ngfw_admin_password_secret.deletion_policy
+    )
+    error_message = "ngfw_admin_password_secret.deletion_policy must be DELETE, DISABLE, or ABANDON."
+  }
+  validation {
+    condition     = trimspace(var.ngfw_admin_password_secret.secret_id) != ""
+    error_message = "ngfw_admin_password_secret.secret_id must be non-empty."
+  }
+}
+
+variable "ngfw_health_check" {
+  description = "Health check configuration for NGFW managed instance groups and internal load balancers. Defaults to TCP port 22 for backward compatibility; set protocol to HTTPS with port 443 and request_path /unauth/php/health.php for dataplane health probing after adding TCP/443 health check firewall rules on landing and dmz."
+  type = object({
+    protocol            = optional(string, "TCP")
+    port                = optional(number)
+    request_path        = optional(string, "/unauth/php/health.php")
+    check_interval_sec  = optional(number)
+    timeout_sec         = optional(number)
+    healthy_threshold   = optional(number)
+    unhealthy_threshold = optional(number)
+    enable_logging      = optional(bool)
+    is_regional         = optional(bool, false)
+  })
+  default  = {}
+  nullable = false
+  validation {
+    condition     = contains(["TCP", "HTTPS", "HTTP"], var.ngfw_health_check.protocol)
+    error_message = "ngfw_health_check.protocol must be TCP, HTTPS, or HTTP."
+  }
+  validation {
+    condition = (
+      var.ngfw_health_check.port == null ||
+      (var.ngfw_health_check.port >= 1 && var.ngfw_health_check.port <= 65535)
+    )
+    error_message = "ngfw_health_check.port must be between 1 and 65535."
+  }
+  validation {
+    condition = (
+      var.ngfw_health_check.protocol == "TCP" ||
+      startswith(coalesce(var.ngfw_health_check.request_path, ""), "/")
+    )
+    error_message = "ngfw_health_check.request_path must start with '/' for HTTP and HTTPS health checks."
+  }
+}
+
+variable "ngfw_ilb_config" {
+  description = "Optional internal passthrough load balancer hardening and static VIP configuration for the NGFW trusted landing and untrusted DMZ frontends."
+  type = object({
+    connection_draining_timeout_sec = optional(number)
+    failover_config = optional(object({
+      disable_conn_drain        = optional(bool)
+      drop_traffic_if_unhealthy = optional(bool)
+      ratio                     = optional(number)
+    }))
+    idle_timeout_sec          = optional(number)
+    persist_conn_on_unhealthy = optional(string)
+    session_affinity          = optional(string)
+    track_per_session         = optional(bool)
+    trusted_static_ips        = optional(map(string), {})
+    untrusted_static_ips      = optional(map(string), {})
+  })
+  default  = {}
+  nullable = false
+  validation {
+    condition = (
+      var.ngfw_ilb_config.persist_conn_on_unhealthy == null ||
+      contains(
+        ["DEFAULT_FOR_PROTOCOL", "NEVER_PERSIST", "ALWAYS_PERSIST"],
+        var.ngfw_ilb_config.persist_conn_on_unhealthy
+      )
+    )
+    error_message = "ngfw_ilb_config.persist_conn_on_unhealthy must be DEFAULT_FOR_PROTOCOL, NEVER_PERSIST, or ALWAYS_PERSIST."
+  }
+  validation {
+    condition = alltrue(concat(
+      [for _, ip in var.ngfw_ilb_config.trusted_static_ips : can(cidrhost("${ip}/32", 0))],
+      [for _, ip in var.ngfw_ilb_config.untrusted_static_ips : can(cidrhost("${ip}/32", 0))]
+    ))
+    error_message = "ngfw_ilb_config trusted_static_ips and untrusted_static_ips must be valid IPv4 addresses."
+  }
+}
+
+variable "ngfw_stig_config" {
+  description = "Optional DISA STIG hardening settings for the Palo Alto NGFW bootstrap XML template. Leave null to keep legacy defaults. FIPS-CC mode requires post-boot CLI or MRT activation rather than bootstrap files."
+  type = object({
+    login_banner        = optional(string)
+    min_password_length = optional(number, 16)
+    timezone            = optional(string, "UTC")
+  })
+  default = null
+  validation {
+    condition = (
+      var.ngfw_stig_config == null ||
+      var.ngfw_stig_config.min_password_length >= 16
+    )
+    error_message = "ngfw_stig_config.min_password_length must be at least 16."
+  }
+  validation {
+    condition = (
+      var.ngfw_stig_config == null ||
+      trimspace(var.ngfw_stig_config.timezone) != ""
+    )
+    error_message = "ngfw_stig_config.timezone must be a non-empty timezone string."
+  }
+}
+
 variable "organization" {
   # tfdoc:variable:source 0-bootstrap
   description = "Organization details."
@@ -268,6 +556,46 @@ variable "psa_ranges" {
   })
   nullable = false
   default  = {}
+}
+
+variable "psc_google_apis" {
+  description = "Optional per-VPC Private Service Connect endpoints for Google APIs created in the landing hub VPC and environment spoke VPCs. Defaults Service Directory registration to regions.primary when service_directory_registration or its region is unset."
+  type = object({
+    enabled   = optional(bool, false)
+    bundle    = optional(string, "vpc-sc")
+    hub_ip    = optional(string, "10.255.255.1")
+    spoke_ips = optional(map(string), {})
+    service_directory_registration = optional(object({
+      namespace = optional(string)
+      region    = optional(string)
+    }))
+  })
+  default  = {}
+  nullable = false
+  validation {
+    condition     = contains(["all-apis", "vpc-sc"], var.psc_google_apis.bundle)
+    error_message = "psc_google_apis.bundle must be all-apis or vpc-sc."
+  }
+  validation {
+    condition = (
+      can(cidrhost("${var.psc_google_apis.hub_ip}/32", 0)) &&
+      alltrue([
+        for _, ip in var.psc_google_apis.spoke_ips :
+        can(cidrhost("${ip}/32", 0))
+      ])
+    )
+    error_message = "psc_google_apis hub_ip and spoke_ips must be valid IPv4 addresses."
+  }
+  validation {
+    condition = (
+      !var.psc_google_apis.enabled ||
+      length(distinct([
+        for k in keys(var.envs_folders) :
+        substr("psc${replace(lower(k), "/[^a-z0-9]/", "")}0", 0, 20)
+      ])) == length(keys(var.envs_folders))
+    )
+    error_message = "psc_google_apis.enabled requires envs_folders keys to produce unique 20-character PSC forwarding rule names."
+  }
 }
 
 variable "regime_mapping" {
@@ -362,6 +690,17 @@ variable "tenant_accounts" {
     main_project    = string
     admin_principal = string
   }))
+}
+
+variable "transit_mode" {
+  description = "Spoke-to-landing transit mode: peering for classic VPC peering or ncc for Network Connectivity Center."
+  type        = string
+  default     = "peering"
+  nullable    = false
+  validation {
+    condition     = contains(["peering", "ncc"], var.transit_mode)
+    error_message = "transit_mode must be peering or ncc."
+  }
 }
 
 # To get a list of available official images, please run the following command:

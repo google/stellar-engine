@@ -100,12 +100,16 @@ module "env-spoke-vpc" {
 
 output "bootstrap_xml" {
   value = templatefile(var.template, {
-    password_hash     = "hash"
-    ssh_pubkey        = "ssh-rsa key"
-    healthcheck_cidrs = ["35.191.0.0/16"]
-    iap_cidrs         = ["35.235.240.0/20"]
-    return_routes     = local.ngfw_return_routes
-    lz_gateway_ip     = "%s"
+    password_hash            = "hash"
+    ssh_pubkey               = "ssh-rsa key"
+    healthcheck_cidrs        = ["35.191.0.0/16"]
+    iap_cidrs                = ["35.235.240.0/20"]
+    return_routes            = local.ngfw_return_routes
+    lz_gateway_ip            = "%s"
+    min_password_length      = 12
+    timezone                 = "US/Pacific"
+    login_banner             = ""
+    enable_https_healthcheck = false
   })
 }
 """

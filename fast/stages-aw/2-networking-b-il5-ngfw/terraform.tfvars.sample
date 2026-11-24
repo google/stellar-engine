@@ -174,7 +174,8 @@ firewall_rules = {
         rules = [
           {
             protocol = "tcp"
-            ports    = ["22"]
+            # Add "443" before setting ngfw_health_check.protocol = "HTTPS".
+            ports = ["22"]
           }
         ]
       }
@@ -203,7 +204,8 @@ firewall_rules = {
         rules = [
           {
             protocol = "tcp"
-            ports    = ["22"]
+            # Add "443" before setting ngfw_health_check.protocol = "HTTPS".
+            ports = ["22"]
           }
         ]
       }

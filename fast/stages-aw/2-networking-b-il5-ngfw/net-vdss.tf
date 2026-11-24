@@ -27,7 +27,7 @@ module "vdss-host-project" {
   lien_reason     = "Protected by default as a core project."
   parent          = var.folder_ids.networking
   prefix          = var.prefix
-  services = [
+  services = concat([
     "compute.googleapis.com",
     "certificatemanager.googleapis.com",
     "dns.googleapis.com",
@@ -37,7 +37,10 @@ module "vdss-host-project" {
     "networkservices.googleapis.com",
     "cloudkms.googleapis.com",
     "secretmanager.googleapis.com"
-  ]
+    ],
+    local._ncc_enabled ? ["networkconnectivity.googleapis.com"] : [],
+    var.psc_google_apis.enabled ? ["servicedirectory.googleapis.com"] : []
+  )
   shared_vpc_host_config = {
     enabled = true
   }
@@ -106,12 +109,16 @@ module "vdss-vpc" {
     logging = var.dns.enable_logging
   }
   # Set explicit routes for googleapis in case the default route is deleted
-  create_googleapis_routes = {
-    # Fabric v59 adds a DirectPath route by default; keep the previous routes.
-    directpath = false
-    private    = true
-    restricted = true
-  }
+  create_googleapis_routes = (
+    var.psc_google_apis.enabled
+    ? null
+    : {
+      # Fabric v59 adds a DirectPath route by default; keep the previous routes.
+      directpath = false
+      private    = true
+      restricted = true
+    }
+  )
 }
 
 module "vdss-firewall" {
@@ -217,10 +224,20 @@ module "landing-dns-policy-googleapis" {
   source     = "../../../modules/dns-response-policy"
   project_id = module.vdss-host-project.project_id
   name       = "googleapis"
-  rules      = var.dns_policy_rules
-  networks = {
-    dmz     = module.dmz-vpc.self_link
-    landing = module.vdss-vpc.self_link
-    mgmt    = module.mgmt-vpc.self_link
+  context    = var.psc_google_apis.enabled ? local._dns_policy_context : {}
+  factories_config = {
+    rules = (
+      var.psc_google_apis.enabled ? local._psc_dns_policy_rules_file : null
+    )
   }
+  rules = local._psc_hub_dns_rules
+  networks = (
+    var.psc_google_apis.enabled
+    ? { landing = module.vdss-vpc.self_link }
+    : {
+      dmz     = module.dmz-vpc.self_link
+      landing = module.vdss-vpc.self_link
+      mgmt    = module.mgmt-vpc.self_link
+    }
+  )
 }

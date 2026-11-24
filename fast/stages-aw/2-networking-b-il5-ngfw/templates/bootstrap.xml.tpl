@@ -24,7 +24,7 @@
     </users>
     <password-complexity>
       <enabled>yes</enabled>
-      <minimum-length>12</minimum-length>
+      <minimum-length>${ min_password_length }</minimum-length>
     </password-complexity>
   </mgt-config>
   <shared>
@@ -157,7 +157,8 @@
                 <entry name="${cidr}"/>
                 %{ endfor ~}
               </permitted-ip>
-              <ssh>yes</ssh>
+              <ssh>yes</ssh>%{ if enable_https_healthcheck }
+              <https>yes</https>%{ endif }
             </entry>
           </interface-management-profile>
         </profiles>
@@ -377,7 +378,7 @@
               </recurring>
             </threats>
           </update-schedule>
-          <timezone>US/Pacific</timezone>
+          <timezone>${ timezone }</timezone>
           <service>
             <disable-telnet>yes</disable-telnet>
             <disable-http>yes</disable-http>
@@ -388,7 +389,9 @@
             <product-usage>no</product-usage>
             <threat-prevention>no</threat-prevention>
             <region>Americas</region>
-          </device-telemetry>
+          </device-telemetry>%{ if login_banner != "" }
+          <login-banner>${ login_banner }</login-banner>
+          <ack-login-banner>yes</ack-login-banner>%{ endif }
         </system>
         <setting>
           <config>
