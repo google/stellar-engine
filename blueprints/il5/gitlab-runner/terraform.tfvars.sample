@@ -1,0 +1,47 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+project_id         = "my-runner-project-0"
+network_project_id = "my-net-host-0"
+region             = "us-east4"
+zone               = "us-east4-a"
+
+network_name    = "my-vpc-0"
+subnetwork_name = "my-subnet-0"
+
+kms_key_id   = "projects/my-kms-0/locations/us-east4/keyRings/kr/cryptoKeys/vm"
+golden_image = "projects/my-img-0/global/images/family/gitlab-runner-golden"
+
+gitlab_url                  = "https://gitlab.example.com"
+runner_token_secret_id      = "gitlab-runner-auth-token"
+runner_token_secret_version = "latest"
+
+instance_name      = "gitlab-runner-0"
+service_account_id = "gitlab-runner-sa"
+machine_type       = "n2d-standard-4"
+executor           = "docker"
+docker_image       = "us-east4-docker.pkg.dev/example-sec-0/containers/google-cloud-cli@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+boot_disk_size_gb  = 50
+boot_disk_type     = "pd-balanced"
+
+create_runner_token_secret = false
+enable_boot_disk_snapshots = false
+enable_iap_ssh             = false
+enable_cloud_nat           = false
+manage_kms_iam             = true
+
+labels = {
+  environment = "prod"
+  workload    = "gitlab-runner"
+}
