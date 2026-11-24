@@ -57,7 +57,7 @@ variable "instance_type" {
 }
 
 variable "kms_key_name" {
-  description = "The full self-link (projects/../locations/../keyRings/../cryptoKeys/..) of the existing KMS key to use for disk encryption."
+  description = "Short name of the existing KMS crypto key (for example `my-key`) used for disk encryption, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`."
   type        = string
 }
 

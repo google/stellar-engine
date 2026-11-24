@@ -73,7 +73,7 @@ To see the bucket, browse to [Cloud Storage Bucket](https://console.cloud.google
 |---|---|:---:|:---:|:---:|
 | [bucket_name](variables.tf#L24) | Bucket name suffix. | <code>string</code> | ✓ |  |
 | [core_project_id](variables.tf#L29) | Core Project ID. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L34) | The full self-link (projects/../locations/../cryptoKeys/..) of the existing KMS key to use for encryption. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L34) | Short name of the existing KMS crypto key (for example `my-key`) used for encryption, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. | <code>string</code> | ✓ |  |
 | [kms_keyring_name](variables.tf#L39) | Keyring attributes. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L44) | Project ID. | <code>string</code> | ✓ |  |
 | [retention_policy](variables.tf#L75) | Retention policy. | <code>object&#40;&#123;&#8230;&#125;</code> | ✓ |  |

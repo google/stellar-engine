@@ -46,7 +46,7 @@ variable "main_project_id" {
 }
 
 variable "network_name" {
-  description = "Full path to VPC."
+  description = "Short name of the existing VPC network (for example `prod-spoke-0`), not the full resource path. It is looked up in `network_project_id`."
   type        = string
 }
 

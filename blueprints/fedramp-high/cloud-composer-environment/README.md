@@ -69,7 +69,7 @@ Use GCP console to verify if the resources have been created.
 |---|---|:---:|:---:|:---:|
 | [composer_env_name](variables.tf#L16) | Name of the Composer environment. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L43) | Main project ID. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L48) | Full path to VPC. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L48) | Short name of the existing VPC network (for example `prod-spoke-0`), not the full resource path. It is looked up in `network_project_id`. | <code>string</code> | ✓ |  |
 | [network_project_id](variables.tf#L53) | The ID of the landing zone project where the VPC is. | <code>string</code> | ✓ |  |
 | [subnetwork_name](variables.tf#L82) | The name of the existing subnetwork to use within the specified VPC network and region. | <code>string</code> | ✓ |  |
 | [composer_version](variables.tf#L21) | Cloud composer version. | <code>string</code> |  | <code>&#34;composer-3-airflow-2&#34;</code> |

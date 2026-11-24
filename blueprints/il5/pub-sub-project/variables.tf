@@ -31,7 +31,7 @@ variable "gcp_region" {
 }
 
 variable "kms_key_name" {
-  description = "The full resource path of the existing Cloud KMS CryptoKey to use for Customer-Managed Encryption Keys (CMEK) on the Pub/Sub topic."
+  description = "Short name of the existing KMS crypto key (for example `my-key`) used for Pub/Sub topic CMEK, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`."
   type        = string
 }
 

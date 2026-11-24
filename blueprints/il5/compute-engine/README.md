@@ -23,7 +23,7 @@ Compute Engine is an Infrastructure-as-a-Service product offering flexible, self
 | [compute_service_account_id](variables.tf#L23) | The Service Account for Compute Engine. | <code>string</code> | ✓ |  |
 | [core_project_id](variables.tf#L29) | Core project ID. | <code>string</code> | ✓ |  |
 | [instance_name](variables.tf#L34) | Provide the name of the Compute Instance. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L47) | The full self-link (projects/../locations/../keyRings/../cryptoKeys/..) of the existing KMS key to use for disk encryption. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L47) | Short name of the existing KMS crypto key (for example `my-key`) used for disk encryption, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. | <code>string</code> | ✓ |  |
 | [kms_keyring_name](variables.tf#L53) | KMS Keyring. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L58) | Main project ID. | <code>string</code> | ✓ |  |
 | [network_name](variables.tf#L63) | The name of the existing VPC network to use. | <code>string</code> | ✓ |  |

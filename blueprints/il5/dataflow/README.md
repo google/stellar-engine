@@ -100,7 +100,7 @@ The Apache Beam SDK for Java has a warning about a bug in the latest version as 
 | [core_project_id](variables.tf#L33) | Core Project ID. | <code>string</code> | ✓ |  |
 | [dataflow_name](variables.tf#L38) | Name of the Dataflow project. | <code>string</code> | ✓ |  |
 | [firewall_name](variables.tf#L56) | The firewall name. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L61) | The full self-link (projects/../locations/../cryptoKeys/..) of the existing KMS key to use for encryption. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L61) | Short name of the existing KMS crypto key (for example `my-key`) used for encryption, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. | <code>string</code> | ✓ |  |
 | [kms_keyring_name](variables.tf#L66) | Keyring attributes. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L71) | The ID of the project in which to provision resources. | <code>string</code> | ✓ |  |
 | [network_name](variables.tf#L76) | The network name. | <code>string</code> | ✓ |  |

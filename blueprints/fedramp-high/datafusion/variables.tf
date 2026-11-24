@@ -18,7 +18,7 @@ variable "core_project_id" {
 }
 
 variable "kms_key_name" {
-  description = "Full path to KMS key for pubsub."
+  description = "Short name of the existing KMS crypto key (for example `my-key`) used for Pub/Sub, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. Required in practice: the lookup fails when this is left at the `null` default."
   type        = string
   default     = null
 }
@@ -39,7 +39,7 @@ variable "name" {
 }
 
 variable "network_name" {
-  description = "Full path to VPC."
+  description = "Short name of the existing VPC network (for example `prod-spoke-0`), not the full resource path. It is looked up in `network_project_id`."
   type        = string
 }
 
@@ -54,6 +54,6 @@ variable "region" {
 }
 
 variable "subnetwork_name" {
-  description = "Full path to subnet."
+  description = "Short name of the existing subnetwork (for example `prod-subnet-0`), not the full resource path. It is looked up in `region` and `network_project_id`."
   type        = string
 }

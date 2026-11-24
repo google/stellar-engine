@@ -77,7 +77,7 @@ The apply will take about 1 minute to complete. The Shielded VM be deployed in t
 | [allowed_firewall_ports](variables.tf#L17) | The list of the Allowed Ports. | <code>list&#40;any&#41;</code> | ✓ |  |
 | [compute_service_account_id](variables.tf#L23) | The Service Account for Compute Engine. | <code>string</code> | ✓ |  |
 | [core_project_id](variables.tf#L29) | Core Project ID. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L53) | The full self-link (projects/../locations/../cryptoKeys/..) of the existing KMS key to use for encryption. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L53) | Short name of the existing KMS crypto key (for example `my-key`) used for encryption, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. | <code>string</code> | ✓ |  |
 | [kms_keyring_name](variables.tf#L58) | Keyring attributes. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L63) | Project ID. | <code>string</code> | ✓ |  |
 | [network_name](variables.tf#L68) | The name of the VPC. | <code>string</code> | ✓ |  |

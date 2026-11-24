@@ -74,7 +74,7 @@ variable "is_job" {
 }
 
 variable "kms_key_name" {
-  description = "Path to the kms key to use."
+  description = "Short name of the existing KMS crypto key (for example `my-key`), not the full resource path. It is looked up in the key ring named by `kms_keyring_name`."
   type        = string
 }
 
