@@ -253,6 +253,33 @@ locals {
       "folders/${google_assured_workloads_workload.primary[0].resources[0].resource_id}"
     )
   ) : try(module.no-compliance-folder[0].folder.id, null)
+  # Assured Workloads creates and monitors these baseline list and boolean
+  # policies on enclave folders. Exclude them on root-folder-config so
+  # folder-mode applies do not collide with or overwrite them.
+  aw_managed_policies = (
+    var.assured_workloads.regime == "COMPLIANCE_REGIME_UNSPECIFIED"
+    ? []
+    : [
+      "compute.disableGlobalCloudArmorPolicy",
+      "compute.disableGlobalLoadBalancing",
+      "compute.setNewProjectDefaultToZonalDNSOnly",
+      "compute.skipDefaultNetworkCreation",
+      "gcp.resourceLocations",
+      "gcp.restrictCmekCryptoKeyProjects",
+      "gcp.restrictNonCmekServices",
+      "gcp.restrictServiceUsage",
+      "gcp.restrictTLSVersion",
+      "iam.automaticIamGrantsForDefaultServiceAccounts",
+      "iam.disableServiceAccountKeyCreation",
+      "storage.publicAccessPrevention",
+    ]
+  )
+  _root_folder_org_policies = {
+    for k, v in local.org_policies : k => v
+    if !startswith(trimprefix(k, "dry_run:"), "custom.") &&
+    !contains(local.org_only_policies, trimprefix(k, "dry_run:")) &&
+    !contains(local.aw_managed_policies, trimprefix(k, "dry_run:"))
+  }
   custom_roles = (
     var.deploy_org_resources.custom_roles
     ? module.organization.custom_role_id
@@ -504,10 +531,6 @@ module "root-folder-config" {
   org_policies = (
     var.deploy_org_resources.org_policies || var.bootstrap_user != null
     ? null
-    : {
-      for k, v in local.org_policies : k => v
-      if !startswith(trimprefix(k, "dry_run:"), "custom.") &&
-      !contains(local.org_only_policies, trimprefix(k, "dry_run:"))
-    }
+    : local._root_folder_org_policies
   )
 }

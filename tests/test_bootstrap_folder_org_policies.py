@@ -20,11 +20,25 @@ import unittest
 
 import yaml
 
-_BOOTSTRAP_DIR = (
-    pathlib.Path(__file__).resolve().parents[1] / "fast/stages-aw/0-bootstrap"
-)
+_REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
+_BOOTSTRAP_DIR = _REPO_ROOT / "fast/stages-aw/0-bootstrap"
 _ORG_TF = _BOOTSTRAP_DIR / "organization.tf"
+_UPGRADING_MD = _REPO_ROOT / "UPGRADING-7.md"
 _PLACEHOLDER_RE = re.compile(r"\$\{[^}]+\}")
+_AW_MANAGED_POLICIES = (
+    "compute.disableGlobalCloudArmorPolicy",
+    "compute.disableGlobalLoadBalancing",
+    "compute.setNewProjectDefaultToZonalDNSOnly",
+    "compute.skipDefaultNetworkCreation",
+    "gcp.resourceLocations",
+    "gcp.restrictCmekCryptoKeyProjects",
+    "gcp.restrictNonCmekServices",
+    "gcp.restrictServiceUsage",
+    "gcp.restrictTLSVersion",
+    "iam.automaticIamGrantsForDefaultServiceAccounts",
+    "iam.disableServiceAccountKeyCreation",
+    "storage.publicAccessPrevention",
+)
 
 
 def _block(text, header):
@@ -100,13 +114,57 @@ class TestBootstrapFolderOrgPolicies(unittest.TestCase):
             self.root_folder,
             r"org_policies\s*=\s*\(\s*"
             r"var\.deploy_org_resources\.org_policies\s*\|\|\s*"
-            r"var\.bootstrap_user\s*!=\s*null\s*\?\s*null\s*:\s*\{\s*"
+            r"var\.bootstrap_user\s*!=\s*null\s*\?\s*null\s*:\s*"
+            r"local\._root_folder_org_policies\s*\)",
+        )
+        self.assertRegex(
+            self.text,
+            r"_root_folder_org_policies\s*=\s*\{\s*"
             r"for\s+k,\s*v\s+in\s+local\.org_policies\s*:\s*k\s*=>\s*v\s+"
             r'if\s*!startswith\(trimprefix\(k,\s*"dry_run:"\),\s*"custom\."\)\s*&&\s*'
-            r'!contains\(local\.org_only_policies,\s*trimprefix\(k,\s*"dry_run:"\)\)\s*'
-            r"\}\s*\)",
+            r'!contains\(local\.org_only_policies,\s*trimprefix\(k,\s*"dry_run:"\)\)\s*&&\s*'
+            r'!contains\(local\.aw_managed_policies,\s*trimprefix\(k,\s*"dry_run:"\)\)\s*'
+            r"\}",
         )
         self.assertNotIn("factories_config", self.root_folder)
+
+    def test_aw_managed_policies_protect_enclave_baseline_constraints(self):
+        aw_block = re.search(
+            r"aw_managed_policies\s*=\s*\(\s*"
+            r'var\.assured_workloads\.regime\s*==\s*"COMPLIANCE_REGIME_UNSPECIFIED"\s*'
+            r"\?\s*\[\s*\]\s*:\s*\[([\s\S]*?)\]\s*\)",
+            self.text,
+        )
+        self.assertIsNotNone(aw_block)
+        constraints = re.findall(r'"([^"]+)"', aw_block.group(1))
+        self.assertEqual(constraints, sorted(_AW_MANAGED_POLICIES))
+        self.assertEqual(len(constraints), 12)
+
+    def test_upgrading_guide_excludes_aw_managed_policies_from_imports(self):
+        upgrading = _UPGRADING_MD.read_text(encoding="utf-8")
+        match = re.search(
+            r"^- In `0-bootstrap` when "
+            r"`deploy_org_resources\.org_policies = false`"
+            r"[\s\S]*?(?=^- In `1-resman`)",
+            upgrading,
+            re.MULTILINE,
+        )
+        self.assertIsNotNone(match)
+        section = match.group(0)
+        for constraint in _AW_MANAGED_POLICIES:
+            with self.subTest(constraint=constraint):
+                self.assertIn(f"`{constraint}`", section)
+        self.assertIn("Do not import those 12 constraints", section)
+        self.assertIn("moved", section)
+        self.assertIn("removed", section)
+        imported = re.findall(
+            r"import\s*\{[\s\S]*?"
+            r'google_org_policy_policy\.default\["([^"]+)"\][\s\S]*?\}',
+            section,
+        )
+        self.assertEqual(imported, ["compute.requireOsLogin"])
+        for constraint in imported:
+            self.assertNotIn(constraint, _AW_MANAGED_POLICIES)
 
     def test_root_folder_config_omits_scalar_context_condition_vars(self):
         self.assertNotIn("condition_vars", self.root_folder)
@@ -128,6 +186,9 @@ class TestBootstrapFolderOrgPolicies(unittest.TestCase):
                 merged.update(data)
 
         org_only_policies = {"resourcemanager.accessBoundaries"}
+        # Check the full non-custom, non-org-only policy set because
+        # COMPLIANCE_REGIME_UNSPECIFIED still attaches all of these on
+        # root-folder-config.
         folder_policies = {
             k: v
             for k, v in merged.items()
@@ -135,9 +196,6 @@ class TestBootstrapFolderOrgPolicies(unittest.TestCase):
             and k.removeprefix("dry_run:") not in org_only_policies
         }
         self.assertTrue(folder_policies)
-        for key in folder_policies:
-            self.assertFalse(key.removeprefix("dry_run:").startswith("custom."))
-            self.assertNotIn(key.removeprefix("dry_run:"), org_only_policies)
 
         dumped = yaml.safe_dump(folder_policies)
         self.assertEqual(
