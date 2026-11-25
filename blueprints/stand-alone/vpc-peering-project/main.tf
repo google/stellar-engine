@@ -101,8 +101,8 @@ module "vpc-networks" {
       ip_cidr_range = each.value.cidrs[2]
       description   = "Subnet c with secondary ranges for ${each.key} VPC"
       secondary_ip_ranges = {
-        a = each.value.secondary_cidrs_a
-        b = each.value.secondary_cidrs_b
+        a = { ip_cidr_range = each.value.secondary_cidrs_a }
+        b = { ip_cidr_range = each.value.secondary_cidrs_b }
       }
       flow_logs_config = { # CIS Compliance Benchmark 3.8
         aggregation_interval = "INTERVAL_5_SEC"
