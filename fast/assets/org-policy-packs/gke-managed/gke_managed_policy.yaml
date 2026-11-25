@@ -1,0 +1,88 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+# Opt-in Google Kubernetes Engine managed organization policy pack.
+# Prefix any constraint key with "dry_run:" to audit violations in Cloud Audit
+# Logs before switching to live enforcement.
+
+# Prevents GKE nodes from using the default Compute Engine service account.
+container.managed.disallowDefaultComputeServiceAccount:
+  rules:
+    - enforce: true
+
+# Disables the insecure kubelet read-only port (10255) across GKE cluster nodes.
+container.managed.disableInsecureKubeletReadOnlyPort:
+  rules:
+    - enforce: true
+
+# Requires Binary Authorization on all new GKE clusters.
+container.managed.enableBinaryAuthorization:
+  rules:
+    - enforce: true
+
+# Optional: uncomment to require Google Groups for GKE RBAC across all clusters.
+# Leave disabled unless every target cluster configures a security group.
+# container.managed.enableGoogleGroupsRBAC:
+#   rules:
+#     - enforce: true
+
+# Requires a network policy provider on all new GKE clusters.
+container.managed.enableNetworkPolicy:
+  rules:
+    - enforce: true
+
+# Requires private nodes without public IP addresses on all new GKE clusters.
+container.managed.enablePrivateNodes:
+  rules:
+    - enforce: true
+
+# Requires Security Bulletin Notifications on all new GKE clusters.
+container.managed.enableSecurityBulletinNotifications:
+  rules:
+    - enforce: true
+
+# Requires Workload Identity Federation for GKE on all new clusters.
+container.managed.enableWorkloadIdentityFederation:
+  rules:
+    - enforce: true
+
+# Enforces GKE control-plane egress mode NONE so the control plane has no public
+# IP and routes outbound egress through a private or proxy path (distinct from
+# inbound Master Authorized Networks).
+container.managed.restrictControlPlaneEgress:
+  rules:
+    - enforce: true
+
+# Requires application-layer Secrets encryption with Cloud KMS on GKE clusters.
+container.managed.enableSecretsEncryption:
+  rules:
+    - enforce: true
+
+# Requires Cloud Logging for system and workload components on GKE clusters.
+container.managed.enableCloudLogging:
+  rules:
+    - enforce: true
+
+# Requires the DenyServiceExternalIPs admission controller, blocking
+# spec.externalIPs on ClusterIP, NodePort, and LoadBalancer Services without
+# blocking standard cloud external LoadBalancer services.
+container.managed.denyServiceExternalIPs:
+  rules:
+    - enforce: true
+
+# Disables insecure Kubernetes RBAC bindings referencing built-in system groups.
+container.managed.disableRBACSystemBindings:
+  rules:
+    - enforce: true
