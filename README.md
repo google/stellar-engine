@@ -53,7 +53,7 @@ The module catalog covers foundational identity, resource hierarchy, networking,
 
 ## 7. Workload blueprints
 
-Stellar Engine provides workload blueprints aligned with [FRM](https://github.com/google/stellar-engine/tree/main/blueprints/fedramp-moderate), [FRH](https://github.com/google/stellar-engine/tree/main/blueprints/fedramp-high), and [IL5](https://github.com/google/stellar-engine/tree/main/blueprints/il5) baselines. These blueprints range from full boundary architectures such as Cloud Native Access Point to focused service deployments that you can adapt to tenant workloads.
+Stellar Engine provides workload blueprints aligned with FRM (no blueprint family yet, tracked in [#192](https://github.com/google/stellar-engine/issues/192)), [FRH](https://github.com/google/stellar-engine/tree/main/blueprints/fedramp-high), and [IL5](https://github.com/google/stellar-engine/tree/main/blueprints/il5) baselines. These blueprints range from full boundary architectures such as Cloud Native Access Point to focused service deployments that you can adapt to tenant workloads.
 
 See each blueprint's `README.md` file for prerequisites, inputs, and deployment steps.
 

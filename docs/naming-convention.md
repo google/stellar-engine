@@ -114,7 +114,7 @@ Subnet
   * example: `acme-il2-prod-subnet-uswest-gke`
 
 Internal Firewall
-  * spec: `{prefix}-{compliance regime}-{environment}-fw-{source}-{dest}-{protocal}-{port}-{action}`
+  * spec: `{prefix}-{compliance regime}-{environment}-fw-{source}-{dest}-{protocol}-{port}-{action}`
   * example: `acme-il2-prod-fw-gke-lb-http-80-allow`
 
 IP Route
