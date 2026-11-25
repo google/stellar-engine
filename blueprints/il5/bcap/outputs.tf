@@ -1,4 +1,4 @@
-# Copyright 2025 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,29 +15,31 @@
 output "attachment_names" {
   description = "Names of the created VLAN attachments."
   value = {
-    for k, attachment in google_compute_interconnect_attachment.attachments : k => attachment.name
+    for k, attachment in google_compute_interconnect_attachment.attachments :
+    k => attachment.name
   }
 }
 
 output "bcap_subnets" {
-  description = "Details of the created BCAP Subnets for DoD IP space (map keyed by 'subnet1', 'subnet2'). Includes calculated CIDRs."
+  description = "Details of the created BCAP subnets for DoD IP space keyed by subnet_configs keys. Includes calculated CIDRs."
   value       = google_compute_subnetwork.bcap_subnets
 }
 
 output "cloud_routers" {
-  description = "Details of the created Cloud Routers (map keyed by 'router1', 'router2')."
+  description = "Details of the created Cloud Routers keyed by router_configs keys."
   value       = google_compute_router.routers
 }
 
 output "dod_split_cidr_blocks" {
-  description = "The calculated /25 CIDR blocks for the two DoD subnets."
+  description = "The calculated /25 (2-region) or /26 (4-region) CIDR blocks for the DoD subnets."
   value       = local.dod_split_cidr_blocks
 }
 
 output "pairing_keys" {
   description = "Pairing keys for each VLAN attachment. Provide these to the BCAP/DISA team."
   value = {
-    for k, attachment in google_compute_interconnect_attachment.attachments : k => attachment.pairing_key
+    for k, attachment in google_compute_interconnect_attachment.attachments :
+    k => attachment.pairing_key
   }
   sensitive = true
 }
@@ -49,6 +51,16 @@ output "vlan_attachments" {
 }
 
 output "vpc_network" {
-  description = "Details of the created VPC Network."
-  value       = google_compute_network.vpc_network
+  description = "Details of the created VPC network, or null when create_vpc is false."
+  value       = one(google_compute_network.vpc_network)
+}
+
+output "vpc_network_id" {
+  description = "Resource ID of the created or existing BCAP VPC network."
+  value       = local.network_id
+}
+
+output "vpc_network_self_link" {
+  description = "Self link of the created or existing BCAP VPC network."
+  value       = local.network_self_link
 }
