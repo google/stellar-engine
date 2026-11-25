@@ -1,6 +1,47 @@
 # Changelog
 
 
+## [8.0.0](https://github.com/google/stellar-engine/compare/v7.0.0...v8.0.0) (2026-11-25)
+
+
+### Breaking Changes
+
+* **0-bootstrap:** exclude AW-managed org policies on folder-scoped root config ([#565](https://github.com/google/stellar-engine/issues/565)) ([18cd457](https://github.com/google/stellar-engine/commit/18cd45738121334cdcd72c9d756f852304451ca1))
+  * Excludes Assured Workloads baseline organization policy constraints from folder-scoped root configurations in `0-bootstrap`, requiring operators of folder-scoped compliance deployments to release any previously imported constraints from Terraform state without destroying them ([#565](https://github.com/google/stellar-engine/issues/565)).
+
+### Features
+
+* **3-security:** expose vpc_accessible_services on default perimeter and dry_run_spec ([#571](https://github.com/google/stellar-engine/issues/571)) ([6f5f47b](https://github.com/google/stellar-engine/commit/6f5f47b436fe1bea90748c34626d25b18c668f18))
+  * Adds optional VPC-accessible services configuration to default and dry-run security perimeters in stage 3-security, allowing deployments to restrict and test reachable APIs without impacting existing perimeters ([#571](https://github.com/google/stellar-engine/issues/571)).
+* **3-security:** support access_policy reuse, discovery scope, and project_id_search_scope ([#567](https://github.com/google/stellar-engine/issues/567)) ([509067b](https://github.com/google/stellar-engine/commit/509067bd760020dc8f404ab65d661f4ea1f64fa6))
+  * Adds options to reuse existing access policies and configure resource discovery and project search scopes in Stage 3 VPC Service Controls, enabling deployments in brownfield environments and folder-scoped enclaves ([#567](https://github.com/google/stellar-engine/issues/567)).
+* **blueprints/bcap:** support candidate BGP IPs and reject vlan_id on partner attachments ([#569](https://github.com/google/stellar-engine/issues/569)) ([26f9de4](https://github.com/google/stellar-engine/commit/26f9de4fe4c7ecac35d9dd74028f16d502aebd61))
+  * Adds candidate BGP IP support for Layer 2 Partner Interconnects and rejects VLAN IDs on Partner attachments in the BCAP blueprint, preventing invalid interconnect configurations at plan time in [#569](https://github.com/google/stellar-engine/issues/569).
+* **blueprints/ha-vpn-multicloud:** add CNSA multi-cloud HA VPN blueprint on modules/net-vpn-ha ([#595](https://github.com/google/stellar-engine/issues/595)) ([37e07dd](https://github.com/google/stellar-engine/commit/37e07dd57185da4bb8293e865daee06b194da8ef))
+  * Adds a multi-cloud HA VPN blueprint for FedRAMP High and DoD IL5 deployments with CNSA-compliant IKEv2 encryption defaults and Secret Manager-backed pre-shared key retrieval to establish secure cross-boundary network connectivity ([#595](https://github.com/google/stellar-engine/issues/595)).
+* **blueprints:** add multi-bastion and existing-VPC multi-region BCAP support ([#596](https://github.com/google/stellar-engine/issues/596)) ([fad47e2](https://github.com/google/stellar-engine/commit/fad47e253069eaaa8cfdbef766108edd787b6489))
+  * Adds multi-bastion configurations, BCAP access mode, and observability IAM roles to the IL5 bastion blueprint, and expands the IL5 BCAP blueprint to support existing VPCs and multi-region topologies in [#596](https://github.com/google/stellar-engine/issues/596).
+* **cli:** add REST transport, proxy CA support, and custom IAM role preflight ([#592](https://github.com/google/stellar-engine/issues/592)) ([14fa225](https://github.com/google/stellar-engine/commit/14fa225bbf84a141efc9b05200463ee8f1edd27a))
+  * Adds REST transport configuration, corporate proxy and custom CA bundle support, and Stage 0 custom IAM role preflight validation to the CLI, enabling deployments through TLS-inspected proxies and catching unsupported IAM permissions before apply in [#592](https://github.com/google/stellar-engine/issues/592).
+* **docs:** add opt-in org policy guardrail packs and Day-2 ATO operations guides ([#594](https://github.com/google/stellar-engine/issues/594)) ([6dd44f7](https://github.com/google/stellar-engine/commit/6dd44f7f207e854ae4daeadf32526ae4ccb5e68f))
+  * Adds opt-in Organization Policy guardrail packs and Day-2 operations guides, allowing operators to drop vendor-verified managed and dry-run custom constraints directly into Stage 0 deployments without file collisions ([#594](https://github.com/google/stellar-engine/issues/594)).
+
+
+### Bug Fixes
+
+* **0-bootstrap:** exclude AW-managed org policies on folder-scoped root config ([#565](https://github.com/google/stellar-engine/issues/565)) ([18cd457](https://github.com/google/stellar-engine/commit/18cd45738121334cdcd72c9d756f852304451ca1))
+  * Excludes Assured Workloads baseline organization policies from folder-scoped bootstrap root configurations to prevent overwriting enclave folder constraints ([#565](https://github.com/google/stellar-engine/issues/565)).
+* **0-bootstrap:** fix WIF provider merge, custom jwks_json, and fail-closed branch binding ([#568](https://github.com/google/stellar-engine/issues/568)) ([c0d458f](https://github.com/google/stellar-engine/commit/c0d458fe843e7802e2e332d90a0ccef6b2465edb))
+  * Fixes Workload Identity Federation and workforce identity pool configurations in stage 0 bootstrap to support custom OIDC settings, prevent Google Cloud display name limit errors, and enforce fail-closed branch bindings for CI/CD service accounts ([#568](https://github.com/google/stellar-engine/issues/568)).
+* **0-bootstrap:** omit bigquerydatatransfer API from IL4 and IL5 billing export ([#566](https://github.com/google/stellar-engine/issues/566)) ([bf112b6](https://github.com/google/stellar-engine/commit/bf112b63ed26e89fd5f837bc09cee757b356e5f9))
+  * Omits the BigQuery Data Transfer API from Stage 0 billing export projects in IL4 and IL5 Assured Workloads regimes to minimize API surface and avoid connector compliance restrictions without impacting standard cost exports or existing deployments ([#566](https://github.com/google/stellar-engine/issues/566)).
+* **2-networking-b-il5-ngfw:** align secret version data and subnet secondary_ip_ranges with v60 modules ([#558](https://github.com/google/stellar-engine/issues/558)) ([3f2d93a](https://github.com/google/stellar-engine/commit/3f2d93a474e198b8156f2ee12fabcead4724ea2a))
+  * Updates Stage 2b IL5 NGFW secret version configurations and subnet secondary IP range variable definitions to align with Cloud Foundation Fabric v60 modules so Terraform plans succeed without manual HCL workarounds, resolving [#512](https://github.com/google/stellar-engine/issues/512) and [#513](https://github.com/google/stellar-engine/issues/513) in [#558](https://github.com/google/stellar-engine/issues/558).
+* **2-networking-b-il5-ngfw:** remove legacy GlobalProtect crypto profile from PAN-OS bootstrap ([#591](https://github.com/google/stellar-engine/issues/591)) ([0821e5e](https://github.com/google/stellar-engine/commit/0821e5ed6fce646a329064c5fc0e7b51bb6b2549))
+  * Removes the unused default GlobalProtect crypto profile from the Stage 2b PAN-OS bootstrap XML template to eliminate legacy CBC and SHA-1 algorithms in DoD IL4 and IL5 NGFW deployments ([#591](https://github.com/google/stellar-engine/issues/591)).
+* **stages-aw:** harden setIAM.sh and split CI/CD plan from apply workflows ([#593](https://github.com/google/stellar-engine/issues/593)) ([d36176d](https://github.com/google/stellar-engine/commit/d36176dd9485e1ff22a13efc4c6043a31045d1bb))
+  * Hardens the bootstrap setIAM.sh script with stricter input validation and splits CI/CD workflow templates into isolated read-only pull request plan jobs and protected default-branch apply jobs to prevent untrusted state-mutating deployments ([#593](https://github.com/google/stellar-engine/issues/593)).
+
 ## [7.0.0](https://github.com/google/stellar-engine/compare/v6.0.0...v7.0.0) (2026-11-23)
 
 
