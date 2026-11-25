@@ -25,13 +25,14 @@ _STAGE_DIR = (
 )
 _DRY_RUN = "var.vpc_sc.perimeter_default.dry_run"
 _DRY_RUN_SPEC = "var.vpc_sc.perimeter_default.dry_run_spec"
-_OVERRIDES = (
+_LIST_OVERRIDES = (
     "access_levels",
     "egress_policies",
     "ingress_policies",
     "resources",
     "restricted_services",
 )
+_OVERRIDES = _LIST_OVERRIDES + ("vpc_accessible_services",)
 _SPEC = "local.vpc_sc_perimeters.spec"
 _STATUS = "local.vpc_sc_perimeters.status"
 _USE_DRY_RUN_SPEC = "local._vpc_sc_use_dry_run_spec"
@@ -170,12 +171,14 @@ class TestSecurityVpcScDryRun(unittest.TestCase):
     def test_only_the_spec_receives_the_non_null_overrides(self):
         inputs = _local("_vpc_sc_perimeter_inputs")
         self.assertIn(
-            "for k, v in { spec = ( local._vpc_sc_dry_run_spec == null ? {} "
-            ": { for a, l in local._vpc_sc_dry_run_spec : a => l if l != null "
-            "} ) status = {} } : k => merge({",
+            "spec = merge( local._vpc_sc_perimeter_base, "
+            "local._vpc_sc_dry_run_spec == null ? {} : {",
             inputs,
         )
-        self.assertTrue(inputs.endswith("}, v) } )"), inputs)
+        self.assertIn("status = local._vpc_sc_perimeter_base", inputs)
+        self.assertIn(
+            "local._vpc_sc_dry_run_spec.vpc_accessible_services", inputs
+        )
 
     def test_overrides_apply_before_the_normalization(self):
         perimeters = _local("vpc_sc_perimeters")
@@ -199,13 +202,22 @@ class TestSecurityVpcScDryRun(unittest.TestCase):
             block,
         )
         self.assertIsNotNone(dry_run_spec)
-        self.assertEqual(
-            [
-                " ".join(line.split())
-                for line in dry_run_spec.group(1).split("\n")
-            ],
-            [f"{name} = optional(list(string))" for name in _OVERRIDES],
+        body = dry_run_spec.group(1)
+        for name in _LIST_OVERRIDES:
+            with self.subTest(attribute=name):
+                self.assertRegex(
+                    body, rf"(?m)^\s*{name}\s*=\s*optional\(list\(string\)\)$"
+                )
+        self.assertIn("vpc_accessible_services = optional(object({", body)
+        # Ensure both vpc_accessible_services declarations default to null
+        # (not {}), because modules/vpc-sc defaults enable_restriction = true
+        # on non-null objects.
+        vas_closings = re.findall(
+            r"(?m)^( +)vpc_accessible_services = optional\(object\(\{\n"
+            r"[\s\S]*?\n\1\}\)\)$",
+            block,
         )
+        self.assertEqual(len(vas_closings), 2)
 
     def test_variable_rejects_ambiguous_inputs(self):
         conditions = [
