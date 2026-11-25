@@ -133,6 +133,16 @@ def preflight(
     strict: Annotated[
         bool, typer.Option("--strict", help="Exit non-zero on warnings too.")
     ] = False,
+    transport: Annotated[
+        str | None,
+        typer.Option(
+            "--transport",
+            help=(
+                "Google Cloud API transport: grpc or rest. Defaults to "
+                f"${live.TRANSPORT_ENV_VAR}, then grpc."
+            ),
+        ),
+    ] = None,
     home: common.HomeOption = None,
     repo: common.RepoOption = None,
 ):
@@ -169,9 +179,10 @@ def preflight(
             None if answers is None else answers_lib.to_preflight(answers),
         )
         inputs_lib.validate_against_repo(resolved, session.repo)
+    cloud = common.live_cloud(transport)
     ctx = checks.Context(
         inputs=resolved,
-        cloud=live.LiveCloudApi(),
+        cloud=cloud,
         tools=tools_lib.SystemTools(),
         repo=session.repo,
         environ=os.environ,

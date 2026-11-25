@@ -162,3 +162,13 @@ def test_imports_scan_reports_cloud_errors(
     outcome = helpers.invoke(cli_runner, "imports", "scan")
     assert outcome.exit_code == 1
     assert "no orgpolicy access" in outcome.output
+
+
+def test_imports_scan_invalid_transport_exits_2(
+    cli_runner, fake_cloud, monkeypatch
+):
+    assert helpers.init_env(cli_runner).exit_code == 0
+    monkeypatch.setenv("STELLAR_GCP_TRANSPORT", "bogus")
+    outcome = helpers.invoke(cli_runner, "imports", "scan")
+    assert outcome.exit_code == 2
+    assert "Error: Invalid transport" in outcome.output

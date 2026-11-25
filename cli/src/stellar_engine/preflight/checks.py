@@ -601,6 +601,107 @@ def _role_results(ctx):
     return results
 
 
+def check_custom_roles(ctx):
+    """Validates Stage 0 custom IAM role YAML permissions against the org.
+
+    Each YAML file under `fast/stages-aw/0-bootstrap/data/custom-roles/`
+    declares `includedPermissions` that Stage 0 creates as organization
+    custom roles. Checking every permission against `queryTestablePermissions`
+    catches unsupported or typoed permissions before `terraform apply`.
+    """
+    check_id = "iam.custom_roles"
+    title = "Custom IAM role permissions"
+    if ctx.org is None:
+        return [_skip(check_id, Category.IAM, title, "--org")]
+    try:
+        roles = ctx.repo.custom_roles()
+    except repo_lib.RepoError as error:
+        return [
+            CheckResult(
+                check_id,
+                Category.IAM,
+                title,
+                Status.FAIL,
+                str(error),
+                remedy=(
+                    "Fix the YAML syntax or `includedPermissions` list under "
+                    "fast/stages-aw/0-bootstrap/data/custom-roles/."
+                ),
+                doc=DOC_IAM,
+            )
+        ]
+    if not roles:
+        return [
+            CheckResult(
+                check_id,
+                Category.IAM,
+                title,
+                Status.PASS,
+                "No Stage 0 custom role definitions found under "
+                "fast/stages-aw/0-bootstrap/data/custom-roles.",
+                doc=DOC_IAM,
+            )
+        ]
+    org_resource = (
+        f"//cloudresourcemanager.googleapis.com/organizations/{ctx.org.org_id}"
+    )
+    try:
+        supported = ctx.cloud.custom_role_permissions(org_resource)
+    except api.CloudError as error:
+        return [
+            CheckResult(
+                check_id,
+                Category.IAM,
+                title,
+                Status.FAIL,
+                f"Cannot query custom role permissions on organization "
+                f"{ctx.org.org_id}: {error}",
+                doc=DOC_IAM,
+            )
+        ]
+    invalid_by_file: list[tuple[str, list[str]]] = []
+    total_permissions = 0
+    for role in roles:
+        total_permissions += len(role.permissions)
+        unsupported = sorted(set(role.permissions) - supported)
+        if unsupported:
+            invalid_by_file.append((role.filename, unsupported))
+    if invalid_by_file:
+        details = "; ".join(
+            f"{filename}: {_listed(perms)}"
+            for filename, perms in invalid_by_file
+        )
+        return [
+            CheckResult(
+                check_id,
+                Category.IAM,
+                title,
+                Status.FAIL,
+                f"Unsupported permissions in custom role YAML files: "
+                f"{details}.",
+                remedy=(
+                    "Remove or fix the unsupported permissions in "
+                    "fast/stages-aw/0-bootstrap/data/custom-roles/*.yaml "
+                    "before running terraform apply."
+                ),
+                doc=DOC_IAM,
+            )
+        ]
+    perm_noun = "permission" if total_permissions == 1 else "permissions"
+    return [
+        CheckResult(
+            check_id,
+            Category.IAM,
+            title,
+            Status.PASS,
+            f"All {total_permissions} {perm_noun} across "
+            f"{_count(roles, 'custom role')} are supported on organization "
+            f"{ctx.org.org_id}.",
+            doc=DOC_IAM,
+        )
+    ]
+
+
 def check_billing(ctx):
     """Checks the billing account, project linking and pre-created resources.
 
@@ -1821,6 +1922,7 @@ ALL_CHECKS = (
     check_identity,
     check_organization,
     check_iam_roles,
+    check_custom_roles,
     check_billing,
     check_project,
     check_groups,

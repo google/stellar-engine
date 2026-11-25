@@ -58,6 +58,7 @@ _VERSION_FLOOR_RE = re.compile(r">=\s*([0-9.]+)")
 # `local._org_policies_raw` in `0-bootstrap/organization.tf` decodes every
 # `*_policy.yaml` file of the plain directory with `yamldecode`, and renders
 # the files of the templated directory with `templatefile` first.
+_CUSTOM_ROLES_DIR = "data/custom-roles"
 _ORG_POLICY_DIR = "data/org-policies"
 _TEMPLATED_ORG_POLICY_DIR = "data/custom-org-policies"
 _ORG_POLICY_GLOB = "*_policy.yaml"
@@ -263,6 +264,22 @@ class BillingResource:
     name: str
     create: str
     import_id: str
+
+
+@dataclasses.dataclass(frozen=True)
+class CustomRole:
+    """A Stage 0 organization custom IAM role definition.
+
+    Attributes:
+        filename: YAML filename under `data/custom-roles`, for example
+            `storage_viewer.yaml`.
+        role_id: Role ID in the organization, from `name` or the file stem.
+        permissions: Included IAM permissions in file order.
+    """
+
+    filename: str
+    role_id: str
+    permissions: tuple[str, ...]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -586,19 +603,56 @@ class Repo:
         default = self._bootstrap_variables["log_sinks"].get("default", {})
         return sorted(hcl.unquote(name) for name in default)
 
+    def custom_roles(self) -> list[CustomRole]:
+        """Returns the organization custom role definitions Stage 0 creates.
+
+        Reads `fast/stages-aw/0-bootstrap/data/custom-roles/*.yaml`. Returns
+        an empty list when the directory is missing or contains no YAML files.
+
+        Raises:
+            RepoError: If a custom role YAML file cannot be parsed or declares
+                an invalid `includedPermissions` field.
+        """
+        directory = self.bootstrap_dir / _CUSTOM_ROLES_DIR
+        if not directory.is_dir():
+            return []
+        roles = []
+        for path in sorted(directory.glob("*.yaml")):
+            try:
+                data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            except yaml.YAMLError as error:
+                raise RepoError(
+                    f"Cannot parse custom role file {path.name}: {error}"
+                ) from error
+            if data is None:
+                data = {}
+            if not isinstance(data, dict):
+                raise RepoError(
+                    f"Custom role file {path.name} must contain a YAML mapping."
+                )
+            raw_perms = data.get("includedPermissions")
+            if raw_perms is None:
+                perms: tuple[str, ...] = ()
+            elif isinstance(raw_perms, list) and all(
+                isinstance(item, str) for item in raw_perms
+            ):
+                perms = tuple(raw_perms)
+            else:
+                raise RepoError(
+                    f"Custom role file {path.name} must declare "
+                    "`includedPermissions` as a list of strings."
+                )
+            role_id = str(data.get("name") or path.stem)
+            roles.append(CustomRole(path.name, role_id, perms))
+        return roles
+
     def custom_role_ids(self):
         """Returns the organization custom role IDs that Stage 0 creates.
 
         A role file without a `name` key falls back to its file name, which
         matches how the organization module names it.
         """
-        role_ids = []
-        for path in sorted(
-            (self.bootstrap_dir / "data/custom-roles").glob("*.yaml")
-        ):
-            data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-            role_ids.append(data.get("name") or path.stem)
-        return role_ids
+        return [role.role_id for role in self.custom_roles()]
 
     def custom_constraint_names(self):
         """Returns the organization custom constraint names Stage 0 creates."""

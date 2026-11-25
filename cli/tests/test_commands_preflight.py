@@ -203,3 +203,63 @@ def test_preflight_rejects_broken_answers(
     path.write_text("prefix: [unclosed\n")
     outcome = helpers.invoke(cli_runner, "preflight", "--json")
     assert outcome.exit_code == 2
+
+
+def test_preflight_transport_flag_and_env(cli_runner, fake_cloud, monkeypatch):
+    outcome = cli_runner.invoke(
+        cli.app, [*BASE_ARGS, "--transport", "rest", "--json"]
+    )
+    assert outcome.exit_code == 0, outcome.output
+    assert fake_cloud.transport == "rest"
+
+    monkeypatch.setenv("STELLAR_GCP_TRANSPORT", "rest")
+    outcome = cli_runner.invoke(cli.app, [*BASE_ARGS, "--json"])
+    assert outcome.exit_code == 0, outcome.output
+    assert fake_cloud.transport == "rest"
+
+    outcome = cli_runner.invoke(
+        cli.app, [*BASE_ARGS, "--transport", "grpc", "--json"]
+    )
+    assert outcome.exit_code == 0, outcome.output
+    assert fake_cloud.transport == "grpc"
+
+    monkeypatch.setenv("STELLAR_GCP_TRANSPORT", "   ")
+    outcome = cli_runner.invoke(cli.app, [*BASE_ARGS, "--json"])
+    assert outcome.exit_code == 0, outcome.output
+    assert fake_cloud.transport == "grpc"
+
+
+@pytest.mark.parametrize("value", ["invalid", ""])
+def test_preflight_invalid_transport_exits_2(cli_runner, fake_cloud, value):
+    outcome = cli_runner.invoke(
+        cli.app, [*BASE_ARGS, "--transport", value, "--json"]
+    )
+    assert outcome.exit_code == 2
+    assert "Invalid transport" in outcome.output
+
+
+def test_preflight_invalid_env_transport_exits_2(
+    cli_runner, fake_cloud, monkeypatch
+):
+    monkeypatch.setenv("STELLAR_GCP_TRANSPORT", "bogus")
+    outcome = cli_runner.invoke(cli.app, [*BASE_ARGS, "--json"])
+    assert outcome.exit_code == 2
+    assert "Invalid transport" in outcome.output
+
+
+def test_preflight_includes_custom_roles_check(cli_runner, fake_cloud):
+    outcome = cli_runner.invoke(cli.app, [*BASE_ARGS, "--json"])
+    assert outcome.exit_code == 0, outcome.output
+    checks_by_id = {
+        c["check_id"]: c for c in json.loads(outcome.stdout)["checks"]
+    }
+    assert checks_by_id["iam.custom_roles"]["status"] == "pass"
+
+    fake_cloud.org_testable = set()
+    failed = cli_runner.invoke(cli.app, [*BASE_ARGS, "--json"])
+    assert failed.exit_code == 1
+    checks_by_id = {
+        c["check_id"]: c for c in json.loads(failed.stdout)["checks"]
+    }
+    assert checks_by_id["iam.custom_roles"]["status"] == "fail"
+    assert "storage_viewer.yaml" in checks_by_id["iam.custom_roles"]["detail"]

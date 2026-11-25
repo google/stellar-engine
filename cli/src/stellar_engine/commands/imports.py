@@ -21,7 +21,6 @@ from stellar_engine import org_policies
 from stellar_engine.commands import common
 from stellar_engine.config import answers as answers_lib
 from stellar_engine.gcp import api
-from stellar_engine.gcp import live
 
 _SCAN_RESULTS = {
     "kept": "import on the final Stage 0 apply",
@@ -48,8 +47,9 @@ def imports_scan(
     # the save.
     env, answers = common.load_env(session, prefix, check_repo=False)
     org_id = answers.organization.id
+    cloud = common.live_cloud()
     try:
-        scanned = org_policies.scan(answers, session.repo, live.LiveCloudApi())
+        scanned = org_policies.scan(answers, session.repo, cloud)
     except (api.CloudError, api.CredentialsError) as error:
         common.fail(
             f"Cannot list the policies of organization {org_id}: {error}",
