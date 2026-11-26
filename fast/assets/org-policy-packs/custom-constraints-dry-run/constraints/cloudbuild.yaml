@@ -1,0 +1,29 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Fail-closed ALLOW requiring Cloud Build private worker pools to disable public
+# egress via peered-network egressOption or Private Service Connect settings.
+
+custom.cloudBuildWorkerPoolNoPublicEgress:
+  display_name: Disallow public egress on Cloud Build worker pools
+  description: Allows Cloud Build private worker pools only when public egress and public IP addresses are disabled.
+  action_type: ALLOW
+  resource_types:
+    - cloudbuild.googleapis.com/WorkerPool
+  method_types:
+    - CREATE
+    - UPDATE
+  condition: >-
+    (has(resource.privatePoolV1Config.networkConfig) && resource.privatePoolV1Config.networkConfig.egressOption == 'NO_PUBLIC_EGRESS') ||
+    (has(resource.privatePoolV1Config.privateServiceConnect) && (resource.privatePoolV1Config.privateServiceConnect.publicIpAddressDisabled == true || resource.privatePoolV1Config.privateServiceConnect.routeAllTraffic == true))

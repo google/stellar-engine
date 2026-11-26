@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+# Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,43 +13,21 @@
 # limitations under the License.
 
 variables:
-  GOOGLE_CREDENTIALS: cicd-sa-credentials.json
   FAST_OUTPUTS_BUCKET: ${outputs_bucket}
   FAST_WIF_PROVIDER: ${identity_provider}
   SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-  %{~ if tf_var_files != [] ~}
-  TF_VAR_FILES: ${join("\n    ", tf_var_files)}
-  %{~ endif ~}
 
 workflow:
   rules:
-    # merge / apply
-    - if: $CI_PIPELINE_SOURCE == 'push' && $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH
-      variables:
-        COMMAND: apply
-        FAST_SERVICE_ACCOUNT: ${service_accounts.apply}
-        TF_PROVIDERS_FILE: ${tf_providers_files.apply}
-    # pr / plan
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-      variables:
-        COMMAND: plan
-        FAST_SERVICE_ACCOUNT: ${service_accounts.plan}
-        TF_PROVIDERS_FILE: ${tf_providers_files.plan}
+    - if: $CI_PIPELINE_SOURCE == 'push' && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_REF_PROTECTED == 'true'
 
 stages:
-  - gcp-setup
-  - tf-plan-apply
+  - setup
+  - plan
+  - apply
 
-# TODO: document project-level deploy key used to fetch modules
-
-gcp-setup:
-  stage: gcp-setup
-  image:
-    name: google/cloud-sdk:slim
-  artifacts:
-    paths:
-      - cicd-sa-credentials.json
-      - providers.tf
+.wif-auth:
   id_tokens:
     GITLAB_TOKEN:
       aud:
@@ -57,43 +35,223 @@ gcp-setup:
         - ${aud}
       %{~ endfor ~}
   before_script:
-    - echo "$GITLAB_TOKEN" > token.txt
+    - |
+      set -eu
+      umask 077
+      if [ -n "$${FAST_SERVICE_ACCOUNT:-}" ] && [ -n "$${FAST_SERVICE_ACCOUNT_PLAN:-}" ]; then
+        echo "ERROR: Conflicting plan and apply service accounts." >&2
+        exit 1
+      fi
+      ACTIVE_SERVICE_ACCOUNT="$${FAST_SERVICE_ACCOUNT:-}"
+      if [ -z "$ACTIVE_SERVICE_ACCOUNT" ]; then
+        ACTIVE_SERVICE_ACCOUNT="$${FAST_SERVICE_ACCOUNT_PLAN:-}"
+      fi
+      if [ -z "$ACTIVE_SERVICE_ACCOUNT" ]; then
+        echo "ERROR: No FAST service account configured for this job." >&2
+        exit 1
+      fi
+      printf '%s' "$GITLAB_TOKEN" > "$CI_PROJECT_DIR/.ci_job_jwt_file"
+      cat <<EOF > "$CI_PROJECT_DIR/.gcp_temp_cred.json"
+      {
+        "type": "external_account",
+        "audience": "//iam.googleapis.com/$FAST_WIF_PROVIDER",
+        "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+        "token_url": "https://sts.googleapis.com/v1/token",
+        "credential_source": {
+          "file": "$CI_PROJECT_DIR/.ci_job_jwt_file"
+        },
+        "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/$ACTIVE_SERVICE_ACCOUNT:generateAccessToken",
+        "service_account_impersonation": {
+          "token_lifetime_seconds": 900
+        }
+      }
+      EOF
+      export GOOGLE_APPLICATION_CREDENTIALS="$CI_PROJECT_DIR/.gcp_temp_cred.json"
+  after_script:
+    - rm -f "$CI_PROJECT_DIR/.ci_job_jwt_file" "$CI_PROJECT_DIR/.gcp_temp_cred.json" "$SSH_AUTH_SOCK"
+
+gcp-setup-plan:
+  stage: setup
+  extends: .wif-auth
+  image:
+    name: google/cloud-sdk:slim
+  variables:
+    FAST_SERVICE_ACCOUNT_PLAN: ${service_accounts.plan}
+    TF_PROVIDERS_FILE: ${tf_providers_files.plan}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - when: never
   script:
     - |
-      gcloud iam workload-identity-pools create-cred-config \
-        $FAST_WIF_PROVIDER \
-        --service-account=$FAST_SERVICE_ACCOUNT \
-        --service-account-token-lifetime-seconds=900 \
-        --output-file=$GOOGLE_CREDENTIALS \
-        --credential-source-file=token.txt
-    - gcloud config set auth/credential_file_override $GOOGLE_CREDENTIALS
-    - gcloud alpha storage cp -r "gs://$FAST_OUTPUTS_BUCKET/providers/$TF_PROVIDERS_FILE" ./providers.tf
-
-tf-plan-apply:
-  stage: tf-plan-apply
-  dependencies:
-    - gcp-setup
-  id_tokens:
-    GITLAB_TOKEN:
-      aud:
-      %{~ for aud in audiences ~}
-        - ${aud}
+      set -eu
+      umask 077
+      gcloud config set auth/credential_file_override "$GOOGLE_APPLICATION_CREDENTIALS"
+      gcloud alpha storage cp -r "gs://$FAST_OUTPUTS_BUCKET/providers/$TF_PROVIDERS_FILE" ./providers.tf
+      %{~ for f in tf_var_files ~}
+      gcloud alpha storage cp -r "gs://$FAST_OUTPUTS_BUCKET/tfvars/${f}" ./
       %{~ endfor ~}
+  artifacts:
+    expire_in: 2 hours
+    paths:
+      - providers.tf
+      %{~ for f in tf_var_files ~}
+      - ${f}
+      %{~ endfor ~}
+
+gcp-setup-apply:
+  stage: setup
+  extends: .wif-auth
   image:
-    name: hashicorp/terraform
+    name: google/cloud-sdk:slim
+  resource_group: fast-${stage_name}-apply
+  variables:
+    FAST_SERVICE_ACCOUNT: ${service_accounts.apply}
+    TF_PROVIDERS_FILE: ${tf_providers_files.apply}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'push' && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_REF_PROTECTED == 'true'
+    - when: never
+  script:
+    - |
+      set -eu
+      umask 077
+      gcloud config set auth/credential_file_override "$GOOGLE_APPLICATION_CREDENTIALS"
+      gcloud alpha storage cp -r "gs://$FAST_OUTPUTS_BUCKET/providers/$TF_PROVIDERS_FILE" ./providers.tf
+      %{~ for f in tf_var_files ~}
+      gcloud alpha storage cp -r "gs://$FAST_OUTPUTS_BUCKET/tfvars/${f}" ./
+      %{~ endfor ~}
+  artifacts:
+    expire_in: 2 hours
+    paths:
+      - providers.tf
+      %{~ for f in tf_var_files ~}
+      - ${f}
+      %{~ endfor ~}
+
+plan:
+  stage: plan
+  extends: .wif-auth
+  needs:
+    - job: gcp-setup-plan
+      artifacts: true
+  image:
+    name: hashicorp/terraform:1.13.3
     entrypoint:
       - "/usr/bin/env"
   variables:
-    SSH_AUTH_SOCK: /tmp/ssh-agent.sock
+    FAST_SERVICE_ACCOUNT_PLAN: ${service_accounts.plan}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - when: never
   script:
     - |
-      ssh-agent -a $SSH_AUTH_SOCK
-      echo "$CICD_MODULES_KEY" | ssh-add -
-      mkdir -p ~/.ssh
-      ssh-keyscan -H 'gitlab.com' >> ~/.ssh/known_hosts
-      ssh-keyscan gitlab.com | sort -u - ~/.ssh/known_hosts -o ~/.ssh/known_hosts
-    - echo "$GITLAB_TOKEN" > token.txt
-    - terraform init
-    - terraform validate
-    - "if [ $COMMAND == 'plan' ]; then terraform plan -input=false -no-color -lock=false; fi"
-    - "if [ $COMMAND == 'apply' ]; then terraform apply -input=false -no-color -auto-approve; fi"
+      set -eu
+      umask 077
+      if [ -n "$${CICD_MODULES_KEY:-}" ]; then
+        ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
+        printf '%s\n' "$CICD_MODULES_KEY" | ssh-add -
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        ssh-keyscan -H "$${CI_SERVER_HOST:-gitlab.com}" >> ~/.ssh/known_hosts
+      fi
+      terraform init -input=false -no-color
+      terraform validate -no-color
+      set +e
+      terraform plan -input=false -no-color -lock=false -detailed-exitcode
+      plan_exit=$?
+      set -e
+      if [ "$plan_exit" -eq 0 ] || [ "$plan_exit" -eq 2 ]; then
+        exit 0
+      fi
+      exit "$plan_exit"
+
+plan-apply:
+  stage: plan
+  extends: .wif-auth
+  resource_group: fast-${stage_name}-apply
+  needs:
+    - job: gcp-setup-apply
+      artifacts: true
+  image:
+    name: hashicorp/terraform:1.13.3
+    entrypoint:
+      - "/usr/bin/env"
+  variables:
+    FAST_SERVICE_ACCOUNT: ${service_accounts.apply}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'push' && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_REF_PROTECTED == 'true'
+    - when: never
+  script:
+    - |
+      set -eu
+      umask 077
+      if [ -n "$${CICD_MODULES_KEY:-}" ]; then
+        ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
+        printf '%s\n' "$CICD_MODULES_KEY" | ssh-add -
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        ssh-keyscan -H "$${CI_SERVER_HOST:-gitlab.com}" >> ~/.ssh/known_hosts
+      fi
+      terraform init -input=false -no-color
+      terraform validate -no-color
+      set +e
+      terraform plan -input=false -no-color -detailed-exitcode -out=tfplan.binary
+      plan_exit=$?
+      set -e
+      if [ "$plan_exit" -eq 0 ]; then
+        echo "HAS_CHANGES=false" > plan.env
+      elif [ "$plan_exit" -eq 2 ]; then
+        echo "HAS_CHANGES=true" > plan.env
+      else
+        exit "$plan_exit"
+      fi
+  artifacts:
+    expire_in: 2 hours
+    when: on_success
+    reports:
+      dotenv: plan.env
+    paths:
+      - tfplan.binary
+
+apply:
+  stage: apply
+  extends: .wif-auth
+  resource_group: fast-${stage_name}-apply
+  allow_failure: true
+  needs:
+    - job: gcp-setup-apply
+      artifacts: true
+    - job: plan-apply
+      artifacts: true
+  image:
+    name: hashicorp/terraform:1.13.3
+    entrypoint:
+      - "/usr/bin/env"
+  variables:
+    FAST_SERVICE_ACCOUNT: ${service_accounts.apply}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'push' && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_COMMIT_REF_PROTECTED == 'true'
+      when: manual
+    - when: never
+  script:
+    - |
+      set -eu
+      umask 077
+      if [ "$${HAS_CHANGES:-}" = "false" ]; then
+        echo "Skipping apply: no changes detected."
+        exit 0
+      fi
+      if [ "$${HAS_CHANGES:-}" != "true" ]; then
+        echo "ERROR: Plan result was unavailable or invalid." >&2
+        exit 1
+      fi
+      if [ -n "$${CICD_MODULES_KEY:-}" ]; then
+        ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null
+        printf '%s\n' "$CICD_MODULES_KEY" | ssh-add -
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        ssh-keyscan -H "$${CI_SERVER_HOST:-gitlab.com}" >> ~/.ssh/known_hosts
+      fi
+      terraform init -input=false -no-color
+      terraform apply -input=false -no-color -auto-approve tfplan.binary
+  after_script:
+    - rm -f "$CI_PROJECT_DIR/.ci_job_jwt_file" "$CI_PROJECT_DIR/.gcp_temp_cred.json" "$SSH_AUTH_SOCK" tfplan.binary

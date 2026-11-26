@@ -21,7 +21,13 @@ from xml.etree import ElementTree
 
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 _IL5_NET_DIR = _REPO_ROOT / "fast/stages-aw/2-networking-b-il5-ngfw"
-_LEGACY_ALGORITHMS = {"3des", "aes-128-cbc", "sha1", "md5", "group1", "group2"}
+_BROKEN_ALGORITHMS = {"3des", "sha1", "md5", "group1", "group2"}
+_LEGACY_ALGORITHMS = _BROKEN_ALGORITHMS | {"aes-128-cbc"}
+_CRYPTO_PROFILE_FAMILIES = {
+    "global-protect-app-crypto-profiles",
+    "ike-crypto-profiles",
+    "ipsec-crypto-profiles",
+}
 
 
 def _top_block(text, header):
@@ -48,6 +54,15 @@ def _members(element, path):
     if values:
         return values
     return [e.text for e in element.findall(path)]
+
+
+def _element_values(element):
+    """Returns stripped lowercase text values for all descendant elements."""
+    return {
+        node.text.strip().lower()
+        for node in element.iter()
+        if node.text and node.text.strip()
+    }
 
 
 class TestNgfwTemplateHardening(unittest.TestCase):
@@ -98,6 +113,42 @@ class TestNgfwTemplateHardening(unittest.TestCase):
                 values = _members(default, path)
                 self.assertEqual(values, _members(strong, path))
                 self.assertFalse(_LEGACY_ALGORITHMS.intersection(values))
+
+    def test_globalprotect_app_crypto_profiles_is_empty(self):
+        # PAN-OS only allows sha1 in GlobalProtect crypto authentication, so
+        # keeping this unused container empty removes aes-128-cbc and sha1.
+        profiles = self.crypto.find("global-protect-app-crypto-profiles")
+        self.assertIsNotNone(profiles)
+        self.assertEqual(list(profiles), [])
+        self.assertFalse(_element_values(profiles))
+
+    def test_default_crypto_profiles_reject_legacy_algorithms(self):
+        families = list(self.crypto)
+        self.assertTrue(
+            _CRYPTO_PROFILE_FAMILIES.issubset({f.tag for f in families})
+        )
+        defaults_checked = 0
+        for family in families:
+            for entry in family.findall("entry[@name='default']"):
+                defaults_checked += 1
+                with self.subTest(family=family.tag):
+                    self.assertFalse(
+                        _LEGACY_ALGORITHMS.intersection(_element_values(entry))
+                    )
+        self.assertGreaterEqual(defaults_checked, 2)
+
+    def test_all_crypto_profiles_reject_broken_algorithms(self):
+        # PAN-OS predefined Suite-B-GCM-128 uses aes-128-cbc for IKEv2 per
+        # RFC 6379, so check every profile entry against broken algorithms.
+        entries_checked = 0
+        for family in self.crypto:
+            for entry in family.findall("entry"):
+                entries_checked += 1
+                with self.subTest(family=family.tag, entry=entry.get("name")):
+                    self.assertFalse(
+                        _BROKEN_ALGORITHMS.intersection(_element_values(entry))
+                    )
+        self.assertGreater(entries_checked, 0)
 
     def test_allow_rules_log_at_session_end_only(self):
         rules = _bootstrap_xml().findall(".//rulebase/security/rules/entry")

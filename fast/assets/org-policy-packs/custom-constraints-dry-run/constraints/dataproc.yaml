@@ -1,0 +1,28 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Denies Dataproc cluster creation or update unless internalIpOnly is true.
+# Note that UPDATE evaluates editable cluster parameters only and can block
+# scaling pre-existing clusters that were created with external IP addresses.
+
+custom.dataprocRequireInternalIp:
+  display_name: Require private Dataproc clusters
+  description: Denies Dataproc cluster creation or update unless the cluster uses internal IP addresses only.
+  action_type: DENY
+  resource_types:
+    - dataproc.googleapis.com/Cluster
+  method_types:
+    - CREATE
+    - UPDATE
+  condition: "resource.config.gceClusterConfig.internalIpOnly != true"

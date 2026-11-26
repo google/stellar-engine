@@ -1,5 +1,5 @@
 /**
- * Copyright 2024 Google LLC
+ * Copyright 2026 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,26 @@
  * limitations under the License.
  */
 
+output "additional_bastions" {
+  description = "Details of additional multi-role bastion hosts keyed by additional_bastions key."
+  value = {
+    for k, v in var.additional_bastions : k => {
+      firewall_name         = google_compute_firewall.additional[k].name
+      instance_name         = coalesce(v.instance_name, k)
+      internal_ip           = module.additional-bastion-vm[k].internal_ip
+      service_account_email = google_service_account.additional[k].email
+    }
+  }
+}
+
 output "compute_service_account_email" {
   description = "The email of the compute service account."
   value       = google_service_account.compute.email
+}
+
+output "internal_ip" {
+  description = "The internal IP address of the primary bastion VM."
+  value       = module.bastion-vm.internal_ip
 }
 
 output "subnet_self_link" {

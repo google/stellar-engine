@@ -251,16 +251,7 @@
                 </lifetime>
               </entry>
             </ipsec-crypto-profiles>
-            <global-protect-app-crypto-profiles>
-              <entry name="default">
-                <encryption>
-                  <member>aes-128-cbc</member>
-                </encryption>
-                <authentication>
-                  <member>sha1</member>
-                </authentication>
-              </entry>
-            </global-protect-app-crypto-profiles>
+            <global-protect-app-crypto-profiles/>
           </crypto-profiles>
         </ike>
         <qos>

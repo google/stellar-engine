@@ -742,3 +742,33 @@ def test_hcl_helpers_cover_every_stage0_block(repo):
         for name, _ in repo_lib._resources(path, kind)
     )
     assert resources == expected
+
+
+def test_custom_roles_parses_repo_definitions(repo):
+    roles = {role.filename: role for role in repo.custom_roles()}
+    assert "storage_viewer.yaml" in roles
+    assert roles["storage_viewer.yaml"].role_id == "storage_viewer"
+    assert "storage.buckets.get" in roles["storage_viewer.yaml"].permissions
+    assert roles["organization_iam_admin.yaml"].role_id == (
+        "organizationIamAdmin"
+    )
+    assert [role.role_id for role in repo.custom_roles()] == (
+        repo.custom_role_ids()
+    )
+
+
+def test_custom_roles_handles_missing_and_invalid_files(tmp_path):
+    empty_repo = repo_lib.Repo(tmp_path)
+    assert empty_repo.custom_roles() == []
+
+    custom_dir = (
+        paths.stage_dir(tmp_path, paths.BOOTSTRAP) / "data/custom-roles"
+    )
+    custom_dir.mkdir(parents=True)
+    assert empty_repo.custom_roles() == []
+
+    (custom_dir / "bad_type.yaml").write_text(
+        "includedPermissions: not-a-list\n", encoding="utf-8"
+    )
+    with pytest.raises(repo_lib.RepoError, match=r"bad_type\.yaml"):
+        empty_repo.custom_roles()

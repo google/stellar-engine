@@ -35,6 +35,7 @@ from stellar_engine import repo as repo_lib
 from stellar_engine.config import answers as answers_lib
 from stellar_engine.config import models
 from stellar_engine.config import validate as validate_lib
+from stellar_engine.gcp import live
 from stellar_engine.wizard import prompts
 
 EXIT_CLOUD = 1
@@ -181,6 +182,17 @@ def console(stderr: bool = False) -> rich_console.Console:
         stderr: Prints to stderr instead of stdout.
     """
     return rich_console.Console(stderr=stderr)
+
+
+def live_cloud(transport: str | None = None) -> live.LiveCloudApi:
+    """Builds a `LiveCloudApi`, exiting 2 when the transport is invalid.
+
+    Args:
+        transport: Optional explicit transport (`grpc` or `rest`). When None,
+            `STELLAR_GCP_TRANSPORT` is read and defaults to `grpc`.
+    """
+    with ExitOn(ValueError):
+        return live.LiveCloudApi(transport=transport)
 
 
 def now() -> datetime.datetime:

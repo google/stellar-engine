@@ -86,27 +86,51 @@ locals {
   # perimeter inputs before normalization, where the dry-run spec replaces
   # only the attributes that dry_run_spec sets and inherits the null ones, so
   # the enforced status never picks up a candidate value
-  _vpc_sc_perimeter_inputs = (
+  _vpc_sc_perimeter_base = (
     var.vpc_sc.perimeter_default == null
     ? null
     : {
-      for k, v in {
-        spec = (
-          local._vpc_sc_dry_run_spec == null
-          ? {}
-          : { for a, l in local._vpc_sc_dry_run_spec : a => l if l != null }
-        )
-        status = {}
-      } :
-      k => merge({
-        access_levels    = var.vpc_sc.perimeter_default.access_levels
-        egress_policies  = var.vpc_sc.perimeter_default.egress_policies
-        ingress_policies = var.vpc_sc.perimeter_default.ingress_policies
-        resources        = var.vpc_sc.perimeter_default.resources
-        restricted_services = yamldecode(file(
-          var.factories_config.vpc_sc.restricted_services
-        ))
-      }, v)
+      access_levels    = var.vpc_sc.perimeter_default.access_levels
+      egress_policies  = var.vpc_sc.perimeter_default.egress_policies
+      ingress_policies = var.vpc_sc.perimeter_default.ingress_policies
+      resources        = var.vpc_sc.perimeter_default.resources
+      restricted_services = yamldecode(file(
+        var.factories_config.vpc_sc.restricted_services
+      ))
+      vpc_accessible_services = (
+        var.vpc_sc.perimeter_default.vpc_accessible_services
+      )
+    }
+  )
+  _vpc_sc_perimeter_inputs = (
+    local._vpc_sc_perimeter_base == null
+    ? null
+    : {
+      spec = merge(
+        local._vpc_sc_perimeter_base,
+        local._vpc_sc_dry_run_spec == null ? {} : {
+          for a, l in {
+            access_levels    = local._vpc_sc_dry_run_spec.access_levels
+            egress_policies  = local._vpc_sc_dry_run_spec.egress_policies
+            ingress_policies = local._vpc_sc_dry_run_spec.ingress_policies
+            resources        = local._vpc_sc_dry_run_spec.resources
+            restricted_services = (
+              local._vpc_sc_dry_run_spec.restricted_services
+            )
+          } : a => l if l != null
+        },
+        {
+          vpc_accessible_services = (
+            try(
+              local._vpc_sc_dry_run_spec.vpc_accessible_services,
+              null
+            ) != null
+            ? local._vpc_sc_dry_run_spec.vpc_accessible_services
+            : local._vpc_sc_perimeter_base.vpc_accessible_services
+          )
+        }
+      )
+      status = local._vpc_sc_perimeter_base
     }
   )
   vpc_sc_perimeters = (
@@ -136,23 +160,31 @@ locals {
         restricted_services = v.restricted_services
         resources = distinct(concat(
           v.resources,
-          var.vpc_sc.resource_discovery.enabled != true ? [] : [
+          !local._vpc_sc_discovery_enabled ? [] : [
             for n in module.vpc-sc-discovery[0].project_numbers :
             "projects/${n}"
           ]
         ))
+        vpc_accessible_services = v.vpc_accessible_services
       }
     }
+  )
+  _vpc_sc_discovery_enabled = (
+    try(var.vpc_sc.resource_discovery.enabled, false) == true
+  )
+  _vpc_sc_discovery_parent = coalesce(
+    try(var.vpc_sc.resource_discovery.parent, null),
+    "organizations/${var.organization.id}"
   )
 }
 
 module "vpc-sc-discovery" {
   source           = "../../../modules/projects-data-source"
-  count            = var.vpc_sc.resource_discovery.enabled == true ? 1 : 0
-  parent           = "organizations/${var.organization.id}"
-  ignore_folders   = var.vpc_sc.resource_discovery.ignore_folders
-  ignore_projects  = var.vpc_sc.resource_discovery.ignore_projects
-  include_projects = var.vpc_sc.resource_discovery.include_projects
+  count            = local._vpc_sc_discovery_enabled ? 1 : 0
+  parent           = local._vpc_sc_discovery_parent
+  ignore_folders   = try(var.vpc_sc.resource_discovery.ignore_folders, [])
+  ignore_projects  = try(var.vpc_sc.resource_discovery.ignore_projects, [])
+  include_projects = try(var.vpc_sc.resource_discovery.include_projects, [])
 }
 
 
@@ -160,11 +192,13 @@ module "vpc-sc" {
   source = "../../../modules/vpc-sc"
   # only enable if the default perimeter is defined
   count         = var.vpc_sc.perimeter_default == null ? 0 : 1
-  access_policy = null
-  access_policy_create = {
-    parent = "organizations/${var.organization.id}"
-    title  = "default"
-  }
+  access_policy = var.vpc_sc.access_policy
+  access_policy_create = (
+    var.vpc_sc.access_policy != null ? null : {
+      parent = "organizations/${var.organization.id}"
+      title  = "default"
+    }
+  )
   access_levels   = var.vpc_sc.access_levels
   egress_policies = local._vpc_sc_egress_policies
   ingress_policies = merge(
@@ -176,6 +210,7 @@ module "vpc-sc" {
     egress_policies  = var.factories_config.vpc_sc.egress_policies
     ingress_policies = var.factories_config.vpc_sc.ingress_policies
   }
+  project_id_search_scope = var.vpc_sc.project_id_search_scope
   perimeters = {
     default = {
       spec = (

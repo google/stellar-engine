@@ -1,0 +1,48 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Split into two single-field ALLOW constraints because Cloud Composer UPDATE
+# requests modify one configuration block per RPC and combining both checks
+# blocks remediation on existing environments.
+
+custom.composerRequirePrivateIp:
+  display_name: Require Private IP on Cloud Composer environments
+  description: Allows Cloud Composer environments only when Private IP networking is enabled via enablePrivateEnvironment or networkingType PRIVATE.
+  action_type: ALLOW
+  resource_types:
+    - composer.googleapis.com/Environment
+  method_types:
+    - CREATE
+    - UPDATE
+  condition: >-
+    resource.config.privateEnvironmentConfig.enablePrivateEnvironment == true ||
+    resource.config.privateEnvironmentConfig.networkingType == 'PRIVATE'
+
+# Blocks /0 through /7 to permit RFC 1918 10.0.0.0/8; note this trade-off still
+# permits public /8 CIDR ranges unless reviewed or tightened to narrower CIDRs.
+custom.composerRestrictWebServerAccess:
+  display_name: Restrict Cloud Composer web UI IP allowlist
+  description: Allows Cloud Composer environments only with an explicit webServerNetworkAccessControl block containing no broad public CIDR ranges from /0 through /7.
+  action_type: ALLOW
+  resource_types:
+    - composer.googleapis.com/Environment
+  method_types:
+    - CREATE
+    - UPDATE
+  condition: >-
+    has(resource.config.webServerNetworkAccessControl) &&
+    !resource.config.webServerNetworkAccessControl.allowedIpRanges.exists(r,
+      r.value.endsWith('/0') || r.value.endsWith('/1') || r.value.endsWith('/2') ||
+      r.value.endsWith('/3') || r.value.endsWith('/4') || r.value.endsWith('/5') ||
+      r.value.endsWith('/6') || r.value.endsWith('/7'))

@@ -108,10 +108,12 @@ module "ngfw-ssh-secrets" {
       versions = {
         latest = {
           enabled = true
-          data    = tls_private_key.ngfw_ssh.private_key_openssh
           # Write-only data keeps a second copy of the key out of the secret
           # version state, as the module did before v44.2.0.
-          data_config = { write_only_version = 1 }
+          data = {
+            value      = tls_private_key.ngfw_ssh.private_key_openssh
+            wo_version = 1
+          }
         }
       }
     }
@@ -126,9 +128,11 @@ module "ngfw-ssh-secrets" {
       }
       versions = {
         latest = {
-          enabled     = true
-          data        = tls_private_key.ngfw_ssh.public_key_openssh
-          data_config = { write_only_version = 1 }
+          enabled = true
+          data = {
+            value      = tls_private_key.ngfw_ssh.public_key_openssh
+            wo_version = 1
+          }
         }
       }
     }

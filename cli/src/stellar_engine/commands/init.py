@@ -27,7 +27,6 @@ from stellar_engine.commands import common
 from stellar_engine.config import answers as answers_lib
 from stellar_engine.config import seed as seed_lib
 from stellar_engine.config import validate as validate_lib
-from stellar_engine.gcp import live
 from stellar_engine.render import imports as imports_lib
 from stellar_engine.wizard import discovery
 from stellar_engine.wizard import flow
@@ -266,7 +265,7 @@ def _save_answers(session, data, base, origin=None):
 
 def _run_wizard(data, repository, offline, sections):
     """Runs the interactive wizard, exiting 2 when answers stay invalid."""
-    cloud = None if offline else live.LiveCloudApi()
+    cloud = None if offline else common.live_cloud()
     found = discovery.discover(cloud, tools_lib.SystemTools())
     prompter = common.prompter()
     for problem in found.problems:
