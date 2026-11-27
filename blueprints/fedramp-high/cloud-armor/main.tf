@@ -30,19 +30,15 @@ locals {
       merge(
         rule,
         {
-          policy = policy_name,
-          region = var.region,
-          # Placeholder for unique priority
+          policy   = policy_name
+          region   = var.region
+          priority = try(rule.priority, 1000 + i)
         }
       )
     ]
   ])
 
-  # Assign unique priorities across all rules
-  indexed_rules = [
-    for i, rule in local.rules :
-    merge(rule, { priority = 1000 + i })
-  ]
+  indexed_rules = local.rules
 }
 
 resource "google_compute_region_security_policy" "policy" {
@@ -90,8 +86,8 @@ resource "google_compute_region_security_policy_rule" "policy_rule" {
   dynamic "rate_limit_options" {
     for_each = try(each.value.rate_limit_options, null) != null ? [1] : []
     content {
-      conform_action = "allow"
-      exceed_action  = "deny(429)"
+      conform_action = try(each.value.rate_limit_options.conform_action, "allow")
+      exceed_action  = try(each.value.rate_limit_options.exceed_action, "deny(429)")
       enforce_on_key = ""
       enforce_on_key_configs {
         enforce_on_key_type = "IP"
@@ -111,6 +107,33 @@ resource "google_compute_region_security_policy_rule" "policy_rule" {
         }
       }
       ban_duration_sec = try(each.value.rate_limit_options.ban_duration_sec, null)
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition = (
+        try(each.value.expression, null) != null ||
+        try(each.value.src_ip_ranges, null) != null ||
+        startswith(try(each.value.action, "deny(403)"), "deny(")
+      )
+      error_message = "Non-deny rules without a CEL expression must explicitly define src_ip_ranges rather than defaulting to wildcard."
+    }
+
+    precondition {
+      condition = !anytrue([
+        for other in local.indexed_rules : (
+          other.policy == each.value.policy &&
+          other.priority < each.value.priority &&
+          try(other.expression, null) == null &&
+          (
+            contains(try(other.src_ip_ranges, ["*"]), "*") ||
+            contains(try(other.src_ip_ranges, ["*"]), "0.0.0.0/0")
+          ) &&
+          contains(["allow", "throttle", "rate_based_ban"], try(other.action, "deny(403)"))
+        )
+      ])
+      error_message = "A catch-all allow, throttle, or rate_based_ban rule cannot precede lower-priority rules in the same policy."
     }
   }
 }
