@@ -35,3 +35,5 @@ basic_rules: #Rules called basic_rules
     expression: "java-v33-stable" # Preconfigured rule name
   nodejs:
     expression: "nodejs-v33-stable" # Preconfigured rule name
+  sqli:
+    expression: "sqli-v33-stable" # Preconfigured rule name
