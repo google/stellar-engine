@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+locals {
+  gitlab_hostname      = regex("^https://([^/:]+)", var.gitlab_uri)[0]
+  use_self_signed_cert = nonsensitive(var.ssl_certificate == null)
+}
+
 data "google_project" "project" {
   project_id = var.project_id
 }
@@ -69,6 +74,35 @@ resource "google_project_service" "storagetransfer_api" {
   project            = var.project_id
   service            = "storagetransfer.googleapis.com"
   disable_on_destroy = false
+}
+
+resource "google_project_service" "secretmanager_api" {
+  count              = local.use_self_signed_cert ? 1 : 0
+  project            = var.project_id
+  service            = "secretmanager.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service_identity" "secretmanager_agent" {
+  count      = local.use_self_signed_cert ? 1 : 0
+  provider   = google-beta
+  project    = var.project_id
+  service    = "secretmanager.googleapis.com"
+  depends_on = [google_project_service.secretmanager_api]
+}
+
+resource "time_sleep" "secretmanager_propagation" {
+  count           = local.use_self_signed_cert ? 1 : 0
+  create_duration = "60s"
+  depends_on      = [google_project_service_identity.secretmanager_agent]
+}
+
+resource "google_kms_crypto_key_iam_member" "secretmanager_kms_permissions" {
+  count         = local.use_self_signed_cert ? 1 : 0
+  crypto_key_id = var.kms_key
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = google_project_service_identity.secretmanager_agent[0].member
+  depends_on    = [time_sleep.secretmanager_propagation]
 }
 
 # Only container.googleapis.com exposes a primary service identity via
@@ -231,7 +265,20 @@ trap 'rm -f "$GITLAB_INSTALL_SCRIPT"' EXIT
 curl --fail --show-error --location --output "$GITLAB_INSTALL_SCRIPT" https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh
 echo "${var.gitlab_install_script_sha256}  $GITLAB_INSTALL_SCRIPT" | sha256sum --check - && sudo bash "$GITLAB_INSTALL_SCRIPT"
 
-sudo EXTERNAL_URL="${var.gitlab_uri}" apt install gitlab-ee -y
+# TLS terminates at the external HTTPS load balancer, so configure GitLab to
+# listen on HTTP port 80 while emitting https:// links from forwarded headers.
+sudo mkdir -p /etc/gitlab
+cat <<'GITLAB_RB' | sudo tee /etc/gitlab/gitlab.rb >/dev/null
+external_url '${var.gitlab_uri}'
+letsencrypt['enable'] = false
+nginx['listen_port'] = 80
+nginx['listen_https'] = false
+nginx['proxy_set_headers'] = { 'X-Forwarded-Proto' => 'https', 'X-Forwarded-Ssl' => 'on' }
+GITLAB_RB
+sudo chmod 0600 /etc/gitlab/gitlab.rb
+
+sudo DEBIAN_FRONTEND=noninteractive EXTERNAL_URL="${var.gitlab_uri}" apt install gitlab-ee -y
+sudo gitlab-ctl reconfigure
       EOT
   }
 
@@ -241,24 +288,57 @@ sudo EXTERNAL_URL="${var.gitlab_uri}" apt install gitlab-ee -y
   ]
 }
 
-// This creates a self signed certificate
+moved {
+  from = tls_private_key.default
+  to   = tls_private_key.default[0]
+}
+
+# Generates a short-lived self-signed certificate when no caller certificate is provided.
 resource "tls_private_key" "default" {
+  count     = local.use_self_signed_cert ? 1 : 0
   algorithm = "RSA"
   rsa_bits  = 2048
 }
 
+moved {
+  from = tls_self_signed_cert.default
+  to   = tls_self_signed_cert.default[0]
+}
+
 resource "tls_self_signed_cert" "default" {
-  private_key_pem = tls_private_key.default.private_key_pem
+  count           = local.use_self_signed_cert ? 1 : 0
+  private_key_pem = tls_private_key.default[0].private_key_pem
   subject {
-    common_name  = var.gitlab_uri
+    common_name  = local.gitlab_hostname
     organization = "STELLAR EXAMPLE DEPLOYMENT, INC"
   }
+  dns_names             = [local.gitlab_hostname]
   validity_period_hours = 720
   allowed_uses = [
     "key_encipherment",
     "digital_signature",
     "server_auth"
   ]
+}
+
+module "tls-private-key-secret" {
+  count      = local.use_self_signed_cert ? 1 : 0
+  source     = "../../../modules/secret-manager"
+  project_id = var.project_id
+  secrets = {
+    "${var.lb_name}-tls-key" = {
+      global_replica_locations = { (var.region) = var.kms_key }
+      versions = {
+        v1 = {
+          data = {
+            value      = tls_private_key.default[0].private_key_pem
+            wo_version = 1
+          }
+        }
+      }
+    }
+  }
+  depends_on = [google_kms_crypto_key_iam_member.secretmanager_kms_permissions]
 }
 
 module "application-lb" {
@@ -283,14 +363,26 @@ module "application-lb" {
     }
   }
   ssl_certificates = {
-    create_configs = {
-      default = {
-        private_key = tls_private_key.default.private_key_pem
-        certificate = tls_self_signed_cert.default.cert_pem
-      }
-    }
+    certificate_ids = (
+      nonsensitive(try(var.ssl_certificate.certificate_id, null) != null)
+      ? [nonsensitive(var.ssl_certificate.certificate_id)]
+      : []
+    )
+    create_configs = (
+      local.use_self_signed_cert ? {
+        default = {
+          private_key = tls_private_key.default[0].private_key_pem
+          certificate = tls_self_signed_cert.default[0].cert_pem
+        }
+        } : nonsensitive(try(var.ssl_certificate.certificate, null) != null) ? {
+        default = {
+          private_key = var.ssl_certificate.private_key
+          certificate = nonsensitive(var.ssl_certificate.certificate)
+        }
+      } : {}
+    )
   }
-  protocol   = "HTTP"
+  protocol   = "HTTPS"
   depends_on = [google_compute_instance_group.umig]
 }
 

@@ -29,11 +29,11 @@ variable "gitlab_install_script_sha256" {
 }
 
 variable "gitlab_uri" {
-  description = "The URL hostname that the gitlab instance will be attached to."
+  description = "The HTTPS URL that the GitLab instance will be served on."
   type        = string
   validation {
-    condition     = can(regex("^https?://[a-zA-Z0-9.-]+(:[0-9]+)?/?$", var.gitlab_uri))
-    error_message = "gitlab_uri must be a valid HTTP/HTTPS URL without shell metacharacters."
+    condition     = can(regex("^https://[a-zA-Z0-9.-]+(:[0-9]+)?/?$", var.gitlab_uri))
+    error_message = "gitlab_uri must be a valid HTTPS URL without shell metacharacters."
   }
 }
 
@@ -104,6 +104,33 @@ variable "region" {
 variable "sa" {
   description = "Account ID of the service account that runs the GitLab VM."
   type        = string
+}
+
+variable "ssl_certificate" {
+  description = "Optional TLS certificate configuration for the HTTPS load balancer. Generates a self-signed certificate and stores its key in Secret Manager when null."
+  type = object({
+    certificate_id = optional(string)
+    certificate    = optional(string)
+    private_key    = optional(string)
+  })
+  default   = null
+  sensitive = true
+  validation {
+    condition = (
+      var.ssl_certificate == null ? true : (
+        (
+          try(trimspace(var.ssl_certificate.certificate_id), "") != "" &&
+          try(var.ssl_certificate.certificate, null) == null &&
+          try(var.ssl_certificate.private_key, null) == null
+          ) || (
+          try(var.ssl_certificate.certificate_id, null) == null &&
+          try(trimspace(var.ssl_certificate.certificate), "") != "" &&
+          try(trimspace(var.ssl_certificate.private_key), "") != ""
+        )
+      )
+    )
+    error_message = "Set either non-empty certificate_id or both non-empty certificate and private_key on ssl_certificate."
+  }
 }
 
 variable "subnetwork" {

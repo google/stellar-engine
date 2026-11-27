@@ -24,6 +24,15 @@ output "lb" {
   sensitive   = true
 }
 
+output "tls_private_key_secret_id" {
+  description = "Secret Manager ID storing the generated self-signed TLS private key, or null when using a custom certificate."
+  value = (
+    local.use_self_signed_cert
+    ? nonsensitive(module.tls-private-key-secret[0].ids["${var.lb_name}-tls-key"])
+    : null
+  )
+}
+
 output "umig" {
   description = "Unmanaged instance group."
   value       = google_compute_instance_group.umig
