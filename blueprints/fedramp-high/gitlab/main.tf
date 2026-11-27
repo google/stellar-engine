@@ -190,10 +190,13 @@ module "net-firewall" {
   network    = var.network_name
   ingress_rules = {
     gitlab-allow = {
-      description   = "Allow health checks to GitLab load balancer."
-      source_ranges = ["35.191.0.0/16", "130.211.0.0/22", "209.85.204.0/22", "209.85.152.0/22", "10.1.3.0/24"]
-      targets       = ["gitlab"]
-      rules         = [{ protocol = "tcp", ports = [80, 443] }]
+      description = "Allow load balancer health checks and regional managed proxy traffic to GitLab."
+      source_ranges = concat(
+        ["35.191.0.0/16", "130.211.0.0/22", "209.85.204.0/22", "209.85.152.0/22"],
+        var.proxy_subnetwork_cidrs,
+      )
+      targets = ["gitlab"]
+      rules   = [{ protocol = "tcp", ports = [80, 443] }]
     }
   }
 }
@@ -410,9 +413,7 @@ module "cluster" {
   access_config = {
     private_nodes = true
     ip_access = {
-      authorized_ranges = {
-        internal-vms = "10.203.0.0/16"
-      }
+      authorized_ranges = var.gke_authorized_ranges
       private_endpoint_config = {
         global_access = false
       }

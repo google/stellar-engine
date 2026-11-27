@@ -2,7 +2,7 @@
 This blueprint will deploy all the required infrastructure to host a GitLab instance that can support 40 RPS.
 
 ## Note
-To have external access to the GitLab instance, the shared vpc networks in the Common Services folder need to be used for the GCE VM, GKE Cluster, and Load Balancer. To enable support for GKE clusters, manual steps to add the pods and service range to the network is required.
+To expose external HTTPS access to the GitLab instance, deploy the GCE VM, GKE cluster, and regional external Application Load Balancer into a Stage 2 Shared VPC spoke network (for example `prod-spoke-0` in host project `xxxx-prod-net-host` inside the Networking folder). The target subnet (`prod-tenant-1-subnet`) must define secondary IPv4 ranges named `gitlab-pod-range` and `gitlab-service-range` for GKE pods and services.
 
 ## Service accounts
 The blueprint creates two service accounts in the deployment project:
@@ -11,24 +11,38 @@ The blueprint creates two service accounts in the deployment project:
 - The GKE nodes run as a separate account named after the first 24 characters of the `gke_name` variable followed by `-nodes`. It holds only `roles/artifactregistry.reader`, `roles/autoscaling.metricsWriter`, `roles/logging.logWriter`, `roles/monitoring.metricWriter`, and `roles/monitoring.viewer` on the deployment project.
 
 ## Manual Pre-Requisite Steps
-Go to the VPC Network inside of the net-host project inside of the Networking folder in the Stellar Engine environment.
+Open the Shared VPC network inside the net-host project inside the Networking folder in the Stellar Engine environment and ensure:
+
+1. The target GKE subnet includes secondary IP ranges named `gitlab-pod-range` and `gitlab-service-range`.
+2. A `REGIONAL_MANAGED_PROXY` subnet exists in the target region (Stage 2 networking creates `proxy-<region>`); pass its CIDR range via `proxy_subnetwork_cidrs` so load balancer proxy traffic reaches the GitLab VM.
+3. Pass internal CIDR ranges allowed to access the GKE control plane endpoint via `gke_authorized_ranges`.
 
 ![alt text](images/image.png)
 
-Next, go to organization policies and change the Policy source to Google-managed default for the "Restrict Load Balancer Creation Based on Load Balancer Types" policy.
+Next, open organization policies and allow `EXTERNAL_MANAGED_HTTP_HTTPS` for the "Restrict Load Balancer Creation Based on Load Balancer Types" (`compute.restrictLoadBalancerCreationForTypes`) constraint on the deployment project.
 
 ![alt text](images/image-3.png)
 
-## Manual Post-Requisite Steps
-Navigate to the deployed Load Balancer in Network Services on the Google Cloud Console. Note the HTTPS frontend IP address, configure DNS for the hostname in `gitlab_uri`, and use that HTTPS URL when connecting the GKE cluster (for example `https://gitlab.example.com`). Run the following commands in order on the deployed virtual machine via SSH.
+## Deployment Steps
+
+Copy `terraform.tfvars.sample` to `terraform.tfvars`, populate project IDs, network paths, secondary-enabled subnet path, KMS key path, `proxy_subnetwork_cidrs`, and `gke_authorized_ranges`, then run:
+
 ```bash
-gcloud container clusters get-credentials <CLUSTER_NAME> --region=CLUSTER_LOCATION --project <PROJECT_ID>
+terraform init
+terraform plan
+terraform apply
+```
+
+## Manual Post-Requisite Steps
+Navigate to the deployed Load Balancer in Network Services on the Google Cloud Console. Note the HTTPS frontend IP address, configure DNS for the hostname in `gitlab_uri`, and use that HTTPS URL when connecting the GKE cluster (for example `https://gitlab.example.com`). Connect to the private GitLab VM over IAP (`gcloud compute ssh <VM_NAME> --zone=<ZONE> --project=<PROJECT_ID> --tunnel-through-iap --internal-ip`) and run the following commands in order.
+```bash
+gcloud container clusters get-credentials <CLUSTER_NAME> --region=<CLUSTER_LOCATION> --project <PROJECT_ID>
 ```
 ```bash
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.7.1/cert-manager.yaml
 ```
 ```bash
-curl --silent --location "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.24.0/install.sh" \ | bash -s v0.24.0
+curl --silent --location "https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.24.0/install.sh" | bash -s v0.24.0
 ```
 ```bash
 kubectl create -f https://operatorhub.io/install/gitlab-runner-operator.yaml
@@ -89,7 +103,7 @@ stringData:
   runner-token: YOUR_RUNNER_AUTHENTICATION_TOKEN
 EOF
 ```
-Before moving onto this step you have to wait about 30 minutes for the earlier changes to have been applied to the cluster. The GitLab OLM runner is installing on the clusters. There will be no visual indication when the process is done.
+Before applying the runner manifest below, wait about 30 minutes for the GitLab OLM operator installation on the GKE cluster to become ready.
 ```bash
 kubectl apply -f gitlab-runner-secret.yml
 ```
@@ -124,24 +138,26 @@ kubectl apply -f gitlab-runner.yml
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
 | [gitlab_uri](variables.tf#L31) | The HTTPS URL that the GitLab instance will be served on. | <code>string</code> | ✓ |  |
-| [kms_key](variables.tf#L58) | KMS key path. | <code>string</code> | ✓ |  |
-| [net_project](variables.tf#L69) | Project name of the spoke network. This project has the Stellar Engine deployed default VPC and is in the Networking folder. | <code>string</code> | ✓ |  |
-| [network](variables.tf#L74) | Network path to use for cluster, VM, and load balancer. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L79) | Network name to use for Firewall rules. E.G. test-net-spoke. | <code>string</code> | ✓ |  |
-| [nodepool_node_count](variables.tf#L84) | Number of node per zone in the Nodepool. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [project_id](variables.tf#L93) | Project ID where the GitLab cluster, VM, and load balancer will be deployed to. | <code>string</code> | ✓ |  |
-| [sa](variables.tf#L104) | Account ID of the service account that runs the GitLab VM. | <code>string</code> | ✓ |  |
-| [subnetwork](variables.tf#L136) | Subnet path to use for cluster, VM, and load balancer. | <code>string</code> | ✓ |  |
+| [kms_key](variables.tf#L69) | KMS key path. | <code>string</code> | ✓ |  |
+| [net_project](variables.tf#L80) | Project name of the spoke network. This project has the Stellar Engine deployed default VPC and is in the Networking folder. | <code>string</code> | ✓ |  |
+| [network](variables.tf#L85) | Network path to use for cluster, VM, and load balancer. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L90) | Network name to use for firewall rules (for example, prod-spoke-0). | <code>string</code> | ✓ |  |
+| [nodepool_node_count](variables.tf#L95) | Number of node per zone in the Nodepool. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [project_id](variables.tf#L104) | Project ID where the GitLab cluster, VM, and load balancer will be deployed to. | <code>string</code> | ✓ |  |
+| [sa](variables.tf#L126) | Account ID of the service account that runs the GitLab VM. | <code>string</code> | ✓ |  |
+| [subnetwork](variables.tf#L158) | Subnet path to use for cluster, VM, and load balancer. | <code>string</code> | ✓ |  |
 | [compute_image](variables.tf#L15) | The image used to provision the compute instance. | <code>string</code> |  | <code>&#34;projects&#47;ubuntu-os-cloud&#47;global&#47;images&#47;ubuntu-2404-noble-amd64-v20241219&#34;</code> |
 | [gitlab_install_script_sha256](variables.tf#L21) | Expected SHA-256 hash for the GitLab package repository install script. | <code>string</code> |  | <code>&#34;47c124527729776870cf09cd6bd46a9b94f55d40c7545ca26640c75de86b560d&#34;</code> |
-| [gke_initial_node_per_zone](variables.tf#L40) | Initial node amount per zone. | <code>number</code> |  | <code>1</code> |
-| [gke_name](variables.tf#L46) | Name of the GKE cluster. | <code>string</code> |  | <code>&#34;gitlab-cluster&#34;</code> |
-| [instance_name](variables.tf#L52) | Name of the vm. | <code>string</code> |  | <code>&#34;gitlab-instance&#34;</code> |
-| [lb_name](variables.tf#L63) | Application load balancer name. | <code>string</code> |  | <code>&#34;gitlab-load-balancer&#34;</code> |
-| [region](variables.tf#L98) | Region for deployment. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [ssl_certificate](variables.tf#L109) | Optional TLS certificate configuration for the HTTPS load balancer. Generates a self-signed certificate and stores its key in Secret Manager when null. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [vm_name](variables.tf#L141) | VM name. | <code>string</code> |  | <code>&#34;gitlab-vm&#34;</code> |
-| [zone](variables.tf#L147) | Zone to deploy to. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
+| [gke_authorized_ranges](variables.tf#L40) | Map of display names to IPv4 CIDR ranges authorized to access the GKE control plane endpoint. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [gke_initial_node_per_zone](variables.tf#L51) | Initial node amount per zone. | <code>number</code> |  | <code>1</code> |
+| [gke_name](variables.tf#L57) | Name of the GKE cluster. | <code>string</code> |  | <code>&#34;gitlab-cluster&#34;</code> |
+| [instance_name](variables.tf#L63) | Name of the vm. | <code>string</code> |  | <code>&#34;gitlab-instance&#34;</code> |
+| [lb_name](variables.tf#L74) | Application load balancer name. | <code>string</code> |  | <code>&#34;gitlab-load-balancer&#34;</code> |
+| [proxy_subnetwork_cidrs](variables.tf#L109) | CIDR ranges of the regional managed proxy subnets permitted to reach the GitLab backend VM through the firewall rule. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
+| [region](variables.tf#L120) | Region for deployment. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [ssl_certificate](variables.tf#L131) | Optional TLS certificate configuration for the HTTPS load balancer. Generates a self-signed certificate and stores its key in Secret Manager when null. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [vm_name](variables.tf#L163) | VM name. | <code>string</code> |  | <code>&#34;gitlab-vm&#34;</code> |
+| [zone](variables.tf#L169) | Zone to deploy to. | <code>string</code> |  | <code>&#34;us-east4-a&#34;</code> |
 
 ## Outputs
 
