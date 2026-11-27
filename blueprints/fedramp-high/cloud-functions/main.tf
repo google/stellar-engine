@@ -32,17 +32,56 @@ module "service-account-runner" {
 resource "google_project_service" "cloud_functions_apis" {
   for_each = toset([
     "artifactregistry.googleapis.com",
+    "binaryauthorization.googleapis.com",
     "cloudbuild.googleapis.com",
     "cloudfunctions.googleapis.com",
+    "compute.googleapis.com",
     "logging.googleapis.com",
     "pubsub.googleapis.com",
     "run.googleapis.com",
-    "binaryauthorization.googleapis.com",
+    "storage.googleapis.com",
   ])
 
   project            = var.main_project_id
   service            = each.value
   disable_on_destroy = false
+}
+
+resource "google_project_service_identity" "cloudfunctions" {
+  provider   = google-beta
+  project    = var.main_project_id
+  service    = "cloudfunctions.googleapis.com"
+  depends_on = [google_project_service.cloud_functions_apis]
+}
+
+resource "google_project_service_identity" "artifactregistry" {
+  provider   = google-beta
+  project    = var.main_project_id
+  service    = "artifactregistry.googleapis.com"
+  depends_on = [google_project_service.cloud_functions_apis]
+}
+
+resource "google_project_service_identity" "run" {
+  provider   = google-beta
+  project    = var.main_project_id
+  service    = "run.googleapis.com"
+  depends_on = [google_project_service.cloud_functions_apis]
+}
+
+data "google_storage_project_service_account" "gcs_sa" {
+  project    = var.main_project_id
+  depends_on = [google_project_service.cloud_functions_apis]
+}
+
+resource "time_sleep" "kms_iam_propagation" {
+  create_duration = "60s"
+  depends_on = [
+    google_project_service.cloud_functions_apis,
+    google_project_service_identity.artifactregistry,
+    google_project_service_identity.cloudfunctions,
+    google_project_service_identity.run,
+    data.google_storage_project_service_account.gcs_sa,
+  ]
 }
 
 # Cloud Build does not support IAM policies on builds, so the project is the
@@ -54,7 +93,7 @@ resource "google_project_iam_member" "cloud_build" {
   member  = module.service-account-runner.iam_email
 }
 
-# The Cloud Run service behind the function exists only after the gcloud
+# The Cloud Run service behind the function exists only after the module
 # deployment, so the binding waits for it.
 resource "google_cloud_run_v2_service_iam_member" "cloud_invoker" {
   project    = var.main_project_id
@@ -62,20 +101,21 @@ resource "google_cloud_run_v2_service_iam_member" "cloud_invoker" {
   name       = local.function_service_name
   role       = "roles/run.invoker"
   member     = module.service-account-runner.iam_email
-  depends_on = [null_resource.cloud_function_deploy]
+  depends_on = [module.cloud-function]
 }
 
 resource "google_kms_crypto_key_iam_member" "cloud_storage" {
-  for_each = toset([
-    "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com",
-    "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com",
-    "serviceAccount:service-${data.google_project.current.number}@gcf-admin-robot.iam.gserviceaccount.com",
-    "serviceAccount:service-${data.google_project.current.number}@gcp-sa-artifactregistry.iam.gserviceaccount.com",
-    "serviceAccount:service-${data.google_project.current.number}@serverless-robot-prod.iam.gserviceaccount.com"
-  ])
+  for_each = {
+    artifactregistry = google_project_service_identity.artifactregistry.member
+    cloudfunctions   = google_project_service_identity.cloudfunctions.member
+    compute          = "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com"
+    run              = google_project_service_identity.run.member
+    storage          = data.google_storage_project_service_account.gcs_sa.member
+  }
   crypto_key_id = var.kms_key_name
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = each.value
+  depends_on    = [time_sleep.kms_iam_propagation]
 }
 
 moved {
@@ -91,52 +131,50 @@ resource "google_project_iam_member" "logging_log_writer" {
   member  = module.service-account-runner.iam_email
 }
 
-resource "null_resource" "cloud_function_deploy" {
-  depends_on = [module.bucket, module.registry-docker]
-  triggers = {
-    project_id       = var.main_project_id
-    region           = var.region
-    function_name    = var.function_name
-    runtime          = var.function_runtime
-    entry_point      = var.function_entry_point
-    memory           = var.function_memory_mb
-    timeout          = var.function_timeout_seconds
-    source_code_hash = sha256(join("", [for f in fileset("./src-code", "**") : file("./src-code/${f}")]))
+module "cloud-function" {
+  source      = "../../../modules/cloud-function-v2"
+  project_id  = var.main_project_id
+  region      = var.region
+  name        = var.function_name
+  description = var.description
+  bucket_name = module.bucket.name
+  bundle_config = {
+    path = var.bundle_config == null ? "${path.module}/src-code" : var.bundle_config.path
+    folder_options = (
+      var.bundle_config == null
+      ? {
+        archive_path = tostring(null)
+        excludes     = tolist(null)
+      }
+      : var.bundle_config.folder_options
+    )
   }
-  provisioner "local-exec" {
-    environment = {
-      CF_NAME              = var.function_name
-      CF_PROJECT           = var.main_project_id
-      CF_REGION            = var.region
-      CF_RUNTIME           = var.function_runtime
-      CF_ENTRY_POINT       = var.function_entry_point
-      CF_MEMORY            = "${var.function_memory_mb}MB"
-      CF_TIMEOUT           = "${var.function_timeout_seconds}s"
-      CF_MAX_INSTANCES     = tostring(var.function_instance_count)
-      CF_DOCKER_REPOSITORY = module.registry-docker.id
-      CF_KMS_KEY           = var.kms_key_name
-      CF_SERVICE_ACCOUNT   = coalesce(var.service_account, module.service-account-runner.email)
-    }
-    command = <<EOT
-      gcloud functions deploy "$CF_NAME" \
-        --project="$CF_PROJECT" \
-        --region="$CF_REGION" \
-        --runtime="$CF_RUNTIME" \
-        --trigger-http \
-        --source="./src-code" \
-        --entry-point="$CF_ENTRY_POINT" \
-        --memory="$CF_MEMORY" \
-        --timeout="$CF_TIMEOUT" \
-        --max-instances="$CF_MAX_INSTANCES" \
-        --ingress-settings="internal-and-gclb" \
-        --binary-authorization="default" \
-        --docker-repository="$CF_DOCKER_REPOSITORY" \
-        --kms-key="$CF_KMS_KEY" \
-        --service-account="$CF_SERVICE_ACCOUNT"
-    EOT
+  docker_repository_id  = module.registry-docker.id
+  environment_variables = var.environment_variables
+  function_config = {
+    binary_authorization_policy = "default"
+    cpu                         = tostring(var.function_cpu)
+    entry_point                 = var.function_entry_point
+    instance_count              = var.function_instance_count
+    memory_mb                   = var.function_memory_mb
+    runtime                     = var.function_runtime
+    timeout_seconds             = var.function_timeout_seconds
   }
+  ingress_settings = "ALLOW_INTERNAL_AND_GCLB"
+  kms_key          = var.kms_key_name
+  labels           = var.labels
+  secrets          = var.secrets
+  service_account_config = {
+    create = false
+    email  = coalesce(var.service_account, module.service-account-runner.email)
+  }
+  depends_on = [
+    google_project_service.cloud_functions_apis,
+    google_kms_crypto_key_iam_member.cloud_storage,
+    module.bucket,
+    module.registry-docker,
+  ]
 }
-
 
 module "bucket" {
   source         = "../../../modules/gcs"
@@ -150,10 +188,14 @@ module "bucket" {
   iam = {
     "roles/storage.objectUser" = [
       module.service-account-runner.iam_email,
-      "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com",
+      data.google_storage_project_service_account.gcs_sa.member,
       "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com"
     ]
   }
+  depends_on = [
+    google_project_service.cloud_functions_apis,
+    google_kms_crypto_key_iam_member.cloud_storage,
+  ]
 }
 
 module "registry-docker" {
@@ -177,5 +219,8 @@ module "registry-docker" {
       role   = "roles/artifactregistry.writer"
     }
   }
-  depends_on = [google_kms_crypto_key_iam_member.cloud_storage]
+  depends_on = [
+    google_project_service.cloud_functions_apis,
+    google_kms_crypto_key_iam_member.cloud_storage,
+  ]
 }
