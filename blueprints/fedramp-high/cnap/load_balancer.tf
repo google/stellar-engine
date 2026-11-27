@@ -16,9 +16,8 @@ locals {
   cr_backends = { for key, _ in try(local.cloud_runs, {}) : key =>
     {
       backends = [
-        { backend = "neg-${key}" }
+        { group = "neg-${key}" }
       ]
-      id            = ""
       health_checks = []
       port_name     = ""
       # Without a custom OAuth client, IAP uses a Google-managed client.
@@ -69,8 +68,15 @@ locals {
     }
   )
 }
+moved {
+  from = google_compute_shared_vpc_host_project.host
+  to   = google_compute_shared_vpc_host_project.host[0]
+}
+
 resource "google_compute_shared_vpc_host_project" "host" {
-  project = var.network_project_id
+  count      = var.enable_shared_vpc_host ? 1 : 0
+  project    = var.network_project_id
+  depends_on = [google_project_service.net_host_services]
 }
 
 resource "tls_private_key" "default" {
@@ -79,8 +85,9 @@ resource "tls_private_key" "default" {
 }
 
 data "google_compute_network" "network" {
-  name    = var.network_name
-  project = try(var.net_project, var.main_project_id)
+  name       = var.network_name
+  project    = coalesce(var.net_project, var.network_project_id)
+  depends_on = [google_project_service.net_host_services]
 }
 resource "tls_self_signed_cert" "default" {
   provider        = tls
@@ -89,10 +96,7 @@ resource "tls_self_signed_cert" "default" {
     common_name  = var.domain
     organization = "ACME Examples, Inc"
   }
-  dns_names = concat(
-    [for app, values in try(local.apps, {}) : "${values.subdomain}.${var.domain}"],
-    [for mig, values in try(local.vms, {}) : " ${values.subdomain}.${var.domain}"]
-  )
+  dns_names             = [for app, values in try(local.apps, {}) : "${values.subdomain}.${var.domain}"]
   validity_period_hours = 720
   allowed_uses = [
     "key_encipherment",
@@ -121,15 +125,17 @@ moved {
 }
 
 resource "google_compute_address" "cnap_ext_ip" {
+  project      = var.main_project_id
   name         = "cnap-ip"
   region       = var.region
   address_type = "EXTERNAL"
   network_tier = "STANDARD"
+  depends_on   = [google_project_service.services]
 }
 
 module "cnap-0-redirect" {
   source     = "../../../modules/net-lb-app-ext-regional/"
-  project_id = var.network_project_id
+  project_id = var.main_project_id
   name       = "${var.prefix}-cloud-native-access-point-redirect"
   vpc_config = { network = data.google_compute_network.network.self_link }
   region     = var.region
@@ -144,7 +150,10 @@ module "cnap-0-redirect" {
       response_code = "MOVED_PERMANENTLY_DEFAULT"
     }
   }
-  depends_on = [google_org_policy_policy.allow_external_lb]
+  depends_on = [
+    google_org_policy_policy.allow_external_lb,
+    google_project_service.services,
+  ]
 }
 
 module "cnap-0" {
@@ -161,7 +170,7 @@ module "cnap-0" {
   health_check_configs = {}
   neg_configs = { for key, _ in local.cloud_runs : "neg-${key}" =>
     {
-      project = var.main_project_id
+      project_id = var.main_project_id
       cloudrun = {
         region = var.region
         target_service = {
@@ -181,5 +190,9 @@ module "cnap-0" {
     certificate_ids = [google_compute_region_ssl_certificate.default.id]
   }
 
-  depends_on = [google_cloud_run_v2_service.cloud_run_apps] # google_org_policy_policy.allow_external_lb]
+  depends_on = [
+    google_cloud_run_v2_service.cloud_run_apps,
+    google_org_policy_policy.allow_external_lb,
+    google_project_service.services,
+  ]
 }

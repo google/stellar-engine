@@ -19,18 +19,22 @@ data "google_compute_default_service_account" "default" {
 }
 
 data "google_compute_zones" "available" {
-  region  = var.region
-  project = data.google_project.project.project_id
-  status  = "UP"
+  region     = var.region
+  project    = data.google_project.project.project_id
+  status     = "UP"
+  depends_on = [google_project_service.services]
 }
+
 data "google_compute_subnetwork" "default" {
-  name    = var.subnetwork_name
-  project = var.net_project
+  name       = var.subnetwork_name
+  project    = coalesce(var.net_project, var.network_project_id)
+  depends_on = [google_project_service.net_host_services]
 }
 
 data "google_compute_subnetwork" "proxy" {
-  name    = "proxy-${var.region}"
-  project = var.net_project
+  name       = coalesce(var.proxy_subnetwork_name, "proxy-${var.region}")
+  project    = coalesce(var.net_project, var.network_project_id)
+  depends_on = [google_project_service.net_host_services]
 }
 
 # Custom service account with compute engine role
@@ -139,7 +143,7 @@ module "cos-mig" {
     type           = "PROACTIVE"
     min_ready_sec  = 300
     max_surge = {
-      fixed = length(data.google_compute_zones.available)
+      fixed = length(data.google_compute_zones.available.names)
     }
     max_unavailable = {
       fixed = 0
@@ -165,7 +169,8 @@ module "kms" {
   iam = {
     "roles/cloudkms.cryptoKeyEncrypterDecrypter" = [
       google_service_account.compute.member,
-      "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
+      "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com",
+      "serviceAccount:service-${data.google_project.project.number}@serverless-robot-prod.iam.gserviceaccount.com"
     ]
   }
   keyring = {
@@ -173,6 +178,10 @@ module "kms" {
     name     = "cnap-keyring"
   }
 
+  depends_on = [
+    google_project_service.services,
+    google_project_service_identity.cloudrun_sa,
+  ]
 }
 
 moved {
@@ -181,8 +190,11 @@ moved {
 }
 
 resource "google_compute_firewall" "allow_app" {
+  project = coalesce(var.net_project, var.network_project_id)
   name    = "cnap-app-firewall"
   network = data.google_compute_network.network.id
+
+  depends_on = [google_project_service.net_host_services]
 
   allow {
     protocol = "tcp"

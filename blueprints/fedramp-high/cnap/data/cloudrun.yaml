@@ -28,7 +28,7 @@ mod:
   subdomain: mod
   condition:
     title: Moderate Device Level
-    description: "Group based + Expiring Access by 2025 + 7ET->21ET Monday through Friday + US"
+    description: "Group based + 7ET->21ET Monday through Friday + US"
     expression: "\"accessPolicies/${ACCESSPOLICY}/accessLevels/moderate_device\" in request.auth.access_levels"
 hard:
   cloud_run_image: "us-docker.pkg.dev/cloudrun/container/hello"
@@ -37,5 +37,5 @@ hard:
   subdomain: hard
   condition:
     title: Strict Device Level
-    description: "Group based + MacOS/Windows + Encryption Enabled + Corp Owned + Expiring Access by 2025 + 7ET->21ET Monday through Friday + US"
+    description: "Group based + MacOS/Windows + Encryption Enabled + Corp Owned + 7ET->21ET Monday through Friday + US"
     expression: "\"accessPolicies/${ACCESSPOLICY}/accessLevels/strict_device\" in request.auth.access_levels"

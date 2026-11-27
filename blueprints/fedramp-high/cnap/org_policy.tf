@@ -13,8 +13,8 @@
 # limitations under the License.
 
 resource "google_org_policy_policy" "allow_external_lb" {
-  name   = "projects/${data.google_project.landing_project.number}/policies/compute.restrictLoadBalancerCreationForTypes"
-  parent = "projects/${data.google_project.landing_project.number}"
+  name   = "projects/${data.google_project.project.number}/policies/compute.restrictLoadBalancerCreationForTypes"
+  parent = "projects/${data.google_project.project.number}"
   spec {
     inherit_from_parent = false
 
@@ -24,4 +24,5 @@ resource "google_org_policy_policy" "allow_external_lb" {
       }
     }
   }
+  depends_on = [google_project_service.services]
 }

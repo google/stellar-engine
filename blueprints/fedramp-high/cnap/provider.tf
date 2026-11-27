@@ -31,15 +31,11 @@ terraform {
 }
 
 provider "google" {
-  project               = var.network_project_id
-  region                = var.region
-  billing_project       = var.main_project_id
-  user_project_override = true
+  project = var.main_project_id
+  region  = var.region
 }
 
 provider "google-beta" {
-  project               = var.network_project_id
-  region                = var.region
-  billing_project       = var.main_project_id
-  user_project_override = true
+  project = var.main_project_id
+  region  = var.region
 }

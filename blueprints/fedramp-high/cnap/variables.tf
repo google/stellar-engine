@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
+variable "access_expiry_timestamp" {
+  description = "Optional RFC3339 timestamp to create an expiring access level. Omitted when null."
+  type        = string
+  default     = null
+}
+
 variable "access_policy_number" {
   description = "There can only be one Access Policy per GCP Org. Use gcloud access-context-manager policies list --organization <org-number> to list it."
   type        = number
@@ -29,6 +35,12 @@ variable "cloud_armor_request_body_limit" {
   }
 }
 
+variable "create_service_networking_connection" {
+  description = "Whether to create a new Service Networking private IP allocation and VPC peering connection for Cloud IDS. Leave false when reusing the Private Service Access allocation from Stage 2."
+  type        = bool
+  default     = false
+}
+
 variable "default_backend" {
   description = "The default backend for traffic at the load-balancer. Must match the key of one of the backends in the data/apps.yaml file."
   type        = string
@@ -37,6 +49,12 @@ variable "default_backend" {
 variable "domain" {
   description = "FQDN for the load-balancer hosted apps, where the subdomain will be prepended to."
   type        = string
+}
+
+variable "enable_shared_vpc_host" {
+  description = "Whether to register network_project_id as a Shared VPC host project. Leave false when Stage 2 already configures the Shared VPC host project."
+  type        = bool
+  default     = false
 }
 
 variable "iap_oauth2_client" {
@@ -73,7 +91,7 @@ variable "main_project_id" {
 }
 
 variable "net_project" {
-  description = "GCP Project to the VPC belongs to. (Defaults to the variable project if not defined)."
+  description = "Optional host project ID owning the VPC network and subnets. Defaults to network_project_id when null."
   type        = string
   nullable    = true
   default     = null
@@ -101,13 +119,19 @@ variable "prefix" {
   default     = "cnap"
 }
 
+variable "proxy_subnetwork_name" {
+  description = "Optional name of the regional managed proxy subnetwork in the VPC host project. Defaults to proxy-<region> when null."
+  type        = string
+  default     = null
+}
+
 variable "region" {
   description = "GCP Region to deploy into."
   type        = string
 }
 
 variable "severity" {
-  description = "Display name of the service account to create."
+  description = "Minimum threat severity to report in Cloud IDS (INFORMATIONAL, LOW, MEDIUM, HIGH, or CRITICAL)."
   type        = string
   default     = "MEDIUM"
 }
@@ -121,5 +145,5 @@ variable "subnetwork_list" {
 variable "subnetwork_name" {
   description = "Subnet for deploying the instances."
   type        = string
-  default     = "default-us-east4"
+  default     = "prod-tenant-1-subnet"
 }
