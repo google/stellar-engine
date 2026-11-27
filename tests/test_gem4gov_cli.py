@@ -220,5 +220,161 @@ class TestGem4GovPrivateKnowledgeGraph(unittest.TestCase):
                 mock_cfg.assert_called_once()
 
 
+class TestGem4GovLicenseAssign(unittest.TestCase):
+    """Verify project-number resolution on gem4gov license assign (#445)."""
+
+    def test_bare_license_config_id_resolves_project_number_via_cli(self):
+        """Ensure bare --license-config-id expands using project number."""
+        runner = CliRunner()
+        mock_creds = MagicMock()
+        mock_creds.with_quota_project.return_value = mock_creds
+        de_service = MagicMock()
+        crm_service = MagicMock()
+        crm_service.projects().get.return_value.execute.return_value = {
+            "projectNumber": "987654321098"
+        }
+        batch_update = (
+            de_service.projects()
+            .locations()
+            .userStores()
+            .batchUpdateUserLicenses
+        )
+        batch_update.return_value.execute.return_value = {
+            "name": "operations/assign-1"
+        }
+
+        def build_side_effect(api_name, *_args, **_kwargs):
+            return (
+                crm_service
+                if api_name == "cloudresourcemanager"
+                else de_service
+            )
+
+        with (
+            patch.object(gem4gov, "get_credentials", return_value=mock_creds),
+            patch.object(gem4gov, "build", side_effect=build_side_effect),
+        ):
+            result = runner.invoke(
+                gem4gov.cli,
+                [
+                    "license",
+                    "assign",
+                    "--project-id",
+                    "my-project",
+                    "--users",
+                    "user@example.com",
+                    "--license-config-id",
+                    "free_trial_gemini",
+                ],
+            )
+
+        self.assertEqual(result.exit_code, 0, result.output)
+        crm_service.projects().get.assert_called_once_with(
+            projectId="my-project"
+        )
+        kwargs = batch_update.call_args.kwargs
+        self.assertEqual(
+            kwargs["parent"],
+            "projects/my-project/locations/us/userStores/default_user_store",
+        )
+        self.assertEqual(
+            kwargs["body"]["inlineSource"]["userLicenses"],
+            [
+                {
+                    "userPrincipal": "user@example.com",
+                    "licenseConfig": (
+                        "projects/987654321098/locations/us"
+                        "/licenseConfigs/free_trial_gemini"
+                    ),
+                }
+            ],
+        )
+
+    def test_full_license_config_name_skips_project_number_lookup(self):
+        """Ensure full projects/... resource name passes through directly."""
+        mock_creds = MagicMock()
+        de_service = MagicMock()
+        batch_update = (
+            de_service.projects()
+            .locations()
+            .userStores()
+            .batchUpdateUserLicenses
+        )
+        batch_update.return_value.execute.return_value = {"name": "op-2"}
+        full_name = (
+            "projects/111222333444/locations/us/licenseConfigs/custom_cfg"
+        )
+
+        with (
+            patch.object(gem4gov, "get_project_number") as mock_proj_num,
+            patch.object(gem4gov, "build", return_value=de_service),
+        ):
+            gem4gov._batch_update_user_licenses(
+                mock_creds,
+                project_id="my-project",
+                location="us",
+                users="user@example.com",
+                license_config_id=full_name,
+                unassign=False,
+            )
+
+        mock_proj_num.assert_not_called()
+        entry = batch_update.call_args.kwargs["body"]["inlineSource"][
+            "userLicenses"
+        ][0]
+        self.assertEqual(entry["licenseConfig"], full_name)
+
+    def test_missing_project_number_exits_with_error(self):
+        """Ensure failed project number lookup exits cleanly."""
+        mock_creds = MagicMock()
+        with (
+            patch.object(gem4gov, "get_project_number", return_value=None),
+            patch.object(gem4gov, "build") as mock_build,
+            self.assertRaises(SystemExit) as ctx,
+        ):
+            gem4gov._batch_update_user_licenses(
+                mock_creds,
+                project_id="my-project",
+                location="us",
+                users="user@example.com",
+                license_config_id="free_trial_gemini",
+                unassign=False,
+            )
+
+        self.assertEqual(ctx.exception.code, 1)
+        mock_build.assert_not_called()
+
+    def test_unassign_skips_project_number_lookup(self):
+        """Ensure --unassign does not query Cloud Resource Manager."""
+        mock_creds = MagicMock()
+        de_service = MagicMock()
+        batch_update = (
+            de_service.projects()
+            .locations()
+            .userStores()
+            .batchUpdateUserLicenses
+        )
+        batch_update.return_value.execute.return_value = {"name": "op-3"}
+
+        with (
+            patch.object(gem4gov, "get_project_number") as mock_proj_num,
+            patch.object(gem4gov, "build", return_value=de_service),
+        ):
+            gem4gov._batch_update_user_licenses(
+                mock_creds,
+                project_id="my-project",
+                location="us",
+                users="user@example.com",
+                license_config_id=None,
+                unassign=True,
+            )
+
+        mock_proj_num.assert_not_called()
+        entry = batch_update.call_args.kwargs["body"]["inlineSource"][
+            "userLicenses"
+        ][0]
+        self.assertNotIn("licenseConfig", entry)
+
+
 if __name__ == "__main__":
     unittest.main()
