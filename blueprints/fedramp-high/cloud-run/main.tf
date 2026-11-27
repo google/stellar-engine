@@ -12,10 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-data "google_project" "project" {
-  project_id = var.main_project_id
-}
-
 data "google_kms_key_ring" "default" {
   name     = var.kms_keyring_name
   location = var.region
@@ -28,13 +24,27 @@ data "google_kms_crypto_key" "default" {
 }
 
 resource "google_project_service" "cloud_run" {
+  project            = var.main_project_id
   service            = "run.googleapis.com"
   disable_on_destroy = false
 }
 
 resource "google_project_service" "binary_authorization" {
+  project            = var.main_project_id
   service            = "binaryauthorization.googleapis.com"
   disable_on_destroy = false
+}
+
+resource "google_project_service_identity" "run_sa" {
+  provider   = google-beta
+  project    = var.main_project_id
+  service    = "run.googleapis.com"
+  depends_on = [google_project_service.cloud_run]
+}
+
+resource "time_sleep" "cloud_run_agent_propagation" {
+  create_duration = "60s"
+  depends_on      = [google_project_service_identity.run_sa]
 }
 
 resource "google_service_account" "cloud_run_service_account" {
@@ -67,7 +77,8 @@ resource "google_cloud_run_v2_job_iam_member" "cloud_run_invoker" {
 resource "google_kms_crypto_key_iam_member" "cloud_run_service_agent_kms_permissions" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:service-${data.google_project.project.number}@serverless-robot-prod.iam.gserviceaccount.com"
+  member        = google_project_service_identity.run_sa.member
+  depends_on    = [time_sleep.cloud_run_agent_propagation]
 }
 
 moved {
@@ -115,5 +126,10 @@ module "cloud-run" {
     create = false
     email  = google_service_account.cloud_run_service_account.email
   }
-  deletion_protection = true
+  deletion_protection = var.deletion_protection
+  depends_on = [
+    google_project_service.cloud_run,
+    google_project_service.binary_authorization,
+    google_kms_crypto_key_iam_member.cloud_run_service_agent_kms_permissions,
+  ]
 }

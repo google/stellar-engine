@@ -1,12 +1,12 @@
 main_project_id    = "xxxx-xxxx-main-0"
 core_project_id    = "xxxx-xxxx-iac-core-0"
-network_project_id = "xxxx-xxxx-net-host"
+network_project_id = "xxxx-prod-net-host"
 
 kms_keyring_name = "xxxx-xxxx-keyring"
 kms_key_name     = "default"           # Must already exist
 
-network_name    = "xxxx-spoke-0"       # Must already exist
-subnetwork_name = "default-us-east4"   # Must already exist
+network_name    = "prod-spoke-0"         # Must already exist
+subnetwork_name = "prod-tenant-1-subnet" # Must already exist
 
 region = "us-east4"
 
@@ -23,6 +23,6 @@ workstations = {
       CONFIG = "TEST"
       FOO    = "BAR"
     }
-    users = ["user:<EMAIL-ADDRESS>>"] # change/delete this
+    users = ["user:<EMAIL-ADDRESS>"] # change/delete this
   }
 }

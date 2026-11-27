@@ -23,9 +23,15 @@ resource "google_project_service" "bigtable_api" {
 }
 
 resource "google_project_service_identity" "bigtable_sa" {
-  provider = google-beta
-  project  = var.main_project_id
-  service  = "bigtableadmin.googleapis.com"
+  provider   = google-beta
+  project    = var.main_project_id
+  service    = "bigtableadmin.googleapis.com"
+  depends_on = [google_project_service.bigtable_api]
+}
+
+resource "time_sleep" "bigtable_agent_propagation" {
+  create_duration = "60s"
+  depends_on      = [google_project_service_identity.bigtable_sa]
 }
 
 data "google_kms_key_ring" "default" {
@@ -54,6 +60,7 @@ resource "google_kms_crypto_key_iam_member" "bigtable_agent_kms_access" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = google_project_service_identity.bigtable_sa.member
+  depends_on    = [time_sleep.bigtable_agent_propagation]
 }
 
 module "bigtable-instance" {
@@ -71,4 +78,9 @@ module "bigtable-instance" {
   }
   tables              = var.table
   deletion_protection = var.deletion_protection
+  depends_on = [
+    google_project_service.bigtable_api,
+    google_kms_crypto_key_iam_member.bigtable_sa_kms_access,
+    google_kms_crypto_key_iam_member.bigtable_agent_kms_access,
+  ]
 }

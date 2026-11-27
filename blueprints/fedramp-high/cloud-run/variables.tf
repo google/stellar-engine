@@ -54,6 +54,12 @@ variable "cpu_idle" {
   default     = true
 }
 
+variable "deletion_protection" {
+  description = "Prevent Terraform from destroying the Cloud Run service or job."
+  type        = bool
+  default     = true
+}
+
 variable "env_vars" {
   description = "Environment variables for the Cloud Run service or job."
   type        = map(string)

@@ -24,6 +24,13 @@ resource "google_kms_crypto_key_iam_member" "workstations_sa_kms_permissions" {
   member        = "serviceAccount:${google_service_account.workstation_config_key_user.email}"
 }
 
+resource "google_kms_crypto_key_iam_member" "compute_sa_kms_permissions" {
+  crypto_key_id = local.key
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:service-${data.google_project.project.number}@compute-system.iam.gserviceaccount.com"
+  depends_on    = [time_sleep.kms_iam_propagation]
+}
+
 # The Cloud Workstations service agent attaches the cluster and its VMs to one
 # subnetwork, so it holds the role on that subnetwork and not on the project.
 resource "google_compute_subnetwork_iam_member" "network_user" {
@@ -32,7 +39,7 @@ resource "google_compute_subnetwork_iam_member" "network_user" {
   subnetwork = var.subnetwork_name
   role       = "roles/compute.networkUser"
   member     = local.workstation_default_sa
-  depends_on = [google_project_service.workstations]
+  depends_on = [time_sleep.kms_iam_propagation]
 }
 
 # Workstation VMs pull a private image only as a service account that the

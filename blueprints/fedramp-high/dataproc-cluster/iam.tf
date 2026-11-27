@@ -19,32 +19,36 @@ resource "google_project_iam_member" "worker" {
 }
 
 resource "google_project_iam_member" "dataproc_service_agent" {
-  project = var.main_project_id
-  role    = "roles/dataproc.serviceAgent"
-  member  = "serviceAccount:service-${data.google_project.current.number}@dataproc-accounts.iam.gserviceaccount.com"
+  project    = var.main_project_id
+  role       = "roles/dataproc.serviceAgent"
+  member     = google_project_service_identity.dataproc_agent.member
+  depends_on = [time_sleep.dataproc_agent_propagation]
 }
 
 resource "google_project_iam_member" "dataproc_network_user" {
-  project = var.network_project_id
-  role    = "roles/compute.networkUser"
-  member  = "serviceAccount:service-${data.google_project.current.number}@dataproc-accounts.iam.gserviceaccount.com"
+  project    = var.network_project_id
+  role       = "roles/compute.networkUser"
+  member     = google_project_service_identity.dataproc_agent.member
+  depends_on = [time_sleep.dataproc_agent_propagation]
 }
 
 # Required for delete
 resource "google_project_iam_member" "dataproc_compute_viewer" {
-  project = var.main_project_id
-  role    = "roles/compute.viewer"
-  member  = "serviceAccount:service-${data.google_project.current.number}@dataproc-accounts.iam.gserviceaccount.com"
+  project    = var.main_project_id
+  role       = "roles/compute.viewer"
+  member     = google_project_service_identity.dataproc_agent.member
+  depends_on = [time_sleep.dataproc_agent_propagation]
 }
 
 resource "google_kms_crypto_key_iam_member" "dataproc_kms" {
   for_each = {
     dataproc_vm    = google_service_account.dataproc_vm.member
-    gcs_agent      = "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com"
-    dataproc_agent = "serviceAccount:service-${data.google_project.current.number}@dataproc-accounts.iam.gserviceaccount.com"
+    gcs_agent      = data.google_storage_project_service_account.gcs_sa.member
+    dataproc_agent = google_project_service_identity.dataproc_agent.member
     compute_agent  = "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com"
   }
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = each.value
+  depends_on    = [time_sleep.dataproc_agent_propagation]
 }

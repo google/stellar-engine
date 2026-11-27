@@ -162,6 +162,7 @@ class TestCloudWorkstationsIam(unittest.TestCase):
             [
                 "google_kms_crypto_key_iam_member."
                 "workstations_sa_kms_permissions",
+                "google_kms_crypto_key_iam_member.compute_sa_kms_permissions",
                 "google_artifact_registry_repository_iam_member."
                 "artifact_registry_reader",
                 "google_compute_subnetwork_iam_member.network_user",

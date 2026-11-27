@@ -16,25 +16,20 @@ Bigtable is a fully managed, scalable NoSQL wide-column database service for lar
 ## Bigtable Blueprint
 This blueprint utilizes Terraform to automate the deployment of a Bigtable instance and configure CMEK using Cloud KMS, allowing you to control and manage your encryption keys. This enhances the security posture of your Bigtable deployment. The blueprint also includes optional table creation during instance deployment.
 
-CMEK allows you to encrypt your Bigtable data at rest using keys that you manage in Cloud KMS. This provides greater control over key lifecycle management, including key rotation and access control. This blueprint supports creating new KMS keys, using pre-existing keys, or not using any keys.
+CMEK allows you to encrypt your Bigtable data at rest using keys that you manage in Cloud KMS. This provides greater control over key lifecycle management, including key rotation and access control. This blueprint references pre-existing Cloud KMS key rings and keys via `core_project_id`, `kms_keyring_name`, and `kms_key_name`.
 
 ## Disclaimer
 - The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
 
 ## Deployment Steps
 
-You should see this README and some terraform files.
-1. Update the Variables in the variables.tf and also the properties within the keys variables. For reference update the following variables and associated properties
-
-- ```project_id```  with your GCP Project ID<br />
--  ```instance_name```  with desired bigtable instance name<br />
-- ```zone```  with the GCP Location<br />
-- ```region``` with the GCP region inside of zone <br />
-- ```cluster_id``` with the desired cluster ID to be created and deployed <br />
-
-
-2. There is a sample ```terraform.tfvars.sample``` available as well.
-3. Although each use case is somehow built around the previous one they are self-contained so you can deploy any of them at your will. The usual terraform commands will do the work. To provision this example, run the following from within this directory:
+You should see this README and Terraform configuration files.
+1. Update the variables in `terraform.tfvars` (copied from `terraform.tfvars.sample`):
+   - `main_project_id` and `core_project_id`: Main workload project ID and core KMS project ID.
+   - `instance_name`, `cluster_id`, `bigtable_service_account_id`: Bigtable instance name, cluster ID, and service account ID.
+   - `kms_keyring_name` and `kms_key_name`: Pre-existing Cloud KMS keyring and key names in `core_project_id`.
+   - `region` and `zone`: Deployment region and zone matching your Cloud KMS key region.
+2. Run the usual Terraform commands from within this directory:
 
 ```terraform init ```<br />
 ```terraform plan``` to see the infrastructure plan<br />

@@ -3,7 +3,7 @@
 <!-- BEGIN TOC -->
 - [Introduction](#introduction)
 - [Firestore Blueprint](#firestore-blueprint)
-- [Disclaimer](#disclaimer)
+- [Prerequisites and notes](#prerequisites-and-notes)
 - [Deployment Steps](#deployment-steps)
 - [Verification of a successful deployment](#verification-of-a-successful-deployment)
 - [Prerequisites](#prerequisites)
@@ -19,20 +19,18 @@ Keeping your data in sync across client apps through realtime listeners and offe
 
 ## Firestore Blueprint
 
-This blueprint deploys a standard Firestore Native if the variables are untouched, leveraging its robust and scalable infrastructure. There you will benefit from automatic scaling, high availability, and powerful querying capabilities. Included at default is a weekly database backup to ensure the safety and reoceverability of your data.
+This blueprint deploys a Firestore Native database with optional Cloud KMS encryption (`kms_key_name`) and optional scheduled backups (`backup_schedule`, disabled by default when `null`).
 
-## Disclaimer
+## Prerequisites and notes
 
-CMEK is not supported out of the box - │ Error: Error creating Database: googleapi: Error 400: This project is not eligible to create CMEK databases. Please refer to https://cloud.google.com/firestore/docs/cmek to request access to this feature.
+When `kms_key_name` is set, Terraform creates the Firestore service identity (`firestore.googleapis.com`), waits 60s for IAM propagation, and grants it `roles/cloudkms.cryptoKeyEncrypterDecrypter` on the configured key. Confirm that your project is eligible for Firestore CMEK and that the Cloud KMS key region matches `region`.
 
-Be aware there default for the backup is weekly. The backup_schedule variable block in terraform.tfvars, can be set to use weekly_recurrence or daily_recurrence as needed. 
+Database backups default to disabled (`backup_schedule = null`). Set `backup_schedule` in `terraform.tfvars` to enable either `daily_recurrence` or `weekly_recurrence`.
 
 ## Deployment Steps
 
-1. Update the Variables in the variables.tf
-    <br>a. There is a sample 'terraform.tfvars.sample' available as well that can be copied to create your own 'terraform.tfvars'.</br>
-    <br>b. Choose your backup_schedule; Weekly or Daily options - edit your tfvars accordingly.</br>
-2. Run the following command in this directory:
+1. Update variables in `terraform.tfvars` (copied from `terraform.tfvars.sample`) and optionally set `kms_key_name` or `backup_schedule` (`daily_recurrence` or `weekly_recurrence`).
+2. Run the following commands in this directory:
 
 ```bash
 terraform init
@@ -40,7 +38,7 @@ terraform plan
 terraform apply
 ```
 
-It will take a few minutes. When complete, you shoud see an output stating the command completed successfully. 
+Wait a few minutes for deployment to finish. When complete, Terraform outputs the created database attributes. 
 
 ## Verification of a successful deployment
 

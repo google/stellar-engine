@@ -30,23 +30,20 @@ Binary Authorization is enabled by default in FedRAMP High. To use a custom orga
 
 ## Deployment Steps
 
-You should see this README and some terraform files.
-1. Update the Variables in the variables.tf and also the properties within the keys variables. For reference update the following variables and associated properties
+You should see this README and Terraform configuration files.
+1. Update the variables in `terraform.tfvars` (copied from `terraform.tfvars.sample`):
+   - `main_project_id` and `core_project_id`: Workload project ID and core project ID hosting the Cloud KMS key ring.
+   - `region`, `name`, and `container_image`: Deployment region, Cloud Run Service or Job name, and container image URI.
+   - `kms_keyring_name` and `kms_key_name`: Cloud KMS key ring and key used for CMEK encryption (Terraform grants the Cloud Run service agent key access automatically).
+   - `binary_authorization_mode` and `deletion_protection`: Optional Binary Authorization enforcement mode (`default`, `policy`, or `disabled`) and deletion protection flag.
+2. Initialize and apply the Terraform configuration from this directory:
 
-- ```project_id```  with your GCP Project ID<br />
-- ```region``` with the GCP region <br />
-- ```name``` with the desired cloud run name <br />
-- ```kms_key``` with the full path to the CMEK key that will be used for encryption <br />
-- ```container_image``` with the container to be hosted on the cloud run service <br />
-
-
-2. There is a sample ```terraform.tfvars.sample``` available as well.
-3. Although each use case is somehow built around the previous one they are self-contained so you can deploy any of them at your will. The usual terraform commands will do the work. To provision this example, run the following from within this directory:
-
-```terraform init ```<br />
-```terraform plan``` to see the infrastructure plan<br />
-```terraform apply``` to apply the infrastructure build<br />
-```terraform destroy``` to destroy the built infrastructure<br />
+```bash
+terraform init
+terraform plan
+terraform apply
+terraform destroy
+```
 
 ## Verification of a successful deployment
 Use GCP console to verify if the resources have been created.
@@ -58,20 +55,21 @@ https://console.cloud.google.com/run
 |---|---|:---:|:---:|:---:|
 | [container_image](variables.tf#L35) | Container image to be hosted on cloud run. | <code>string</code> | ✓ |  |
 | [core_project_id](variables.tf#L40) | Core project ID. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L76) | Path to the kms key to use. | <code>string</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L81) | KMS Keyring. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L86) | Main Project ID. | <code>string</code> | ✓ |  |
-| [name](variables.tf#L97) | Name of the cloud run instance to be created. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L108) | Google Cloud Region. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L82) | Path to the kms key to use. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L87) | KMS Keyring. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L92) | Main Project ID. | <code>string</code> | ✓ |  |
+| [name](variables.tf#L103) | Name of the cloud run instance to be created. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L114) | Google Cloud Region. | <code>string</code> | ✓ |  |
 | [binary_authorization_mode](variables.tf#L15) | Binary Authorization mode for the Cloud Run service. | <code>string</code> |  | <code>&#34;default&#34;</code> |
 | [binary_authorization_policy](variables.tf#L25) | The full resource name of the Binary Authorization policy (e.g., 'projects/YOUR_PROJECT_ID/policies/YOUR_POLICY_ID'). | <code>string</code> |  | <code>null</code> |
 | [cpu](variables.tf#L45) | Sets the CPU limit. 1000m = 1 vCPU. | <code>string</code> |  | <code>&#34;1000m&#34;</code> |
 | [cpu_idle](variables.tf#L51) | Allows the container to scale to zero. | <code>bool</code> |  | <code>true</code> |
-| [env_vars](variables.tf#L57) | Environment variables for the Cloud Run service or job. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [ingress](variables.tf#L64) | Ingress settings. | <code>string</code> |  | <code>&#34;INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER&#34;</code> |
-| [is_job](variables.tf#L70) | Set to true to create a job instead of a service. | <code>bool</code> |  | <code>false</code> |
-| [memory](variables.tf#L91) | Sets the memory limit. 512Mi = 512MiB. | <code>string</code> |  | <code>&#34;512Mi&#34;</code> |
-| [port](variables.tf#L102) | Mapping of port number and port name to open. | <code>number</code> |  | <code>8080</code> |
+| [deletion_protection](variables.tf#L57) | Prevent Terraform from destroying the Cloud Run service or job. | <code>bool</code> |  | <code>true</code> |
+| [env_vars](variables.tf#L63) | Environment variables for the Cloud Run service or job. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [ingress](variables.tf#L70) | Ingress settings. | <code>string</code> |  | <code>&#34;INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER&#34;</code> |
+| [is_job](variables.tf#L76) | Set to true to create a job instead of a service. | <code>bool</code> |  | <code>false</code> |
+| [memory](variables.tf#L97) | Sets the memory limit. 512Mi = 512MiB. | <code>string</code> |  | <code>&#34;512Mi&#34;</code> |
+| [port](variables.tf#L108) | Mapping of port number and port name to open. | <code>number</code> |  | <code>8080</code> |
 
 ## Outputs
 
