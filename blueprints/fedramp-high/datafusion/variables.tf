@@ -12,9 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "connection_type" {
+  description = "Private Data Fusion connection type ('PRIVATE_SERVICE_CONNECT_INTERFACES' or 'VPC_PEERING')."
+  type        = string
+  default     = "PRIVATE_SERVICE_CONNECT_INTERFACES"
+  validation {
+    condition     = contains(["PRIVATE_SERVICE_CONNECT_INTERFACES", "VPC_PEERING"], var.connection_type)
+    error_message = "Connection type must be PRIVATE_SERVICE_CONNECT_INTERFACES or VPC_PEERING."
+  }
+}
+
 variable "core_project_id" {
   description = "Core project ID."
   type        = string
+}
+
+variable "ip_allocation" {
+  description = "Allocated /22 CIDR range for Data Fusion private instances when connection_type is VPC_PEERING."
+  type        = string
+  default     = null
+  validation {
+    condition     = var.connection_type != "VPC_PEERING" || (var.ip_allocation != null && trimspace(var.ip_allocation) != "")
+    error_message = "An explicit ip_allocation CIDR range is required when connection_type is VPC_PEERING."
+  }
 }
 
 variable "kms_key_name" {
@@ -56,4 +76,10 @@ variable "region" {
 variable "subnetwork_name" {
   description = "Full path to subnet."
   type        = string
+}
+
+variable "unreachable_cidr_block" {
+  description = "Optional /25 CIDR block to assign to the Data Fusion PSC instance when connection_type is PRIVATE_SERVICE_CONNECT_INTERFACES."
+  type        = string
+  default     = null
 }

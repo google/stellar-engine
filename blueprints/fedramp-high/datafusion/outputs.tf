@@ -24,7 +24,7 @@ output "resource" {
 
 output "service_endpoint" {
   description = "DataFusion Service Endpoint."
-  value       = module.datafusion.service_account
+  value       = module.datafusion.service_endpoint
 }
 
 output "version" {

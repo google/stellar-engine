@@ -20,23 +20,21 @@ A Cloud Spanner blueprint enables the creation of Spanner Instances (regional or
 - The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
 
 ## Deployment Steps
-You should see this README and some terraform files.
-1. Update the Variables in the variables.tf and also the properties within the keys variables. For reference update the following variables and associated properties
+You should see this README and Terraform configuration files.
+1. Update your variables in `terraform.tfvars` (copied from `terraform.tfvars.sample`):
+   - `main_project_id`: Google Cloud project ID where the Spanner instance and database are created.
+   - `region` and `config_name`: Deployment region (such as `us-east4`) and matching Spanner instance configuration (such as `regional-us-east4`).
+   - `instance_name`, `display_name`, and `database_name`: Spanner instance ID, display name, and database name.
+   - `database_user`: Database IAM principal (`user:...`, `group:...`, or `serviceAccount:...`) granted database admin access.
+   - `kms_key_name`: Optional regional Cloud KMS CryptoKey resource path matching the Spanner instance location for CMEK encryption (leave `null` for Google-managed encryption).
+2. Run the standard Terraform workflow from within this directory:
 
-- ```project_id```  with your GCP Project ID<br />
-- ```region``` with the GCP region <br />
-- ```name``` with the desired cloud run name <br />
-- ```kms_key``` with the full path to the CMEK key that will be used for encryption <br />
-- ```container_image``` with the container to be hosted on the cloud run service <br />
-
-
-2. There is a sample ```terraform.tfvars.sample``` available as well.
-3. Although each use case is somehow built around the previous one they are self-contained so you can deploy any of them at your will. The usual terraform commands will do the work. To provision this example, run the following from within this directory:
-
-```terraform init ```<br />
-```terraform plan``` to see the infrastructure plan<br />
-```terraform apply``` to apply the infrastructure build<br />
-```terraform destroy``` to destroy the built infrastructure<br />
+```bash
+terraform init
+terraform plan
+terraform apply
+terraform destroy
+```
 
 ## Verification of a successful deployment
 Use GCP console to verify if the resources have been created.

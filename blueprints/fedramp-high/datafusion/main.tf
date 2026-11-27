@@ -39,7 +39,8 @@ data "google_kms_crypto_key" "default" {
 }
 
 data "google_storage_project_service_account" "gcs_account_main_project" {
-  project = var.main_project_id
+  project    = var.main_project_id
+  depends_on = [google_project_service.datafusion_apis]
 }
 
 resource "google_project_service" "datafusion_apis" {
@@ -48,6 +49,7 @@ resource "google_project_service" "datafusion_apis" {
     "cloudresourcemanager.googleapis.com",
     "datafusion.googleapis.com",
     "dataproc.googleapis.com",
+    "storage.googleapis.com",
   ])
 
   project            = var.main_project_id
@@ -96,8 +98,11 @@ module "datafusion" {
   dataproc_service_account = google_service_account.datafusion_sa.email
   private_instance         = true
   kms_key                  = data.google_kms_crypto_key.default.id
+  connection_type          = var.connection_type
+  ip_allocation            = var.ip_allocation
   ip_allocation_create     = false
-  network_peering          = false
+  network_peering          = var.connection_type == "VPC_PEERING"
+  unreachable_cidr_block   = var.unreachable_cidr_block
 
   depends_on = [
     google_project_service.datafusion_apis,
