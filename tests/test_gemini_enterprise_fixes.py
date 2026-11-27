@@ -330,10 +330,19 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
         self.assertIn('@license.command(name="unassign")', content)
 
         mock_creds = MagicMock()
+        sample_bq_schema = {
+            "fields": [{"name": "record_uuid", "type": "STRING"}]
+        }
         with (
             patch.object(
                 gem4gov, "validate_data_store", return_value={"valid": True}
             ),
+            patch.object(
+                gem4gov, "get_bq_schema", return_value=sample_bq_schema
+            ) as mock_get_bq_schema,
+            patch.object(
+                gem4gov, "create_data_store_schema"
+            ) as mock_create_schema,
             patch.object(gem4gov, "import_bq_documents") as mock_import_bq,
         ):
             gem4gov.import_documents_helper(
@@ -345,6 +354,10 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
                 table_id="my_tbl",
                 id_field="record_uuid",
             )
+            mock_get_bq_schema.assert_called_once_with(
+                mock_creds, "proj-1", "my_ds", "my_tbl"
+            )
+            mock_create_schema.assert_called_once()
             mock_import_bq.assert_called_once_with(
                 mock_creds,
                 "proj-1",
