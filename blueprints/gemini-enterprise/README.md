@@ -908,7 +908,7 @@ The blueprint sets up the following key components:
     -   **Context:** Script detects Project/Tenant/Environment.
     -   **Access Policies:** Configure Time, Location, and Device trust levels.
     -   **Data Stores:** Interactively add GCS Buckets or BigQuery Datasets.
-    -   **Compliance:** Select FedRAMP Moderate, FedRAMP High (Default), IL4, IL5, or None.
+    -   **Compliance:** Select FedRAMP High (Default), FedRAMP Moderate, IL4, IL5, or None.
 3.  **Apply**: The script runs `terraform init` and `apply` automatically.
 
 ### Post-Deployment (Data Ingestion)
