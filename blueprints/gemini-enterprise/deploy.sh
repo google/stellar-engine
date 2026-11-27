@@ -62,6 +62,75 @@ normalize_environment() {
     fi
 }
 
+update_tfvar_string() {
+    local file="$1"
+    local key="$2"
+    local value="$3"
+    [[ -f "$file" ]] || return 1
+    python3 - "$file" "$key" "$value" <<'EOF'
+import json
+import re
+import sys
+
+path, key, value = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(path, "r", encoding="utf-8") as fh:
+    lines = fh.readlines()
+
+pattern = re.compile(rf'^(\s*{re.escape(key)}\s*=\s*)"(?:\\.|[^"\\])*"')
+encoded = json.dumps(value)
+updated = [
+    pattern.sub(lambda m: f"{m.group(1)}{encoded}", line, count=1)
+    for line in lines
+]
+
+with open(path, "w", encoding="utf-8") as fh:
+    fh.writelines(updated)
+EOF
+}
+
+select_from_json_array() {
+    local json_array="$1"
+    local selection="$2"
+    local jq_field="$3"
+    local count
+    count=$(echo "$json_array" | jq 'length' 2>/dev/null || echo "0")
+    if [[ ! "$count" =~ ^[0-9]+$ || ! "$selection" =~ ^[1-9][0-9]*$ ]] || (( 10#$selection < 1 || 10#$selection > 10#$count )); then
+        return 1
+    fi
+    local idx=$((10#$selection - 1))
+    echo "$json_array" | jq -r --argjson idx "$idx" --arg field "$jq_field" '.[$idx][$field] // empty'
+}
+
+validate_schema_file_path() {
+    local schema_file="$1"
+    local base_dir="${2:-$(pwd)}"
+    if [[ -z "$schema_file" || ! -f "$schema_file" ]]; then
+        echo -e "${RED}Error: File '$schema_file' not found or is not a regular file.${NC}"
+        return 1
+    fi
+    if [[ "$schema_file" == *"../"* || "$schema_file" == *".." ]]; then
+        echo -e "${RED}Error: Invalid file path. Path traversal sequences ('../') are not allowed.${NC}"
+        return 1
+    fi
+    local resolved_base
+    resolved_base=$(realpath "$base_dir" 2>/dev/null || echo "$base_dir")
+    local abs_path
+    abs_path=$(realpath "$schema_file" 2>/dev/null || echo "")
+    if [[ -z "$abs_path" || ( "$abs_path" != "$resolved_base" && "$abs_path" != "${resolved_base%/}/"* ) ]]; then
+        echo -e "${RED}Error: Custom schema file must be located within the project folder directory (${resolved_base}).${NC}"
+        return 1
+    fi
+    return 0
+}
+
+curl_auth_config() {
+    local token="${1//$'\r'/}"
+    token="${token//$'\n'/}"
+    token="${token//\\/}"
+    token="${token//\"/}"
+    printf 'header = "Authorization: Bearer %s"\n' "$token"
+}
+
 check_dependencies() {
     echo ""
     echo -e "${BLUE}--- Check Dependencies ---${NC}"
@@ -1544,7 +1613,7 @@ configure_stage_0() {
             
             if [[ -n "$BUCKET_NAME" ]]; then
                 # Ensure the tfvars file is updated with the sanitized bucket name
-                sed -i '' "s/terraform_state_bucket *= *\".*\"/terraform_state_bucket = \"${BUCKET_NAME}\"/" terraform.tfvars 2>/dev/null || sed -i "s/terraform_state_bucket *= *\".*\"/terraform_state_bucket = \"${BUCKET_NAME}\"/" terraform.tfvars
+                update_tfvar_string terraform.tfvars "terraform_state_bucket" "${BUCKET_NAME}"
                 
                 if terraform init -migrate-state -backend-config="bucket=${BUCKET_NAME}" -backend-config="prefix=terraform/state/stage-0" &>/dev/null; then
                      if terraform state list | grep -q "google_kms_key_ring.created"; then
@@ -1552,12 +1621,12 @@ configure_stage_0() {
                          # Update tfvars to clear us_keyring_name
                          # Use strict matching or regex to avoid partial matches
                          # Assuming standard format: us_keyring_name = "..."
-                         sed -i '' 's/us_keyring_name *= *".*"/us_keyring_name = ""/' terraform.tfvars 2>/dev/null || sed -i 's/us_keyring_name *= *".*"/us_keyring_name = ""/' terraform.tfvars
+                         update_tfvar_string terraform.tfvars "us_keyring_name" ""
                      fi
                      
                      if terraform state list | grep -q "google_kms_crypto_key.gemini_enterprise"; then
                          echo -e "${YELLOW}gemini-enterprise Key found in Terraform State. Updating existing config to use managed resource.${NC}"
-                         sed -i '' 's/kms_key_id *= *".*"/kms_key_id = ""/' terraform.tfvars 2>/dev/null || sed -i 's/kms_key_id *= *".*"/kms_key_id = ""/' terraform.tfvars
+                         update_tfvar_string terraform.tfvars "kms_key_id" ""
                      fi
                      
                      if terraform state list | grep -q "google_access_context_manager_access_level"; then
@@ -1567,11 +1636,11 @@ configure_stage_0() {
             fi
             
             if [[ -n "$ENVIRONMENT" ]]; then
-                sed -i '' "s/environment *= *\".*\"/environment = \"${ENVIRONMENT}\"/" terraform.tfvars 2>/dev/null || sed -i "s/environment *= *\".*\"/environment = \"${ENVIRONMENT}\"/" terraform.tfvars
+                update_tfvar_string terraform.tfvars "environment" "${ENVIRONMENT}"
             fi
             
             if [[ -n "$PREFIX" ]]; then
-                sed -i '' "s/prefix *= *\".*\"/prefix = \"${PREFIX}\"/" terraform.tfvars 2>/dev/null || sed -i "s/prefix *= *\".*\"/prefix = \"${PREFIX}\"/" terraform.tfvars
+                update_tfvar_string terraform.tfvars "prefix" "${PREFIX}"
             fi
             
             cd ..
@@ -1896,7 +1965,9 @@ configure_stage_0() {
             POOL_SEL=${POOL_SEL:-1}
             
             # Extract selected pool name (full resource name)
-            ACL_POOL_NAME=$(echo "$POOLS_JSON" | jq -r ".[$((POOL_SEL-1))].name")
+            if ! ACL_POOL_NAME=$(select_from_json_array "$POOLS_JSON" "$POOL_SEL" "name"); then
+                ACL_POOL_NAME=""
+            fi
         fi
         
         if [[ -z "$ACL_POOL_NAME" ]]; then
@@ -1920,8 +1991,11 @@ configure_stage_0() {
             PROV_SEL=${PROV_SEL:-1}
             
             # Extract selected provider ID (last part of name)
-            FULL_PROV_NAME=$(echo "$PROVIDERS_JSON" | jq -r ".[$((PROV_SEL-1))].name")
-            ACL_PROVIDER_ID=$(basename "$FULL_PROV_NAME")
+            if FULL_PROV_NAME=$(select_from_json_array "$PROVIDERS_JSON" "$PROV_SEL" "name") && [[ -n "$FULL_PROV_NAME" ]]; then
+                ACL_PROVIDER_ID=$(basename "$FULL_PROV_NAME")
+            else
+                ACL_PROVIDER_ID=""
+            fi
         fi
         
         if [[ -z "$ACL_PROVIDER_ID" ]]; then
@@ -2022,10 +2096,11 @@ configure_stage_0() {
         
         local CACHE_RESPONSE
         CACHE_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -K - \
             -H "Content-Type: application/json" \
             -d "${CACHE_PAYLOAD}" \
-            "${CACHE_CONFIG_URL}")
+            "${CACHE_CONFIG_URL}" \
+            <<<"$(curl_auth_config "${ACCESS_TOKEN}")")
             
         local CACHE_HTTP_CODE=$(echo "$CACHE_RESPONSE" | tail -n 1)
         if [[ "$CACHE_HTTP_CODE" == "200" || "$CACHE_HTTP_CODE" == "204" ]]; then
@@ -2278,9 +2353,10 @@ configure_stage_0() {
         
             # --- Check if already registered ---
             echo "Checking if CMEK key is already registered..."
-            _CONFIG_RESPONSE=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer ${_ACCESS_TOKEN}" \
+            _CONFIG_RESPONSE=$(curl -s -w "\n%{http_code}" -K - \
                 -H "x-goog-user-project: ${PROJECT_ID}" \
-                "https://us-discoveryengine.googleapis.com/v1/projects/${PROJECT_ID}/locations/us/cmekConfigs/default_cmek_config")
+                "https://us-discoveryengine.googleapis.com/v1/projects/${PROJECT_ID}/locations/us/cmekConfigs/default_cmek_config" \
+                <<<"$(curl_auth_config "${_ACCESS_TOKEN}")")
                 
             _OP_HTTP_CODE=$(echo "$_CONFIG_RESPONSE" | tail -n1)
             _OP_BODY=$(echo "$_CONFIG_RESPONSE" | sed '$d')
@@ -2312,11 +2388,12 @@ configure_stage_0() {
             if [[ "$_PROCEED_WITH_PATCH" == "true" ]]; then
                 echo "Sending registration request..."
                 _API_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
-                    -H "Authorization: Bearer ${_ACCESS_TOKEN}" \
+                    -K - \
                     -H "Content-Type: application/json" \
                     -H "x-goog-user-project: ${PROJECT_ID}" \
                     "https://us-discoveryengine.googleapis.com/v1/projects/${PROJECT_ID}/locations/us/cmekConfigs/default_cmek_config?set_default=true" \
-                    -d "{\"kmsKey\": \"${CMEK_US_RESOURCES_KEY}\"}")
+                    -d "{\"kmsKey\": \"${CMEK_US_RESOURCES_KEY}\"}" \
+                    <<<"$(curl_auth_config "${_ACCESS_TOKEN}")")
                     
                 _PATCH_HTTP_CODE=$(echo "$_API_RESPONSE" | tail -n1)
                 _PATCH_BODY=$(echo "$_API_RESPONSE" | sed '$d')
@@ -2331,9 +2408,10 @@ configure_stage_0() {
                         echo -e "${YELLOW}Polling for completion (this may take a few minutes)...${NC}"
                         
                         while true; do
-                            _OP_RESPONSE=$(curl -s -H "Authorization: Bearer ${_ACCESS_TOKEN}" \
+                            _OP_RESPONSE=$(curl -s -K - \
                                 -H "x-goog-user-project: ${PROJECT_ID}" \
-                                "https://us-discoveryengine.googleapis.com/v1/${_OPERATION_ID}")
+                                "https://us-discoveryengine.googleapis.com/v1/${_OPERATION_ID}" \
+                                <<<"$(curl_auth_config "${_ACCESS_TOKEN}")")
                             
                             _IS_DONE=$(echo "$_OP_RESPONSE" | jq -r .done 2>/dev/null || echo "false")
                             _HAS_ERROR=$(echo "$_OP_RESPONSE" | jq -r .error 2>/dev/null || echo "")
@@ -2348,9 +2426,10 @@ configure_stage_0() {
                                 
                                 # Verify ACTIVE state
                                 echo "Verifying CMEK config state..."
-                                _VERIFY_RESPONSE=$(curl -s -H "Authorization: Bearer ${_ACCESS_TOKEN}" \
+                                _VERIFY_RESPONSE=$(curl -s -K - \
                                     -H "x-goog-user-project: ${PROJECT_ID}" \
-                                    "https://us-discoveryengine.googleapis.com/v1/projects/${PROJECT_ID}/locations/us/cmekConfigs/default_cmek_config")
+                                    "https://us-discoveryengine.googleapis.com/v1/projects/${PROJECT_ID}/locations/us/cmekConfigs/default_cmek_config" \
+                                    <<<"$(curl_auth_config "${_ACCESS_TOKEN}")")
                                 
                                 _STATE=$(echo "$_VERIFY_RESPONSE" | jq -r .state 2>/dev/null || echo "")
                                 if [[ "$_STATE" != "ACTIVE" ]]; then
@@ -2693,11 +2772,12 @@ deploy_stage_0() {
                     OBS_Payload='{"observabilityConfig": {"observabilityEnabled": false, "sensitiveLoggingEnabled": false}}'
                 fi
                 OBS_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
-                    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+                    -K - \
                     -H "Content-Type: application/json" \
                     -H "X-Goog-User-Project: ${PROJECT_ID}" \
                     "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}?updateMask=observabilityConfig" \
-                    -d "${OBS_Payload}")
+                    -d "${OBS_Payload}" \
+                    <<<"$(curl_auth_config "${ACCESS_TOKEN}")")
                 OBS_HTTP_CODE=$(echo "$OBS_RESPONSE" | tail -n1)
                 OBS_BODY=$(echo "$OBS_RESPONSE" | sed '$d')
                 if [[ "$OBS_HTTP_CODE" != "200" ]]; then
@@ -2742,11 +2822,12 @@ deploy_stage_0() {
                 fi
 
                 ASST_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
-                    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+                    -K - \
                     -H "Content-Type: application/json" \
                     -H "X-Goog-User-Project: ${PROJECT_ID}" \
                     "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}/assistants/default_assistant?updateMask=${MASK}" \
-                    -d "${ASSISTANT_BODY}")
+                    -d "${ASSISTANT_BODY}" \
+                    <<<"$(curl_auth_config "${ACCESS_TOKEN}")")
                 ASST_HTTP_CODE=$(echo "$ASST_RESPONSE" | tail -n1)
                 ASST_BODY=$(echo "$ASST_RESPONSE" | sed '$d')
                 if [[ "$ASST_HTTP_CODE" != "200" ]]; then
@@ -2773,11 +2854,12 @@ deploy_stage_0() {
                 ACCESS_TOKEN=$(gcloud auth print-access-token)
                 
                 API_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
-                    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+                    -K - \
                     -H "Content-Type: application/json" \
                     -H "x-goog-user-project: ${PROJECT_ID}" \
                     "https://us-discoveryengine.googleapis.com/v1/projects/${PROJECT_ID}/locations/us/cmekConfigs/default_cmek_config?set_default=true" \
-                    -d "{\"kmsKey\": \"${CMEK_KEY_ID}\"}")
+                    -d "{\"kmsKey\": \"${CMEK_KEY_ID}\"}" \
+                    <<<"$(curl_auth_config "${ACCESS_TOKEN}")")
                     
                 HTTP_CODE=$(echo "$API_RESPONSE" | tail -n1)
                 BODY=$(echo "$API_RESPONSE" | sed '$d')
@@ -3238,29 +3320,10 @@ import_documents_helper() {
         if [[ "$USE_EXISTING" != "y" && "$USE_EXISTING" != "Y" ]]; then
             echo ""
             read -p "Enter the path to your custom JSON schema file: " CUSTOM_SCHEMA_FILE
-            
-            # 1. Check if the file exists and is a regular file
-            if [[ ! -f "$CUSTOM_SCHEMA_FILE" ]]; then
-                echo -e "${RED}Error: File '$CUSTOM_SCHEMA_FILE' not found or is not a regular file.${NC}"
-                pause
-                return 1
-            fi
 
-            # 2. Prevent explicit path traversal strings
-            if [[ "$CUSTOM_SCHEMA_FILE" == *"../"* || "$CUSTOM_SCHEMA_FILE" == *".." ]]; then
-                echo -e "${RED}Error: Invalid file path. Path traversal sequences ('../') are not allowed.${NC}"
+            if ! validate_schema_file_path "$CUSTOM_SCHEMA_FILE"; then
                 pause
                 return 1
-            fi
-            
-            # 3. Restrict execution to only files inside the project working directory
-            BASE_DIR=$(pwd)
-            ABS_PATH=$(realpath "$CUSTOM_SCHEMA_FILE" 2>/dev/null || echo "")
-            
-            if [[ -z "$ABS_PATH" || "$ABS_PATH" != "$BASE_DIR"* ]]; then
-                 echo -e "${RED}Error: Custom schema file must be located within the project folder directory (${BASE_DIR}).${NC}"
-                 pause
-                 return 1
             fi
         fi
         
@@ -3371,11 +3434,12 @@ EOF
         PATCH_BODY=$(jq -n --argjson schema "$DE_SCHEMA_JSON" '{structSchema: $schema}')
         
         SCHEMA_RESPONSE=$(curl -s -X PATCH \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -K - \
             -H "x-goog-user-project: ${PROJECT_ID}" \
             -H "Content-Type: application/json" \
             -d "$PATCH_BODY" \
-            "${SCHEMA_URL}")
+            "${SCHEMA_URL}" \
+            <<<"$(curl_auth_config "${ACCESS_TOKEN}")")
             
         if echo "$SCHEMA_RESPONSE" | grep -q "\"error\""; then
              echo -e "${RED}Error patching schema:${NC}"
@@ -3400,11 +3464,12 @@ EOF
         fi
         
         IMPORT_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -K - \
             -H "x-goog-user-project: ${PROJECT_ID}" \
             -H "Content-Type: application/json" \
             -d "$IMPORT_BODY" \
-            "${IMPORT_URL}")
+            "${IMPORT_URL}" \
+            <<<"$(curl_auth_config "${ACCESS_TOKEN}")")
             
         if echo "$IMPORT_RESPONSE" | grep -q "\"error\""; then
              echo -e "${RED}Error starting import:${NC}"
@@ -4073,7 +4138,7 @@ configure_stage_1() {
         if [[ "$REUSE_CONFIG" != "n" && "$REUSE_CONFIG" != "N" ]]; then
             # Ensure stage_0_state_bucket is updated with sanitary BUCKET_NAME
             if [[ -n "$BUCKET_NAME" ]]; then
-                sed -i '' "s/stage_0_state_bucket *= *\".*\"/stage_0_state_bucket = \"${BUCKET_NAME}\"/" gemini-stage-1/terraform.tfvars 2>/dev/null || sed -i "s/stage_0_state_bucket *= *\".*\"/stage_0_state_bucket = \"${BUCKET_NAME}\"/" gemini-stage-1/terraform.tfvars
+                update_tfvar_string gemini-stage-1/terraform.tfvars "stage_0_state_bucket" "${BUCKET_NAME}"
             fi
             return 0
         fi
@@ -4170,8 +4235,12 @@ configure_stage_1() {
                 read -p "Select an SSL Certificate [1]: " CERT_SEL
                 CERT_SEL=${CERT_SEL:-1}
                 
-                SSL_CERT_NAME=$(echo "$CERTS_JSON" | jq -r ".[$((CERT_SEL-1))].name")
-                echo -e "Selected Certificate: ${YELLOW}${SSL_CERT_NAME}${NC}"
+                if SSL_CERT_NAME=$(select_from_json_array "$CERTS_JSON" "$CERT_SEL" "name") && [[ -n "$SSL_CERT_NAME" ]]; then
+                    echo -e "Selected Certificate: ${YELLOW}${SSL_CERT_NAME}${NC}"
+                else
+                    echo -e "${YELLOW}Invalid selection. Switching to manual entry.${NC}"
+                    read -p "Enter SSL Certificate Name (must exist in GCP): " SSL_CERT_NAME
+                fi
             else
                 echo -e "${YELLOW}No SSL Certificates found in region ${REGION}.${NC}"
                 read -p "Enter SSL Certificate Name (must exist in GCP): " SSL_CERT_NAME
@@ -4345,13 +4414,15 @@ main_menu() {
 }
 # --- Entry Point ---
 
-check_dependencies
-if ! gcloud auth print-access-token &>/dev/null; then
-    echo "Starting authentication flow..."
-    gcloud auth login
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    check_dependencies
+    if ! gcloud auth print-access-token &>/dev/null; then
+        echo "Starting authentication flow..."
+        gcloud auth login
+    fi
+    auth_and_project_setup
+    enable_apis
+    select_deployment_type
+    discover_infrastructure
+    main_menu
 fi
-auth_and_project_setup
-enable_apis
-select_deployment_type
-discover_infrastructure
-main_menu
