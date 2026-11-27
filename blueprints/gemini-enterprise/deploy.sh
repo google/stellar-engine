@@ -245,11 +245,14 @@ configure_data_stores() {
                     if [[ -n "$GCS_NAME" && -n "$DISPLAY_NAME" ]]; then
                         CREATE_BUCKET="false"
                         echo -e "${YELLOW}GCS Bucket '${GCS_NAME}' already exists. It will NOT be created by Terraform.${NC}"
-                        
+                        GCS_INDEX=$(echo "$DISPLAY_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed 's/^-//;s/-$//')
+                        if [[ -z "$GCS_INDEX" ]]; then
+                            GCS_INDEX="bucket-${#GCS_LIST[@]}"
+                        fi
+
                         read -p "Would you like to import this bucket into Terraform state to be managed? [y/N]: " IMPORT_GCS
                         if [[ "$IMPORT_GCS" =~ ^[Yy]$ ]]; then
                             CREATE_BUCKET="true"
-                            GCS_INDEX=$(echo "$DISPLAY_NAME" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed 's/^-//;s/-$//')
                             cat <<EOF >> gemini-stage-0/import.tf
 import {
   to = google_storage_bucket.gemini_enterprise_gcs_bucket["${GCS_INDEX}"]
@@ -562,6 +565,44 @@ select_deployment_type() {
     return 0
 }
 
+ensure_greenfield_kms_key() {
+    local target_project="$1"
+    local keyring_location="$2"
+    local keyring_name="$3"
+    local key_name="$4"
+    local regime="${5:-FEDRAMP_HIGH}"
+
+    if ! gcloud kms keyrings describe "$keyring_name" --location="$keyring_location" --project="$target_project" &>/dev/null; then
+        echo "Creating KeyRing ${keyring_name} in ${keyring_location}..." >&2
+        gcloud kms keyrings create "$keyring_name" --location="$keyring_location" --project="$target_project" >&2
+    else
+        echo "KeyRing ${keyring_name} already exists." >&2
+    fi
+
+    if ! gcloud kms keys describe "$key_name" --keyring="$keyring_name" --location="$keyring_location" --project="$target_project" &>/dev/null; then
+        local protection_level="hsm"
+        if [[ "$regime" == "FEDRAMP_MODERATE" ]]; then
+            protection_level="software"
+        fi
+        echo "Creating Key ${key_name} (${protection_level}, 90-day rotation)..." >&2
+        local next_rotation_time
+        next_rotation_time=$(python3 -c 'import datetime; print((datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ"))')
+
+        gcloud kms keys create "$key_name" \
+            --keyring="$keyring_name" \
+            --location="$keyring_location" \
+            --purpose="encryption" \
+            --protection-level="${protection_level}" \
+            --rotation-period="7776000s" \
+            --next-rotation-time="$next_rotation_time" \
+            --project="$target_project" >&2
+    else
+        echo "Key ${key_name} already exists." >&2
+    fi
+
+    echo "projects/${target_project}/locations/${keyring_location}/keyRings/${keyring_name}/cryptoKeys/${key_name}"
+}
+
 discover_infrastructure() {
     # Initialize variables
     ENVIRONMENT=""
@@ -571,6 +612,7 @@ discover_infrastructure() {
     CMEK_US_KEYRING=""
     CMEK_STATE_KEY=""
     CMEK_US_RESOURCES_KEY=""
+    CMEK_REGIONAL_ANALYTICS_KEY=""
 
     echo ""
     echo -e "${BLUE}--- Infrastructure Discovery ---${NC}"
@@ -620,6 +662,7 @@ discover_infrastructure() {
     else 
         # Greenfield
         read -p "Enter a prefix for your resources (<= 6 characters): " PREFIX
+        PREFIX=${PREFIX:-"g4g"}
     fi
 
     if [[ "$IS_BROWNFIELD" == "true" ]]; then
@@ -755,36 +798,56 @@ discover_infrastructure() {
             CMEK_US_KEYRING=""
         fi
 
-        # 5. Fallback for State Key (Regional) if US GCS Key not found
-        if [[ -z "$CMEK_STATE_KEY" ]]; then
-             # If state bucket exists, check what key protects it
-             if [[ -n "$STATE_BUCKET" ]]; then
-                  echo "Checking Terraform State Bucket encryption..."
-                  BUCKET_JSON=$(gcloud storage buckets describe "gs://${STATE_BUCKET}" --format="json" 2>/dev/null || echo "{}")
-                  BUCKET_KEY=$(echo "$BUCKET_JSON" | jq -r '.default_kms_key // .default_kms_key_name // .encryption.defaultKmsKeyName // empty')
-                  if [[ -n "$BUCKET_KEY" ]]; then
-                       CMEK_STATE_KEY="${BUCKET_KEY}"
-                       echo -e "Using Existing Terraform State Bucket Crypto Key: ${YELLOW}${CMEK_STATE_KEY}${NC}"
-                  fi
-             fi
-             
-             # If still no key, check Stage 3 regional keyring (<env>-<region>) first, then legacy
-             if [[ -z "$CMEK_STATE_KEY" ]]; then
-                 for CANDIDATE_REG_KR in "${ENVIRONMENT}-${REGION}" "${CAP_ENV}-${TENANT}-keyring" "${TENANT}-keyring"; do
-                     REGIONAL_KEYRING_ID="projects/${CMEK_PROJECT_ID}/locations/${REGION}/keyRings/${CANDIDATE_REG_KR}"
-                     echo "Checking Regional Keyring: ${REGIONAL_KEYRING_ID}..."
-                     if gcloud kms keyrings describe "${REGIONAL_KEYRING_ID}" &>/dev/null; then
-                         for CANDIDATE_KEY in "gcs" "default"; do
-                             REGIONAL_GCS_KEY="${REGIONAL_KEYRING_ID}/cryptoKeys/${CANDIDATE_KEY}"
-                             if gcloud kms keys describe "${REGIONAL_GCS_KEY}" &>/dev/null; then
-                                 CMEK_STATE_KEY="${REGIONAL_GCS_KEY}"
-                                 echo -e "Found Regional GCS Crypto Key: ${YELLOW}${CMEK_STATE_KEY}${NC}"
-                                 break 2
-                             fi
-                         done
-                     fi
-                 done
-             fi
+        # 5. Discover Regional Keyring for State Key fallback and Analytics CMEK
+        for CANDIDATE_REG_KR in "${ENVIRONMENT}-${REGION}" "${CAP_ENV}-${TENANT}-keyring" "${TENANT}-keyring"; do
+            REGIONAL_KEYRING_ID="projects/${CMEK_PROJECT_ID}/locations/${REGION}/keyRings/${CANDIDATE_REG_KR}"
+            if gcloud kms keyrings describe "${REGIONAL_KEYRING_ID}" &>/dev/null; then
+                if [[ -z "$CMEK_STATE_KEY" ]]; then
+                    # If state bucket exists, check what key protects it first
+                    if [[ -n "$STATE_BUCKET" ]]; then
+                        echo "Checking Terraform State Bucket encryption..."
+                        BUCKET_JSON=$(gcloud storage buckets describe "gs://${STATE_BUCKET}" --format="json" 2>/dev/null || echo "{}")
+                        BUCKET_KEY=$(echo "$BUCKET_JSON" | jq -r '.default_kms_key // .default_kms_key_name // .encryption.defaultKmsKeyName // empty')
+                        if [[ -n "$BUCKET_KEY" ]]; then
+                            CMEK_STATE_KEY="${BUCKET_KEY}"
+                            echo -e "Using Existing Terraform State Bucket Crypto Key: ${YELLOW}${CMEK_STATE_KEY}${NC}"
+                        fi
+                    fi
+                    if [[ -z "$CMEK_STATE_KEY" ]]; then
+                        for CANDIDATE_KEY in "gcs" "default"; do
+                            REGIONAL_GCS_KEY="${REGIONAL_KEYRING_ID}/cryptoKeys/${CANDIDATE_KEY}"
+                            if gcloud kms keys describe "${REGIONAL_GCS_KEY}" &>/dev/null; then
+                                CMEK_STATE_KEY="${REGIONAL_GCS_KEY}"
+                                echo -e "Found Regional GCS Crypto Key: ${YELLOW}${CMEK_STATE_KEY}${NC}"
+                                break
+                            fi
+                        done
+                    fi
+                fi
+
+                if [[ -z "$CMEK_REGIONAL_ANALYTICS_KEY" ]]; then
+                    for CANDIDATE_ANALYTICS_KEY in "artifact-registry" "analytics" "default"; do
+                        REGIONAL_ANALYTICS_CANDIDATE="${REGIONAL_KEYRING_ID}/cryptoKeys/${CANDIDATE_ANALYTICS_KEY}"
+                        if gcloud kms keys describe "${REGIONAL_ANALYTICS_CANDIDATE}" &>/dev/null; then
+                            CMEK_REGIONAL_ANALYTICS_KEY="${REGIONAL_ANALYTICS_CANDIDATE}"
+                            echo -e "Found Regional Analytics Crypto Key: ${GREEN}${CANDIDATE_ANALYTICS_KEY}${NC}"
+                            break
+                        fi
+                    done
+                fi
+                break
+            fi
+        done
+
+        # Fallback: check state bucket encryption directly if no regional keyring matched
+        if [[ -z "$CMEK_STATE_KEY" && -n "$STATE_BUCKET" ]]; then
+            echo "Checking Terraform State Bucket encryption..."
+            BUCKET_JSON=$(gcloud storage buckets describe "gs://${STATE_BUCKET}" --format="json" 2>/dev/null || echo "{}")
+            BUCKET_KEY=$(echo "$BUCKET_JSON" | jq -r '.default_kms_key // .default_kms_key_name // .encryption.defaultKmsKeyName // empty')
+            if [[ -n "$BUCKET_KEY" ]]; then
+                CMEK_STATE_KEY="${BUCKET_KEY}"
+                echo -e "Using Existing Terraform State Bucket Crypto Key: ${YELLOW}${CMEK_STATE_KEY}${NC}"
+            fi
         fi
 
         # Ensure correct outputs and allow operator override of discovered CMEK identifiers
@@ -844,6 +907,7 @@ discover_infrastructure() {
         CMEK_STATE_KEY=""
         CMEK_US_KEYRING=""
         CMEK_US_RESOURCES_KEY=""
+        CMEK_REGIONAL_ANALYTICS_KEY=""
     fi
     return 0
 }
@@ -1185,8 +1249,26 @@ check_org_policies() {
     return 0
 }
 
+_is_managed_access_level() {
+    local managed_list="$1"
+    local tf_name="$2"
+    grep -qE "(^|\\.)(${tf_name})(\\[|\$)" <<<"$managed_list"
+}
+
+_get_acm_prefix() {
+    local raw="${1:-}"
+    raw="${raw:-g4g}"
+    raw="${raw//-/_}"
+    if [[ ! "$raw" =~ ^[a-zA-Z] ]]; then
+        raw="p_${raw}"
+    fi
+    printf '%s\n' "$raw"
+}
+
 configure_access_policies() {
-    
+    local acm_prefix
+    acm_prefix=$(_get_acm_prefix "$PREFIX")
+
     # Initialize Defaults
     CREATE_IP_BASED_ACCESS="true"
     CREATE_US_ACCESS="true"
@@ -1198,36 +1280,36 @@ configure_access_policies() {
     ENABLE_CEP_BOOL="false"
     
     # Existing Access Levels Check
-    echo "Checking for existing Access Levels in Policy ${ACCESS_POLICY_NUMBER}..."
+    echo "Checking for existing Access Levels in Policy ${ACCESS_POLICY_NUMBER} (prefix: ${acm_prefix})..."
     EXISTING_LEVELS=$(gcloud access-context-manager levels list --policy="${ACCESS_POLICY_NUMBER}" --format="value(name)" || echo "")
     
     # 1. IP Based Access
     echo ""
     echo -e "--- IP Based Access ---"
-    EXISTING_IP_ACCESS=$(echo "$EXISTING_LEVELS" | grep -E "(/|^)ip_based_access$" || true)
+    EXISTING_IP_ACCESS=$(echo "$EXISTING_LEVELS" | grep -E "(/|^)${acm_prefix}_ip_based_access$" || true)
     
     if [[ -n "$EXISTING_IP_ACCESS" ]]; then
         # Check if managed by Terraform
-        if [[ "$MANAGED_ACCESS_LEVELS" == *"ip_based_access"* ]]; then
-             echo -e "${GREEN}Found existing MANAGED Access Level 'ip_based_access'. Preserving/Updating.${NC}"
+        if _is_managed_access_level "$MANAGED_ACCESS_LEVELS" "ip_based_access"; then
+             echo -e "${GREEN}Found existing MANAGED Access Level '${acm_prefix}_ip_based_access'. Preserving/Updating.${NC}"
              CREATE_IP_BASED_ACCESS="true"
              # Still offer to add IPs
              read -p "Do you want to add additional IP ranges? (y/N): " ADD_IPS
         else
-             echo -e "${YELLOW}Access Level 'ip_based_access' already exists (Unmanaged).${NC}"
+             echo -e "${YELLOW}Access Level '${acm_prefix}_ip_based_access' already exists (Unmanaged).${NC}"
              echo "Current Configuration:"
-             gcloud access-context-manager levels describe ip_based_access --policy="${ACCESS_POLICY_NUMBER}" --format="value(basic.conditions.ipSubnetworks)" 2>/dev/null || echo "Error fetching IPs"
+             gcloud access-context-manager levels describe "${acm_prefix}_ip_based_access" --policy="${ACCESS_POLICY_NUMBER}" --format="value(basic.conditions.ipSubnetworks)" 2>/dev/null || echo "Error fetching IPs"
              
              read -p "Do you want to add additional IP ranges? (y/N): " ADD_IPS
              if [[ "$ADD_IPS" == "y" || "$ADD_IPS" == "Y" ]]; then
                  CREATE_IP_BASED_ACCESS="true"
              else
-                 echo "Skipping update of 'ip_based_access'."
+                 echo "Skipping update of '${acm_prefix}_ip_based_access'."
                  CREATE_IP_BASED_ACCESS="false"
              fi
         fi
     else
-        echo "Access Level 'ip_based_access' does not exist."
+        echo "Access Level '${acm_prefix}_ip_based_access' does not exist."
         CREATE_IP_BASED_ACCESS="true"
     fi
     
@@ -1260,12 +1342,12 @@ configure_access_policies() {
     # 2. US Region Access
     echo ""
     echo -e "--- US Region Access ---"
-    if echo "$EXISTING_LEVELS" | grep -qE "(/|^)us$"; then
-        if [[ "$MANAGED_ACCESS_LEVELS" == *"us"* ]]; then
-             echo -e "${GREEN}Found existing MANAGED Access Level 'us'. Preserving.${NC}"
+    if echo "$EXISTING_LEVELS" | grep -qE "(/|^)${acm_prefix}_us$"; then
+        if _is_managed_access_level "$MANAGED_ACCESS_LEVELS" "us"; then
+             echo -e "${GREEN}Found existing MANAGED Access Level '${acm_prefix}_us'. Preserving.${NC}"
              CREATE_US_ACCESS="true"
         else
-             echo -e "${YELLOW}Access Level 'us' already exists (Unmanaged). Skipping.${NC}"
+             echo -e "${YELLOW}Access Level '${acm_prefix}_us' already exists (Unmanaged). Skipping.${NC}"
              CREATE_US_ACCESS="false"
         fi
     else
@@ -1280,9 +1362,9 @@ configure_access_policies() {
     # 3. Time Based Access
     echo ""
     echo -e "--- Time Based Access ---"
-    if echo "$EXISTING_LEVELS" | grep -qE "(/|^)time$"; then
-        if [[ "$MANAGED_ACCESS_LEVELS" == *"time"* ]]; then
-             echo -e "${GREEN}Found existing MANAGED Access Level 'time'. Preserving.${NC}"
+    if echo "$EXISTING_LEVELS" | grep -qE "(/|^)${acm_prefix}_time$"; then
+        if _is_managed_access_level "$MANAGED_ACCESS_LEVELS" "time"; then
+             echo -e "${GREEN}Found existing MANAGED Access Level '${acm_prefix}_time'. Preserving.${NC}"
              CREATE_TIME_ACCESS="true"
              if [[ -f "gemini-stage-0/terraform.tfvars" ]]; then
                  ACCESS_START_DAY=$(grep '^access_start_day' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
@@ -1292,7 +1374,7 @@ configure_access_policies() {
                  ACCESS_TIME_ZONE=$(grep '^access_time_zone' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
              fi
         else
-             echo -e "${YELLOW}Access Level 'time' already exists (Unmanaged). Skipping.${NC}"
+             echo -e "${YELLOW}Access Level '${acm_prefix}_time' already exists (Unmanaged). Skipping.${NC}"
              CREATE_TIME_ACCESS="false"
         fi
     else
@@ -1317,15 +1399,15 @@ configure_access_policies() {
     # 4. Expiration Access
     echo ""
     echo -e "--- Expiration Access ---"
-    if echo "$EXISTING_LEVELS" | grep -qE "(/|^)expire$"; then
-        if [[ "$MANAGED_ACCESS_LEVELS" == *"expire"* ]]; then
-             echo -e "${GREEN}Found existing MANAGED Access Level 'expire'. Preserving.${NC}"
+    if echo "$EXISTING_LEVELS" | grep -qE "(/|^)${acm_prefix}_expire$"; then
+        if _is_managed_access_level "$MANAGED_ACCESS_LEVELS" "expire"; then
+             echo -e "${GREEN}Found existing MANAGED Access Level '${acm_prefix}_expire'. Preserving.${NC}"
              CREATE_EXPIRE_ACCESS="true"
              if [[ -f "gemini-stage-0/terraform.tfvars" ]]; then
                  ACCESS_EXPIRATION_TIMESTAMP=$(grep '^access_expiration_timestamp' gemini-stage-0/terraform.tfvars | cut -d'=' -f2 | tr -d ' "' || true)
              fi
         else
-             echo -e "${YELLOW}Access Level 'expire' already exists (Unmanaged). Skipping.${NC}"
+             echo -e "${YELLOW}Access Level '${acm_prefix}_expire' already exists (Unmanaged). Skipping.${NC}"
              CREATE_EXPIRE_ACCESS="false"
         fi
     else
@@ -1356,8 +1438,8 @@ configure_access_policies() {
     echo -e "--- Device Policy Access Levels (Lenient / Moderate / Strict) ---"
     
     # Lenient Device
-    if echo "$EXISTING_LEVELS" | grep -qE "(/|^)lenient_device$"; then
-        if [[ "$MANAGED_ACCESS_LEVELS" == *"lenient_device"* ]]; then
+    if echo "$EXISTING_LEVELS" | grep -qE "(/|^)${acm_prefix}_lenient_device$"; then
+        if _is_managed_access_level "$MANAGED_ACCESS_LEVELS" "lenient_device"; then
              CREATE_LENIENT_DEVICE_ACCESS="true"
         else
              CREATE_LENIENT_DEVICE_ACCESS="false"
@@ -1371,8 +1453,8 @@ configure_access_policies() {
     fi
     
     # Moderate Device
-    if echo "$EXISTING_LEVELS" | grep -qE "(/|^)moderate_device$"; then
-        if [[ "$MANAGED_ACCESS_LEVELS" == *"moderate_device"* ]]; then
+    if echo "$EXISTING_LEVELS" | grep -qE "(/|^)${acm_prefix}_moderate_device$"; then
+        if _is_managed_access_level "$MANAGED_ACCESS_LEVELS" "moderate_device"; then
              CREATE_MODERATE_DEVICE_ACCESS="true"
         else
              CREATE_MODERATE_DEVICE_ACCESS="false"
@@ -1386,8 +1468,8 @@ configure_access_policies() {
     fi
     
     # Strict Device
-    if echo "$EXISTING_LEVELS" | grep -qE "(/|^)strict_device$"; then
-        if [[ "$MANAGED_ACCESS_LEVELS" == *"strict_device"* ]]; then
+    if echo "$EXISTING_LEVELS" | grep -qE "(/|^)${acm_prefix}_strict_device$"; then
+        if _is_managed_access_level "$MANAGED_ACCESS_LEVELS" "strict_device"; then
              CREATE_STRICT_DEVICE_ACCESS="true"
         else
              CREATE_STRICT_DEVICE_ACCESS="false"
@@ -1398,6 +1480,10 @@ configure_access_policies() {
         else
             CREATE_STRICT_DEVICE_ACCESS="false"
         fi
+    fi
+
+    if [[ "$CREATE_LENIENT_DEVICE_ACCESS" == "false" && "$CREATE_MODERATE_DEVICE_ACCESS" == "false" && "$CREATE_STRICT_DEVICE_ACCESS" == "false" ]]; then
+        echo -e "${YELLOW}No ACM conditions or CEP device policy selected; IAP will authorize IAM group members without Access Level restrictions.${NC}"
     fi
 
     echo -e "${GREEN}Access Policy Configuration Complete.${NC}"
@@ -1518,14 +1604,15 @@ prompt_gemini_apps() {
             ENABLE_AGENT_SHARING_FLAG="false"
         fi
 
-        echo ""
-        echo -e "${YELLOW}Agent Sharing without Admin Approval Feature:${NC}"
-        echo -e "${YELLOW}When enabled, users on your team can share and use agents without admin approval when using the Gemini Enterprise app.${NC}"
-        read -p "Would you like to enable 'Agent Sharing without Admin Approval'? [y/N]: " ENABLE_AGENT_SHARING_NO_APPROVAL
-        if [[ "$ENABLE_AGENT_SHARING_NO_APPROVAL" =~ ^[Yy]$ ]]; then
-            ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="true"
-        else
-            ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="false"
+        ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="false"
+        if [[ "$ENABLE_AGENT_SHARING_FLAG" == "true" ]]; then
+            echo ""
+            echo -e "${YELLOW}Agent Sharing without Admin Approval Feature:${NC}"
+            echo -e "${YELLOW}When enabled, users on your team can share and use agents without admin approval when using the Gemini Enterprise app.${NC}"
+            read -p "Would you like to enable 'Agent Sharing without Admin Approval'? [y/N]: " ENABLE_AGENT_SHARING_NO_APPROVAL
+            if [[ "$ENABLE_AGENT_SHARING_NO_APPROVAL" =~ ^[Yy]$ ]]; then
+                ENABLE_AGENT_SHARING_NO_APPROVAL_FLAG="true"
+            fi
         fi
 
         ENABLE_MODEL_ARMOR_FLAG="false"
@@ -1712,15 +1799,24 @@ configure_stage_0() {
         return
     fi
 
-    # Enable APIs based on compliance regime
+    # Enable APIs based on compliance regime (omit certificatemanager for IL4/IL5)
+    REQUIRED_PROJECT_APIS=(
+        "discoveryengine.googleapis.com"
+        "cloudidentity.googleapis.com"
+        "aiplatform.googleapis.com"
+    )
+    if [[ "$COMPLIANCE_REGIME" != "IL4" && "$COMPLIANCE_REGIME" != "IL5" ]]; then
+        REQUIRED_PROJECT_APIS+=("certificatemanager.googleapis.com")
+    fi
+
     if [[ "$COMPLIANCE_REGIME" == "IL5" ]]; then
         echo ""
         echo -e "${RED}WARNING: Discovery Engine API is not currently included in the Assured Workloads Service Usage Allowlist Org Policy for IL5.${NC}"
         echo -e "${RED}Gemini for Government can only be used by creating an exception and adding discoveryengine.googleapis.com to the allowlist.${NC}"
-        read -p "Do you want to attempt to enable the required APIs (Discovery Engine, Cert Manager, Cloud Identity, AI Platform)? [y/N]: " ENABLE_APIS_NOW
+        read -p "Do you want to attempt to enable the required APIs (Discovery Engine, Cloud Identity, AI Platform)? [y/N]: " ENABLE_APIS_NOW
         if [[ "$ENABLE_APIS_NOW" =~ ^[Yy]$ ]]; then
             echo "Attempting to enable APIs..."
-            if ! gcloud services enable discoveryengine.googleapis.com certificatemanager.googleapis.com cloudidentity.googleapis.com aiplatform.googleapis.com --project "${PROJECT_ID}"; then
+            if ! gcloud services enable "${REQUIRED_PROJECT_APIS[@]}" --project "${PROJECT_ID}"; then
                 echo -e "${RED}WARNING: Failed to enable one or more requested APIs.${NC}"
                 echo -e "${RED}This is expected if the APIs are not in your allowlist and you have not created an exception.${NC}"
             fi
@@ -1728,8 +1824,12 @@ configure_stage_0() {
             echo -e "${YELLOW}Skipping API enablement. You may need to enable them manually after configuring exceptions.${NC}"
         fi
     else
-        echo -e "${GREEN}Enabling Discovery Engine, Certificate Manager, Cloud Identity, and AI Platform APIs automatically...${NC}"
-        if ! gcloud services enable discoveryengine.googleapis.com certificatemanager.googleapis.com cloudidentity.googleapis.com aiplatform.googleapis.com --project "${PROJECT_ID}"; then
+        if [[ "$COMPLIANCE_REGIME" == "IL4" ]]; then
+            echo -e "${GREEN}Enabling Discovery Engine, Cloud Identity, and AI Platform APIs automatically (skipping Certificate Manager for IL4)...${NC}"
+        else
+            echo -e "${GREEN}Enabling Discovery Engine, Certificate Manager, Cloud Identity, and AI Platform APIs automatically...${NC}"
+        fi
+        if ! gcloud services enable "${REQUIRED_PROJECT_APIS[@]}" --project "${PROJECT_ID}"; then
             echo -e "${RED}WARNING: Failed to enable one or more requested APIs.${NC}"
             echo -e "${RED}Please ensure you have permissions to enable these APIs or they are allowed by your Org Policy.${NC}"
         fi
@@ -2494,6 +2594,10 @@ configure_stage_0() {
     read -p "Would you like to enable analytics for Gemini Enterprise (via Discovery Engine Audit Logs)? [y/N]: " ENABLE_ANALYTICS
     if [[ "$ENABLE_ANALYTICS" =~ ^[Yy]$ ]]; then
         ENABLE_ANALYTICS_FLAG="true"
+        if [[ "$IS_BROWNFIELD" == "true" || "$IS_CUSTOM" == "true" ]]; then
+            read -p "Enter Regional Analytics/Artifact Registry KMS Key ID (optional) [${CMEK_REGIONAL_ANALYTICS_KEY}]: " INPUT_ANALYTICS_KEY
+            CMEK_REGIONAL_ANALYTICS_KEY=${INPUT_ANALYTICS_KEY:-$CMEK_REGIONAL_ANALYTICS_KEY}
+        fi
     else
         ENABLE_ANALYTICS_FLAG="false"
     fi
@@ -2524,43 +2628,14 @@ configure_stage_0() {
 
     # Greenfield: Create KeyRing and Key if needed
     if [[ "$IS_BROWNFIELD" == "false" && "$IS_CUSTOM" == "false" && -z "$KMS_KEY_ID" ]]; then
-        echo "Greenfield Deployment: Checking/Creating KMS KeyRing and Key..."
-        KEYRING_NAME="gemini-enterprise-keyring"
-        KEY_NAME="state-key"
-        KEYRING_LOCATION="us"
-
-        # Check/Create KeyRing
-        if ! gcloud kms keyrings describe "$KEYRING_NAME" --location="$KEYRING_LOCATION" --project="$PROJECT_ID" &>/dev/null; then
-            echo "Creating KeyRing ${KEYRING_NAME} in ${KEYRING_LOCATION}..."
-            gcloud kms keyrings create "$KEYRING_NAME" --location="$KEYRING_LOCATION" --project="$PROJECT_ID"
-        else
-            echo "KeyRing ${KEYRING_NAME} already exists."
-        fi
-
-        # Check/Create Key
-        if ! gcloud kms keys describe "$KEY_NAME" --keyring="$KEYRING_NAME" --location="$KEYRING_LOCATION" --project="$PROJECT_ID" &>/dev/null; then
-            _GF_PROTECTION_LEVEL="hsm"
-            if [[ "$COMPLIANCE_REGIME" == "FEDRAMP_MODERATE" ]]; then
-                _GF_PROTECTION_LEVEL="software"
-            fi
-            echo "Creating Key ${KEY_NAME} (${_GF_PROTECTION_LEVEL}, 90-day rotation)..."
-            # Calculate next rotation time (90 days from now) using Python for portability
-            NEXT_ROTATION_TIME=$(python3 -c 'import datetime; print((datetime.datetime.utcnow() + datetime.timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ"))')
-            
-            gcloud kms keys create "$KEY_NAME" \
-                --keyring="$KEYRING_NAME" \
-                --location="$KEYRING_LOCATION" \
-                --purpose="encryption" \
-                --protection-level="${_GF_PROTECTION_LEVEL}" \
-                --rotation-period="7776000s" \
-                --next-rotation-time="$NEXT_ROTATION_TIME" \
-                --project="$PROJECT_ID"
-        else
-            echo "Key ${KEY_NAME} already exists."
-        fi
-        
-        KMS_KEY_ID="projects/${PROJECT_ID}/locations/${KEYRING_LOCATION}/keyRings/${KEYRING_NAME}/cryptoKeys/${KEY_NAME}"
+        echo "Greenfield Deployment: Checking/Creating US KMS KeyRing and Key..."
+        KMS_KEY_ID=$(ensure_greenfield_kms_key "$PROJECT_ID" "us" "gemini-enterprise-keyring" "state-key" "$COMPLIANCE_REGIME")
         echo -e "Using KMS Key: ${YELLOW}${KMS_KEY_ID}${NC}"
+    fi
+    if [[ "$ENABLE_ANALYTICS_FLAG" == "true" && "$IS_BROWNFIELD" == "false" && "$IS_CUSTOM" == "false" && -z "$CMEK_REGIONAL_ANALYTICS_KEY" ]]; then
+        echo "Greenfield Deployment: Checking/Creating Regional Analytics KMS KeyRing and Key..."
+        CMEK_REGIONAL_ANALYTICS_KEY=$(ensure_greenfield_kms_key "$PROJECT_ID" "$REGION" "gemini-enterprise-keyring-${REGION}" "analytics-key" "$COMPLIANCE_REGIME")
+        echo -e "Using Regional Analytics KMS Key: ${YELLOW}${CMEK_REGIONAL_ANALYTICS_KEY}${NC}"
     fi
 
     # Initialize Terraform early to check state
@@ -2631,7 +2706,12 @@ shared_vpc_subnet_name      = "${SHARED_VPC_SUBNET}"
 shared_vpc_proxy_subnet_name = "${SHARED_VPC_PROXY_SUBNET}"
 create_data_stores          = ${CREATE_DS_BOOL}
 enable_analytics            = ${ENABLE_ANALYTICS_FLAG}
+analytics_kms_key_id        = ""
 EOF
+
+    if [[ -n "$CMEK_REGIONAL_ANALYTICS_KEY" ]]; then
+        update_tfvar_string gemini-stage-0/terraform.tfvars "analytics_kms_key_id" "${CMEK_REGIONAL_ANALYTICS_KEY}"
+    fi
 
     
     # Add example data stores
@@ -2647,29 +2727,36 @@ EOF
     # Construct Access Level Lists
     LENIENT_LIST=()
     MODERATE_LIST=()
-    
+    STRICT_LIST=()
+
+    ACM_PREFIX=$(_get_acm_prefix "$PREFIX")
     PREFIX_PATH="accessPolicies/${ACCESS_POLICY_NUMBER}/accessLevels"
     
     if [[ "$CREATE_US_ACCESS" == "true" ]]; then
-        LENIENT_LIST+=("\"${PREFIX_PATH}/us\"")
-        MODERATE_LIST+=("\"${PREFIX_PATH}/us\"")
+        LENIENT_LIST+=("\"${PREFIX_PATH}/${ACM_PREFIX}_us\"")
+        MODERATE_LIST+=("\"${PREFIX_PATH}/${ACM_PREFIX}_us\"")
+        STRICT_LIST+=("\"${PREFIX_PATH}/${ACM_PREFIX}_us\"")
     fi
     
     if [[ "$CREATE_IP_BASED_ACCESS" == "true" ]]; then
-         LENIENT_LIST+=("\"${PREFIX_PATH}/ip_based_access\"")
-         MODERATE_LIST+=("\"${PREFIX_PATH}/ip_based_access\"")
+         LENIENT_LIST+=("\"${PREFIX_PATH}/${ACM_PREFIX}_ip_based_access\"")
+         MODERATE_LIST+=("\"${PREFIX_PATH}/${ACM_PREFIX}_ip_based_access\"")
+         STRICT_LIST+=("\"${PREFIX_PATH}/${ACM_PREFIX}_ip_based_access\"")
     fi
     
     if [[ "$CREATE_TIME_ACCESS" == "true" ]]; then
-        MODERATE_LIST+=("\"${PREFIX_PATH}/time\"")
+        MODERATE_LIST+=("\"${PREFIX_PATH}/${ACM_PREFIX}_time\"")
+        STRICT_LIST+=("\"${PREFIX_PATH}/${ACM_PREFIX}_time\"")
     fi
     
     if [[ "$CREATE_EXPIRE_ACCESS" == "true" ]]; then
-        MODERATE_LIST+=("\"${PREFIX_PATH}/expire\"")
+        MODERATE_LIST+=("\"${PREFIX_PATH}/${ACM_PREFIX}_expire\"")
+        STRICT_LIST+=("\"${PREFIX_PATH}/${ACM_PREFIX}_expire\"")
     fi
     
     LENIENT_STR="[$(IFS=,; echo "${LENIENT_LIST[*]}")]"
     MODERATE_STR="[$(IFS=,; echo "${MODERATE_LIST[*]}")]"
+    STRICT_STR="[$(IFS=,; echo "${STRICT_LIST[*]}")]"
 
     # Add Access Policy Creation Flags
     cat >> gemini-stage-0/terraform.tfvars <<EOF
@@ -2683,6 +2770,7 @@ create_strict_device_access     = ${CREATE_STRICT_DEVICE_ACCESS}
 enable_chrome_enterprise_premium = ${ENABLE_CEP_BOOL}
 lenient_device_access_levels    = ${LENIENT_STR}
 moderate_device_access_levels   = ${MODERATE_STR}
+strict_device_access_levels     = ${STRICT_STR}
 EOF
     
     # Add Time variables if set
@@ -2727,34 +2815,23 @@ EOF
     return 0
 }
 
-deploy_stage_0() {
-    echo ""
-    echo -e "${BLUE}--- Deploying Stage 0 ---${NC}"
-    
-    cd gemini-stage-0
-    rm -f backend.tf
-    rm -rf .terraform
-    
-    echo "Initializing Terraform..."
-    if ! terraform init -migrate-state -backend-config="bucket=${BUCKET_NAME}" -backend-config="prefix=terraform/state/stage-0"; then
-        echo -e "${RED}Terraform Init failed! Please try resolving the error and running the Step again.${NC}"
-        cd ..
-        pause
-        return 1
-    fi
-    
-    echo ""
-    echo "Applying Terraform..."
-    if ! terraform apply -var-file="terraform.tfvars"; then
-        echo -e "${RED}Terraform Apply failed! Please try resolving the error and running the Step again.${NC}"
-        cd ..
-        pause
-        return 1
-    fi
-    
-    # Post-Deployment: Configure Observability (Audit Logs) and Default Assistants for Gemini Apps
+apply_gemini_app_post_deploy_patches() {
+    # Expects working directory to be gemini-stage-0 (after terraform apply).
     echo ""
     echo "Configuring logging and assistant compliance settings for Gemini applications..."
+    local PROJECT_ID_LOCAL="${PROJECT_ID:-}"
+    local REGIME_LOCAL="${COMPLIANCE_REGIME:-}"
+    if [[ -z "$PROJECT_ID_LOCAL" ]]; then
+        PROJECT_ID_LOCAL=$(terraform output -raw main_project_id 2>/dev/null || echo "")
+    fi
+    if [[ -z "$REGIME_LOCAL" && -f "terraform.tfvars" ]]; then
+        REGIME_LOCAL=$(grep -E '^[[:space:]]*compliance_regime[[:space:]]*=' terraform.tfvars | awk -F'=' '{print $2}' | tr -d ' "' || echo "")
+    fi
+    if [[ -z "$PROJECT_ID_LOCAL" ]]; then
+        echo -e "${RED}Warning: Could not determine main_project_id for post-deploy compliance PATCHes.${NC}"
+        return 1
+    fi
+
     AUDIT_LOGS_MAP=$(terraform output -json gemini_apps_audit_logs 2>/dev/null || echo "{}")
     MODEL_ARMOR_MAP=$(terraform output -json gemini_apps_model_armor 2>/dev/null || echo "{}")
     MODEL_ARMOR_TEMPLATE_NAME=$(terraform output -raw model_armor_template_name 2>/dev/null || echo "")
@@ -2774,8 +2851,8 @@ deploy_stage_0() {
                 OBS_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
                     -K - \
                     -H "Content-Type: application/json" \
-                    -H "X-Goog-User-Project: ${PROJECT_ID}" \
-                    "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}?updateMask=observabilityConfig" \
+                    -H "X-Goog-User-Project: ${PROJECT_ID_LOCAL}" \
+                    "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID_LOCAL}/locations/us/collections/default_collection/engines/${ENG_ID}?updateMask=observabilityConfig" \
                     -d "${OBS_Payload}" \
                     <<<"$(curl_auth_config "${ACCESS_TOKEN}")")
                 OBS_HTTP_CODE=$(echo "$OBS_RESPONSE" | tail -n1)
@@ -2792,7 +2869,7 @@ deploy_stage_0() {
 
                 # B. Configure Default Assistant Compliance
                 echo "Applying compliance settings to default assistant for Engine: ${ENG_ID}..."
-                if [[ -n "$COMPLIANCE_REGIME" && "$COMPLIANCE_REGIME" != "NONE" ]]; then
+                if [[ -n "$REGIME_LOCAL" && "$REGIME_LOCAL" != "NONE" ]]; then
                      BASE_JSON='{
   "displayName": "Default Assistant",
   "webGroundingType": "WEB_GROUNDING_TYPE_ENTERPRISE_WEB_SEARCH",
@@ -2824,8 +2901,8 @@ deploy_stage_0() {
                 ASST_RESPONSE=$(curl -s -w "\n%{http_code}" -X PATCH \
                     -K - \
                     -H "Content-Type: application/json" \
-                    -H "X-Goog-User-Project: ${PROJECT_ID}" \
-                    "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID}/locations/us/collections/default_collection/engines/${ENG_ID}/assistants/default_assistant?updateMask=${MASK}" \
+                    -H "X-Goog-User-Project: ${PROJECT_ID_LOCAL}" \
+                    "https://us-discoveryengine.googleapis.com/v1alpha/projects/${PROJECT_ID_LOCAL}/locations/us/collections/default_collection/engines/${ENG_ID}/assistants/default_assistant?updateMask=${MASK}" \
                     -d "${ASSISTANT_BODY}" \
                     <<<"$(curl_auth_config "${ACCESS_TOKEN}")")
                 ASST_HTTP_CODE=$(echo "$ASST_RESPONSE" | tail -n1)
@@ -2837,6 +2914,35 @@ deploy_stage_0() {
             fi
         done < <(echo "$AUDIT_LOGS_MAP" | jq -r --argjson ma "$MODEL_ARMOR_MAP" 'to_entries[] | "\(.key)\t\(.value)\t\(($ma[.key]) // false)"')
     fi
+}
+
+deploy_stage_0() {
+    echo ""
+    echo -e "${BLUE}--- Deploying Stage 0 ---${NC}"
+    
+    cd gemini-stage-0
+    rm -f backend.tf
+    rm -rf .terraform
+    
+    echo "Initializing Terraform..."
+    if ! terraform init -migrate-state -backend-config="bucket=${BUCKET_NAME}" -backend-config="prefix=terraform/state/stage-0"; then
+        echo -e "${RED}Terraform Init failed! Please try resolving the error and running the Step again.${NC}"
+        cd ..
+        pause
+        return 1
+    fi
+    
+    echo ""
+    echo "Applying Terraform..."
+    if ! terraform apply -var-file="terraform.tfvars"; then
+        echo -e "${RED}Terraform Apply failed! Please try resolving the error and running the Step again.${NC}"
+        cd ..
+        pause
+        return 1
+    fi
+    
+    # Post-Deployment: Configure Observability (Audit Logs) and Default Assistants for Gemini Apps
+    apply_gemini_app_post_deploy_patches
 
     GEMINI_IP=$(terraform output -raw gemini_enterprise_ip 2>/dev/null || echo "N/A")
     CMEK_KEY_ID=$(terraform output -raw cmek_key_id 2>/dev/null || echo "")
@@ -3012,7 +3118,9 @@ configure_gemini_apps() {
          pause
          return 1
     fi
-    
+
+    apply_gemini_app_post_deploy_patches
+
     cd ..
     
     echo -e "${GREEN}Gemini Enterprise Applications configured and deployed successfully.${NC}"
@@ -3813,7 +3921,10 @@ deploy_analytics_dashboard() {
     local state_project_id=$(echo "$STATE_CONTENT" | jq -r '.outputs.main_project_id.value // empty')
     local state_dataset_id=$(echo "$STATE_CONTENT" | jq -r '.outputs.analytics_dataset_id.value // empty')
     local state_sa_email=$(echo "$STATE_CONTENT" | jq -r '.outputs.analytics_sa_email.value // empty')
+    local state_build_sa_email state_region
+    state_build_sa_email=$(echo "$STATE_CONTENT" | jq -r '.outputs.analytics_build_sa_email.value // empty')
     local state_repo_name=$(echo "$STATE_CONTENT" | jq -r '.outputs.analytics_repo_name.value // empty')
+    state_region=$(echo "$STATE_CONTENT" | jq -r '.outputs.region.value // empty')
     
     # Fallback or prompt
     if [[ -z "$state_project_id" ]]; then
@@ -3841,7 +3952,7 @@ deploy_analytics_dashboard() {
     local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     
     # Determine Region for AR and Cloud Run
-    local region="${REGION:-us-central1}"
+    local region="${state_region:-${REGION:-us-central1}}"
     
     # Fallback for repo name if not in state
     if [[ -z "$state_repo_name" ]]; then
@@ -3872,12 +3983,20 @@ deploy_analytics_dashboard() {
         docker build -t "$image_name" "$script_dir/analytics"
         docker push "$image_name"
     else
-        echo "Falling back to Cloud Build (US region)..."
-        
-        gcloud builds submit "$script_dir/analytics" \
-            --tag "$image_name" \
-            --project "$state_project_id" \
+        echo "Falling back to Cloud Build (${region})..."
+        local build_cmd=(
+            gcloud builds submit "$script_dir/analytics"
+            --tag "$image_name"
+            --project "$state_project_id"
             --region "$region"
+        )
+        if [[ -n "$state_build_sa_email" ]]; then
+            build_cmd+=(
+                --service-account="projects/${state_project_id}/serviceAccounts/${state_build_sa_email}"
+                --default-buckets-behavior=regional-user-owned-bucket
+            )
+        fi
+        "${build_cmd[@]}"
     fi
     
     # Deploy to Cloud Run
@@ -3995,17 +4114,27 @@ connect_analytics_dashboard() {
     echo "Checking Bastion VM..."
     if ! gcloud compute instances describe "$vm_name" --project="$state_project_id" --zone="$zone" &>/dev/null; then
         echo -e "${YELLOW}Bastion VM not found.${NC}"
-        
+
+        local use_shared_vpc network_project_id shared_vpc_network_name shared_vpc_subnet_name
+        use_shared_vpc=$(echo "$STATE_CONTENT" | jq -r '.outputs.use_shared_vpc.value // false')
+        network_project_id=$(echo "$STATE_CONTENT" | jq -r '.outputs.network_project_id.value // empty')
+        shared_vpc_network_name=$(echo "$STATE_CONTENT" | jq -r '.outputs.shared_vpc_network_name.value // empty')
+        shared_vpc_subnet_name=$(echo "$STATE_CONTENT" | jq -r '.outputs.shared_vpc_subnet_name.value // empty')
+
         local network_name="${prefix}-vpc"
         local subnet_name="${prefix}-vpc-subnet"
-        
+        if [[ "$use_shared_vpc" == "true" && -n "$network_project_id" && -n "$shared_vpc_network_name" && -n "$shared_vpc_subnet_name" ]]; then
+            network_name="projects/${network_project_id}/global/networks/${shared_vpc_network_name}"
+            subnet_name="projects/${network_project_id}/regions/${region}/subnetworks/${shared_vpc_subnet_name}"
+        fi
+
         echo -e "Inferred Network: ${YELLOW}$network_name${NC}"
         echo -e "Inferred Subnet: ${YELLOW}$subnet_name${NC}"
         
         read -p "Are these network details correct? [Y/n]: " NET_CONFIRM
         if [[ "$NET_CONFIRM" =~ ^[Nn]$ ]]; then
-            read -p "Enter VPC Network Name: " network_name
-            read -p "Enter Subnet Name: " subnet_name
+            read -p "Enter VPC Network Name (or projects/<host>/global/networks/<name>): " network_name
+            read -p "Enter Subnet Name (or projects/<host>/regions/<region>/subnetworks/<name>): " subnet_name
         fi
         
         echo ""
@@ -4031,7 +4160,7 @@ connect_analytics_dashboard() {
         local startup_script="#!/bin/bash
 apt-get update
 apt-get install -y google-cloud-cli-cloud-run-proxy
-gcloud run services proxy gemini-analytics-dashboard --project=${state_project_id} --region=${region} --port=8080 > /var/log/cloud-run-proxy.log 2>&1 &"
+nohup gcloud run services proxy gemini-analytics-dashboard --project=${state_project_id} --region=${region} --port=8080 > /var/log/cloud-run-proxy.log 2>&1 </dev/null &"
 
         echo "Creating Bastion VM..."
         gcloud compute instances create "$vm_name" \
@@ -4058,7 +4187,7 @@ gcloud run services proxy gemini-analytics-dashboard --project=${state_project_i
         
         # Ensure proxy is running (in case VM was restarted)
         echo "Ensuring proxy is running on VM..."
-        gcloud compute ssh "$vm_name" --project="$state_project_id" --zone="$zone" --tunnel-through-iap --command="pgrep -f 'gcloud run services proxy' || (sudo apt-get update && sudo apt-get install -y google-cloud-cli-cloud-run-proxy && gcloud run services proxy gemini-analytics-dashboard --project=${state_project_id} --region=${region} --port=8080 > /var/log/cloud-run-proxy.log 2>&1 &)" --quiet
+        gcloud compute ssh "$vm_name" --project="$state_project_id" --zone="$zone" --tunnel-through-iap --command="pgrep -f 'gcloud run services proxy' || (sudo apt-get update && sudo apt-get install -y google-cloud-cli-cloud-run-proxy && nohup gcloud run services proxy gemini-analytics-dashboard --project=${state_project_id} --region=${region} --port=8080 > \"\${HOME:-/tmp}/cloud-run-proxy.log\" 2>&1 </dev/null &)" --quiet
     fi
     
     echo -e "${GREEN}Starting SSH Tunnel...${NC}"
