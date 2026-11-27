@@ -12,6 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "bastion_vm_zone" {
+  description = "Optional GCP zone for the bastion host VM. Defaults to `<region>-a` when null."
+  type        = string
+  default     = null
+  validation {
+    condition = (
+      var.bastion_vm_zone == null ||
+      startswith(var.bastion_vm_zone, "${var.region}-")
+    )
+    error_message = "bastion_vm_zone must be located within region."
+  }
+}
+
 variable "config_sync_secret_type" {
   description = "The type of secret Config Sync uses to authenticate to the Git repository in source_repo. The cookiefile, githubapp, ssh, and token values need a git-creds Kubernetes Secret that you create out of band in the config-management-system namespace. The gcpserviceaccount value needs config_sync_service_account_email. The none value needs no credentials."
   type        = string
@@ -95,10 +108,11 @@ variable "gke_vpc_master_ipv4_cidr_block" {
 }
 
 variable "kms_key_names" {
-  description = "Key names and base attributes. Set attributes to null if not needed."
+  description = "Key names and base attributes, which must include a `default` entry referenced by the cluster, node pool, and bastion VM. Set attributes to null if not needed."
   type = map(object({
-    destroy_scheduled_duration    = optional(string)
-    rotation_period               = optional(string, "7776000s") # CIS Compliance Benchmark 1.10
+    destroy_scheduled_duration = optional(string)
+    # CIS Compliance Benchmark 1.10.
+    rotation_period               = optional(string, "7776000s")
     labels                        = optional(map(string))
     purpose                       = optional(string, "ENCRYPT_DECRYPT")
     skip_initial_version_creation = optional(bool, false)
@@ -127,7 +141,7 @@ variable "kms_key_names" {
     })), {})
   }))
   default = {
-    "key-gke" = {
+    "default" = {
       rotation_period            = "7776000s"
       destroy_scheduled_duration = "2592000s"
       labels = {
@@ -137,12 +151,13 @@ variable "kms_key_names" {
         algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
         protection_level = "HSM"
       }
-      lifecycle = {
-        prevent_destroy = true
-      }
     }
   }
   nullable = false
+  validation {
+    condition     = contains(keys(var.kms_key_names), "default")
+    error_message = "kms_key_names must include a key named \"default\" because main.tf references module.kms.keys.default.id."
+  }
 }
 
 variable "kms_keyring_name" {
