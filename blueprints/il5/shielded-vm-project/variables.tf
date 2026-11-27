@@ -46,8 +46,8 @@ variable "instance_name" {
 variable "instance_type" {
   description = "The Machine Type for the Shielded Compute VM."
   type        = string
-  default     = "e2-micro"
-  #Example  default     = "e2-micro"
+  default     = "n2d-standard-2"
+  # Confidential Compute SEV requires N2D, C2D, or C3D machine types.
 }
 
 variable "kms_key_name" {
