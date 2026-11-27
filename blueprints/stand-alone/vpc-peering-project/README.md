@@ -79,56 +79,54 @@ gcloud compute networks describe <VPC_NAME> --project=<PROJECT_ID>
 - Do not deploy this blueprint inside a landing zone already managed by Stellar Engine Stage 2 networking, where hub-and-spoke VPCs and peering are centrally provisioned.
 - Primary (`local_subnetwork_cidr_*`, `peer_subnetwork_cidr_*`) and secondary CIDR ranges must never overlap across peered VPC networks.
 - Keep `gcp_region` consistent with your Assured Workloads regional boundary.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [main_project_id](variables.tf#L1) | The Google Cloud Project ID where the peering connection will be managed (should be one of the VPC projects). | <code>string</code> | ✓ |  |
-| [gcp_region](variables.tf#L6) | The Google Cloud region where both VPCs and their subnets will be deployed. | <code>string</code> | ✓ |  |
-| [local_vpc_name](variables.tf#L11) | The name of the first VPC network to be created by this blueprint. | <code>string</code> | ✓ |  |
-| [local_vpc_project_id](variables.tf#L16) | The Google Cloud Project ID where the first VPC network will be created. | <code>string</code> | ✓ |  |
-| [local_subnetwork_prefix_name](variables.tf#L21) | The prefix name for subnets within the first VPC network. | <code>string</code> |  | <code>&#34;local-subnet&#34;</code> |
-| [local_subnetwork_cidr_a](variables.tf#L27) | The primary IP CIDR range for the first subnet in the local VPC (e.g., &#39;10.100.0.0&#47;24&#39;). | <code>string</code> | ✓ |  |
-| [local_subnetwork_cidr_b](variables.tf#L32) | The primary IP CIDR range for the second subnet in the local VPC (e.g., &#39;10.100.1.0&#47;24&#39;). | <code>string</code> | ✓ |  |
-| [local_subnetwork_cidr_c](variables.tf#L37) | The primary IP CIDR range for the third subnet in the local VPC (e.g., &#39;10.100.2.0&#47;24&#39;). | <code>string</code> | ✓ |  |
-| [local_secondary_ip_ranges_cidr_a](variables.tf#L42) | The secondary IP CIDR range &#39;a&#39; for a subnet in the local VPC (e.g., &#39;192.168.0.0&#47;24&#39;). | <code>string</code> | ✓ |  |
-| [local_secondary_ip_ranges_cidr_b](variables.tf#L47) | The secondary IP CIDR range &#39;b&#39; for a subnet in the local VPC (e.g., &#39;192.168.1.0&#47;24&#39;). | <code>string</code> | ✓ |  |
-| [peer_vpc_name_to_create](variables.tf#L52) | The name of the second VPC network to be created by this blueprint (this will be the &#39;peer&#39; side). | <code>string</code> | ✓ |  |
-| [peer_vpc_project_id_to_create](variables.tf#L57) | The Google Cloud Project ID where the second VPC network will be created (this will be the &#39;peer&#39; side). | <code>string</code> | ✓ |  |
-| [peer_subnetwork_prefix_name](variables.tf#L62) | The prefix name for subnets within the second VPC network (the &#39;peer&#39; side). | <code>string</code> |  | <code>&#34;peer-subnet&#34;</code> |
-| [peer_subnetwork_cidr_a](variables.tf#L68) | The primary IP CIDR range for the first subnet in the peer VPC (e.g., &#39;10.200.0.0&#47;24&#39;). | <code>string</code> | ✓ |  |
-| [peer_subnetwork_cidr_b](variables.tf#L73) | The primary IP CIDR range for the second subnet in the peer VPC (e.g., &#39;10.200.1.0&#47;24&#39;). | <code>string</code> | ✓ |  |
-| [peer_subnetwork_cidr_c](variables.tf#L78) | The primary IP CIDR range for the third subnet in the peer VPC (e.g., &#39;10.200.2.0&#47;24&#39;). | <code>string</code> | ✓ |  |
-| [peer_secondary_ip_ranges_cidr_a](variables.tf#L83) | The secondary IP CIDR range &#39;a&#39; for a subnet in the peer VPC (e.g., &#39;192.168.2.0&#47;24&#39;). | <code>string</code> | ✓ |  |
-| [peer_secondary_ip_ranges_cidr_b](variables.tf#L88) | The secondary IP CIDR range &#39;b&#39; for a subnet in the peer VPC (e.g., &#39;192.168.3.0&#47;24&#39;). | <code>string</code> | ✓ |  |
+| [gcp_region](variables.tf#L15) | The Google Cloud region where both VPCs and their subnets will be deployed. | <code>string</code> | ✓ |  |
+| [local_secondary_ip_ranges_cidr_a](variables.tf#L20) | The secondary IP CIDR range 'a' for a subnet in the local VPC (e.g., '192.168.0.0/24'). | <code>string</code> | ✓ |  |
+| [local_secondary_ip_ranges_cidr_b](variables.tf#L25) | The secondary IP CIDR range 'b' for a subnet in the local VPC (e.g., '192.168.1.0/24'). | <code>string</code> | ✓ |  |
+| [local_subnetwork_cidr_a](variables.tf#L30) | The primary IP CIDR range for the first subnet in the local VPC (e.g., '10.100.0.0/24'). | <code>string</code> | ✓ |  |
+| [local_subnetwork_cidr_b](variables.tf#L35) | The primary IP CIDR range for the second subnet in the local VPC (e.g., '10.100.1.0/24'). | <code>string</code> | ✓ |  |
+| [local_subnetwork_cidr_c](variables.tf#L40) | The primary IP CIDR range for the third subnet in the local VPC (e.g., '10.100.2.0/24'). | <code>string</code> | ✓ |  |
+| [local_vpc_name](variables.tf#L51) | The name of the first VPC network to be created by this blueprint. | <code>string</code> | ✓ |  |
+| [local_vpc_project_id](variables.tf#L56) | The Google Cloud Project ID where the first VPC network will be created. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L61) | The Google Cloud Project ID where the peering connection will be managed (should be one of the VPC projects). | <code>string</code> | ✓ |  |
+| [peer_secondary_ip_ranges_cidr_a](variables.tf#L66) | The secondary IP CIDR range 'a' for a subnet in the peer VPC (e.g., '192.168.2.0/24'). | <code>string</code> | ✓ |  |
+| [peer_secondary_ip_ranges_cidr_b](variables.tf#L71) | The secondary IP CIDR range 'b' for a subnet in the peer VPC (e.g., '192.168.3.0/24'). | <code>string</code> | ✓ |  |
+| [peer_subnetwork_cidr_a](variables.tf#L76) | The primary IP CIDR range for the first subnet in the peer VPC (e.g., '10.200.0.0/24'). | <code>string</code> | ✓ |  |
+| [peer_subnetwork_cidr_b](variables.tf#L81) | The primary IP CIDR range for the second subnet in the peer VPC (e.g., '10.200.1.0/24'). | <code>string</code> | ✓ |  |
+| [peer_subnetwork_cidr_c](variables.tf#L86) | The primary IP CIDR range for the third subnet in the peer VPC (e.g., '10.200.2.0/24'). | <code>string</code> | ✓ |  |
+| [peer_vpc_name_to_create](variables.tf#L97) | The name of the second VPC network to be created by this blueprint (this will be the 'peer' side). | <code>string</code> | ✓ |  |
+| [peer_vpc_project_id_to_create](variables.tf#L102) | The Google Cloud Project ID where the second VPC network will be created (this will be the 'peer' side). | <code>string</code> | ✓ |  |
+| [local_subnetwork_prefix_name](variables.tf#L45) | The prefix name for subnets within the first VPC network. | <code>string</code> |  | <code>&#34;local-subnet&#34;</code> |
+| [peer_subnetwork_prefix_name](variables.tf#L91) | The prefix name for subnets within the second VPC network (the 'peer' side). | <code>string</code> |  | <code>&#34;peer-subnet&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [local_network_peering](outputs.tf#L16) | The peering resource for the local VPC side of the connection. |  |
-| [peer_network_peering](outputs.tf#L21) | The peering resource for the peer VPC side of the connection. |  |
-| [local_vpc_network](outputs.tf#L26) | The network resource object for the local VPC created by this blueprint. |  |
-| [local_vpc_network_self_link](outputs.tf#L31) | The self-link for the local VPC created by this blueprint. |  |
-| [local_vpc_subnet_ids](outputs.tf#L36) | A map of subnet IDs keyed by name for the local VPC. |  |
-| [local_vpc_subnet_ips](outputs.tf#L41) | A map of subnet address ranges keyed by name for the local VPC. |  |
-| [local_vpc_subnet_self_links](outputs.tf#L46) | A map of subnet self links keyed by name for the local VPC. |  |
-| [local_vpc_subnet_regions](outputs.tf#L51) | A map of subnet regions keyed by name for the local VPC. |  |
-| [local_vpc_subnets](outputs.tf#L56) | List of subnet resources for the local VPC. |  |
-| [local_vpc_subnet_secondary_ranges](outputs.tf#L61) | Map of subnet secondary ranges keyed by name for the local VPC. |  |
-| [local_vpc_subnet_ipv6_external_prefixes](outputs.tf#L66) | Map of subnet external IPv6 prefixes keyed by name for the local VPC. |  |
-| [local_vpc_network_attachment_ids](outputs.tf#L71) | IDs of network attachments for the local VPC. |  |
-| [peer_vpc_network](outputs.tf#L76) | The network resource object for the peer VPC created by this blueprint. |  |
-| [peer_vpc_network_self_link](outputs.tf#L81) | The self-link for the peer VPC created by this blueprint. |  |
-| [peer_vpc_subnet_ids](outputs.tf#L86) | A map of subnet IDs keyed by name for the peer VPC. |  |
-| [peer_vpc_subnet_ips](outputs.tf#L91) | A map of subnet address ranges keyed by name for the peer VPC. |  |
-| [peer_vpc_subnet_self_links](outputs.tf#L96) | A map of subnet self links keyed by name for the peer VPC. |  |
-| [peer_vpc_subnet_regions](outputs.tf#L101) | A map of subnet regions keyed by name for the peer VPC. |  |
-| [peer_vpc_subnets](outputs.tf#L106) | List of subnet resources for the peer VPC. |  |
-| [peer_vpc_subnet_secondary_ranges](outputs.tf#L111) | Map of subnet secondary ranges keyed by name for the peer VPC. |  |
-| [peer_vpc_subnet_ipv6_external_prefixes](outputs.tf#L116) | Map of subnet external IPv6 prefixes keyed by name for the peer VPC. |  |
-| [peer_vpc_network_attachment_ids](outputs.tf#L121) | IDs of network attachments for the peer VPC. |  |
-<!-- END TOC -->
-
+| [local_network_peering](outputs.tf#L17) | The peering resource for the local VPC side of the connection. |  |
+| [local_vpc_network](outputs.tf#L22) | The network resource object for the local VPC created by this blueprint. |  |
+| [local_vpc_network_attachment_ids](outputs.tf#L27) | IDs of network attachments for the local VPC. |  |
+| [local_vpc_network_self_link](outputs.tf#L32) | The self-link for the local VPC created by this blueprint. |  |
+| [local_vpc_subnet_ids](outputs.tf#L37) | A map of subnet IDs keyed by name for the local VPC. |  |
+| [local_vpc_subnet_ips](outputs.tf#L42) | A map of subnet address ranges keyed by name for the local VPC. |  |
+| [local_vpc_subnet_ipv6_external_prefixes](outputs.tf#L47) | Map of subnet external IPv6 prefixes keyed by name for the local VPC. |  |
+| [local_vpc_subnet_regions](outputs.tf#L52) | A map of subnet regions keyed by name for the local VPC. |  |
+| [local_vpc_subnet_secondary_ranges](outputs.tf#L57) | Map of subnet secondary ranges keyed by name for the local VPC. |  |
+| [local_vpc_subnet_self_links](outputs.tf#L62) | A map of subnet self links keyed by name for the local VPC. |  |
+| [local_vpc_subnets](outputs.tf#L67) | List of subnet resources for the local VPC. |  |
+| [peer_network_peering](outputs.tf#L72) | The peering resource for the peer VPC side of the connection. |  |
+| [peer_vpc_network](outputs.tf#L77) | The network resource object for the peer VPC created by this blueprint. |  |
+| [peer_vpc_network_attachment_ids](outputs.tf#L82) | IDs of network attachments for the peer VPC. |  |
+| [peer_vpc_network_self_link](outputs.tf#L87) | The self-link for the peer VPC created by this blueprint. |  |
+| [peer_vpc_subnet_ids](outputs.tf#L92) | A map of subnet IDs keyed by name for the peer VPC. |  |
+| [peer_vpc_subnet_ips](outputs.tf#L97) | A map of subnet address ranges keyed by name for the peer VPC. |  |
+| [peer_vpc_subnet_ipv6_external_prefixes](outputs.tf#L102) | Map of subnet external IPv6 prefixes keyed by name for the peer VPC. |  |
+| [peer_vpc_subnet_regions](outputs.tf#L107) | A map of subnet regions keyed by name for the peer VPC. |  |
+| [peer_vpc_subnet_secondary_ranges](outputs.tf#L112) | Map of subnet secondary ranges keyed by name for the peer VPC. |  |
+| [peer_vpc_subnet_self_links](outputs.tf#L117) | A map of subnet self links keyed by name for the peer VPC. |  |
+| [peer_vpc_subnets](outputs.tf#L122) | List of subnet resources for the peer VPC. |  |
+<!-- END TFDOC -->

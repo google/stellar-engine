@@ -20,7 +20,8 @@ variable "core_project_id" {
 variable "email" {
   description = "Email address of a user to grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` on every key in `existing_kms_keys`. Set to null to skip the grant."
   type        = string
-  default     = null # Made optional, as it might not always be used
+  # Made optional, as it might not always be used
+  default = null
 }
 
 variable "existing_kms_keyring_name" {
@@ -45,7 +46,8 @@ variable "gcp_region" {
 variable "group_email" {
   description = "Email address of a Google group to grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` on every key in `existing_kms_keys`. Set to null to skip the grant."
   type        = string
-  default     = null # Made optional, as it might not always be used
+  # Made optional, as it might not always be used
+  default = null
 }
 
 variable "main_project_id" {

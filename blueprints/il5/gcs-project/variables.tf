@@ -78,7 +78,6 @@ variable "retention_policy" {
     is_locked        = bool
     retention_period = number
   })
-
   default = {
     is_locked        = false # Change to true if storing logs here for CIS Compliance Benchmark 2.3
     retention_period = 7776000

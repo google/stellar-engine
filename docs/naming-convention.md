@@ -7,19 +7,19 @@ To architect to these Google Cloud naming requirements we establish a "naming st
 _Throughout this documentation we use example naming and diagrams to show examples of how the naming fits.  The example company is named ACME._
 
 # Table of Contents
+
 <!-- BEGIN TOC -->
-- [Google Cloud Naming Convention](#google-cloud-naming-convention)
 - [Table of Contents](#table-of-contents)
-  - [Google Cloud Org Domain](#google-cloud-org-domain)
-  - [Prefix](#prefix)
-  - [Google Cloud Folders](#google-cloud-folders)
-  - [Google Cloud Projects](#google-cloud-projects)
-  - [Google Cloud Networks](#google-cloud-networks)
-  - [Google Cloud Org Policy Custom Constraints](#google-cloud-org-policy-custom-constraints)
-  - [IAM Custom Roles](#iam-custom-roles)
-  - [GCS Buckets](#gcs-buckets)
-  - [GCE](#gce)
-  - [Terraform labels](#terraform-labels)
+- [Google Cloud Org Domain](#google-cloud-org-domain)
+- [Prefix](#prefix)
+- [Google Cloud Folders](#google-cloud-folders)
+- [Google Cloud Projects](#google-cloud-projects)
+- [Google Cloud Networks](#google-cloud-networks)
+- [Google Cloud Org Policy Custom Constraints](#google-cloud-org-policy-custom-constraints)
+- [IAM Custom Roles](#iam-custom-roles)
+- [GCS Buckets](#gcs-buckets)
+- [GCE](#gce)
+- [Terraform labels](#terraform-labels)
 <!-- END TOC -->
 
 ## Google Cloud Org Domain

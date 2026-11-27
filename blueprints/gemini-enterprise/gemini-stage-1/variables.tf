@@ -12,14 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-variable "stage_0_state_bucket" {
-  description = "The name of the GCS bucket used for Stage 0 Terraform state."
+variable "cert_management_choice" {
+  description = "Certificate management choice for external deployments: 'google_managed' or 'self_managed'."
   type        = string
+  default     = "self_managed"
+  validation {
+    condition     = contains(["google_managed", "self_managed"], var.cert_management_choice)
+    error_message = "Allowed values for cert_management_choice are 'google_managed' or 'self_managed'."
+  }
 }
 
 variable "gemini_enterprise_domain" {
-  description = "Your domain that you associated the reserved IP from stage 0 to"
+  description = "Your domain that you associated the reserved IP from stage 0 to."
   type        = string
+}
+
+variable "host_project_id" {
+  description = "The ID of the host project where the VPC network resides."
+  type        = string
+  default     = ""
+}
+
+variable "network_name" {
+  description = "The name of the VPC network."
+  type        = string
+  default     = ""
 }
 
 # Variable for the customer-provided SSL certificate name
@@ -41,26 +58,9 @@ variable "ssl_private_key_path" {
   default     = ""
 }
 
-variable "cert_management_choice" {
-  description = "Certificate management choice for external deployments: 'google_managed' or 'self_managed'."
+variable "stage_0_state_bucket" {
+  description = "The name of the GCS bucket used for Stage 0 Terraform state."
   type        = string
-  default     = "self_managed"
-  validation {
-    condition     = contains(["google_managed", "self_managed"], var.cert_management_choice)
-    error_message = "Allowed values for cert_management_choice are 'google_managed' or 'self_managed'."
-  }
-}
-
-variable "network_name" {
-  description = "The name of the VPC network."
-  type        = string
-  default     = ""
-}
-
-variable "host_project_id" {
-  description = "The ID of the host project where the VPC network resides."
-  type        = string
-  default     = ""
 }
 
 variable "subnet_name" {

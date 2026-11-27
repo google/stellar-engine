@@ -39,19 +39,20 @@ Cloud Workstations provides preconfigured, customizable, and secure managed deve
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [kms_key_name](variables.tf#L49) | The name of the kms key. | <code>string</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L54) | The keyring of the kms key. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L65) | The Project ID where the workstations will be created. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L70) | The name of the network. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L81) | The Google Cloud region. | <code>string</code> | ✓ |  |
-| [subnetwork_name](variables.tf#L86) | The name of the subnet. | <code>string</code> | ✓ |  |
-| [workstations](variables.tf#L91) | The workstations that will be created based on the configuration. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [kms_key_name](variables.tf#L50) | The name of the kms key. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L55) | The keyring of the kms key. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L66) | The Project ID where the workstations will be created. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L71) | The name of the network. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L82) | The Google Cloud region. | <code>string</code> | ✓ |  |
+| [subnetwork_name](variables.tf#L87) | The name of the subnet. | <code>string</code> | ✓ |  |
+| [workstations](variables.tf#L92) | The workstations that will be created based on the configuration. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [cluster_id](variables.tf#L15) | The ID of the workstation cluster. | <code>string</code> |  | <code>&#34;example-workstation-cluster&#34;</code> |
 | [config_id](variables.tf#L21) | The ID of the workstation configuration. | <code>string</code> |  | <code>&#34;example-workstation-config&#34;</code> |
 | [core_project_id](variables.tf#L27) | The Project ID where the kms key is located. | <code>string</code> |  | <code>null</code> |
-| [image_repository](variables.tf#L39) | Artifact Registry repository that holds the custom image set in `image`. When both are set, the workstation VMs run as a dedicated service account that reads only this repository. The project defaults to `main_project_id`. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [machine_type](variables.tf#L59) | Type of GCE machine for the workstation configuration. | <code>string</code> |  | <code>&#34;e2-standard-4&#34;</code> |
-| [network_project_id](variables.tf#L75) | The ID of the landing zone project where the VPC is located. | <code>string</code> |  | <code>null</code> |
+| [image](variables.tf#L34) | Container image used by the workstations. | <code>string</code> |  | <code>null</code> |
+| [image_repository](variables.tf#L40) | Artifact Registry repository that holds the custom image set in `image`. When both are set, the workstation VMs run as a dedicated service account that reads only this repository. The project defaults to `main_project_id`. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [machine_type](variables.tf#L60) | Type of GCE machine for the workstation configuration. | <code>string</code> |  | <code>&#34;e2-standard-4&#34;</code> |
+| [network_project_id](variables.tf#L76) | The ID of the landing zone project where the VPC is located. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs
 

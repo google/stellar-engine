@@ -58,7 +58,6 @@ variable "kms_key_names" {
       }))
     })), {})
   }))
-
   default = {
     "default" = {
       destroy_scheduled_duration    = null
