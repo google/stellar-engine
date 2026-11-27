@@ -239,10 +239,9 @@ following [link](https://docs.gitlab.com/omnibus/settings/ssl/#configure-https-m
 
 #### Step 0: Cloning the repository
 
-If you want to deploy from your Cloud Shell, click on the image below, sign in
-if required and when the prompt appears, click on “confirm”.
+If you want to deploy from Cloud Shell, open the repository workspace in the editor and confirm when prompted.
 
-![Open Cloudshell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2FGoogleCloudPlatform%2Fcloud-foundation-fabric&cloudshell_workspace=blueprints%2Fthird-party-solutions%2Fwordpress%2Fcloudrun)
+![Open Cloudshell](https://shell.cloud.google.com/cloudshell/editor?cloudshell_git_repo=https%3A%2F%2Fgithub.com%2Fgoogle%2Fstellar-engine&cloudshell_workspace=blueprints%2Fthird-party-solutions%2Fgitlab)
 
 Otherwise, in your console of choice:
 
@@ -255,11 +254,13 @@ information (for more precise configuration see the Variables section):
 
 * The project ID
 
-The VPC host project, VPC and subnets should already exist and the following networking requirements are satisfied:
-- configured PSA for Cloud SQL on the VPC
-- subnets configured with PGA and Cloud NAT for internet access
-- Inbound firewall rule for IAP on port 22
-- Inbound firewall rule for TCP ports 80, 443, 2222 from proxy subnet CIDR (gitlab)
+The VPC host project, VPC, and subnets should already exist and satisfy these networking requirements:
+- Configured Private Services Access (PSA) for both Cloud SQL and Memorystore Redis on the VPC (for example, Stage 2 `psa_ranges` in `2-networking-a-fedramp` or `2-networking-b-il5-ngfw`)
+- Subnets configured with Private Google Access and Cloud NAT for outbound internet access
+- Inbound firewall rule for IAP SSH on port 22 (`35.235.240.0/20`)
+- Inbound firewall rule for TCP ports 80, 443, and 2222 from the internal load balancer subnet and allowed client ranges
+
+Note on CMEK and bucket location: `gcs_config.location` defaults to `var.region` so storage buckets comply with US `gcp.resourceLocations` constraints. The current Cloud SQL, Memorystore Redis, GCS, and Secret Manager resources in `services.tf` and `gitlab.tf` use Google-managed encryption keys by default; add explicit KMS keys before deploying in environments that enforce CMEK constraints.
 
 #### Step 2: Prepare the variables
 
@@ -282,24 +283,23 @@ terraform apply
 
 #### Step 4: Use the created resources
 
-Connect to squid-proxy for accessing gitlab instance using the gcloud command
-available in the `ssh_to_bastion` terraform output.
+Connect to the GitLab instance over IAP using the `gcloud` command in the `ssh_to_gitlab` Terraform output:
 
 ```bash
-terraform output ssh_to_bastion
+terraform output -raw ssh_to_gitlab
 ```
 
-A gcloud command like the following should be available
-
-```bash 
-gcloud compute ssh squid-vm --project ${project} --zone europe-west8-b -- -L 3128:127.0.0.1:3128 -N -q -f
-```
-
-Set as system proxy ip 127.0.0.1 and port 3128 and connect to Gitlab hostname https://gitlab.gcp.example.com.
-Use default admin password available in /run/gitlab/config/initial_root_password or reset admin password via the following command on the Docker container:
+Run the output command (adding `--tunnel-through-iap` if the VM has no external IP address) to open local port forwards:
 
 ```bash
-gitlab-rake “gitlab:password:reset”
+gcloud compute ssh <INSTANCE_NAME> --project <PROJECT_ID> --zone <ZONE> --tunnel-through-iap -- -L 8080:127.0.0.1:80 -L 2222:127.0.0.1:2222 -L 8443:127.0.0.1:443 -N -q -f
+```
+
+You can reach GitLab directly at the internal load balancer IP from `terraform output -raw gitlab_ilb_ip` inside the VPC, or through the SSH tunnel at `https://127.0.0.1:8443` (with `gitlab_config.hostname` mapped to `127.0.0.1` in `/etc/hosts` when using hostname-based TLS).
+Retrieve the initial administrator password from `/run/gitlab/config/initial_root_password` or reset the password inside the container:
+
+```bash
+docker exec gitlab gitlab-rake "gitlab:password:reset"
 ```
 
 ## Reference and useful links

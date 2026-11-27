@@ -145,11 +145,15 @@ module "gitlab-instance" {
     data = {
       snapshot_schedule = ["daily-backup"]
       initialize_params = {
-        replica_zone = var.gitlab_instance_config.replica_zone
-        size         = var.gitlab_instance_config.data_disk.size
-        # The previous module interface ignored data_disk.type and created
-        # pd-balanced disks, so the fixed type keeps existing data disks.
-        type = "pd-balanced"
+        replica_zone = try(
+          coalesce(
+            var.gitlab_instance_config.data_disk.replica_zone,
+            var.gitlab_instance_config.replica_zone,
+          ),
+          null,
+        )
+        size = var.gitlab_instance_config.data_disk.size
+        type = var.gitlab_instance_config.data_disk.type
       }
     }
   }

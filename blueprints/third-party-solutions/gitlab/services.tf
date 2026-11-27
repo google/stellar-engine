@@ -89,7 +89,7 @@ module "gitlab-object-storage" {
   prefix        = var.prefix
   name          = each.key
   storage_class = var.gcs_config.storage_class
-  location      = var.gcs_config.location
+  location      = coalesce(var.gcs_config.location, var.region)
   versioning    = var.gcs_config.enable_versioning
   iam = {
     "roles/storage.objectUser" = [
