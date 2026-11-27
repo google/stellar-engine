@@ -1,5 +1,6 @@
 # Cloud Spanner
 
+<!-- BEGIN TOC -->
 - [Introduction to Cloud Spanner](#introduction-to-cloud-spanner)
 - [Cloud Spanner Blueprint](#cloud-spanner-blueprint)
 - [Disclaimer](#disclaimer)
@@ -7,6 +8,7 @@
 - [Verification of a successful deployment](#verification-of-a-successful-deployment)
 - [Variables](#variables)
 - [Outputs](#outputs)
+<!-- END TOC -->
 
 ## Introduction to Cloud Spanner
 Google Cloud Spanner is a fully managed, globally distributed relational database offering strong consistency and a familiar SQL interface. Its core components are highly available instances that provide ACID-compliant transactions and horizontal scalability. Spanner supports features like automatic sharding, managed backup and restore, point-in-time recovery, and Change Streams for real-time data integration, all within a "no-ops" managed service designed for mission-critical workloads.

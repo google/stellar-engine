@@ -127,7 +127,8 @@ variable "log_min_duration_statement" {
 variable "log_min_error_statement" {
   description = "The log_min_error_statement flag defines the minimum message severity level that are considered as an error statement."
   type        = string
-  default     = "error" # Required for CIS Compliance Benchmark 6.2
+  # Required for CIS Compliance Benchmark 6.2
+  default = "error"
 
   validation {
     condition     = contains(["debug5", "debug4", "debug3", "debug2", "debug1", "info", "notice", "warning", "error", "log", "fatal", "panic"], var.log_min_error_statement)

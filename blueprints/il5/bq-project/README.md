@@ -23,11 +23,11 @@ Google BigQuery is a fully-managed, serverless data system in which querying dat
 |---|---|:---:|:---:|:---:|
 | [dataset_description](variables.tf#L17) | Provides a discription of the deployed BigQuery Dataset. | <code>string</code> | ✓ |  |
 | [dataset_id](variables.tf#L22) | This is the dataset id. | <code>string</code> | ✓ |  |
-| [kms_key_names](variables.tf#L27) | Key names and base attributes. Set attributes to null if not needed. | <code>map&#40;object&#40;&#123;&#8230;&#125;</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L82) | Keyring attributes. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [main_project_id](variables.tf#L90) | Project ID. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L95) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
-| [tables](variables.tf#L100) | BigQuery tables. | <code>map&#40;map&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [kms_keyring_name](variables.tf#L81) | Keyring attributes. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [main_project_id](variables.tf#L89) | Project ID. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L94) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
+| [kms_key_names](variables.tf#L27) | Key names and base attributes. Set attributes to null if not needed. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [tables](variables.tf#L99) | BigQuery tables. | <code>map&#40;map&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 

@@ -320,6 +320,7 @@ gitlab-rake “gitlab:password:reset”
 | [services.tf](./services.tf) | None | <code>cloudsql-instance</code> · <code>gcs</code> | <code>google_redis_instance</code> |
 | [ssl.tf](./ssl.tf) | None |  | <code>tls_cert_request</code> · <code>tls_locally_signed_cert</code> · <code>tls_private_key</code> · <code>tls_self_signed_cert</code> |
 | [variables.tf](./variables.tf) | Module variables. |  |  |
+| [versions.tf](./versions.tf) | Version pins. |  |  |
 
 ## Variables
 

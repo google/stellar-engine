@@ -10,6 +10,7 @@ This blueprint provisions a CMEK-encrypted Google Cloud Workflows workflow in a 
 - [5 Next steps](#5-next-steps)
 - [6 Service agent notes](#6-service-agent-notes)
 - [Variables](#variables)
+- [Outputs](#outputs)
 <!-- END TOC -->
 
 ## 1 Workflows overview
@@ -51,21 +52,29 @@ Review the [Workflows best practices documentation](https://cloud.google.com/wor
 ## 6 Service agent notes
 
 This blueprint explicitly provisions the Workflows service agent `service-<project-number>@gcp-sa-workflows.iam.gserviceaccount.com` and grants `roles/cloudkms.cryptoKeyEncrypterDecrypter` on the configured KMS key before creating the workflow so CMEK encryption succeeds on initial deployment.
-
+<!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [main_project_id](variables.tf#L31) | The Google Cloud Project ID where the Workflows resource will be deployed. | <code>string</code> | ✓ |  |
-| [name](variables.tf#L36) | Name of the workflow. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L41) | The Google Cloud region where the Workflows resource will be deployed and where the KMS key is located (if using CMEK in the same region). | <code>string</code> | ✓ |  |
-| [core_project_id](variables.tf#L46) | The Google Cloud Project ID where shared core services like KMS keys are located. | <code>string</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L51) | The name of the existing KMS Key Ring to use for workflow encryption CMEK. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L56) | The name of the existing KMS Crypto Key to use for workflow encryption CMEK. | <code>string</code> | ✓ |  |
-| [deletion_protection](variables.tf#L1) | Deletion protection for the workflow. | <code>bool</code> |  | <code>true</code> |
-| [description](variables.tf#L7) | Description of the workflow. | <code>string</code> |  | <code>null</code> |
-| [env_vars](variables.tf#L13) | Environment variables made available to your workflow execution. | <code>map&#40;string&#41;</code> |  | <code>null</code> |
-| [file](variables.tf#L19) | File path to the instructions for the workflow (e.g., example.yaml). | <code>string</code> |  | <code>&#34;code&#47;example.yaml&#34;</code> |
-| [logging_level](variables.tf#L25) | Logging level of workflow executions. Options: CALL_LOG_LEVEL_UNSPECIFIED, LOG_ALL_CALLS, LOG_ERRORS_ONLY, LOG_NONE. | <code>string</code> |  | <code>&#34;LOG_ERRORS_ONLY&#34;</code> |
-| [workflow_service_account_id](variables.tf#L61) | The ID for the custom service account created for the workflow (e.g., 'my-workflow-sa'). | <code>string</code> |  | <code>&#34;workflows-sa&#42;</code> |
+| [core_project_id](variables.tf#L15) | The Google Cloud Project ID where shared core services like KMS keys are located. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L52) | The name of the existing KMS Crypto Key to use for workflow encryption (CMEK). | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L57) | The name of the existing KMS Key Ring to use for workflow encryption (CMEK). | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L75) | The Google Cloud Project ID where the Workflows resource will be deployed. | <code>string</code> | ✓ |  |
+| [name](variables.tf#L80) | Name of the workflow. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L85) | The Google Cloud region where the Workflows resource will be deployed and where the KMS key is located (if using CMEK in the same region). | <code>string</code> | ✓ |  |
+| [deletion_protection](variables.tf#L20) | Deletion protection for the workflow. | <code>bool</code> |  | <code>true</code> |
+| [description](variables.tf#L26) | Description of the workflow. | <code>string</code> |  | <code>null</code> |
+| [env_vars](variables.tf#L32) | Environment variables made available to your workflow execution. | <code>map&#40;string&#41;</code> |  | <code>null</code> |
+| [file](variables.tf#L39) | File path to the instructions for the workflow (e.g., example.yaml). | <code>string</code> |  | <code>&#34;code&#47;example.yaml&#34;</code> |
+| [kms_key_location](variables.tf#L45) | The location (region) of the existing KMS Key Ring and Crypto Key. Defaults to the workflow region if not set. | <code>string</code> |  | <code>null</code> |
+| [logging_level](variables.tf#L62) | Logging level of workflow executions. Options: CALL_LOG_LEVEL_UNSPECIFIED, LOG_ALL_CALLS, LOG_ERRORS_ONLY, LOG_NONE. | <code>string</code> |  | <code>&#34;LOG_ERRORS_ONLY&#34;</code> |
+| [workflow_service_account_id](variables.tf#L90) | The ID for the custom service account created for the workflow (e.g., 'my-workflow-sa'). | <code>string</code> |  | <code>&#34;workflows-sa&#34;</code> |
 
+## Outputs
+
+| name | description | sensitive |
+|---|---|:---:|
+| [service_account](outputs.tf#L15) | The workflow service account. |  |
+| [workflow](outputs.tf#L20) | The newly created workflow. | ✓ |
+<!-- END TFDOC -->

@@ -30,7 +30,8 @@ variable "core_project_id" {
   default     = null
 }
 
-variable "image" { # https://cloud.google.com/workstations/docs/preconfigured-base-images
+# https://cloud.google.com/workstations/docs/preconfigured-base-images
+variable "image" {
   description = "Container image used by the workstations."
   type        = string
   default     = null

@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "core_project_id" {
+  description = "The Google Cloud Project ID where shared core services like KMS keys are located."
+  type        = string
+}
+
 variable "deletion_protection" {
   description = "Deletion protection for the workflow."
   type        = bool
@@ -35,6 +40,23 @@ variable "file" {
   description = "File path to the instructions for the workflow (e.g., example.yaml)."
   type        = string
   default     = "code/example.yaml"
+}
+
+variable "kms_key_location" {
+  description = "The location (region) of the existing KMS Key Ring and Crypto Key. Defaults to the workflow region if not set."
+  type        = string
+  # Or default to var.region
+  default = null
+}
+
+variable "kms_key_name" {
+  description = "The name of the existing KMS Crypto Key to use for workflow encryption (CMEK)."
+  type        = string
+}
+
+variable "kms_keyring_name" {
+  description = "The name of the existing KMS Key Ring to use for workflow encryption (CMEK)."
+  type        = string
 }
 
 variable "logging_level" {
@@ -65,30 +87,9 @@ variable "region" {
   type        = string
 }
 
-variable "core_project_id" {
-  description = "The Google Cloud Project ID where shared core services like KMS keys are located."
-  type        = string
-}
-
-variable "kms_keyring_name" {
-  description = "The name of the existing KMS Key Ring to use for workflow encryption (CMEK)."
-  type        = string
-}
-
-variable "kms_key_name" {
-  description = "The name of the existing KMS Crypto Key to use for workflow encryption (CMEK)."
-  type        = string
-}
-
-variable "kms_key_location" {
-  description = "The location (region) of the existing KMS Key Ring and Crypto Key. Defaults to the workflow region if not set."
-  type        = string
-  default     = null # Or default to var.region
-}
-
 variable "workflow_service_account_id" {
   description = "The ID for the custom service account created for the workflow (e.g., 'my-workflow-sa')."
   type        = string
-  default     = "workflows-sa" # Provide a default but allow override
+  # Provide a default but allow override
+  default = "workflows-sa"
 }
-

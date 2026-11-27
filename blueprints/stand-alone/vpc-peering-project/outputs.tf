@@ -14,21 +14,19 @@
  * limitations under the License.
  */
 
-# --- Peering Connection Outputs ---
 output "local_network_peering" {
   description = "The peering resource for the local VPC side of the connection."
   value       = module.peering.local_network_peering
 }
 
-output "peer_network_peering" {
-  description = "The peering resource for the peer VPC side of the connection."
-  value       = module.peering.peer_network_peering
-}
-
-# --- Local VPC Outputs (First VPC created by this blueprint) ---
 output "local_vpc_network" {
   description = "The network resource object for the local VPC created by this blueprint."
   value       = module.vpc-networks["local"].network
+}
+
+output "local_vpc_network_attachment_ids" {
+  description = "IDs of network attachments for the local VPC."
+  value       = module.vpc-networks["local"].network_attachment_ids
 }
 
 output "local_vpc_network_self_link" {
@@ -46,9 +44,9 @@ output "local_vpc_subnet_ips" {
   value       = module.vpc-networks["local"].subnet_ips
 }
 
-output "local_vpc_subnet_self_links" {
-  description = "A map of subnet self links keyed by name for the local VPC."
-  value       = module.vpc-networks["local"].subnet_self_links
+output "local_vpc_subnet_ipv6_external_prefixes" {
+  description = "Map of subnet external IPv6 prefixes keyed by name for the local VPC."
+  value       = module.vpc-networks["local"].subnet_ipv6_external_prefixes
 }
 
 output "local_vpc_subnet_regions" {
@@ -56,31 +54,34 @@ output "local_vpc_subnet_regions" {
   value       = module.vpc-networks["local"].subnet_regions
 }
 
-# Optional detailed subnet outputs for local VPC
-output "local_vpc_subnets" {
-  description = "List of subnet resources for the local VPC."
-  value       = module.vpc-networks["local"].subnets
-}
-
 output "local_vpc_subnet_secondary_ranges" {
   description = "Map of subnet secondary ranges keyed by name for the local VPC."
   value       = module.vpc-networks["local"].subnet_secondary_ranges
 }
 
-output "local_vpc_subnet_ipv6_external_prefixes" {
-  description = "Map of subnet external IPv6 prefixes keyed by name for the local VPC."
-  value       = module.vpc-networks["local"].subnet_ipv6_external_prefixes
+output "local_vpc_subnet_self_links" {
+  description = "A map of subnet self links keyed by name for the local VPC."
+  value       = module.vpc-networks["local"].subnet_self_links
 }
 
-output "local_vpc_network_attachment_ids" {
-  description = "IDs of network attachments for the local VPC."
-  value       = module.vpc-networks["local"].network_attachment_ids
+output "local_vpc_subnets" {
+  description = "List of subnet resources for the local VPC."
+  value       = module.vpc-networks["local"].subnets
 }
 
-# --- Peer VPC Outputs (Second VPC created by this blueprint) ---
+output "peer_network_peering" {
+  description = "The peering resource for the peer VPC side of the connection."
+  value       = module.peering.peer_network_peering
+}
+
 output "peer_vpc_network" {
   description = "The network resource object for the peer VPC created by this blueprint."
   value       = module.vpc-networks["peer"].network
+}
+
+output "peer_vpc_network_attachment_ids" {
+  description = "IDs of network attachments for the peer VPC."
+  value       = module.vpc-networks["peer"].network_attachment_ids
 }
 
 output "peer_vpc_network_self_link" {
@@ -98,9 +99,9 @@ output "peer_vpc_subnet_ips" {
   value       = module.vpc-networks["peer"].subnet_ips
 }
 
-output "peer_vpc_subnet_self_links" {
-  description = "A map of subnet self links keyed by name for the peer VPC."
-  value       = module.vpc-networks["peer"].subnet_self_links
+output "peer_vpc_subnet_ipv6_external_prefixes" {
+  description = "Map of subnet external IPv6 prefixes keyed by name for the peer VPC."
+  value       = module.vpc-networks["peer"].subnet_ipv6_external_prefixes
 }
 
 output "peer_vpc_subnet_regions" {
@@ -108,24 +109,17 @@ output "peer_vpc_subnet_regions" {
   value       = module.vpc-networks["peer"].subnet_regions
 }
 
-# Optional detailed subnet outputs for peer VPC
-output "peer_vpc_subnets" {
-  description = "List of subnet resources for the peer VPC."
-  value       = module.vpc-networks["peer"].subnets
-}
-
 output "peer_vpc_subnet_secondary_ranges" {
   description = "Map of subnet secondary ranges keyed by name for the peer VPC."
   value       = module.vpc-networks["peer"].subnet_secondary_ranges
 }
 
-output "peer_vpc_subnet_ipv6_external_prefixes" {
-  description = "Map of subnet external IPv6 prefixes keyed by name for the peer VPC."
-  value       = module.vpc-networks["peer"].subnet_ipv6_external_prefixes
+output "peer_vpc_subnet_self_links" {
+  description = "A map of subnet self links keyed by name for the peer VPC."
+  value       = module.vpc-networks["peer"].subnet_self_links
 }
 
-output "peer_vpc_network_attachment_ids" {
-  description = "IDs of network attachments for the peer VPC."
-  value       = module.vpc-networks["peer"].network_attachment_ids
+output "peer_vpc_subnets" {
+  description = "List of subnet resources for the peer VPC."
+  value       = module.vpc-networks["peer"].subnets
 }
-

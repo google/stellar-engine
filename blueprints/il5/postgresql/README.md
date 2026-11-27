@@ -105,9 +105,9 @@ provider "google-beta" {
 |---|---|:---:|:---:|:---:|
 | [database_name](variables.tf#L29) | This is the name of the database. | <code>string</code> | ✓ |  |
 | [kms_key_name](variables.tf#L71) | Full path to KMS key. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L164) | This is the project ID. Please set using a terraform.tfvars file. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L169) | This is the name of the network. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L174) | Project that the Compute Engine VPC is located. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L165) | This is the project ID. Please set using a terraform.tfvars file. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L170) | This is the name of the network. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L175) | Project that the Compute Engine VPC is located. | <code>string</code> | ✓ |  |
 | [allowed_firewall_ports](variables.tf#L17) | Deprecated and ignored. The blueprint no longer creates a VPC firewall rule. | <code>list&#40;number&#41;</code> |  | <code>null</code> |
 | [database_instance_tier](variables.tf#L23) | This specifies the kind of machine-type that we will be running it from. | <code>string</code> |  | <code>&#34;db-g1-small&#34;</code> |
 | [database_version](variables.tf#L34) | This is the database type that we are running the cloud sql instance. | <code>string</code> |  | <code>&#34;POSTGRES_13&#34;</code> |
@@ -119,11 +119,11 @@ provider "google-beta" {
 | [log_disconnections](variables.tf#L89) | Enabling the log_disconnections setting logs the end of each session, including the session duration. | <code>string</code> |  | <code>&#34;on&#34;</code> |
 | [log_error_verbosity](variables.tf#L102) | The log_error_verbosity flag controls the verbosity/details of messages logged. | <code>string</code> |  | <code>&#34;default&#34;</code> |
 | [log_min_duration_statement](variables.tf#L115) | Type the minimum amount of execution time of a statement in milliseconds where the total duration of the statement is logged or \"-1\" to disable. | <code>number</code> |  | <code>-1</code> |
-| [log_min_error_statement](variables.tf#L127) | The log_min_error_statement flag defines the minimum message severity level that are considered as an error statement. | <code>string</code> |  | <code>&#34;error&#34; &#35; Required for CIS Compliance Benchmark 6.2&#34;</code> |
-| [log_min_messages](variables.tf#L138) | The log_min_messages flag defines the minimum message severity level that is considered as an error statement. | <code>string</code> |  | <code>&#34;warning&#34;</code> |
-| [log_statement](variables.tf#L151) | The value of log_statement flag determines the SQL statements that are logged. | <code>string</code> |  | <code>&#34;ddl&#34;</code> |
-| [psc_config](variables.tf#L179) | Private Service Connect configuration. When set, the instance uses Private Service Connect instead of Private Services Access, so the network needs no Private Services Access connection. List in allowed_consumer_projects each project that hosts a Private Service Connect endpoint for the instance. Leave null to use Private Services Access. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [region](variables.tf#L196) | This is the region that we are going to be running the cloud sql instance from. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [log_min_error_statement](variables.tf#L127) | The log_min_error_statement flag defines the minimum message severity level that are considered as an error statement. | <code>string</code> |  | <code>&#34;error&#34;</code> |
+| [log_min_messages](variables.tf#L139) | The log_min_messages flag defines the minimum message severity level that is considered as an error statement. | <code>string</code> |  | <code>&#34;warning&#34;</code> |
+| [log_statement](variables.tf#L152) | The value of log_statement flag determines the SQL statements that are logged. | <code>string</code> |  | <code>&#34;ddl&#34;</code> |
+| [psc_config](variables.tf#L180) | Private Service Connect configuration. When set, the instance uses Private Service Connect instead of Private Services Access, so the network needs no Private Services Access connection. List in allowed_consumer_projects each project that hosts a Private Service Connect endpoint for the instance. Leave null to use Private Services Access. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [region](variables.tf#L197) | This is the region that we are going to be running the cloud sql instance from. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
 
 ## Outputs
 
