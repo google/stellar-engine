@@ -30,7 +30,7 @@ This runbook guides security operators and incident responders through identifyi
 
 ## 3. Operational scope
 
-This runbook applies to all Stellar Engine landing zones, including FedRAMP High, FedRAMP Moderate, IL4, and IL5 environments where CMEK protects data at rest, covering four scenarios:
+This runbook applies to all Stellar Engine landing zones, including FedRAMP High, FedRAMP Moderate, IL4, and IL5 environments where CMEK protects data at rest. Key rings and keys live in centralized infrastructure projects such as `<prefix>-prod-iac-core-0`, `<prefix>-prod-audit-logs-0`, `<prefix>-<env>-<tenant>-iac-core-0`, `<prefix>-net-vdss-host`, and opt-in Stage 3 security projects `<prefix>-{dev,prod}-sec-core-0`, with symmetric key rotation constrained to 90 days (`7776000s`) or less by `custom.kmsRotation` and HSM protection used for FedRAMP High, IL4, and IL5. The procedures cover four scenarios:
 
 - Compromise of symmetric or asymmetric Cloud KMS keys.
 - Unauthorized or accidental scheduling of key version destruction.
@@ -50,16 +50,17 @@ Monitor these telemetry sources for indicators of CMEK compromise or loss:
 
 ### 4.2 Initial log assessment
 
-1. Locate the triggering Cloud KMS administrative event in Logs Explorer:
+1. Locate the triggering Cloud KMS administrative event in Logs Explorer scoped to the organization or the centralized `audit-logs` Cloud Logging bucket in `<prefix>-prod-audit-logs-0`:
    ```text
-   logName="organizations/[ORG_ID]/logs/cloudaudit.googleapis.com%2Factivity"
-   AND resource.type="cloudkms_cryptokeyversion"
+   log_id("cloudaudit.googleapis.com/activity")
+   AND protoPayload.serviceName="cloudkms.googleapis.com"
    AND protoPayload.methodName:("DestroyCryptoKeyVersion" OR "DisableCryptoKeyVersion" OR "UpdateCryptoKeyPrimaryVersion" OR "SetIamPolicy")
    ```
+   Also inspect `log_id("cloudaudit.googleapis.com/data_access")` filtered to `protoPayload.serviceName="cloudkms.googleapis.com"` when investigating unauthorized key use (`Encrypt`, `Decrypt`, `AsymmetricSign`, or `AsymmetricDecrypt`).
 2. Record the key attributes from the audit log entry:
-   - Record the `principalEmail` field to identify the principal that executed the change.
-   - Record the `resourceName` field for the full path to the affected key version, such as `projects/my-kms-project/locations/us-east4/keyRings/my-keyring/cryptoKeys/my-key/cryptoKeyVersions/1`.
-   - Record the `methodName` field for the exact Cloud KMS API method invoked.
+   - Record the `protoPayload.authenticationInfo.principalEmail` field to identify the principal that executed the change.
+   - Record the `protoPayload.resourceName` field for the full path to the affected key or key version, such as `projects/my-kms-project/locations/us-east4/keyRings/my-keyring/cryptoKeys/my-key/cryptoKeyVersions/1`.
+   - Record the `protoPayload.methodName` field for the exact Cloud KMS API method invoked.
 3. Assign incident severity based on key state and data impact:
    - Assign SEV 1 critical severity when an active key version is compromised or scheduled for destruction, creating an immediate risk of unauthorized decryption or permanent data loss.
    - Assign SEV 2 high severity when a key version is disabled or required IAM bindings are removed, causing a production outage while the key material remains intact.
@@ -85,7 +86,7 @@ Disabling a key version immediately interrupts read and write operations on ever
 
 ### 5.2 Scheduled destruction recovery
 
-Destroying a Cloud KMS key version through the API or Google Cloud console places the version in a scheduled-for-destruction state with a default 24-hour soft-delete window before Google Cloud permanently erases the key material:
+Destroying a Cloud KMS key version through the API or Google Cloud console places the version in a scheduled-for-destruction state with a default 30-day soft-delete window, configurable down to a 24-hour minimum, before Google Cloud permanently erases the key material:
 
 1. Restore the scheduled key version immediately before the destruction window expires:
    ```bash
@@ -107,10 +108,10 @@ Generate clean cryptographic material, re-encrypt affected data at rest, and ali
 
 ### 6.1 Key rotation
 
-1. Create a new Cloud KMS key version and promote it to primary after confirming compromise of the previous primary version:
+1. Create a new Cloud KMS key version and promote it to primary for symmetric keys after confirming compromise of the previous primary version, or update workload references directly when rotating an asymmetric key because asymmetric keys do not use a primary version:
    ```bash
-   gcloud kms keys versions create --key=[KEY_NAME] --keyring=[KEYRING_NAME] --location=[LOCATION] --project=[KMS_PROJECT_ID]
-   # Set the new version as primary
+   gcloud kms keys versions create --key=[KEY_NAME] --keyring=[KEYRING_NAME] --location=[LOCATION] --project=[KMS_PROJECT_ID] --primary
+   # Or update the primary version explicitly when the key version already exists
    gcloud kms keys update [KEY_NAME] --keyring=[KEYRING_NAME] --location=[LOCATION] --project=[KMS_PROJECT_ID] --primary-version=[NEW_VERSION]
    ```
 
@@ -126,7 +127,10 @@ Rotating a Cloud KMS key encrypts new writes with the new primary key version, w
      ```
    - Copy BigQuery tables or write `SELECT *` query results into destination tables configured with the new key version.
    - Snapshot Compute Engine persistent disks using the new key version and recreate instances and disks from those snapshots.
-3. Schedule the compromised key version for destruction only after verifying that all affected resources use the new key version.
+3. Schedule the compromised key version for destruction only after verifying that all affected resources use the new key version:
+   ```bash
+   gcloud kms keys versions destroy [OLD_VERSION] --key=[KEY_NAME] --keyring=[KEYRING_NAME] --location=[LOCATION] --project=[KMS_PROJECT_ID]
+   ```
 
 ### 6.3 Terraform state reconciliation
 
