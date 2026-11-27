@@ -127,13 +127,19 @@ variable "cert_management_choice" {
 }
 
 variable "cloud_armor_request_body_limit" {
-  description = "Maximum request body size, based on the Content-Length header, allowed through the Cloud Armor policy. Regional policies only inspect the first 8KB of the body with preconfigured WAF rules, so larger requests are denied to prevent WAF bypass via oversized payloads. The rule runs in preview while every WAF rule in data/cloudarmor.yaml is in preview. Set to null to disable."
+  description = "Maximum request body size, based on the Content-Length header, allowed through the Cloud Armor policy. Regional policies only inspect the first 8KB of the body with preconfigured WAF rules, so larger requests are denied to prevent WAF bypass via oversized payloads. The rule runs in preview when cloud_armor_waf_preview is true or every WAF rule in data/cloudarmor.yaml is in preview. Set to null to disable."
   type        = string
   default     = "8KB"
   validation {
     condition     = var.cloud_armor_request_body_limit == null || var.cloud_armor_request_body_limit == "8KB"
     error_message = "Request body limit must be null or 8KB, regional policies do not support larger request body inspection sizes."
   }
+}
+
+variable "cloud_armor_waf_preview" {
+  description = "Optional override for Cloud Armor WAF preview mode across OWASP rules and the request body size limit rule. When null, uses per-rule preview values from data/cloudarmor.yaml (false by default)."
+  type        = bool
+  default     = null
 }
 
 variable "compliance_regime" {

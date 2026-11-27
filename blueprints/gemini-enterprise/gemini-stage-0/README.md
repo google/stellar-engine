@@ -34,12 +34,12 @@ terraform apply
 |---|---|:---:|:---:|:---:|
 | [access_policy_number](variables.tf#L43) | There can only be one Access Policy per GCP Org. Use gcloud access-context-manager policies list --organization <org-number> to list it. | <code>number</code> | ✓ |  |
 | [admin_group](variables.tf#L96) | The email address of the admin user group for Gemini Enterprise. | <code>string</code> | ✓ |  |
-| [domain](variables.tf#L220) | FQDN for the load-balancer hosted apps, where the subdomain will be prepended to. | <code>string</code> | ✓ |  |
-| [environment](variables.tf#L243) | The environment identifier (e.g. prod, dev, staging). | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L304) | The GCP Project name. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L327) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
-| [tenant](variables.tf#L350) | The tenant identifier (e.g. g4g). | <code>string</code> | ✓ |  |
-| [user_groups](variables.tf#L367) | A list of email addresses or principal sets for the Gemini Enterprise users group. | <code>list&#40;string&#41;</code> | ✓ |  |
+| [domain](variables.tf#L226) | FQDN for the load-balancer hosted apps, where the subdomain will be prepended to. | <code>string</code> | ✓ |  |
+| [environment](variables.tf#L249) | The environment identifier (e.g. prod, dev, staging). | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L310) | The GCP Project name. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L333) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
+| [tenant](variables.tf#L356) | The tenant identifier (e.g. g4g). | <code>string</code> | ✓ |  |
+| [user_groups](variables.tf#L373) | A list of email addresses or principal sets for the Gemini Enterprise users group. | <code>list&#40;string&#41;</code> | ✓ |  |
 | [access_end_day](variables.tf#L17) | The day of the week when access ends, evaluated using CEL getDayOfWeek() where 0 is Sunday, 1 is Monday, ..., 6 is Saturday (0-6). | <code>number</code> |  | <code>5</code> |
 | [access_end_hour](variables.tf#L27) | The hour (0-23) in the configured access_time_zone (default America/New_York) when access ends. | <code>number</code> |  | <code>21</code> |
 | [access_expiration_timestamp](variables.tf#L33) | The timestamp when access expires (RFC 3339 format, e.g. 2028-01-01T00:00:00Z). | <code>string</code> |  | <code>&#34;2028-01-01T00:00:00Z&#34;</code> |
@@ -52,36 +52,37 @@ terraform apply
 | [allowed_ip_ranges](variables.tf#L101) | The IP range to allow traffic from. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
 | [bq_data_store_configs](variables.tf#L107) | A map of configurations for BigQuery Data Stores. If create_dataset is true, it creates the dataset. Schema provides the structure for the data. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [cert_management_choice](variables.tf#L119) | Certificate management choice for external deployments: 'google_managed' or 'self_managed'. | <code>string</code> |  | <code>&#34;self_managed&#34;</code> |
-| [cloud_armor_request_body_limit](variables.tf#L129) | Maximum request body size, based on the Content-Length header, allowed through the Cloud Armor policy. Regional policies only inspect the first 8KB of the body with preconfigured WAF rules, so larger requests are denied to prevent WAF bypass via oversized payloads. The rule runs in preview while every WAF rule in data/cloudarmor.yaml is in preview. Set to null to disable. | <code>string</code> |  | <code>&#34;8KB&#34;</code> |
-| [compliance_regime](variables.tf#L139) | Compliance regime this environment is deployed in (e.g. FEDRAMP_MODERATE, FEDRAMP_HIGH, IL4, IL5, NONE). | <code>string</code> |  | <code>&#34;NONE&#34;</code> |
-| [create_data_stores](variables.tf#L155) | Whether to create example Data Stores (BigQuery, GCS) and associated CMEK config. | <code>bool</code> |  | <code>true</code> |
-| [create_expire_access](variables.tf#L161) | Whether to create the Expiration access level. | <code>bool</code> |  | <code>true</code> |
-| [create_ip_based_access](variables.tf#L167) | Whether to create the IP-based access level. | <code>bool</code> |  | <code>true</code> |
-| [create_lenient_device_access](variables.tf#L173) | Whether to create the Lenient device access level. | <code>bool</code> |  | <code>true</code> |
-| [create_moderate_device_access](variables.tf#L179) | Whether to create the Moderate device access level. | <code>bool</code> |  | <code>true</code> |
-| [create_strict_device_access](variables.tf#L185) | Whether to create the Strict device access level. | <code>bool</code> |  | <code>true</code> |
-| [create_time_access](variables.tf#L191) | Whether to create the Time-based access level. | <code>bool</code> |  | <code>true</code> |
-| [create_us_access](variables.tf#L197) | Whether to create the US-only access level. | <code>bool</code> |  | <code>true</code> |
-| [custom_domain](variables.tf#L203) | The fully qualified domain name (FQDN) to use for the Google-managed certificate. | <code>string</code> |  | <code>&#34;&#34;</code> |
-| [deployment_type](variables.tf#L209) | Type of deployment: 'internal', 'external', or 'none'. | <code>string</code> |  | <code>&#34;external&#34;</code> |
-| [enable_analytics](variables.tf#L225) | Enable analytics for Gemini Enterprise via Discovery Engine Audit Logs. | <code>bool</code> |  | <code>false</code> |
-| [enable_chrome_enterprise_premium](variables.tf#L231) | Enable Chrome Enterprise Premium features (e.g., Zero Trust). | <code>bool</code> |  | <code>false</code> |
-| [enable_data_store_cmek](variables.tf#L237) | Whether to encrypt Data Stores with CMEK. If false, Google-managed keys will be used. | <code>bool</code> |  | <code>true</code> |
-| [gcs_data_store_configs](variables.tf#L248) | A map of configurations for Google Cloud Storage (GCS) Data Stores. If create_bucket is true, the script will create the bucket. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [gemini_apps](variables.tf#L258) | A map of Gemini Enterprise Search Application configurations. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [gemini_enterprise_gcs_bucket_name](variables.tf#L274) | The name of the GCS bucket to be used as the data source for the Discovery Engine Data Connector. | <code>string</code> |  | <code>&#34;your-bucket-name-placeholder&#34;</code> |
-| [geolocation](variables.tf#L280) | Location for Discovery Engine resources (us, eu, or global). | <code>string</code> |  | <code>&#34;us&#34;</code> |
-| [internal_lb_subnet_range](variables.tf#L286) | The IP CIDR range for the internal load balancer subnet. | <code>string</code> |  | <code>&#34;10.10.10.0&#47;24&#34;</code> |
-| [kms_key_id](variables.tf#L292) | The full resource name of the Cloud KMS key to use for CMEK (e.g. projects/p/locations/l/keyRings/r/cryptoKeys/k). If not provided, a new key will be created. | <code>string</code> |  | <code>null</code> |
-| [lenient_device_access_levels](variables.tf#L298) | List of Access Levels to include in the Lenient Device Policy. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
-| [moderate_device_access_levels](variables.tf#L309) | List of Access Levels to include in the Moderate Device Policy. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
-| [network_project_id](variables.tf#L315) | The Project ID where the Shared VPC resides (Host Project). Required if use_shared_vpc is true. | <code>string</code> |  | <code>&#34;&#34;</code> |
-| [prefix](variables.tf#L321) | Prefix for naming resources in this blueprint. | <code>string</code> |  | <code>&#34;cnap&#34;</code> |
-| [shared_vpc_network_name](variables.tf#L332) | The name of the existing Shared VPC network. Required if use_shared_vpc is true. | <code>string</code> |  | <code>&#34;&#34;</code> |
-| [shared_vpc_proxy_subnet_name](variables.tf#L338) | The name of the existing proxy-only subnetwork to use. Required if use_shared_vpc is true. | <code>string</code> |  | <code>&#34;&#34;</code> |
-| [shared_vpc_subnet_name](variables.tf#L344) | The name of the existing subnetwork to use. Required if use_shared_vpc is true. | <code>string</code> |  | <code>&#34;&#34;</code> |
-| [terraform_state_bucket](variables.tf#L355) | The name of the Terraform state bucket. If not provided, it will be constructed from prefix and project ID. | <code>string</code> |  | <code>null</code> |
-| [use_shared_vpc](variables.tf#L361) | Whether to use an existing Shared VPC instead of creating a new one. | <code>bool</code> |  | <code>false</code> |
+| [cloud_armor_request_body_limit](variables.tf#L129) | Maximum request body size, based on the Content-Length header, allowed through the Cloud Armor policy. Regional policies only inspect the first 8KB of the body with preconfigured WAF rules, so larger requests are denied to prevent WAF bypass via oversized payloads. The rule runs in preview when cloud_armor_waf_preview is true or every WAF rule in data/cloudarmor.yaml is in preview. Set to null to disable. | <code>string</code> |  | <code>&#34;8KB&#34;</code> |
+| [cloud_armor_waf_preview](variables.tf#L139) | Optional override for Cloud Armor WAF preview mode across OWASP rules and the request body size limit rule. When null, uses per-rule preview values from data/cloudarmor.yaml (false by default). | <code>bool</code> |  | <code>null</code> |
+| [compliance_regime](variables.tf#L145) | Compliance regime this environment is deployed in (e.g. FEDRAMP_MODERATE, FEDRAMP_HIGH, IL4, IL5, NONE). | <code>string</code> |  | <code>&#34;NONE&#34;</code> |
+| [create_data_stores](variables.tf#L161) | Whether to create example Data Stores (BigQuery, GCS) and associated CMEK config. | <code>bool</code> |  | <code>true</code> |
+| [create_expire_access](variables.tf#L167) | Whether to create the Expiration access level. | <code>bool</code> |  | <code>true</code> |
+| [create_ip_based_access](variables.tf#L173) | Whether to create the IP-based access level. | <code>bool</code> |  | <code>true</code> |
+| [create_lenient_device_access](variables.tf#L179) | Whether to create the Lenient device access level. | <code>bool</code> |  | <code>true</code> |
+| [create_moderate_device_access](variables.tf#L185) | Whether to create the Moderate device access level. | <code>bool</code> |  | <code>true</code> |
+| [create_strict_device_access](variables.tf#L191) | Whether to create the Strict device access level. | <code>bool</code> |  | <code>true</code> |
+| [create_time_access](variables.tf#L197) | Whether to create the Time-based access level. | <code>bool</code> |  | <code>true</code> |
+| [create_us_access](variables.tf#L203) | Whether to create the US-only access level. | <code>bool</code> |  | <code>true</code> |
+| [custom_domain](variables.tf#L209) | The fully qualified domain name (FQDN) to use for the Google-managed certificate. | <code>string</code> |  | <code>&#34;&#34;</code> |
+| [deployment_type](variables.tf#L215) | Type of deployment: 'internal', 'external', or 'none'. | <code>string</code> |  | <code>&#34;external&#34;</code> |
+| [enable_analytics](variables.tf#L231) | Enable analytics for Gemini Enterprise via Discovery Engine Audit Logs. | <code>bool</code> |  | <code>false</code> |
+| [enable_chrome_enterprise_premium](variables.tf#L237) | Enable Chrome Enterprise Premium features (e.g., Zero Trust). | <code>bool</code> |  | <code>false</code> |
+| [enable_data_store_cmek](variables.tf#L243) | Whether to encrypt Data Stores with CMEK. If false, Google-managed keys will be used. | <code>bool</code> |  | <code>true</code> |
+| [gcs_data_store_configs](variables.tf#L254) | A map of configurations for Google Cloud Storage (GCS) Data Stores. If create_bucket is true, the script will create the bucket. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [gemini_apps](variables.tf#L264) | A map of Gemini Enterprise Search Application configurations. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [gemini_enterprise_gcs_bucket_name](variables.tf#L280) | The name of the GCS bucket to be used as the data source for the Discovery Engine Data Connector. | <code>string</code> |  | <code>&#34;your-bucket-name-placeholder&#34;</code> |
+| [geolocation](variables.tf#L286) | Location for Discovery Engine resources (us, eu, or global). | <code>string</code> |  | <code>&#34;us&#34;</code> |
+| [internal_lb_subnet_range](variables.tf#L292) | The IP CIDR range for the internal load balancer subnet. | <code>string</code> |  | <code>&#34;10.10.10.0&#47;24&#34;</code> |
+| [kms_key_id](variables.tf#L298) | The full resource name of the Cloud KMS key to use for CMEK (e.g. projects/p/locations/l/keyRings/r/cryptoKeys/k). If not provided, a new key will be created. | <code>string</code> |  | <code>null</code> |
+| [lenient_device_access_levels](variables.tf#L304) | List of Access Levels to include in the Lenient Device Policy. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
+| [moderate_device_access_levels](variables.tf#L315) | List of Access Levels to include in the Moderate Device Policy. | <code>list&#40;string&#41;</code> |  | <code>&#91;&#93;</code> |
+| [network_project_id](variables.tf#L321) | The Project ID where the Shared VPC resides (Host Project). Required if use_shared_vpc is true. | <code>string</code> |  | <code>&#34;&#34;</code> |
+| [prefix](variables.tf#L327) | Prefix for naming resources in this blueprint. | <code>string</code> |  | <code>&#34;cnap&#34;</code> |
+| [shared_vpc_network_name](variables.tf#L338) | The name of the existing Shared VPC network. Required if use_shared_vpc is true. | <code>string</code> |  | <code>&#34;&#34;</code> |
+| [shared_vpc_proxy_subnet_name](variables.tf#L344) | The name of the existing proxy-only subnetwork to use. Required if use_shared_vpc is true. | <code>string</code> |  | <code>&#34;&#34;</code> |
+| [shared_vpc_subnet_name](variables.tf#L350) | The name of the existing subnetwork to use. Required if use_shared_vpc is true. | <code>string</code> |  | <code>&#34;&#34;</code> |
+| [terraform_state_bucket](variables.tf#L361) | The name of the Terraform state bucket. If not provided, it will be constructed from prefix and project ID. | <code>string</code> |  | <code>null</code> |
+| [use_shared_vpc](variables.tf#L367) | Whether to use an existing Shared VPC instead of creating a new one. | <code>bool</code> |  | <code>false</code> |
 
 ## Outputs
 

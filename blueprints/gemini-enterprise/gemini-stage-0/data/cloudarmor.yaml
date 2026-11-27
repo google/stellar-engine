@@ -17,54 +17,54 @@ basic_rules:
     expression: "sqli-v33-stable"
     sensitivity: 2
     priority: 100
-    preview: true
+    preview: false
   xss:
     expression: "xss-v33-stable"
     sensitivity: 2
     priority: 101
-    preview: true
+    preview: false
   lfi:
     expression: "lfi-v33-stable"
     sensitivity: 1
     priority: 102
-    preview: true
+    preview: false
   rfi:
     expression: "rfi-v33-stable"
     sensitivity: 2
     priority: 103
-    preview: true
+    preview: false
   rce:
     expression: "rce-v33-stable"
     sensitivity: 2
     priority: 104
-    preview: true
+    preview: false
   scannerdetection:
     expression: "scannerdetection-v33-stable"
     sensitivity: 2
     priority: 105
-    preview: true
+    preview: false
   protocolattack:
     expression: "protocolattack-v33-stable"
     sensitivity: 2
     priority: 106
-    preview: true
+    preview: false
   php:
     expression: "php-v33-stable"
     sensitivity: 2
     priority: 107
-    preview: true
+    preview: false
   sessionfixation:
     expression: "sessionfixation-v33-stable"
     sensitivity: 1
     priority: 108
-    preview: true
+    preview: false
   java:
     expression: "java-v33-stable"
     sensitivity: 2
     priority: 109
-    preview: true
+    preview: false
   nodejs:
     expression: "nodejs-v33-stable"
     sensitivity: 1
     priority: 110
-    preview: true
+    preview: false

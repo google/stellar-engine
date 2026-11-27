@@ -33,7 +33,7 @@ resource "google_compute_region_security_policy" "gemini_enterprise_policy" {
     content {
       action   = "deny(403)"
       priority = rules.value.priority
-      preview  = rules.value.preview
+      preview  = coalesce(var.cloud_armor_waf_preview, rules.value.preview)
       match {
         expr {
           expression = "evaluatePreconfiguredWaf('${rules.value.expression}', {'sensitivity': ${rules.value.sensitivity}})"
@@ -47,14 +47,14 @@ resource "google_compute_region_security_policy" "gemini_enterprise_policy" {
   # the request body, so a payload padded past 8KB is never matched against WAF
   # signatures. Deny requests whose Content-Length declares a larger body,
   # ahead of the WAF (100+) and allow (1000+) rules. The rule follows the WAF
-  # rules' mode: preview while all of them are in preview, enforced otherwise.
+  # rules' mode: preview when overridden or all WAF rules are in preview, enforced otherwise.
   # https://cloud.google.com/armor/docs/configure-waf#request-body
   dynamic "rules" {
     for_each = var.cloud_armor_request_body_limit == null ? [] : [1]
     content {
       action   = "deny(403)"
       priority = 90
-      preview  = alltrue([for r in values(local.waf.basic_rules) : r.preview])
+      preview  = var.cloud_armor_waf_preview != null ? var.cloud_armor_waf_preview : alltrue([for r in values(local.waf.basic_rules) : r.preview])
       match {
         expr {
           expression = "int(request.headers['content-length']) > ${parseint(trimsuffix(var.cloud_armor_request_body_limit, "KB"), 10) * 1024}"
@@ -80,16 +80,21 @@ resource "google_compute_region_security_policy" "gemini_enterprise_policy" {
     }
   }
 
-  rules {
-    # Custom Rule 2: Allow traffic only from the United States.
-    action   = "allow"
-    priority = 2000
-    match {
-      expr {
-        expression = "origin.region_code == 'US'"
+  # Only allow general US geo traffic when no explicit IP allowlist is set;
+  # otherwise priority 2000 bypasses var.allowed_ip_ranges for any US IP.
+  dynamic "rules" {
+    for_each = length(var.allowed_ip_ranges) == 0 ? [1] : []
+    content {
+      # Custom Rule 2: Allow traffic only from the United States.
+      action   = "allow"
+      priority = 2000
+      match {
+        expr {
+          expression = "origin.region_code == 'US'"
+        }
       }
+      description = "Allow traffic from the US"
     }
-    description = "Allow traffic from the US"
   }
 
   rules {
