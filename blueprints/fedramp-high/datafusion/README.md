@@ -11,34 +11,31 @@
 <!-- END TOC -->
 
 ## Introduction to Data Fusion
-
+Cloud Data Fusion is a fully managed, cloud-native data integration service for building and managing ETL and ELT pipelines.
 
 ## Data Fusion Blueprint
-This blueprint deploys Data Fusion.
-
+This blueprint deploys a private Cloud Data Fusion instance encrypted with Cloud KMS in a Shared VPC environment.
 
 ## Deployment Steps
-You should see this README and some terraform files.
-1. Update the Variables in the variables.tf and also the properties within the keys variables. For reference update the following variables and associated properties
+You should see this README and some Terraform files.
+1. Update the variables in `terraform.tfvars` (copied from `terraform.tfvars.sample`) to match your environment:
+   - `main_project_id`: Project ID where the Data Fusion instance is created.
+   - `core_project_id`: Core project ID hosting `kms_keyring_name` and `kms_key_name`.
+   - `network_project_id`, `network_name`, and `subnetwork_name`: Shared VPC host project, VPC name, and subnet name.
+   - `region` and `name`: Deployment region and Data Fusion instance name.
+   - `connection_type`, `unreachable_cidr_block`, and `ip_allocation`: Defaults to Private Service Connect (`PRIVATE_SERVICE_CONNECT_INTERFACES`, creating a Compute Engine network attachment; set `unreachable_cidr_block` if a dedicated `/25` range is needed). Set `connection_type = "VPC_PEERING"` with an explicit `ip_allocation` CIDR block only when legacy VPC peering is required.
+2. Run the usual Terraform commands from within this directory:
 
-- ```project_id```  with your GCP Project ID<br />
-- ```region``` with the GCP region <br />
-- ```name``` with the desired cloud run name <br />
-- ```kms_key``` with the full path to the CMEK key that will be used for encryption <br />
-- ```container_image``` with the container to be hosted on the cloud run service <br />
-
-
-2. There is a sample ```terraform.tfvars.sample``` available as well.
-3. Although each use case is somehow built around the previous one they are self-contained so you can deploy any of them at your will. The usual terraform commands will do the work. To provision this example, run the following from within this directory:
-
-```terraform init ```<br />
-```terraform plan``` to see the infrastructure plan<br />
-```terraform apply``` to apply the infrastructure build<br />
-```terraform destroy``` to destroy the built infrastructure<br />
+```bash
+terraform init
+terraform plan
+terraform apply
+terraform destroy
+```
 
 ### Troubleshooting
 
-If you receive any errors during the `terraform apply`, run the apply two or three more times until a successfull deployment is achieved.
+Service account and service-agent IAM propagation waits 3 minutes (`time_sleep.datafusion_service_propagation`) before instance creation. If creation still encounters a transient API permission error on initial deployment, confirm the deploying identity holds `roles/compute.networkAdmin` (or `compute.networkAttachments.create`) in `network_project_id` and re-run `terraform apply`.
 
 ## Verification of a successful deployment
 Navigate to [Data Fusion](https://console.cloud.google.com/data-fusion) within the GCP console to verify whether the resources have been created.
@@ -47,15 +44,18 @@ Navigate to [Data Fusion](https://console.cloud.google.com/data-fusion) within t
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [core_project_id](variables.tf#L15) | Core project ID. | <code>string</code> | ✓ |  |
-| [kms_keyring_name](variables.tf#L26) | KMS Keyring. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L31) | Project id. | <code>string</code> | ✓ |  |
-| [name](variables.tf#L36) | Name of DataFusion instance. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L41) | Full path to VPC. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L46) | Landing project id. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L51) | Location to deploy job. | <code>string</code> | ✓ |  |
-| [subnetwork_name](variables.tf#L56) | Full path to subnet. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L20) | Full path to KMS key for pubsub. | <code>string</code> |  | <code>null</code> |
+| [core_project_id](variables.tf#L25) | Core project ID. | <code>string</code> | ✓ |  |
+| [kms_keyring_name](variables.tf#L46) | KMS Keyring. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L51) | Project id. | <code>string</code> | ✓ |  |
+| [name](variables.tf#L56) | Name of DataFusion instance. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L61) | Full path to VPC. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L66) | Landing project id. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L71) | Location to deploy job. | <code>string</code> | ✓ |  |
+| [subnetwork_name](variables.tf#L76) | Full path to subnet. | <code>string</code> | ✓ |  |
+| [connection_type](variables.tf#L15) | Private Data Fusion connection type ('PRIVATE_SERVICE_CONNECT_INTERFACES' or 'VPC_PEERING'). | <code>string</code> |  | <code>&#34;PRIVATE_SERVICE_CONNECT_INTERFACES&#34;</code> |
+| [ip_allocation](variables.tf#L30) | Allocated /22 CIDR range for Data Fusion private instances when connection_type is VPC_PEERING. | <code>string</code> |  | <code>null</code> |
+| [kms_key_name](variables.tf#L40) | Full path to KMS key for pubsub. | <code>string</code> |  | <code>null</code> |
+| [unreachable_cidr_block](variables.tf#L81) | Optional /25 CIDR block to assign to the Data Fusion PSC instance when connection_type is PRIVATE_SERVICE_CONNECT_INTERFACES. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs
 
