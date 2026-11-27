@@ -17,14 +17,40 @@
 # tfdoc:file:description Dev spoke VPC and related resources.
 
 locals {
+  _tenant_subnet_pairs = flatten([
+    for ta in values(var.tenant_accounts) : [
+      for region, subnets in {
+        for s in try(var.subnets[lower(ta.env)], []) :
+        s.region => s... if s.tenant != null && s.tenant == ta.tenant
+        } : [
+        for idx, s in subnets : {
+          # Preserve the legacy "<main_project>-<region>" key for the first
+          # matching subnet in each region so existing single-subnet states
+          # do not migrate, and disambiguate additional subnets by name.
+          key = (
+            idx == 0
+            ? "${ta.main_project}-${region}"
+            : "${ta.main_project}-${region}-${s.name}"
+          )
+          project         = ta.main_project
+          tenant          = ta.tenant
+          admin_principal = ta.admin_principal
+          region          = region
+          env             = ta.env
+          subnet_name     = s.name
+        }
+      ]
+    ]
+  ])
+  _unmapped_tenant_accounts = [
+    for k, ta in var.tenant_accounts : "${ta.env}/${ta.tenant}"
+    if length([
+      for s in try(var.subnets[lower(ta.env)], []) :
+      s.name if s.tenant != null && s.tenant == ta.tenant
+    ]) == 0
+  ]
   tenant_subnets_map_of_maps = {
-    for pairing in setproduct(values(var.tenant_accounts), values(var.regions)) : "${pairing[0].main_project}-${pairing[1]}" => {
-      "project"         = pairing[0].main_project,
-      "tenant"          = pairing[0].tenant,
-      "admin_principal" = pairing[0].admin_principal
-      "region"          = pairing[1],
-      "env"             = pairing[0].env
-    }
+    for item in local._tenant_subnet_pairs : item.key => item
   }
 }
 module "env-spoke-projects" {
@@ -225,6 +251,13 @@ module "env-dns-peer-landing-root" {
   }
 }
 
+check "tenant_subnet_mapping" {
+  assert {
+    condition     = length(local._unmapped_tenant_accounts) == 0
+    error_message = "No subnet in subnets.<env> matches tenant_accounts entries (${join(", ", local._unmapped_tenant_accounts)}); skipping allow_admin_principals IAM for unmapped tenants."
+  }
+}
+
 moved {
   from = google_compute_subnetwork_iam_member.allow-admin-principals
   to   = google_compute_subnetwork_iam_member.allow_admin_principals
@@ -235,9 +268,7 @@ resource "google_compute_subnetwork_iam_member" "allow_admin_principals" {
   project  = module.env-spoke-projects[each.value.env].project_id
   region   = each.value.region
   subnetwork = module.env-spoke-vpc[each.value.env].subnet_ids[
-    "${each.value.region}/${one([
-      for s in try(var.subnets[lower(each.value.env)], []) : s.name if s.tenant == each.value.tenant
-    ])}"
+    "${each.value.region}/${each.value.subnet_name}"
   ]
   role   = "roles/compute.networkUser"
   member = each.value.admin_principal
