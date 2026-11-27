@@ -32,7 +32,7 @@ This blueprint contains all the necessary Terraform modules to build and deploy 
 
 ## How to deploy the Terraform Code. The Deployment Steps
 You should see this README and some terraform files.
-1. Review and follow the [Prerequisite for Google Bigquery (Bigquery)](#pre-requisite-for-google-bigquery-bigquery)
+1. Review and follow the [Prerequisite for Google Bigquery (Bigquery)](#prerequisites-for-google-bigquery-bigquery)
 2. Run ```cp terraform.tfvars.sample terraform.tfvars``` to copy the sample variables to your own tfvars file.
 3. Update the variables as necessary in your tfvars file.
 
