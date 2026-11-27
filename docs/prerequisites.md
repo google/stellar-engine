@@ -69,10 +69,9 @@ Terraform.
 > [!TIP]
 > Run [`./fast/stages-aw/0-bootstrap/enableServices.sh`](../fast/stages-aw/0-bootstrap/enableServices.sh)
 > from the repository root after setting the active `gcloud` project to enable
-> the 11 core Stage 0 APIs automatically, then run
-> `gcloud services enable monitoring.googleapis.com` for the Cloud Monitoring
-> API. Alternatively, enable each service listed below manually in the console
-> or with the `gcloud services enable` command.
+> all 12 prerequisite Stage 0 APIs automatically. Alternatively, enable each
+> service listed below manually in the console or with the
+> `gcloud services enable` command.
 
 The `enableServices.sh` script enables these services:
 
@@ -87,9 +86,7 @@ The `enableServices.sh` script enables these services:
 - `logging.googleapis.com`
 - `iamcredentials.googleapis.com`
 - `orgpolicy.googleapis.com`
-
-Also enable the `monitoring.googleapis.com` API in the bootstrap project before
-running Stage 0.
+- `monitoring.googleapis.com`
 
 ## Initial IAM Grants
 
@@ -135,15 +132,11 @@ A shared billing account whose IAM you cannot change still works with Stage 0.
 
 ## Administrative Groups
 
-Create or confirm the initial Google Cloud administrative groups used by the
-deployment:
+Create or confirm the required Stage 0 Google Cloud administrative groups
+(`0-bootstrap/variables.tf`; `gcp-support` aliases to `gcp-devops` by default):
 
 - `gcp-billing-admins@<domain>`
-- `gcp-developers@<domain>`
 - `gcp-devops@<domain>`
-- `gcp-hybrid-connectivity-admins@<domain>`
-- `gcp-logging-monitoring-admins@<domain>`
-- `gcp-logging-monitoring-viewers@<domain>`
 - `gcp-organization-admins@<domain>`
 - `gcp-vpc-network-admins@<domain>`
 - `gcp-security-admins@<domain>`
@@ -151,8 +144,9 @@ deployment:
 ## Organization Features And Quotas
 
 - Enable Access Transparency for the organization.
-- Confirm project quota before deployment. The DDG currently calls for a quota
-  of at least 13 projects.
+- Confirm project quota before deployment. Budget at least
+  `10 + 6 * <tenants>` new projects (`22` projects for the default
+  3-environment, 2-tenant deployment).
 - If an Assured Workloads deployment blocks `bigquery.googleapis.com`, review
   the available services in the Assured Workloads folder, allow the BigQuery
   family of APIs, wait for propagation, and rerun the failed Terraform step.
