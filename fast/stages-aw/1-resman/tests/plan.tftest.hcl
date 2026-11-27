@@ -146,3 +146,26 @@ run "plan_tenant_gcs_locations" {
     error_message = "Expected tenant buckets to be REGIONAL unless the tenant sets a multi-region GCS location."
   }
 }
+
+run "plan_envs_folders_without_admin" {
+  command = plan
+
+  providers = {
+    google              = google
+    google-beta         = google-beta
+    google.billing      = google.billing
+    google-beta.billing = google-beta.billing
+  }
+
+  variables {
+    envs_folders = {
+      Prod = {}
+      Test = { admin = null }
+    }
+  }
+
+  assert {
+    condition     = toset(keys(module.branch-envs-folders)) == toset(["Prod", "Test"])
+    error_message = "Expected envs_folders to plan cleanly when admin is omitted or null."
+  }
+}

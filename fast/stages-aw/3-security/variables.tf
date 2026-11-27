@@ -85,7 +85,7 @@ variable "envs_folders" {
   # tfdoc:variable:source 1-resman
   description = "List of environments to be created for projects to go into."
   type = map(object({
-    admin = string
+    admin = optional(string)
   }))
 }
 
