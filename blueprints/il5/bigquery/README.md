@@ -13,10 +13,8 @@
 <!-- END TOC -->
 
 ## Introduction Google BigQuery (BigQuery)
-Google BigQuery is a fully-managed, serverless data system in which querying data is made possible. Database does not need to be constantly monitored, and users can levarage data and analyze the data.
-1. The Rotation Period ``` rotation_period ``` is set to 90 days indicated by 7776000s seconds,
-2. The Destory Schedulded Duration is ``` destroy_scheduled_duration ``` is set to 30 days indicated by 2592000 seconds.
-3. The IAM Permissions and Roles ```roles/cloudkms.cryptoKeyEncrypterDecrypter``` is assigned
+Google BigQuery is a fully-managed, serverless data system in which querying data is made possible. The database does not need to be constantly monitored, and users can analyze data inside Assured Workloads.
+- Grants `roles/cloudkms.cryptoKeyEncrypterDecrypter` to the BigQuery default service account on the existing Cloud KMS CryptoKey configured in `core_project_id`.
 
 ## Blueprint
 This blueprint contains all the necessary Terraform modules to build and deploy a BigQuery project on Google Cloud.

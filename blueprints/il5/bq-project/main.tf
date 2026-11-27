@@ -14,8 +14,17 @@
  * limitations under the License.
  */
 
+resource "google_project_service" "bigquery_api" {
+  project            = var.main_project_id
+  service            = "bigquery.googleapis.com"
+  disable_on_destroy = false
+}
+
 data "google_bigquery_default_service_account" "bq_sa" {
   project = var.main_project_id
+  depends_on = [
+    google_project_service.bigquery_api
+  ]
 }
 
 module "bigquery-dataset" {
@@ -26,7 +35,10 @@ module "bigquery-dataset" {
   encryption_key = module.kms.keys.default.id
   description    = var.dataset_description
   tables         = var.tables
-  depends_on     = [module.kms]
+  depends_on = [
+    module.kms,
+    google_project_service.bigquery_api,
+  ]
 }
 
 #Google KMS Module
