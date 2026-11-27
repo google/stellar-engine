@@ -78,6 +78,8 @@ gcloud compute ssh <BASTION_VM_NAME> --zone <BASTION_VM_ZONE> --tunnel-through-i
 
 The bastion VM has no external IP address (its network interface does not set `nat`), so the SSH session has to go through Identity-Aware Proxy.
 
+This blueprint does not create the IAP access this needs. Its only firewall rule (`allow_gke_nodes_to_master`) covers traffic from the GKE nodes to the control plane, so allow ingress on TCP port 22 from the IAP range `35.235.240.0/20` on the shared VPC network in `landing_project_id`, and grant the connecting user `roles/iap.tunnelResourceAccessor` together with SSH access to the VM (for example OS Login with `roles/compute.osLogin`).
+
 2. Fetch cluster credentials inside the bastion `toolbox` container environment and verify node readiness:
 
 ```bash
