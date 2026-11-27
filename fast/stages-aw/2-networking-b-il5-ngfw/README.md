@@ -25,8 +25,8 @@ Stage 2 deploys centralized hub-and-spoke Shared VPC infrastructure inspected by
   - [DNS design](#dns-design)
 - [2 Stage file layout](#2-stage-file-layout)
   - [VPCs](#vpcs)
-  - [VPNs](#vpns)
-  - [Routing and BGP](#routing-and-bgp)
+  - [Hybrid connectivity](#hybrid-connectivity)
+  - [Routing](#routing)
   - [Firewalls](#firewalls)
   - [DNS architecture](#dns-architecture)
     - [Cloud environment](#cloud-environment)
@@ -63,7 +63,7 @@ Configure the `regions` variable to deploy regional NVA instance templates, mana
 The central VDSS inspection boundary separates traffic across two transit VPC networks connected by regional multi-zone [Managed Instance Groups](https://cloud.google.com/compute/docs/instance-groups) of Palo Alto VM-Series appliances fronted by regional internal passthrough Network Load Balancers:
 
 - The landing VPC serves as the trusted hub peered with environment spoke VPCs and terminates Cloud VPN tunnels from on-premises networks.
-- The DMZ VPC serves as the untrusted boundary towards the public internet and hosts [Cloud NAT](https://cloud.google.com/nat/docs/overview) when enabled.
+- The DMZ VPC serves as the untrusted boundary towards the public internet and hosts [Cloud NAT](https://cloud.google.com/nat/docs/overview).
 - Cross-environment traffic and north-south traffic between landing and DMZ networks traverse the NVA appliances, which come up unlicensed for initial routing and NAT bootstrap until you apply production licenses and security policies.
 - Outbound traffic from landing networks to DMZ networks undergoes source NAT on the NVAs unless excluded by policy.
 
@@ -80,9 +80,9 @@ Environment spokes peer directly with the landing hub VPC while multi-NIC applia
 
 Plan your cloud IP address space up front so routes aggregate into larger CIDR blocks and stay well within [Cloud Router](https://cloud.google.com/network-connectivity/docs/router/quotas) and [VPC](https://cloud.google.com/vpc/docs/quota) quotas.
 
-By default, this stage partitions a `/11` CIDR block (`10.64.0.0/11`) into eight `/16` blocks across configured regions for landing DMZ, landing hub, development, and production zones. Within each `/16` block, the first `/24` allocates a default subnet and the final three `/24` ranges stay available for [Private Services Access](https://cloud.google.com/vpc/docs/private-services-access) via `psa_ranges` or [Internal Application Load Balancer](https://cloud.google.com/load-balancing/docs/l7-internal) proxy-only subnets.
+By default, `terraform.tfvars.sample` places the three VDSS transit subnets inside `10.64.0.0/11` in `regions.primary` and assigns dedicated `/16` tenant workload ranges, `/24` proxy-only subnets (`proxy_subnets`), and optional [Private Services Access](https://cloud.google.com/vpc/docs/private-services-access) ranges (`psa_ranges`) per environment in `terraform.tfvars`.
 
-The `<prefix>-net-vdss-host` project hosts three VDSS networks alongside one peered spoke VPC per `<env>` host project from `1-resman`:
+The `<prefix>-net-vdss-host` project hosts three VDSS networks alongside one peered spoke VPC in a dedicated `<prefix>-<env>-net-host` Shared VPC host project created for each `<env>` environment defined in `1-resman`:
 
 | name | description |
 | --- | --- |
@@ -94,70 +94,69 @@ Default VDSS subnets allocate from the primary region:
 
 | name | region | VPC network | CIDR |
 | --- | --- | --- | --- |
-| `mgmt-default` | `<primary-region>` | `prod-mgmt-0` | `10.64.128.0/24` |
-| `dmz-default` | `<primary-region>` | `prod-dmz-0` | `10.64.128.0/24` |
-| `landing-default` | `<primary-region>` | `prod-landing-0` | `10.64.0.0/24` |
+| `mgmt-default` | `<primary-region>` | `vdss-mgmt-0` | `10.64.129.0/24` |
+| `dmz-default` | `<primary-region>` | `vdss-dmz-0` | `10.64.128.0/24` |
+| `landing-default` | `<primary-region>` | `vdss-landing-0` | `10.64.0.0/24` |
 
-Each environment spoke VPC also receives a workload subnet and a regional proxy-only subnet.
+Each environment spoke VPC also receives workload subnets (`subnets`) and a regional proxy-only subnet (`proxy_subnets`).
 
-Routing combines automatic subnet routes, VPC peering route exchange, tagged static routes, and [Cloud Router](https://cloud.google.com/network-connectivity/docs/router#docs) BGP advertisements:
+Routing combines automatic subnet routes, VPC peering route exchange, and static routes on the VPCs and NVA appliances:
 
 - Subnets within the same VPC exchange routes automatically.
 - Environment spoke VPCs and the landing hub VPC exchange subnet routes over VPC peering.
-- Tagged static routes in spoke VPCs steer cross-environment, on-premises, and internet traffic from regional VMs to the regional NVA internal load balancer VIP as next hop.
+- Static routes in `vdss-landing-0` and `vdss-mgmt-0` steer default egress traffic toward the regional NVA internal load balancer VIP and the management default internet gateway respectively.
 - Static routes on the NVA trusted interface return traffic to every spoke primary subnet, secondary subnet range, and proxy-only subnet. Because the NVAs hold a default route on the DMZ interface only, a reply to any spoke range missing a static route exits through the DMZ. Private Services Access ranges have no static route because VPC peering is not transitive.
-- Cloud Routers attached to landing VPC VPN gateways disable default subnet advertisements and advertise aggregated CIDR blocks through custom advertisements to conserve route quotas.
+- When extending `vdss-landing-0` with Cloud VPN or Cloud Interconnect, configure Cloud Routers to disable default subnet advertisements and advertise aggregated CIDR blocks through custom advertisements to conserve route quotas.
 
 ### Internet egress
 
-Outbound internet traffic traverses a NAT policy from the landing zone to the DMZ zone on the Palo Alto NGFW. Set `enable_cloud_nat = true` to enable [Cloud NAT](https://cloud.google.com/nat/docs/overview) in the DMZ VPC, which defaults to disabled. You can also adapt the design for per-VPC Cloud NAT, explicit forwarding proxies with URL filtering, or hairpinned egress through on-premises firewalls.
+Outbound internet traffic traverses a NAT policy from the landing zone to the DMZ zone on the Palo Alto NGFW. This stage deploys [Cloud NAT](https://cloud.google.com/nat/docs/overview) unconditionally in `vdss-dmz-0` (`module.dmz-nat-primary`) and `vdss-mgmt-0` (`module.dmz-nat-mgmt`) via `net-vdss.tf`. You can also adapt the design for per-VPC Cloud NAT, explicit forwarding proxies with URL filtering, or hairpinned egress through on-premises firewalls.
 
 ### VPC and hierarchical firewalls
 
-Stage 2 combines folder-level hierarchical firewall policies on the `Networking` folder for baseline ingress rules such as load balancer health checks and Identity-Aware Proxy TCP forwarding with per-VPC firewall rules defined in YAML factory files.
+Stage 2 combines a folder-level hierarchical firewall policy on the `Networking` folder with per-VPC firewall rules configured through `firewall_rules` and `cidrs`.
 
 ### DNS design
 
-Cloud DNS policies and peering zones support bidirectional hybrid and cloud name resolution:
+Cloud DNS private zones, peering zones, and response policies centralize name resolution across the VDSS hub and environment spokes:
 
-- Private zones and an [inbound server policy](https://cloud.google.com/dns/docs/server-policies-overview#dns-server-policy-in) resolve cloud domains for on-premises resolvers, while forwarding zones send `onprem.example.com` queries to on-premises DNS servers.
-- The landing hub hosts on-premises forwarding zones, Google API zones, and the top-level private zone (`gcp.example.com`).
-- Environment spoke projects host environment subdomains such as `prod.gcp.example.com` using [cross-project binding](https://cloud.google.com/dns/docs/zones/zones-overview#cross-project_binding) and delegate root `.` resolution to the landing hub via DNS peering.
+- The `<prefix>-net-vdss-host` project hosts the root private zone (`<organization.domain>`) attached to `vdss-landing-0` and a `googleapis` response policy attached to `vdss-dmz-0`, `vdss-landing-0`, and `vdss-mgmt-0`.
+- Environment spoke host projects host environment subdomains (`<env>.<organization.domain>`) visible to `vdss-landing-0` and delegate root `.` resolution to `vdss-landing-0` via DNS peering.
 - [Cloud DNS response policies](https://cloud.google.com/dns/docs/zones/manage-response-policies#create-response-policy-rule) resolve [Private Google Access domains](https://cloud.google.com/vpc/docs/configure-private-google-access#domain-options) privately.
 
-Route `35.199.192.0/19` from on-premises networks into the Cloud VPN tunnels and forward `private.googleapis.com`, `restricted.googleapis.com`, and your cloud domain such as `gcp.example.com` to the landing inbound DNS addresses.
+If adding hybrid Cloud VPN connectivity, route `35.199.192.0/19` from on-premises networks into the tunnels and forward `private.googleapis.com`, `restricted.googleapis.com`, and `<organization.domain>` queries to inbound DNS addresses on `vdss-landing-0`.
 
 ## 2 Stage file layout
 
 ### VPCs
 
-Separate `vpc-*.tf` files define the landing and DMZ VDSS networks and environment spoke networks:
+The `net-vdss.tf` and `branch-net-envs.tf` files define the VDSS transit networks and environment spoke networks:
 
-- The [`project`](../../../modules/project) module provisions each [Shared VPC host project](https://cloud.google.com/vpc/docs/shared-vpc) and enables required APIs.
-- The [`net-vpc`](../../../modules/net-vpc) module manages subnets from `data/subnets/`, Private Google Access routes, landing DNS inbound policies, and [Private Services Access](https://cloud.google.com/vpc/docs/configure-private-services-access#allocating-range) ranges via `psa_ranges`, falling back to a default `/22` `default-peering` range when `psa_ranges` is unset for an environment.
-- The [`net-cloudnat`](../../../modules/net-cloudnat) module provisions Cloud NAT for outbound internet egress in the DMZ VPC.
+- The [`project`](../../../modules/project) module provisions `<prefix>-net-vdss-host` and each `<prefix>-<env>-net-host` [Shared VPC host project](https://cloud.google.com/vpc/docs/shared-vpc) and enables required APIs.
+- The [`net-vpc`](../../../modules/net-vpc) module manages subnets from `subnets` and `proxy_subnets`, Private Google Access routes, landing DNS inbound policies, and [Private Services Access](https://cloud.google.com/vpc/docs/configure-private-services-access#allocating-range) ranges via `psa_ranges`, while `psc.tf` falls back to a default `/22` `default-peering` range when `psa_ranges` is empty for an environment (or its `dev` fallback).
+- The [`net-cloudnat`](../../../modules/net-cloudnat) module provisions Cloud NAT in `vdss-dmz-0` and `vdss-mgmt-0`.
 
-### VPNs
+### Hybrid connectivity
 
-The `vpn-onprem.tf` file configures HA VPN connectivity through the [`net-vpn-ha`](../../../modules/net-vpn-ha) module between on-premises networks and the landing VPC using `vpn_onprem_primary_config` and `vpn_onprem_secondary_config`.
+This stage does not deploy VPN or Interconnect tunnels by default. When hybrid connectivity is required, add [`net-vpn-ha`](../../../modules/net-vpn-ha) resources targeting `vdss-landing-0` or deploy `blueprints/il5/ha-vpn-multicloud`.
 
-### Routing and BGP
+### Routing
 
-Each [`net-vpc`](../../../modules/net-vpc) call in `vpc-*.tf` manages static routes alongside dynamic routes learned via VPC peering and BGP sessions configured through `vpn_onprem_configs`.
+Each [`net-vpc`](../../../modules/net-vpc) call in `net-vdss.tf` and `branch-net-envs.tf` configures Private Google Access routes, while `ngfw-routes.tf` computes NGFW return routes across every spoke primary subnet, secondary range, and proxy-only subnet for `templates/bootstrap.xml.tpl`, `ngfw.tf` configures `default-route-nva` in `vdss-landing-0`, and `net-vdss.tf` configures `default-route-mgmt` in `vdss-mgmt-0`.
 
 ### Firewalls
 
-Per-VPC firewall rules use [`net-vpc-firewall`](../../../modules/net-vpc-firewall) YAML factories under `data/firewall-rules/dmz/` and `data/firewall-rules/landing/`, following the [rules factory documentation](../../../modules/net-vpc-firewall#rules-factory).
+Per-VPC firewall rules use [`net-vpc-firewall`](../../../modules/net-vpc-firewall) configured via `firewall_rules` and `cidrs` in `net-vdss.tf` and `branch-net-envs.tf`.
 
-Folder-level hierarchical firewall policies in `main.tf` attach to the `Networking` folder via [`folder`](../../../modules/folder) and [`net-firewall-policy`](../../../modules/net-firewall-policy/README.md#factory) using rules in `data/hierarchical-ingress-rules.yaml`.
+Folder-level hierarchical firewall policies in `main.tf` attach to the `Networking` folder via [`folder`](../../../modules/folder) and [`net-firewall-policy`](../../../modules/net-firewall-policy/README.md#factory) using optional factory files under `factories_config.data_dir` (`cidrs.yaml` and `hierarchical-ingress-rules.yaml`).
 
 ### DNS architecture
 
-Files matching `dns-*.tf` configure [`dns`](../../../modules/dns) zones for on-premises forwarding, the root cloud domain (`gcp.example.com`), and environment subdomains (`dev.gcp.example.com` and `prod.gcp.example.com`).
+Both `net-vdss.tf` and `branch-net-envs.tf` configure [`dns`](../../../modules/dns) and [`dns-response-policy`](../../../modules/dns-response-policy) resources for the root domain (`org-domain`), Google APIs response policy (`googleapis`), and per-environment subdomains (`<env>-org-domain` and `<env>-root-dns-peering`).
 
 #### Cloud environment
 
-The root DNS zone in the landing host project serves as the central resolver for spoke VPCs through root DNS peering (`prod-landing-root-dns-peering`). Grant visibility to both the landing and DMZ VPCs when adding spoke private zones (`prod-dns-private-zone`) so the entire cloud network can resolve them.
+The root DNS zone in `<prefix>-net-vdss-host` acts as the central resolver for spoke VPCs through root DNS peering (`<env>-root-dns-peering`). Grant visibility to both `vdss-landing-0` and `vdss-dmz-0` when adding spoke private zones (`<env>-org-domain`) if DMZ workloads also need to resolve spoke names.
 
 ## 3 Stage deployment
 
@@ -174,15 +173,15 @@ Stage 2 consumes generated provider and `.auto.tfvars.json` files from [Stage 0 
 Copy the generated provider and variable files into the stage directory:
 
 ```bash
-gcloud alpha storage cp gs://xxx-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./
-gcloud alpha storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./
-gcloud alpha storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./
-gcloud alpha storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+gcloud storage cp gs://xxx-prod-iac-core-outputs-0/providers/2-networking-providers.tf ./
+gcloud storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./
+gcloud storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./
+gcloud storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
 ```
 
 ### Service account impersonation
 
-The generated provider file impersonates the Stage 2 automation service account. Ensure your active user identity belongs to `gcp-devops` or `organization-admins`.
+The generated provider file impersonates the Stage 2 automation service account. Ensure your active user identity belongs to `gcp-devops` or `gcp-organization-admins`.
 
 ### Default gcloud project
 
@@ -221,9 +220,9 @@ outputs_location = "~/fast-config"
 Delayed billing linkage is unsupported for production and intended only for development environments where Terraform cannot attach billing accounts directly:
 
 - Set `billing_account.id` to `null` temporarily in `0-globals.auto.tfvars.json`.
-- Target each project resource (`dev-spoke-project`, `landing-project`, `prod-spoke-project`) individually and untaint it if needed:
-  `terraform apply -target 'module.landing-project.google_project.project[0]'`
-  `terraform untaint 'module.landing-project.google_project.project[0]'`
+- Target each project resource (`module.vdss-host-project`, `module.env-spoke-projects["Prod"]`, `module.env-spoke-projects["Int"]`, `module.env-spoke-projects["Test"]`) individually and untaint it if needed:
+  `terraform apply -target 'module.vdss-host-project.google_project.project[0]'`
+  `terraform untaint 'module.vdss-host-project.google_project.project[0]'`
 - Link the billing account to the created projects manually.
 - Restore `billing_account.id` in `0-globals.auto.tfvars.json` and run `terraform apply`.
 
@@ -243,7 +242,7 @@ terraform apply
 
 - Cloud DNS response policies in the landing project resolve supported Google API domains to Private Google Access VIPs.
 - Static routes for `private.googleapis.com` and `restricted.googleapis.com` VIP ranges exist on every VPC except the DMZ VPC.
-- Advertise the Private Google Access VIP ranges through custom router or tunnel advertisements on `vpn_onprem_primary_config` and `vpn_onprem_secondary_config` to enable private Google API access from on-premises networks.
+- Advertise the Private Google Access VIP ranges through custom Cloud Router or VPN tunnel advertisements if adding hybrid connectivity so on-premises networks can reach Google APIs privately.
 
 ## 4 Customizations
 
@@ -262,12 +261,12 @@ Gather three prerequisites to reach the Palo Alto web management console:
 
 1. Retrieve the initial administrator password from Terraform outputs with `terraform output -json | jq ".ngfw_password.value.result"`.
 2. Start the `management-bastion` VM on the management network if it is stopped.
-3. Target the second network interface (`nic1`) attached to `prod-mgmt-0`, which is the only NGFW interface enabled for administration.
+3. Target the second network interface (`nic1`) attached to `vdss-mgmt-0`, which is the only NGFW interface enabled for administration.
 
-Open an Identity-Aware Proxy SSH tunnel through `management-bastion` in its deployed `<ZONE>`, which you can look up with `terraform show | grep zone`:
+Open an Identity-Aware Proxy SSH tunnel through `management-bastion` in its deployed `<ZONE>` (`${var.regions.primary}-c`), targeting the `<vdss-host-project-id>` (`<prefix>-net-vdss-host`) project:
 
 ```bash
-gcloud compute ssh management-bastion --zone <ZONE> --tunnel-through-iap -- -L 8443:<ip-of-ngfw>:443
+gcloud compute ssh management-bastion --project=<vdss-host-project-id> --zone <ZONE> --tunnel-through-iap -- -L 8443:<ip-of-ngfw>:443
 ```
 
 Sign in at `https://localhost:8443/` with username `admin` and the password from Terraform outputs.
@@ -280,7 +279,7 @@ mkdir -p ~/.ssh && gcloud secrets versions access latest --secret=ngfw-ssh-priva
 
 ### Bootstrap XML updates
 
-After changing firewall settings in the Palo Alto console, export the running configuration archive from the Device Operations tab to extract `running-config.xml`, then merge your changes back into `templates/bootstrap.xml.tpl` while preserving five Terraform template expressions:
+After changing firewall settings in the Palo Alto console, export the running configuration archive from the Device Operations tab to extract `running-config.xml`, then merge your changes back into `templates/bootstrap.xml.tpl` while preserving these Terraform template expressions across five blocks:
 
 - `password_hash` appears once near the top of `templates/bootstrap.xml.tpl`.
 - `ssh_pubkey` appears twice, once near the top and once near the middle of the template.
@@ -292,7 +291,7 @@ Terraform builds `return_routes` from every spoke subnet, secondary range, and p
 
 ## 6 Redeployment
 
-Run `pre-redeploy.sh` before redeploying this stage with the same `prefix` to import retained resources cleanly.
+When redeploying this stage with the same `prefix` after teardown or state loss, recover soft-deleted host projects and KMS key versions and import retained resources (`module.vdss-host-project.google_project.project[0]`, `module.env-spoke-projects["<Env>"].google_project.project[0]`, `module.kms.google_kms_key_ring.default[0]`, and `module.kms.google_kms_crypto_key.default["default"]`) into Terraform state before running `terraform apply`. See [the experimental restore script](../../../scripts/restore.sh) for the reference `gcloud` and `terraform import` sequence.
 <!-- BEGIN TFDOC -->
 ## Variables
 
@@ -303,10 +302,10 @@ Run `pre-redeploy.sh` before redeploying this stage with the same `prefix` to im
 | [billing_account](variables.tf#L41) | Billing account id. If billing account is not part of the same org set `is_org_level` to false. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [envs_folders](variables.tf#L109) | List of environments to be created for projects to go into. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [folder_ids](variables.tf#L184) | Folders to be used for the networking resources in folders/nnnnnnnnnnn format. If null, folder will be created. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [organization](variables.tf#L219) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [prefix](variables.tf#L235) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
-| [regions](variables.tf#L279) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [tenant_accounts](variables.tf#L356) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [organization](variables.tf#L229) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [prefix](variables.tf#L245) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
+| [regions](variables.tf#L289) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [tenant_accounts](variables.tf#L366) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [assured_workloads](variables.tf#L22) | Configuration for Assured Workloads. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [billing_override](variables.tf#L54) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [cidrs](variables.tf#L63) | Named CIDR ranges to use in firewall rules. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
@@ -320,16 +319,16 @@ Run `pre-redeploy.sh` before redeploying this stage with the same `prefix` to im
 | [firewall_rules](variables.tf#L153) | Firewall rules for each VPC / environment spoke. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [force_destroy](variables.tf#L193) | Toggles force_destroy for GCS buckets. | <code>bool</code> |  | <code>false</code> |
 | [groups](variables.tf#L199) | IAM groups mapping. | <code>any</code> |  | <code>null</code> |
-| [kms_protection_level](variables.tf#L205) | KMS protection level. | <code>string</code> |  | <code>null</code> |
-| [logging](variables.tf#L213) | Logging configuration. | <code>any</code> |  | <code>null</code> |
-| [outputs_location](variables.tf#L229) | Path where providers and tfvars files for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
-| [proxy_subnets](variables.tf#L246) | VPC proxy-only subnet CIDRs keyed by environment. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [psa_ranges](variables.tf#L253) | IP ranges used for Private Service Access (e.g. CloudSQL). Ranges is in name => range format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [regime_mapping](variables.tf#L273) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
-| [service_accounts](variables.tf#L287) | Automation service accounts in name => email format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [spoke_project_iam](variables.tf#L301) | Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [subnets](variables.tf#L308) | VPC subnet configurations keyed by network name. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [vmseries_image](variables.tf#L370) | The image name from which to boot an instance, including a license type (bundle/flex) and version. | <code>string</code> |  | <code>&#34;vmseries-112&#34;</code> |
+| [kms_protection_level](variables.tf#L205) | Cloud KMS protection level for the VDSS keyring key (defaults to HSM when null). | <code>string</code> |  | <code>null</code> |
+| [logging](variables.tf#L223) | Logging configuration. | <code>any</code> |  | <code>null</code> |
+| [outputs_location](variables.tf#L239) | Path where providers and tfvars files for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
+| [proxy_subnets](variables.tf#L256) | VPC proxy-only subnet CIDRs keyed by environment. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [psa_ranges](variables.tf#L263) | IP ranges used for Private Service Access (e.g. CloudSQL) keyed by lowercase environment name (for example prod, int, test, or dev fallback). | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [regime_mapping](variables.tf#L283) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
+| [service_accounts](variables.tf#L297) | Automation service accounts in name => email format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [spoke_project_iam](variables.tf#L311) | Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [subnets](variables.tf#L318) | VPC subnet configurations keyed by network name. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [vmseries_image](variables.tf#L380) | The image name from which to boot an instance, including a license type (bundle/flex) and version. | <code>string</code> |  | <code>&#34;vmseries-112&#34;</code> |
 
 ## Outputs
 

@@ -131,7 +131,12 @@ module "env-spoke-vpc" {
     logging = var.dns.enable_logging
   }
   delete_default_routes_on_create = true
-  psa_configs                     = try(var.psa_ranges[lower(each.key)], var.psa_ranges.dev)
+  psa_configs = try(
+    var.psa_ranges[lower(each.key)],
+    var.psa_ranges[each.key],
+    var.psa_ranges["dev"],
+    []
+  )
   # Set explicit routes for googleapis; send everything else to NVAs
   create_googleapis_routes = {
     # Fabric v59 adds a DirectPath route by default; keep the previous routes.

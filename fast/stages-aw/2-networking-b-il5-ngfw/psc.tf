@@ -19,7 +19,12 @@ locals {
   # passed to the spoke VPC module, including its fallback to the dev ranges.
   psa_default_envs = {
     for k, v in var.envs_folders : k => v
-    if length(try(var.psa_ranges[lower(k)], var.psa_ranges.dev)) == 0
+    if length(try(
+      var.psa_ranges[lower(k)],
+      var.psa_ranges[k],
+      var.psa_ranges["dev"],
+      []
+    )) == 0
   }
 }
 
