@@ -296,3 +296,22 @@ run "rejects_invalid_resource_discovery_parent" {
 
   expect_failures = [var.vpc_sc]
 }
+
+run "rejects_prefix_over_7_chars" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    local               = local
+    time                = time
+  }
+
+  variables {
+    prefix = "abcdefgh"
+  }
+
+  expect_failures = [var.prefix]
+}
