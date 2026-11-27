@@ -48,7 +48,9 @@ module "env-spoke-projects" {
     "servicenetworking.googleapis.com",
     "stackdriver.googleapis.com",
     "vpcaccess.googleapis.com"
-    ]
+    ],
+    local._ncc_enabled ? ["networkconnectivity.googleapis.com"] : [],
+    var.psc_google_apis.enabled ? ["servicedirectory.googleapis.com"] : []
   )
   shared_vpc_host_config = {
     enabled = true
@@ -107,11 +109,16 @@ module "env-spoke-vpc" {
   delete_default_routes_on_create = true
   psa_configs                     = try(var.psa_ranges[lower(each.key)], var.psa_ranges.dev)
   # Set explicit routes for googleapis; send everything else to NVAs
-  create_googleapis_routes = {
-    # Fabric v59 adds a DirectPath route by default; keep the previous routes.
-    directpath = false
-    private    = true
-  restricted = true }
+  create_googleapis_routes = (
+    var.psc_google_apis.enabled
+    ? null
+    : {
+      # Fabric v59 adds a DirectPath route by default; keep the previous routes.
+      directpath = false
+      private    = true
+      restricted = true
+    }
+  )
   subnets = try(var.subnets[lower(each.key)], [])
   subnets_proxy_only = [{
     region        = var.regions.primary
@@ -161,7 +168,7 @@ module "env-spoke-firewall" {
 }
 
 resource "time_sleep" "peering_delay" {
-  for_each = var.envs_folders
+  for_each = var.transit_mode == "peering" ? var.envs_folders : {}
 
   create_duration = "${index(keys(var.envs_folders), each.key) * 30}s"
 
@@ -174,7 +181,7 @@ resource "time_sleep" "peering_delay" {
 
 module "peering-envs" {
   source   = "../../../modules/net-vpc-peering"
-  for_each = var.envs_folders
+  for_each = var.transit_mode == "peering" ? var.envs_folders : {}
 
   prefix        = lower("${each.key}-peering-0")
   local_network = time_sleep.peering_delay[each.key].triggers["local_network"]
@@ -217,7 +224,11 @@ module "env-dns-peer-landing-root" {
   project_id = module.env-spoke-projects[each.key].project_id
   name       = lower("${each.key}-root-dns-peering")
   zone_config = {
-    domain = "."
+    domain = (
+      var.psc_google_apis.enabled
+      ? lower("${var.organization.domain}.")
+      : "."
+    )
     peering = {
       client_networks = [module.env-spoke-vpc[each.key].self_link]
       peer_network    = module.vdss-vpc.self_link

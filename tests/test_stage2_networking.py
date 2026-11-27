@@ -391,8 +391,10 @@ class TestStage2Networking(unittest.TestCase):
         self.assertFalse(fedramp_factory.is_symlink())
         self.assertTrue(fedramp_schema.is_file())
         self.assertFalse((_FEDRAMP_NET_DIR / "schemas").is_symlink())
-        self.assertFalse((_IL5_NET_DIR / "factory-ncc.tf").exists())
-        self.assertFalse((_IL5_NET_DIR / "schemas").exists())
+        self.assertTrue((_IL5_NET_DIR / "factory-ncc.tf").is_file())
+        self.assertTrue(
+            (_IL5_NET_DIR / "schemas/ncc-hub.schema.json").is_file()
+        )
 
         schema = json.loads(fedramp_schema.read_text(encoding="utf-8"))
         self.assertEqual(

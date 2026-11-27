@@ -20,6 +20,128 @@ locals {
   # tflint-ignore: terraform_unused_declarations
   nva_zones   = { for k, v in var.regions : k => slice(data.google_compute_zones.available[k].names, 0, 2) }
   cidr_ranges = var.cidrs
+  _ngfw_min_password_length = (
+    var.ngfw_stig_config == null
+    ? 12
+    : var.ngfw_stig_config.min_password_length
+  )
+  _ngfw_timezone = (
+    var.ngfw_stig_config == null
+    ? "US/Pacific"
+    : var.ngfw_stig_config.timezone
+  )
+  _ngfw_login_banner_raw = try(var.ngfw_stig_config.login_banner, null)
+  _ngfw_login_banner = (
+    local._ngfw_login_banner_raw == null
+    ? ""
+    : replace(
+      replace(
+        replace(local._ngfw_login_banner_raw, "&", "&amp;"),
+        "<",
+        "&lt;"
+      ),
+      ">",
+      "&gt;"
+    )
+  )
+  # ngfw_health_check.protocol is TCP or HTTPS (bootstrap.xml disables HTTP).
+  _ngfw_hc_https = var.ngfw_health_check.protocol == "HTTPS"
+  _ngfw_hc_port = coalesce(
+    var.ngfw_health_check.port,
+    local._ngfw_hc_https ? 443 : 22
+  )
+  _ngfw_mig_health_check_config = {
+    check_interval_sec  = var.ngfw_health_check.check_interval_sec
+    healthy_threshold   = var.ngfw_health_check.healthy_threshold
+    timeout_sec         = var.ngfw_health_check.timeout_sec
+    unhealthy_threshold = var.ngfw_health_check.unhealthy_threshold
+    enable_logging      = coalesce(var.ngfw_health_check.enable_logging, false)
+    https = (
+      local._ngfw_hc_https
+      ? {
+        port         = local._ngfw_hc_port
+        request_path = var.ngfw_health_check.request_path
+      }
+      : null
+    )
+    tcp = local._ngfw_hc_https ? null : { port = local._ngfw_hc_port }
+  }
+  _ngfw_ilb_health_check_config = {
+    check_interval_sec  = var.ngfw_health_check.check_interval_sec
+    enable_logging      = coalesce(var.ngfw_health_check.enable_logging, true)
+    healthy_threshold   = var.ngfw_health_check.healthy_threshold
+    is_regional         = var.ngfw_health_check.is_regional
+    timeout_sec         = var.ngfw_health_check.timeout_sec
+    unhealthy_threshold = var.ngfw_health_check.unhealthy_threshold
+    https = (
+      local._ngfw_hc_https
+      ? {
+        port         = local._ngfw_hc_port
+        request_path = var.ngfw_health_check.request_path
+      }
+      : null
+    )
+    tcp = local._ngfw_hc_https ? null : { port = local._ngfw_hc_port }
+  }
+  _ngfw_ilb_connection_tracking = (
+    var.ngfw_ilb_config.persist_conn_on_unhealthy == null &&
+    var.ngfw_ilb_config.idle_timeout_sec == null &&
+    var.ngfw_ilb_config.track_per_session == null
+    ? null
+    : {
+      idle_timeout_sec          = var.ngfw_ilb_config.idle_timeout_sec
+      persist_conn_on_unhealthy = var.ngfw_ilb_config.persist_conn_on_unhealthy
+      track_per_session         = var.ngfw_ilb_config.track_per_session
+    }
+  )
+  _ngfw_ilb_backend_service_config = {
+    connection_draining_timeout_sec = (
+      var.ngfw_ilb_config.connection_draining_timeout_sec
+    )
+    connection_tracking = local._ngfw_ilb_connection_tracking
+    failover_config     = var.ngfw_ilb_config.failover_config
+    session_affinity    = var.ngfw_ilb_config.session_affinity
+  }
+  _ngfw_trusted_static_ips = {
+    for k, r in var.regions : k => lookup(
+      var.ngfw_ilb_config.trusted_static_ips,
+      r,
+      lookup(var.ngfw_ilb_config.trusted_static_ips, k, null)
+    )
+  }
+  _ngfw_untrusted_static_ips = {
+    for k, r in var.regions : k => lookup(
+      var.ngfw_ilb_config.untrusted_static_ips,
+      r,
+      lookup(var.ngfw_ilb_config.untrusted_static_ips, k, null)
+    )
+  }
+  _ngfw_ilb_static_addresses = merge(
+    {
+      for k, ip in local._ngfw_trusted_static_ips :
+      "nva-vdss-${k}" => {
+        address = ip
+        region  = var.regions[k]
+        subnetwork = try(
+          module.vdss-vpc.subnet_self_links["${var.regions[k]}/landing-default"],
+          null
+        )
+      }
+      if ip != null
+    },
+    {
+      for k, ip in local._ngfw_untrusted_static_ips :
+      "nva-dmz-${k}" => {
+        address = ip
+        region  = var.regions[k]
+        subnetwork = try(
+          module.dmz-vpc.subnet_self_links["${var.regions[k]}/dmz-default"],
+          null
+        )
+      }
+      if ip != null
+    }
+  )
 }
 
 data "google_storage_project_service_account" "gcs_account" {
@@ -54,9 +176,41 @@ resource "tls_private_key" "ngfw_ssh" {
 
 # Shell out to openssl to get the password hash
 resource "random_password" "password" {
-  length           = 16
+  length           = max(16, local._ngfw_min_password_length)
   special          = true
   override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+module "ngfw-admin-password-secret" {
+  count      = var.ngfw_admin_password_secret.enabled ? 1 : 0
+  source     = "../../../modules/secret-manager"
+  project_id = module.vdss-host-project.project_id
+  secrets = {
+    (var.ngfw_admin_password_secret.secret_id) = {
+      location = var.regions.primary
+      kms_key  = module.kms.keys.default.id
+      iam = (
+        length(var.ngfw_admin_password_secret.accessor_members) > 0
+        ? {
+          "roles/secretmanager.secretAccessor" = (
+            var.ngfw_admin_password_secret.accessor_members
+          )
+        }
+        : {}
+      )
+      versions = {
+        latest = {
+          deletion_policy = var.ngfw_admin_password_secret.deletion_policy
+          enabled         = true
+          data = {
+            value      = random_password.password.result
+            wo_version = var.ngfw_admin_password_secret.wo_version
+          }
+        }
+      }
+    }
+  }
+  depends_on = [module.kms]
 }
 
 # Shell out to openssl to get the password hash
@@ -181,14 +335,17 @@ moved {
 resource "google_storage_bucket_object" "bootstrap_xml" {
   name     = "config/bootstrap.xml"
   for_each = var.regions
-  content = templatefile("./templates/bootstrap.xml.tpl", {
-    password_hash     = data.external.openssl.result.hash
-    ssh_pubkey        = tls_private_key.ngfw_ssh.public_key_openssh
-    healthcheck_cidrs = local.cidr_ranges["healthchecks"]
-    iap_cidrs         = local.cidr_ranges["iap"]
-    return_routes     = local.ngfw_return_routes
-    lz_gateway_ip     = module.vdss-vpc.subnets["${each.value}/landing-default"].gateway_address
-
+  content = templatefile("${path.module}/templates/bootstrap.xml.tpl", {
+    password_hash            = data.external.openssl.result.hash
+    ssh_pubkey               = tls_private_key.ngfw_ssh.public_key_openssh
+    healthcheck_cidrs        = local.cidr_ranges["healthchecks"]
+    iap_cidrs                = local.cidr_ranges["iap"]
+    return_routes            = local.ngfw_return_routes
+    lz_gateway_ip            = module.vdss-vpc.subnets["${each.value}/landing-default"].gateway_address
+    min_password_length      = local._ngfw_min_password_length
+    timezone                 = local._ngfw_timezone
+    login_banner             = local._ngfw_login_banner
+    enable_https_healthcheck = var.ngfw_health_check.protocol == "HTTPS"
   })
   bucket = module.ngfw-bootstrap-bucket[each.key].name
 }
@@ -202,7 +359,7 @@ resource "google_storage_bucket_object" "init_cfg" {
   name     = "config/init-cfg.txt"
   for_each = var.regions
 
-  content = templatefile("./templates/init-cfg.txt.tpl", {
+  content = templatefile("${path.module}/templates/init-cfg.txt.tpl", {
     op-command-modes = "mgmt-interface-swap"
   })
   bucket = module.ngfw-bootstrap-bucket[each.key].name
@@ -306,11 +463,7 @@ module "ngfw-mig" {
   auto_healing_policies = {
     initial_delay_sec = 900
   }
-  health_check_config = {
-    tcp = {
-      port = 22
-    }
-  }
+  health_check_config = local._ngfw_mig_health_check_config
   update_policy = {
     minimal_action = "REPLACE"
     type           = "PROACTIVE"
@@ -325,15 +478,29 @@ module "ngfw-mig" {
 
 }
 
+module "ngfw-ilb-addresses" {
+  count              = length(local._ngfw_ilb_static_addresses) > 0 ? 1 : 0
+  source             = "../../../modules/net-address"
+  project_id         = module.vdss-host-project.project_id
+  internal_addresses = local._ngfw_ilb_static_addresses
+}
+
 module "ilb-nva-dmz" {
-  for_each      = var.regions
-  source        = "../../../modules/net-lb-int"
-  project_id    = module.vdss-host-project.project_id
-  region        = each.value
-  name          = "nva-dmz-${each.key}"
-  service_label = var.prefix
+  for_each               = var.regions
+  source                 = "../../../modules/net-lb-int"
+  project_id             = module.vdss-host-project.project_id
+  region                 = each.value
+  name                   = "nva-dmz-${each.key}"
+  service_label          = var.prefix
+  backend_service_config = local._ngfw_ilb_backend_service_config
   forwarding_rules_config = {
     "" = {
+      address = try(
+        module.ngfw-ilb-addresses[0].internal_addresses[
+          "nva-dmz-${each.key}"
+        ].address,
+        null
+      )
       global_access = true
     }
   }
@@ -346,23 +513,25 @@ module "ilb-nva-dmz" {
     { group = v.group_manager.instance_group }
     if startswith(k, each.key)
   ]
-  health_check_config = {
-    enable_logging = true
-    tcp = {
-      port = 22
-    }
-  }
+  health_check_config = local._ngfw_ilb_health_check_config
 }
 
 module "ilb-nva-vdss" {
-  for_each      = var.regions
-  source        = "../../../modules/net-lb-int"
-  project_id    = module.vdss-host-project.project_id
-  region        = each.value
-  name          = "nva-vdss-${each.key}"
-  service_label = var.prefix
+  for_each               = var.regions
+  source                 = "../../../modules/net-lb-int"
+  project_id             = module.vdss-host-project.project_id
+  region                 = each.value
+  name                   = "nva-vdss-${each.key}"
+  service_label          = var.prefix
+  backend_service_config = local._ngfw_ilb_backend_service_config
   forwarding_rules_config = {
     "" = {
+      address = try(
+        module.ngfw-ilb-addresses[0].internal_addresses[
+          "nva-vdss-${each.key}"
+        ].address,
+        null
+      )
       global_access = true
     }
   }
@@ -375,12 +544,7 @@ module "ilb-nva-vdss" {
     { group = v.group_manager.instance_group }
     if startswith(k, each.key)
   ]
-  health_check_config = {
-    enable_logging = true
-    tcp = {
-      port = 22
-    }
-  }
+  health_check_config = local._ngfw_ilb_health_check_config
 }
 
 resource "google_compute_route" "default" {
@@ -390,6 +554,20 @@ resource "google_compute_route" "default" {
   network      = module.vdss-vpc.name
   next_hop_ilb = module.ilb-nva-vdss["primary"].forwarding_rules[""].id
   priority     = 100
+}
+
+# NCC VPC spokes exchange subnet routes only, so custom static 0.0.0.0/0
+# routes on vdss-vpc do not propagate to spoke VPCs. Cross-VPC static routes
+# over NCC require the ILB IPv4 VIP rather than a forwarding rule URI.
+resource "google_compute_route" "ncc_spoke_default" {
+  for_each     = var.transit_mode == "ncc" ? var.envs_folders : {}
+  name         = lower("${each.key}-default-route-nva")
+  project      = module.env-spoke-projects[each.key].project_id
+  dest_range   = "0.0.0.0/0"
+  network      = module.env-spoke-vpc[each.key].name
+  next_hop_ilb = module.ilb-nva-vdss["primary"].forwarding_rule_addresses[""]
+  priority     = 100
+  depends_on   = [google_network_connectivity_spoke.vpcs]
 }
 
 # Google KMS Module

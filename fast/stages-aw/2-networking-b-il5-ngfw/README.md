@@ -40,6 +40,11 @@ Stage 2 deploys centralized hub-and-spoke Shared VPC infrastructure inspected by
     - [Private Google Access](#private-google-access)
 - [4 Customizations](#4-customizations)
   - [Default regions](#default-regions)
+  - [Network Connectivity Center transit](#network-connectivity-center-transit)
+  - [Per-VPC Private Service Connect](#per-vpc-private-service-connect)
+  - [Hybrid Cloud DNS forwarding](#hybrid-cloud-dns-forwarding)
+  - [NGFW health checks and load balancers](#ngfw-health-checks-and-load-balancers)
+  - [NGFW STIG hardening and secrets](#ngfw-stig-hardening-and-secrets)
 - [5 Palo Alto NGFW configuration](#5-palo-alto-ngfw-configuration)
   - [Management console access](#management-console-access)
   - [Bootstrap XML updates](#bootstrap-xml-updates)
@@ -254,13 +259,73 @@ The `regions` variable maps `regions.primary` to a Google Cloud region. Replace 
 - Update the region values in `regions` to match your target Assured Workloads regions.
 - Keep `landing-default`, `dmz-default`, and `mgmt-default` in `regions.primary` because the NGFW instance templates and bootstrap configuration look up those subnets by primary region.
 
+### Network Connectivity Center transit
+
+Set `transit_mode = "ncc"` to replace classic VPC network peering between environment spokes and the landing hub with a STAR-topology Network Connectivity Center hub (`main`) inside the VDSS host project:
+
+- Leaving `transit_mode` at its default value `peering` preserves existing VPC peering between environment spokes and `vdss-landing-0`.
+- Setting `transit_mode = "ncc"` enables `networkconnectivity.googleapis.com`, places `vdss-landing-0` in the `center` group and every `<env>-spoke-0` VPC in the `edge` group, and skips classic peering resources (`module.peering-envs` and `time_sleep.peering_delay`).
+- Because NCC VPC spokes exchange subnet routes only and do not propagate custom static routes, `transit_mode = "ncc"` creates one `0.0.0.0/0` `google_compute_route` per environment spoke (`google_compute_route.ncc_spoke_default`) with `next_hop_ilb` set to the IPv4 VIP of `module.ilb-nva-vdss["primary"]` after spoke attachment completes.
+- Switching `transit_mode` from `peering` to `ncc` destroys classic VPC peerings before attaching NCC VPC spokes; if reverting from `ncc` to `peering`, apply a two-step transition by removing the NCC VPC spokes first before re-enabling VPC peering.
+- Extend the `main` hub or define additional hubs through `ncc_hubs` or YAML files under `data/ncc-hubs/` using `factories_config.ncc_hubs` and `schemas/ncc-hub.schema.json`.
+- Plan-time validations and lifecycle preconditions require explicit project IDs in `auto_accept`, reject wildcard `*` auto-accept entries, and prevent `vdss-mgmt-0` from attaching to a data-plane NCC hub.
+
+### Per-VPC Private Service Connect
+
+Set `psc_google_apis.enabled = true` to provision per-VPC Private Service Connect endpoints for Google APIs targeting `vpc-sc` by default or `all-apis`, avoiding NGFW source NAT hairpinning for Google API traffic:
+
+- Each environment spoke VPC and `vdss-landing-0` receives its own PSC forwarding rule (`modules/net-address`) and Cloud DNS response policy (`data/dns-policy-rules.yaml`) setting `accounts.google.com.` to `bypassResponsePolicy`.
+- Service Directory registration defaults to `regions.primary` when `psc_google_apis.service_directory_registration` or its `region` is unset so single-region Assured Workloads enclaves avoid Google Cloud's implicit `us-central1` fallback.
+- Under the default `bundle = "vpc-sc"`, the per-VPC response policies map `restricted.googleapis.com.` and VPC-SC Google API domains to the local PSC IP while setting `private.googleapis.com.` and non-VPC-SC domains (`dl.google.com`, `*.gstatic.com`, `packages.cloud.google.com`, `source.developers.google.com`) to `bypassResponsePolicy` because the `vpc-sc` bundle rejects non-VPC-SC services. Reach `dl.google.com` or `packages.cloud.google.com` by switching to `bundle = "all-apis"` or routing them through an explicit egress proxy or NGFW policy.
+- Enabling per-VPC PSC removes legacy `199.36.153.4/30` and `199.36.153.8/30` Google API routes from `vdss-landing-0` and spoke VPCs, scopes `landing-dns-policy-googleapis` to `vdss-landing-0`, and attaches a dedicated Private Google Access response policy (`module.vdss-mgmt-dmz-dns-policy-googleapis`) to `vdss-mgmt-0` and `vdss-dmz-0` after detaching them from `landing-dns-policy-googleapis` so `management-bastion` and NGFW bootstrap keep resolving Google APIs privately via `199.36.153.4/30` (`vpc-sc`) or `199.36.153.8/30` (`all-apis`).
+- Enabling `psc_google_apis.enabled = true` on a brownfield deployment triggers a ForceNew replacement of each spoke's root `.` DNS peering zone (`module.env-dns-peer-landing-root`) with `${organization.domain}.`, causing a brief DNS interruption during apply and dropping automatic peering for custom private DNS zones outside `${organization.domain}.` and `dns_forwarding_zones` unless you add dedicated peering zones for them.
+- Environment keys in `envs_folders` must produce unique 20-character PSC forwarding rule names when `psc_google_apis.enabled` is `true`.
+- DNS response policy rules that answer with a PSC endpoint IP read the IP from the `modules/net-address` PSC outputs, so Terraform creates or updates them only after the PSC forwarding rules exist.
+- To revert `psc_google_apis.enabled` from `true` to `false`, apply a two-step transition because a VPC network can bind to only one Cloud DNS response policy: run `terraform apply -destroy -target='module.vdss-mgmt-dmz-dns-policy-googleapis'` to detach the dedicated response policy from `vdss-mgmt-0` and `vdss-dmz-0`, then set `psc_google_apis.enabled = false` and run `terraform apply` so `landing-dns-policy-googleapis` binds to both VPCs again.
+
+Migrate legacy `dns_policy_rules` before enabling `psc_google_apis` on an existing deployment, because the landing, spoke, and `vdss-mgmt-0`/`vdss-dmz-0` response policies then load the rules factory together with `dns_policy_rules`:
+
+- Entries in `dns_policy_rules` override factory rules with the same key, so the Google API entries copied from `terraform.tfvars.sample` would keep Google API names on `private.googleapis.com.` and bypass the PSC endpoints and VPC Service Controls.
+- Plan fails when `psc_google_apis.enabled` is `true` and a `dns_policy_rules` entry reuses a factory rule key or `dns_name`, or points `local_data` at `private.googleapis.com.`, `restricted.googleapis.com.`, or their `199.36.153.4/30` and `199.36.153.8/30` VIPs.
+- Delete those Google API entries from `dns_policy_rules` in the same change that enables `psc_google_apis`, and keep only custom rules such as on-premises names. Leave them in place while `psc_google_apis.enabled` is `false`, because the default mode resolves Google APIs from `dns_policy_rules` alone.
+- To change Google API handling, copy `data/dns-policy-rules.yaml`, edit the copy, and set `factories_config.dns_policy_rules_file` to its path, or set `factories_config.data_dir` to a directory that contains `dns-policy-rules.yaml`.
+- An explicit `factories_config.dns_policy_rules_file` must point to an existing file, otherwise plan fails. When it is unset, the stage reads `<factories_config.data_dir>/dns-policy-rules.yaml` and falls back to the stage's `data/dns-policy-rules.yaml`. The stage reads the rules factory only when `psc_google_apis.enabled` is `true`.
+
+### Hybrid Cloud DNS forwarding
+
+Configure `dns_forwarding_zones` to create Cloud DNS forwarding zones in the VDSS host project for on-premises or cross-cloud domains:
+
+- Every zone domain must end with a trailing dot and cannot be the root domain `.` because a root forwarding zone breaks Compute Engine internal DNS resolution.
+- Every forwarder map key must be a valid IPv4 address paired with a `forwarding_path` of `default` or `private`.
+- When `psc_google_apis.enabled` is `true`, each environment spoke also receives a DNS peering zone to `vdss-landing-0` for every configured forwarding domain so spokes keep resolving hybrid names.
+
+### NGFW health checks and load balancers
+
+Customize dataplane probing and load balancer failover behavior with `ngfw_health_check` and `ngfw_ilb_config`:
+
+- By default, `ngfw_health_check` probes TCP port 22 with `enable_logging = null`, preserving `false` on the managed instance group and `true` on the internal load balancers for zero-diff upgrades. Set `enable_logging` explicitly to `true` or `false` to override logging on both the managed instance group and internal load balancers.
+- `ngfw_health_check.protocol` accepts only `TCP` or `HTTPS`. `templates/bootstrap.xml.tpl` disables HTTP on both dataplane interface management profiles, so HTTP probes would always fail and make managed instance group autohealing replace every NGFW.
+- Before switching `ngfw_health_check.protocol = "HTTPS"` with port 443 and `request_path = "/unauth/php/health.php"`, add TCP port 443 ingress firewall rules from `cidrs.healthchecks` on both `vdss` (`landing`) and `dmz` VPCs. Applying HTTPS health checks without TCP port 443 firewall rules causes Google health check probes to fail and mark every NGFW backend unhealthy.
+- Set `ngfw_ilb_config.persist_conn_on_unhealthy = "NEVER_PERSIST"` with optional `connection_draining_timeout_sec` and `failover_config` to drop stale sessions when an NGFW instance fails health checks.
+- Set `ngfw_ilb_config.trusted_static_ips` and `ngfw_ilb_config.untrusted_static_ips` keyed by region name or alias to reserve deterministic internal VIPs through `modules/net-address`.
+
+### NGFW STIG hardening and secrets
+
+Configure DISA STIG bootstrap defaults and write-only Secret Manager storage with `ngfw_stig_config` and `ngfw_admin_password_secret`:
+
+- Leaving `ngfw_stig_config = null` preserves legacy bootstrap defaults (`minimum-length` 12, `US/Pacific` timezone, and no login banner) with byte-for-byte parity in rendered `bootstrap.xml` and `init-cfg.txt`.
+- Setting `ngfw_stig_config` enforces a `min_password_length` of at least 16, defaults `timezone` to `UTC`, and renders an XML-escaped `login_banner` with acknowledgment when provided.
+- PAN-OS VM-Series FIPS-CC mode cannot be enabled through `init-cfg.txt`. Enable FIPS-CC mode post-boot through the PAN-OS CLI (`debug fips-cc on`) or the Maintenance Recovery Tool (MRT); activation triggers a factory reset and requires re-applying a FIPS-compliant running configuration.
+- Setting `ngfw_admin_password_secret.enabled = true` stores the generated administrator password in a regional CMEK-encrypted Secret Manager secret (`ngfw-admin-password` by default) using write-only secret versions (`wo_version`) and returns `null` from the legacy `ngfw_password` output. Although `wo_version` avoids a second copy in Secret Manager version state, `random_password.password` remains in Terraform state, so treat the Terraform state bucket as sensitive and restrict access strictly.
+- Write-only secret versions resend the password only when `wo_version` changes. Increment `ngfw_admin_password_secret.wo_version` in the same apply as any change that replaces `random_password.password`, such as raising `ngfw_stig_config.min_password_length` above 16 or running `terraform apply -replace=random_password.password`. Otherwise replacement NGFW instances boot with the new password from `bootstrap.xml` while Secret Manager keeps the previous one.
+
 ## 5 Palo Alto NGFW configuration
 
 ### Management console access
 
 Gather three prerequisites to reach the Palo Alto web management console:
 
-1. Retrieve the initial administrator password from Terraform outputs with `terraform output -json | jq ".ngfw_password.value.result"`.
+1. Retrieve the initial administrator password from Terraform outputs with `terraform output -json | jq ".ngfw_password.value.result"`, or from Secret Manager with `gcloud secrets versions access latest --secret=ngfw-admin-password --location=<region> --project=<vdss-host-project-id>` when `ngfw_admin_password_secret.enabled` is `true`.
 2. Start the `management-bastion` VM on the management network if it is stopped.
 3. Target the second network interface (`nic1`) attached to `prod-mgmt-0`, which is the only NGFW interface enabled for administration.
 
@@ -270,7 +335,7 @@ Open an Identity-Aware Proxy SSH tunnel through `management-bastion` in its depl
 gcloud compute ssh management-bastion --zone <ZONE> --tunnel-through-iap -- -L 8443:<ip-of-ngfw>:443
 ```
 
-Sign in at `https://localhost:8443/` with username `admin` and the password from Terraform outputs.
+Sign in at `https://localhost:8443/` with username `admin` and the password from Terraform outputs or Secret Manager.
 
 To connect to the NGFW over SSH from `management-bastion`, fetch the SSH private key from Secret Manager on the bastion host:
 
@@ -280,13 +345,13 @@ mkdir -p ~/.ssh && gcloud secrets versions access latest --secret=ngfw-ssh-priva
 
 ### Bootstrap XML updates
 
-After changing firewall settings in the Palo Alto console, export the running configuration archive from the Device Operations tab to extract `running-config.xml`, then merge your changes back into `templates/bootstrap.xml.tpl` while preserving five Terraform template expressions:
+After changing firewall settings in the Palo Alto console, export the running configuration archive from the Device Operations tab to extract `running-config.xml`, then merge your changes back into `templates/bootstrap.xml.tpl` while preserving the Terraform template expressions:
 
-- `password_hash` appears once near the top of `templates/bootstrap.xml.tpl`.
-- `ssh_pubkey` appears twice, once near the top and once near the middle of the template.
-- `healthcheck_cidrs` wraps a template loop from `%{ for` to `%{ endfor`.
-- `iap_cidrs` wraps a template loop from `%{ for` to `%{ endfor`.
+- `password_hash` and `min_password_length` appear under `mgt-config` near the top of `templates/bootstrap.xml.tpl`.
+- `ssh_pubkey` appears twice, once near the top and once under `initcfg`.
+- `healthcheck_cidrs`, `iap_cidrs`, and `enable_https_healthcheck` render inside the `ssh-healthcheck` interface management profile.
 - `return_routes` and `lz_gateway_ip` wrap the static-route template loop from `%{ for` to `%{ endfor`.
+- `timezone` and `login_banner` appear under `deviceconfig` and `system`.
 
 Terraform builds `return_routes` from every spoke subnet, secondary range, and proxy-only subnet, and the NGFW instance template tracks the hash of the rendered `bootstrap.xml` file. Adding or removing a spoke range causes the next `terraform apply` to create a new instance template and replace running NGFW instances through the managed instance group, dropping active connections on replaced instances and discarding any live NGFW changes not merged into `templates/bootstrap.xml.tpl`.
 
@@ -301,43 +366,57 @@ Run `pre-redeploy.sh` before redeploying this stage with the same `prefix` to im
 | [alert_email](variables.tf#L17) | Email to receive log alerts. | <code>string</code> | ✓ |  |
 | [automation](variables.tf#L33) | Automation resources created by the bootstrap stage. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [billing_account](variables.tf#L41) | Billing account id. If billing account is not part of the same org set `is_org_level` to false. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [envs_folders](variables.tf#L109) | List of environments to be created for projects to go into. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [folder_ids](variables.tf#L184) | Folders to be used for the networking resources in folders/nnnnnnnnnnn format. If null, folder will be created. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [organization](variables.tf#L219) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [prefix](variables.tf#L235) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
-| [regions](variables.tf#L279) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [tenant_accounts](variables.tf#L356) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [envs_folders](variables.tf#L169) | List of environments to be created for projects to go into. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [folder_ids](variables.tf#L256) | Folders to be used for the networking resources in folders/nnnnnnnnnnn format. If null, folder will be created. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [organization](variables.tf#L549) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [prefix](variables.tf#L565) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
+| [regions](variables.tf#L649) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [tenant_accounts](variables.tf#L726) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [assured_workloads](variables.tf#L22) | Configuration for Assured Workloads. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [billing_override](variables.tf#L54) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [cidrs](variables.tf#L63) | Named CIDR ranges to use in firewall rules. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [common_services_folder](variables.tf#L70) | Common services folder ID. | <code>string</code> |  | <code>null</code> |
 | [custom_roles](variables.tf#L76) | Custom roles defined at the org level, in key => id format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [dns](variables.tf#L85) | DNS configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [dns_policy_rules](variables.tf#L95) | DNS response policy rules in name => rule format. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [essential_contacts](variables.tf#L116) | Email or map of emails to notification category lists used for essential contacts, unset if null or empty. | <code>any</code> |  | <code>&#123;&#125;</code> |
-| [factories_config](variables.tf#L130) | Configuration for network resource factories. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
-| [fast_features](variables.tf#L147) | FAST features enabled. | <code>any</code> |  | <code>null</code> |
-| [firewall_rules](variables.tf#L153) | Firewall rules for each VPC / environment spoke. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [force_destroy](variables.tf#L193) | Toggles force_destroy for GCS buckets. | <code>bool</code> |  | <code>false</code> |
-| [groups](variables.tf#L199) | IAM groups mapping. | <code>any</code> |  | <code>null</code> |
-| [kms_protection_level](variables.tf#L205) | KMS protection level. | <code>string</code> |  | <code>null</code> |
-| [logging](variables.tf#L213) | Logging configuration. | <code>any</code> |  | <code>null</code> |
-| [outputs_location](variables.tf#L229) | Path where providers and tfvars files for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
-| [proxy_subnets](variables.tf#L246) | VPC proxy-only subnet CIDRs keyed by environment. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [psa_ranges](variables.tf#L253) | IP ranges used for Private Service Access (e.g. CloudSQL). Ranges is in name => range format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [regime_mapping](variables.tf#L273) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
-| [service_accounts](variables.tf#L287) | Automation service accounts in name => email format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
-| [spoke_project_iam](variables.tf#L301) | Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [subnets](variables.tf#L308) | VPC subnet configurations keyed by network name. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [vmseries_image](variables.tf#L370) | The image name from which to boot an instance, including a license type (bundle/flex) and version. | <code>string</code> |  | <code>&#34;vmseries-112&#34;</code> |
+| [dns_forwarding_zones](variables.tf#L95) | Optional hybrid Cloud DNS forwarding zones created in the VDSS host project, keyed by zone name suffix. Root domain '.' is forbidden because it breaks Compute Engine internal DNS. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [dns_policy_rules](variables.tf#L131) | DNS response policy rules in name => rule format. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [essential_contacts](variables.tf#L176) | Email or map of emails to notification category lists used for essential contacts, unset if null or empty. | <code>any</code> |  | <code>&#123;&#125;</code> |
+| [factories_config](variables.tf#L190) | Configuration for network resource factories. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [fast_features](variables.tf#L219) | FAST features enabled. | <code>any</code> |  | <code>null</code> |
+| [firewall_rules](variables.tf#L225) | Firewall rules for each VPC / environment spoke. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [force_destroy](variables.tf#L265) | Toggles force_destroy for GCS buckets. | <code>bool</code> |  | <code>false</code> |
+| [groups](variables.tf#L271) | IAM groups mapping. | <code>any</code> |  | <code>null</code> |
+| [kms_protection_level](variables.tf#L277) | KMS protection level. | <code>string</code> |  | <code>null</code> |
+| [logging](variables.tf#L285) | Logging configuration. | <code>any</code> |  | <code>null</code> |
+| [ncc_hubs](variables.tf#L291) | Network Connectivity Center hubs, groups, and spokes in hub_name => config format, merged with YAML definitions from factories_config.ncc_hubs. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [ngfw_admin_password_secret](variables.tf#L418) | Opt-in NGFW password secret; raise wo_version on rotation. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [ngfw_health_check](variables.tf#L452) | Health check configuration for NGFW managed instance groups and internal load balancers. Defaults to TCP port 22 for backward compatibility; set protocol to HTTPS with port 443 and request_path /unauth/php/health.php for dataplane health probing after adding TCP/443 health check firewall rules on landing and dmz. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [ngfw_ilb_config](variables.tf#L488) | Optional internal passthrough load balancer hardening and static VIP configuration for the NGFW trusted landing and untrusted DMZ frontends. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [ngfw_stig_config](variables.tf#L525) | Optional DISA STIG hardening settings for the Palo Alto NGFW bootstrap XML template. Leave null to keep legacy defaults. FIPS-CC mode requires post-boot CLI or MRT activation rather than bootstrap files. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [outputs_location](variables.tf#L559) | Path where providers and tfvars files for the following stages are written. Leave empty to disable. | <code>string</code> |  | <code>null</code> |
+| [proxy_subnets](variables.tf#L576) | VPC proxy-only subnet CIDRs keyed by environment. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
+| [psa_ranges](variables.tf#L583) | IP ranges used for Private Service Access (e.g. CloudSQL). Ranges is in name => range format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [psc_google_apis](variables.tf#L603) | Optional per-VPC Private Service Connect endpoints for Google APIs created in the landing hub VPC and environment spoke VPCs. Defaults Service Directory registration to regions.primary when service_directory_registration or its region is unset. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [regime_mapping](variables.tf#L643) | Compliance regime shorthand mapping. | <code>any</code> |  | <code>null</code> |
+| [service_accounts](variables.tf#L657) | Automation service accounts in name => email format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [spoke_project_iam](variables.tf#L671) | Additional authoritative IAM bindings for environment spoke host projects, keyed by environment name (for example dev or prod) and role. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [subnets](variables.tf#L678) | VPC subnet configurations keyed by network name. | <code>map&#40;list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [transit_mode](variables.tf#L737) | Spoke-to-landing transit mode: peering for classic VPC peering or ncc for Network Connectivity Center. | <code>string</code> |  | <code>&#34;peering&#34;</code> |
+| [vmseries_image](variables.tf#L751) | The image name from which to boot an instance, including a license type (bundle/flex) and version. | <code>string</code> |  | <code>&#34;vmseries-112&#34;</code> |
 
 ## Outputs
 
 | name | description | sensitive |
 |---|---|:---:|
-| [host_project_ids](outputs.tf#L64) | Network project ids. |  |
-| [host_project_numbers](outputs.tf#L69) | Network project numbers. |  |
-| [ngfw_password](outputs.tf#L74) | Password for authenticating to the NGFW. | ✓ |
-| [ngfw_ssh_private_key_secret_id](outputs.tf#L80) | Secret Manager secret ID storing the NGFW SSH private key. |  |
-| [tfvars](outputs.tf#L85) | Terraform variables file for the following stages. | ✓ |
+| [dns_forwarding_zones](outputs.tf#L123) | Optional hybrid Cloud DNS forwarding zones created in the VDSS host project. |  |
+| [host_project_ids](outputs.tf#L128) | Network project ids. |  |
+| [host_project_numbers](outputs.tf#L133) | Network project numbers. |  |
+| [ncc_groups](outputs.tf#L138) | Network Connectivity Center group IDs keyed by hub/group. |  |
+| [ncc_hubs](outputs.tf#L143) | Network Connectivity Center hub IDs keyed by hub name. |  |
+| [ncc_spokes](outputs.tf#L148) | Network Connectivity Center spoke IDs grouped by spoke type. |  |
+| [ngfw_admin_password_secret_id](outputs.tf#L153) | Regional Secret Manager secret ID storing the NGFW administrator password when ngfw_admin_password_secret.enabled is true. |  |
+| [ngfw_password](outputs.tf#L161) | Password for authenticating to the NGFW. Returns null when ngfw_admin_password_secret.enabled is true. | ✓ |
+| [ngfw_ssh_private_key_secret_id](outputs.tf#L167) | Secret Manager secret ID storing the NGFW SSH private key. |  |
+| [psc_google_apis_endpoints](outputs.tf#L172) | Per-VPC Private Service Connect Google APIs endpoint addresses and forwarding rules. |  |
+| [tfvars](outputs.tf#L177) | Terraform variables file for the following stages. | ✓ |
 <!-- END TFDOC -->
