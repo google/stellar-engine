@@ -12,11 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+locals {
+  raw_acm_prefix = replace(var.prefix, "-", "_")
+  acm_prefix     = can(regex("^[a-zA-Z]", local.raw_acm_prefix)) ? local.raw_acm_prefix : "p_${local.raw_acm_prefix}"
+  strict_device_levels = (
+    length(var.strict_device_access_levels) > 0
+    ? var.strict_device_access_levels
+    : concat(
+      google_access_context_manager_access_level.us[*].name,
+      google_access_context_manager_access_level.ip_based_access[*].name,
+      google_access_context_manager_access_level.time[*].name,
+      google_access_context_manager_access_level.expire[*].name,
+    )
+  )
+}
+
 # Access level for allowlisted source IP ranges
 resource "google_access_context_manager_access_level" "ip_based_access" {
   count  = var.access_policy_number != "" && length(var.allowed_ip_ranges) > 0 && var.create_ip_based_access ? 1 : 0
   parent = "accessPolicies/${var.access_policy_number}"
-  name   = "accessPolicies/${var.access_policy_number}/accessLevels/ip_based_access"
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/${local.acm_prefix}_ip_based_access"
   title  = "IP-Based Access Control"
   basic {
     conditions {
@@ -29,7 +44,7 @@ resource "google_access_context_manager_access_level" "ip_based_access" {
 resource "google_access_context_manager_access_level" "us" {
   count  = var.access_policy_number != "" && var.create_us_access ? 1 : 0
   parent = "accessPolicies/${var.access_policy_number}"
-  name   = "accessPolicies/${var.access_policy_number}/accessLevels/us"
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/${local.acm_prefix}_us"
   title  = "US Traffic Source IP"
   basic {
     conditions {
@@ -44,7 +59,7 @@ resource "google_access_context_manager_access_level" "us" {
 resource "google_access_context_manager_access_level" "time" {
   count  = var.access_policy_number != "" && var.create_time_access ? 1 : 0
   parent = "accessPolicies/${var.access_policy_number}"
-  name   = "accessPolicies/${var.access_policy_number}/accessLevels/time"
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/${local.acm_prefix}_time"
   title  = "Business Hours (${var.access_time_zone})"
   custom {
     expr {
@@ -58,7 +73,7 @@ resource "google_access_context_manager_access_level" "time" {
 resource "google_access_context_manager_access_level" "expire" {
   count  = var.access_policy_number != "" && var.create_expire_access ? 1 : 0
   parent = "accessPolicies/${var.access_policy_number}"
-  name   = "accessPolicies/${var.access_policy_number}/accessLevels/expire"
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/${local.acm_prefix}_expire"
   title  = "Expire Access 2026"
   custom {
     expr {
@@ -67,25 +82,28 @@ resource "google_access_context_manager_access_level" "expire" {
   }
 }
 
-# Access level for "Lenient" policies, limiting access to only the US Region.
+# Access level for "Lenient" policies, limiting access to configured conditions.
 resource "google_access_context_manager_access_level" "lenient_device" {
-  count  = var.access_policy_number != "" && var.create_lenient_device_access ? 1 : 0
+  count  = var.access_policy_number != "" && var.create_lenient_device_access && length(var.lenient_device_access_levels) > 0 ? 1 : 0
   parent = "accessPolicies/${var.access_policy_number}"
-  name   = "accessPolicies/${var.access_policy_number}/accessLevels/lenient_device"
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/${local.acm_prefix}_lenient_device"
   title  = "Lenient Device Policy"
   basic {
     conditions {
       required_access_levels = var.lenient_device_access_levels
     }
   }
-  depends_on = [google_access_context_manager_access_level.us]
+  depends_on = [
+    google_access_context_manager_access_level.us,
+    google_access_context_manager_access_level.ip_based_access,
+  ]
 }
 
-# Access level for "Moderate" policies, limiting access to only the US Region, Time (7AM-9PM Monday-Friday) & Expiring Access after a date (example: by end of 2027).
+# Access level for "Moderate" policies, combining configured location/time conditions.
 resource "google_access_context_manager_access_level" "moderate_device" {
-  count  = var.access_policy_number != "" && var.create_moderate_device_access ? 1 : 0
+  count  = var.access_policy_number != "" && var.create_moderate_device_access && length(var.moderate_device_access_levels) > 0 ? 1 : 0
   parent = "accessPolicies/${var.access_policy_number}"
-  name   = "accessPolicies/${var.access_policy_number}/accessLevels/moderate_device"
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/${local.acm_prefix}_moderate_device"
   title  = "Moderate Device Policy"
   basic {
     conditions {
@@ -94,20 +112,21 @@ resource "google_access_context_manager_access_level" "moderate_device" {
   }
   depends_on = [
     google_access_context_manager_access_level.us,
+    google_access_context_manager_access_level.ip_based_access,
     google_access_context_manager_access_level.time,
     google_access_context_manager_access_level.expire
   ]
 }
 
-# Access level for "strict" service, including Mac/Windows OS, Encryption enabled, Corp owned device, Expiring Access by end of 2024, Time (7AM-9PM Monday-Friday), & US Region.
+# Access level for "strict" device policies with optional location/time/expiry conditions.
 resource "google_access_context_manager_access_level" "strict_device" {
   count  = var.access_policy_number != "" && var.enable_chrome_enterprise_premium && var.create_strict_device_access ? 1 : 0
   parent = "accessPolicies/${var.access_policy_number}"
-  name   = "accessPolicies/${var.access_policy_number}/accessLevels/strict_device"
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/${local.acm_prefix}_strict_device"
   title  = "Strict Device Policy"
   basic {
     conditions {
-      required_access_levels = ["accessPolicies/${var.access_policy_number}/accessLevels/us", "accessPolicies/${var.access_policy_number}/accessLevels/time", "accessPolicies/${var.access_policy_number}/accessLevels/expire"]
+      required_access_levels = length(local.strict_device_levels) > 0 ? local.strict_device_levels : null
       device_policy {
         require_screen_lock = true
         os_constraints {
@@ -126,6 +145,7 @@ resource "google_access_context_manager_access_level" "strict_device" {
   }
   depends_on = [
     google_access_context_manager_access_level.us,
+    google_access_context_manager_access_level.ip_based_access,
     google_access_context_manager_access_level.time,
     google_access_context_manager_access_level.expire
   ]

@@ -35,6 +35,10 @@ locals {
     "secretmanager.googleapis.com"
   ]
 
+  analytics_services = var.enable_analytics ? [
+    "artifactregistry.googleapis.com",
+  ] : []
+
   restricted_services = [
     "beyondcorp.googleapis.com",
     "certificatemanager.googleapis.com",
@@ -43,6 +47,7 @@ locals {
 
   enabled_services = concat(
     local.base_services,
+    local.analytics_services,
     !contains(["IL4", "IL5"], var.compliance_regime) ? local.restricted_services : []
   )
 }
@@ -100,6 +105,18 @@ resource "google_project_service_identity" "iap" {
   provider = google-beta
   project  = var.main_project_id
   service  = "iap.googleapis.com"
+
+  depends_on = [
+    google_project_service.services,
+    time_sleep.wait_for_services
+  ]
+}
+
+resource "google_project_service_identity" "artifactregistry" {
+  count    = var.enable_analytics ? 1 : 0
+  provider = google-beta
+  project  = var.main_project_id
+  service  = "artifactregistry.googleapis.com"
 
   depends_on = [
     google_project_service.services,

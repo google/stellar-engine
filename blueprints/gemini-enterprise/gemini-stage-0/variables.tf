@@ -104,6 +104,12 @@ variable "allowed_ip_ranges" {
   default     = []
 }
 
+variable "analytics_kms_key_id" {
+  description = "Optional regional Cloud KMS key resource ID in var.region for encrypting the Analytics Artifact Registry repository when enable_analytics is true."
+  type        = string
+  default     = null
+}
+
 variable "bq_data_store_configs" {
   description = "A map of configurations for BigQuery Data Stores. If create_dataset is true, it creates the dataset. Schema provides the structure for the data."
   type = map(object({
@@ -261,6 +267,16 @@ variable "gcs_data_store_configs" {
   default = {}
 }
 
+variable "gcs_lifecycle_delete_age_days" {
+  description = "Optional age in days after which objects in Terraform-managed GCS data store buckets are deleted. Null disables object expiration lifecycle rules."
+  type        = number
+  default     = null
+  validation {
+    condition     = var.gcs_lifecycle_delete_age_days == null || var.gcs_lifecycle_delete_age_days > 0
+    error_message = "gcs_lifecycle_delete_age_days must be null or a positive number of days."
+  }
+}
+
 variable "gemini_apps" {
   description = "A map of Gemini Enterprise Search Application configurations."
   type = map(object({
@@ -270,7 +286,7 @@ variable "gemini_apps" {
     bq_data_store_keys                    = optional(list(string), [])
     external_data_store_ids               = optional(list(string), [])
     enable_agent_sharing                  = optional(bool, false)
-    enable_agent_sharing_without_approval = optional(bool, true)
+    enable_agent_sharing_without_approval = optional(bool, false)
     enable_audit_logs                     = optional(bool, false)
     enable_model_armor                    = optional(bool, false)
   }))
@@ -351,6 +367,12 @@ variable "shared_vpc_subnet_name" {
   description = "The name of the existing subnetwork to use. Required if use_shared_vpc is true."
   type        = string
   default     = ""
+}
+
+variable "strict_device_access_levels" {
+  description = "List of Access Levels to include in the Strict Device Policy."
+  type        = list(string)
+  default     = []
 }
 
 variable "tenant" {

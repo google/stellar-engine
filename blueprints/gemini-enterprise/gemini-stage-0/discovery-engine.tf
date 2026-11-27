@@ -13,7 +13,6 @@
 # limitations under the License.
 
 locals {
-  gcs_lifecycle_age              = 30
   bq_connector_refresh_interval  = "86400s" # Daily
   wait_for_bq_datastore_duration = "120s"
 
@@ -72,12 +71,15 @@ resource "google_storage_bucket" "gemini_enterprise_gcs_bucket" {
     }
   }
 
-  lifecycle_rule {
-    condition {
-      age = local.gcs_lifecycle_age # Example: delete objects older than 30 days
-    }
-    action {
-      type = "Delete"
+  dynamic "lifecycle_rule" {
+    for_each = var.gcs_lifecycle_delete_age_days != null ? [var.gcs_lifecycle_delete_age_days] : []
+    content {
+      condition {
+        age = lifecycle_rule.value
+      }
+      action {
+        type = "Delete"
+      }
     }
   }
 
@@ -94,14 +96,16 @@ resource "google_storage_bucket" "gemini_enterprise_gcs_bucket" {
 
 # Grant Discovery Engine service agent read access to GCS corpus buckets
 resource "google_storage_bucket_iam_member" "corpus_bucket_discovery_engine" {
-  for_each = var.create_data_stores ? { for k, v in var.gcs_data_store_configs : k => v if v.create_bucket } : {}
+  for_each = var.create_data_stores ? var.gcs_data_store_configs : {}
 
-  bucket = google_storage_bucket.gemini_enterprise_gcs_bucket[each.key].name
+  bucket = each.value.create_bucket ? google_storage_bucket.gemini_enterprise_gcs_bucket[each.key].name : each.value.name
   role   = "roles/storage.objectViewer"
   member = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-discoveryengine.iam.gserviceaccount.com"
 
   depends_on = [
-    google_storage_bucket.gemini_enterprise_gcs_bucket
+    google_storage_bucket.gemini_enterprise_gcs_bucket,
+    google_project_service_identity.discoveryengine,
+    time_sleep.wait_for_services,
   ]
 }
 
@@ -265,6 +269,14 @@ resource "google_discovery_engine_search_engine" "gemini_enterprise_search_engin
     search_tier                = "SEARCH_TIER_ENTERPRISE"
     required_subscription_tier = "SUBSCRIPTION_TIER_SEARCH_AND_ASSISTANT"
     search_add_ons             = ["SEARCH_ADD_ON_LLM"]
+  }
+
+  dynamic "knowledge_graph_config" {
+    for_each = contains(["FEDRAMP_HIGH", "IL4", "IL5"], var.compliance_regime) ? [1] : []
+    content {
+      enable_private_knowledge_graph = false
+      enable_cloud_knowledge_graph   = false
+    }
   }
 
   # Merge base features with app-specific overrides and compliance restrictions

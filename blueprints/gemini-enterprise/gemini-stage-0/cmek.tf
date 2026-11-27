@@ -13,8 +13,20 @@
 # limitations under the License.
 
 locals {
-  # Final CMEK Key ID - Only explicitly set if we are enabling Data Store CMEK
-  cmek_key_id = var.enable_data_store_cmek ? var.kms_key_id : null
+  raw_us_kms_key_id = (
+    var.kms_key_id != null && trimspace(var.kms_key_id) != ""
+    ? trimspace(var.kms_key_id)
+    : null
+  )
+  # Final CMEK Key ID - Only explicitly set when Data Store CMEK is enabled and a key is supplied
+  cmek_key_id             = var.enable_data_store_cmek ? local.raw_us_kms_key_id : null
+  analytics_bq_kms_key_id = var.enable_analytics ? local.raw_us_kms_key_id : null
+  bq_kms_key_id           = local.cmek_key_id != null ? local.cmek_key_id : local.analytics_bq_kms_key_id
+  analytics_ar_kms_key_id = (
+    var.enable_analytics && var.analytics_kms_key_id != null && trimspace(var.analytics_kms_key_id) != ""
+    ? trimspace(var.analytics_kms_key_id)
+    : null
+  )
 }
 
 # ---------------------------------------------------------------------------- #
@@ -23,7 +35,7 @@ locals {
 
 # Grant Discovery Engine Service Agent access
 resource "google_kms_crypto_key_iam_member" "discoveryengine_sa_kms_access" {
-  count         = var.enable_data_store_cmek ? 1 : 0
+  count         = local.cmek_key_id != null ? 1 : 0
   crypto_key_id = local.cmek_key_id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-discoveryengine.iam.gserviceaccount.com"
@@ -36,7 +48,7 @@ resource "google_kms_crypto_key_iam_member" "discoveryengine_sa_kms_access" {
 
 # Grant Cloud Storage Service Agent access
 resource "google_kms_crypto_key_iam_member" "gcs_sa_kms_access" {
-  count         = var.enable_data_store_cmek ? 1 : 0
+  count         = local.cmek_key_id != null ? 1 : 0
   crypto_key_id = local.cmek_key_id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = "serviceAccount:service-${data.google_project.project.number}@gs-project-accounts.iam.gserviceaccount.com"
@@ -49,13 +61,26 @@ resource "google_kms_crypto_key_iam_member" "gcs_sa_kms_access" {
 
 # Grant BigQuery Service Agent access
 resource "google_kms_crypto_key_iam_member" "bq_sa_kms_access" {
-  count         = var.enable_data_store_cmek ? 1 : 0
-  crypto_key_id = local.cmek_key_id
+  count         = local.bq_kms_key_id != null ? 1 : 0
+  crypto_key_id = local.bq_kms_key_id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = "serviceAccount:bq-${data.google_project.project.number}@bigquery-encryption.iam.gserviceaccount.com"
 
   depends_on = [
     google_project_service_identity.bigquery,
+    time_sleep.wait_for_services
+  ]
+}
+
+# Grant Artifact Registry Service Agent access for regional Analytics repository CMEK
+resource "google_kms_crypto_key_iam_member" "artifactregistry_sa_kms_access" {
+  count         = local.analytics_ar_kms_key_id != null ? 1 : 0
+  crypto_key_id = local.analytics_ar_kms_key_id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-artifactregistry.iam.gserviceaccount.com"
+
+  depends_on = [
+    google_project_service_identity.artifactregistry,
     time_sleep.wait_for_services
   ]
 }

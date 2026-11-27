@@ -258,6 +258,11 @@ data "google_compute_subnetwork" "gemini_enterprise_vpc_subnet" {
 
 # --- IAP Access Roles ---
 # Grant a user or group access through IAP.
+locals {
+  iap_admin_access_level = try(data.terraform_remote_state.stage_0.outputs.iap_admin_access_level, null)
+  iap_user_access_level  = try(data.terraform_remote_state.stage_0.outputs.iap_user_access_level, null)
+}
+
 resource "google_iap_web_region_backend_service_iam_member" "iap_admin" {
   count                      = data.terraform_remote_state.stage_0.outputs.deployment_type != "none" ? 1 : 0
   project                    = data.terraform_remote_state.stage_0.outputs.main_project_id
@@ -265,10 +270,14 @@ resource "google_iap_web_region_backend_service_iam_member" "iap_admin" {
   web_region_backend_service = data.google_compute_region_backend_service.gemini_enterprise_backend[0].name
   role                       = "roles/iap.httpsResourceAccessor"
   member                     = data.terraform_remote_state.stage_0.outputs.admin_group
-  condition {
-    title       = "Admin Access"
-    description = data.terraform_remote_state.stage_0.outputs.enable_chrome_enterprise_premium ? "Access for Admins with Strict Device Policy" : "Access for Admins with Moderate Policy"
-    expression  = data.terraform_remote_state.stage_0.outputs.enable_chrome_enterprise_premium ? format("\"accessPolicies/%s/accessLevels/strict_device\" in request.auth.access_levels", data.terraform_remote_state.stage_0.outputs.access_policy_number) : format("\"accessPolicies/%s/accessLevels/moderate_device\" in request.auth.access_levels", data.terraform_remote_state.stage_0.outputs.access_policy_number)
+
+  dynamic "condition" {
+    for_each = local.iap_admin_access_level != null && trimspace(local.iap_admin_access_level) != "" ? [1] : []
+    content {
+      title       = "Admin Access"
+      description = data.terraform_remote_state.stage_0.outputs.enable_chrome_enterprise_premium ? "Access for Admins with Strict Device Policy" : "Access for Admins with Moderate Policy"
+      expression  = format("\"%s\" in request.auth.access_levels", local.iap_admin_access_level)
+    }
   }
 }
 
@@ -279,9 +288,13 @@ resource "google_iap_web_region_backend_service_iam_member" "iap_user" {
   web_region_backend_service = data.google_compute_region_backend_service.gemini_enterprise_backend[0].name
   role                       = "roles/iap.httpsResourceAccessor"
   member                     = each.value
-  condition {
-    title       = "User Access"
-    description = data.terraform_remote_state.stage_0.outputs.enable_chrome_enterprise_premium ? "Access for Users with Moderate Device Policy" : "Access for Users with Basic Policy"
-    expression  = data.terraform_remote_state.stage_0.outputs.enable_chrome_enterprise_premium ? format("\"accessPolicies/%s/accessLevels/moderate_device\" in request.auth.access_levels", data.terraform_remote_state.stage_0.outputs.access_policy_number) : format("\"accessPolicies/%s/accessLevels/lenient_device\" in request.auth.access_levels", data.terraform_remote_state.stage_0.outputs.access_policy_number)
+
+  dynamic "condition" {
+    for_each = local.iap_user_access_level != null && trimspace(local.iap_user_access_level) != "" ? [1] : []
+    content {
+      title       = "User Access"
+      description = data.terraform_remote_state.stage_0.outputs.enable_chrome_enterprise_premium ? "Access for Users with Moderate Device Policy" : "Access for Users with Basic Policy"
+      expression  = format("\"%s\" in request.auth.access_levels", local.iap_user_access_level)
+    }
   }
 }
