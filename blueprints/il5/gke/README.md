@@ -28,10 +28,11 @@ Ensure the following projects, network ranges, keys, and IAM bindings exist befo
 - Attach `main_project_id` to `landing_project_id` as a Shared VPC service project.
 - Configure the target Shared VPC subnet with two secondary IP CIDR ranges dedicated to GKE Pods and GKE Services.
 - Provision the Cloud KMS key ring and CryptoKey in `core_project_id` in the target `gcp_region`.
-- Grant required IAM roles across all three projects:
-  - On `main_project_id`, grant the deploying identity `roles/container.admin` and `roles/iam.serviceAccountAdmin`.
-  - On `landing_project_id`, grant `roles/compute.networkUser` on the target subnet to the `main_project_id` GKE service agent, Google APIs service agent, and Compute Engine service agent, and grant `roles/container.hostServiceAgentUser` to the `main_project_id` GKE service agent.
-  - On `core_project_id`, grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` on the KMS CryptoKey to the `main_project_id` GKE service agent and Compute Engine service agent.
+- Grant required IAM roles to the deploying identity across all three projects (`main.tf` enables APIs on all three projects and creates cross-project IAM bindings and firewall rules):
+  - On `main_project_id`, grant `roles/container.admin`, `roles/compute.instanceAdmin.v1`, `roles/compute.storageAdmin`, `roles/iam.serviceAccountAdmin`, `roles/iam.serviceAccountUser`, and `roles/serviceusage.serviceUsageAdmin`.
+  - On `landing_project_id`, grant `roles/serviceusage.serviceUsageAdmin`, `roles/compute.securityAdmin`, `roles/compute.networkUser`, and `roles/resourcemanager.projectIamAdmin` so Terraform can create the node-to-master firewall rule and grant `roles/container.hostServiceAgentUser` to the `main_project_id` GKE service agent and `roles/compute.networkUser` to the `main_project_id` GKE and Google APIs (`@cloudservices.gserviceaccount.com`) service agents.
+  - On `core_project_id`, grant `roles/serviceusage.serviceUsageAdmin`, `roles/cloudkms.viewer`, and `roles/cloudkms.admin` (or a custom role with `cloudkms.cryptoKeys.getIamPolicy` and `cloudkms.cryptoKeys.setIamPolicy`) so Terraform can grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` on the KMS CryptoKey to the `main_project_id` GKE and Compute Engine service agents.
+- To connect to the bastion VM over Identity-Aware Proxy, ensure `landing_project_id` permits TCP `22` ingress from `35.235.240.0/20` (for example through Stage 2 firewall policies) and grant the operator `roles/iap.tunnelResourceAccessor` and OS Login access, because this blueprint only creates the node-to-master firewall rule.
 
 ## 3 Compliance scope
 
