@@ -109,7 +109,8 @@ cat > "${WORK_DIR}/1-resman.auto.tfvars.json" << EOF
     "sandbox": "sandbox-0@${SA_DOMAIN}",
     "security": "sec-0@${SA_DOMAIN}",
     "security-r": "sec-0r@${SA_DOMAIN}",
-    "team-alpha": "team-alpha-0@${SA_DOMAIN}"
+    "team-alpha": "team-alpha-0@${SA_DOMAIN}",
+    "tenant-core-prod-alpha": "tn-prod-alpha-prod-0@${SA_DOMAIN}"
   }
 }
 EOF
@@ -145,7 +146,7 @@ DEPLOYED_ACCOUNTS=(
   dp-dev-0 dp-dev-0r dp-prod-0 dp-prod-0r
   gke-dev-0 gke-dev-0r
   pf-dev-0 pf-dev-0r pf-prod-0 pf-prod-0r
-  envs-0 sandbox-0 team-alpha-0
+  envs-0 sandbox-0 team-alpha-0 tn-prod-alpha-prod-0
 )
 
 # 1. The default run disables every deployed account and skips null and
@@ -286,6 +287,32 @@ assert_equals "default run without an envs key exits successfully" \
 assert_equals "default run without an envs key disables the other accounts" \
   "iam service-accounts disable pfx-prod-resman-net-0@${ENVS_DOMAIN} --project=pfx-prod-iac-core-0 --quiet" \
   "$LOCKDOWN_CALLS"
+
+# 12. The tenant-core-<env>-<tenant> name targets core tenant accounts directly
+# and appears in usage help.
+cat > "${ENVS_DIR}/1-resman.auto.tfvars.json" << EOF
+{
+  "service_accounts": {
+    "networking": "pfx-prod-resman-net-0@${ENVS_DOMAIN}",
+    "tenant-core-prod-alpha": "pfx-tn-prod-alpha-prod-0@${ENVS_DOMAIN}"
+  }
+}
+EOF
+run_lockdown --sa "tenant-core-prod-alpha"
+assert_equals "--sa tenant-core-prod-alpha exits successfully" \
+  "0" "$LOCKDOWN_STATUS"
+assert_equals "--sa tenant-core-prod-alpha disables only that core tenant account" \
+  "iam service-accounts disable pfx-tn-prod-alpha-prod-0@${ENVS_DOMAIN} --project=pfx-prod-iac-core-0 --quiet" \
+  "$LOCKDOWN_CALLS"
+
+run_lockdown --enable --sa "tenant-core-prod-alpha"
+assert_equals "--enable --sa tenant-core-prod-alpha enables only that core tenant account" \
+  "iam service-accounts enable pfx-tn-prod-alpha-prod-0@${ENVS_DOMAIN} --project=pfx-prod-iac-core-0 --quiet" \
+  "$LOCKDOWN_CALLS"
+
+run_lockdown --help
+assert_contains "usage text lists tenant-core-<env>-<tenant> as a valid name" \
+  "tenant-core-<env>-<tenant>" "$LOCKDOWN_OUTPUT"
 
 echo ""
 echo "Summary: ${TEST_COUNT} tests run, ${FAIL_COUNT} failures."
