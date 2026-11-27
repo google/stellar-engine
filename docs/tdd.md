@@ -99,13 +99,10 @@ This document serves as an illustrative technical working reference to guide pro
     - [Data management](#data-management)
       - [Sensitive data inspection](#sensitive-data-inspection)
   - [5.8 Vulnerability management](#58-vulnerability-management)
-    - [Rapid Vulnerability Detection](#rapid-vulnerability-detection)
-    - [Supported scan targets](#supported-scan-targets)
-    - [Managed scans](#managed-scans)
-    - [Service enablement](#service-enablement)
-      - [Testing](#testing)
-      - [Reviewing findings](#reviewing-findings)
-      - [Viewing findings](#viewing-findings)
+    - [OS and host vulnerability scanning](#os-and-host-vulnerability-scanning)
+    - [Container and artifact scanning](#container-and-artifact-scanning)
+    - [Security Command Center posture and threat findings](#security-command-center-posture-and-threat-findings)
+    - [Regime scanning requirements](#regime-scanning-requirements)
 <!-- END TOC -->
 
 ## 1. Purpose
@@ -822,12 +819,10 @@ Use [Cloud Key Management Service](https://cloud.google.com/kms/) whenever workl
 Cloud Storage addresses buckets and objects by name, allowing external callers to infer bucket or object existence from error responses even when ACLs and IAM policies deny access. Apply these naming and access controls to protect bucket metadata and stored objects:
 
 - Include random suffixes in bucket names such as `stellar-engine-mybucket-gxl3` so unauthorized parties cannot guess or enumerate bucket names.
-- Configure [default object ACLs](https://cloud.google.com/storage/docs/access-control#default) or uniform bucket-level access before uploading objects to avoid retroactive per-object permission updates.
-- Account for independent bucket and object ACLs when legacy fine-grained ACLs are enabled, because granting `GroupA` bucket listing permissions and `GroupB` object read permissions lets `GroupB` read a known object without listing the bucket.
-- Segregate public assets into dedicated, clearly labeled buckets such as `stellar-engine-mybucket-public-3vxa` rather than mixing public and private objects.
-- Verify access controls carefully before marking any object publicly readable, because internet-published objects can be copied immediately outside your control.
-- Avoid granting public write permissions on Cloud Storage buckets, because publicly writable buckets invite abuse, malware distribution, and legal or financial liability for hosted content.
-- Issue [signed URLs](https://cloud.google.com/storage/docs/access-control/signed-urls) with explicit read, write, or delete scope and short expiration windows whenever external users without Google accounts need temporary access to specific objects.
+- Enforce `constraints/storage.uniformBucketLevelAccess` (`true`) across all projects so Cloud IAM governs bucket and object permissions uniformly and legacy fine-grained object ACLs remain disabled.
+- Enforce `constraints/storage.publicAccessPrevention` (`true`) and `constraints/iam.allowedPolicyMemberDomains` so buckets and objects never permit `allUsers` or `allAuthenticatedUsers` read or write access.
+- Enforce `constraints/storage.secureHttpTransport` (`true`) to require HTTPS transport for every Cloud Storage request, and apply CMEK keys where mandated by the workload regime.
+- Issue [signed URLs](https://cloud.google.com/storage/docs/access-control/signed-urls) with explicit read or write scope and short expiration windows only where approved temporary external access is required outside restricted buckets.
 
 #### Data residency
 
@@ -867,24 +862,24 @@ Enable network and provider access telemetry alongside Cloud Audit Logs:
 
 #### Log destinations
 
-Export audit and network logs without expiration to centralized retention sinks in BigQuery, Cloud Storage, or Pub/Sub.
+Stage `0-bootstrap` defines four organization log sinks (`audit-logs`, `vpc-sc`, `workspace-audit-logs`, and `empty-audit-logs`) in `var.log_sinks` that route audit and VPC Service Controls logs by default into dedicated Cloud Logging buckets inside `<prefix>-prod-audit-logs-0` (`logging_bucket_retention = 365` days) protected by CMEK. Where long-term archival beyond 365 days or external SIEM forwarding is required, configure additional sinks targeting Cloud Storage, BigQuery, or Pub/Sub via `var.log_sinks`.
 
-When routing logs to a destination in another project, grant destination write permissions to the log sink writer identity service account, and authorize that writer identity in any VPC Service Controls perimeters or access policies protecting the destination project.
+When routing logs to a destination in another project, grant destination write permissions to the log sink writer identity service account, and authorize that writer identity in VPC Service Controls perimeters protecting the destination project (`fast-org-log-sinks` in `fast/stages-aw/3-security/vpc-sc.tf` provisions this automatically when `logging` is wired).
 
 ### 5.4 Monitoring
 
 #### Host projects
 
-Dedicated security core projects host Cloud Monitoring workspaces, dashboards, and alerting policies for each environment:
+Shared VPC monitoring metrics scopes and CIS security alerting span distinct host projects:
 
-| Folder | Monitoring project |
-| :--- | :--- |
-| Security | `<prefix>`-dev-sec-core-0 |
-| Security | `<prefix>`-prod-sec-core-0 |
+| Scope | Project | Purpose |
+| :--- | :--- | :--- |
+| Network metrics scope | `<prefix>-net-hub-host` or `<prefix>-net-vdss-host` | Receives `metric_scopes` bindings from Stage 2 environment network host projects (`<prefix>-<env>-net-host`) for unified network telemetry. |
+| Security alerting | `<prefix>-dev-sec-core-0` and `<prefix>-prod-sec-core-0` | Hosts Stage `3-security` CIS log-based metrics (`modules/cis-log-metrics`) and alerting policies (`modules/cis-log-alerts`), complementing organization audit alerts in `<prefix>-prod-audit-logs-0`. |
 
 #### Monitoring groups
 
-Stage 0 bootstrap provisions the `gcp-monitoring-admins` group described in section 3.2 to administer monitoring configurations.
+Stage `0-bootstrap` configures the `gcp-support` role group (defaulting to `gcp-devops` in `var.groups`) with organization-level `roles/monitoring.viewer` and `roles/logging.viewer` visibility, while operations and security teams manage project-scoped alerting channels and dashboards.
 
 #### Alerting policies
 
@@ -904,9 +899,11 @@ Child folders and projects inherit parent organization policies according to `in
 
 #### Project layout and VPC Service Controls
 
-Terraform manages all cross-project IAM bindings declaratively across the folder and project hierarchy described in section 3.1. Within the hub-and-spoke network topology, a default VPC Service Controls perimeter surrounds the project hosting the restricted Shared VPC.
+Terraform manages cross-project IAM bindings declaratively across the folder and project hierarchy described in section 3.1. VPC Service Controls enforcement is opt-in through Stage `3-security` (`fast/stages-aw/3-security/vpc-sc.tf`) when `var.vpc_sc.perimeter_default` is configured, rather than provisioning an automatic perimeter on a separate restricted Shared VPC tier.
 
-VPC Service Controls mitigate data exfiltration risks by wrapping specified Google Cloud services inside security perimeters that block data egress to unauthorized external IP addresses even when an attacker holds valid user or service account credentials. Combine VPC Service Controls with BeyondCorp Context-Aware Access policies to enforce IP-range and device-trust checks on requests originating outside privileged networks.
+When enabled, `3-security/vpc-sc.tf` configures an Access Context Manager policy (`access_policy_create`), builds a default perimeter enclosing explicit `resources` plus optional automated project discovery (`resource_discovery`), restricts services listed in `data/vpc-sc/restricted-services.yaml`, attaches `fast-org-log-sinks` for centralized audit log ingestion, and supports validating rule updates via `dry_run_spec` alongside the enforced `status` block (`dry_run = true` clears `status = null`).
+
+VPC Service Controls mitigates data exfiltration risks by wrapping protected Google Cloud services inside security perimeters that block unauthorized data egress even when an attacker holds valid user or service account credentials. Combine VPC Service Controls with Access Context Manager access levels and Context-Aware Access policies to enforce IP-range and device-trust checks on requests originating outside trusted corporate networks.
 
 ### 5.6 Network security
 
@@ -933,7 +930,7 @@ Security Command Center remains on the IL5 authorization roadmap and is not yet 
 [Security Command Center](https://cloud.google.com/security-command-center/) centralizes asset inventory, policy posture, and threat detection across Google Cloud:
 
 - Discovers and tracks cloud resources through the Cloud Asset Inventory API.
-- Scans Cloud Storage buckets for sensitive PII using Cloud Data Loss Prevention; verify [Cloud DLP regional availability](https://cloud.google.com/dlp/docs/locations) and regulatory data residency requirements before scanning.
+- Scans Cloud Storage buckets and logs for sensitive PII using Sensitive Data Protection (Cloud DLP); verify [Cloud DLP regional availability](https://cloud.google.com/dlp/docs/locations) and regulatory data residency requirements before scanning.
 - Scans web applications for cross-site scripting flaws and outdated libraries.
 - Publishes Pub/Sub notifications when assets are created, modified, or deleted.
 
@@ -959,78 +956,56 @@ Apply these operational practices when running Security Command Center:
 | Design constraints | None. |
 | Assumptions | None. |
 
-Each VPC network enforces a distributed, stateful virtual firewall at the host network layer across Compute Engine VMs and GKE clusters independently of guest operating systems, allowing return traffic automatically for permitted flows.
+Each VPC network enforces a distributed, stateful virtual firewall at the host network layer across Compute Engine VMs and GKE clusters independently of guest operating systems, allowing return traffic automatically for permitted flows. In Stage `2-networking-a-fedramp`, Shared VPC networks set `network_firewall_policy_enforcement_order = "BEFORE_CLASSIC_FIREWALL"` so folder hierarchical firewall policy `<prefix>-net-default` on `Networking` and global network firewall policies (`<prefix>-hub-fw-policy-0`, `<prefix>-<env>-fw-policy-0`, and `<prefix>-egress-fw-policy-0`) created via `modules/net-firewall-policy` evaluate before classic VPC firewall rules. Stage `0-bootstrap` also enforces `custom.restrictFirewallRanges` to block ingress allow rules matching `0.0.0.0/0` or `::/0`.
 
-VPC firewall rules match traffic by protocol, port, direction, and source or destination CIDRs, subnets, network tags, or service accounts. Because firewall rules cannot be renamed after creation, adopt a consistent naming convention before provisioning rules.
+Firewall policies and rules match traffic by protocol, port, direction, CIDR ranges, address groups, Secure Tags (`target_secure_tags`), or dedicated service accounts (`target_service_accounts`). Because firewall rules and policies carry deterministic Terraform identifiers, adopt a consistent naming convention before provisioning.
 
 Every VPC network includes two built-in implied firewall rules at priority `65535`:
 
 - The implied allow egress rule (`ALLOW`, destination `0.0.0.0/0`, priority `65535`) permits outbound traffic from any instance except traffic [blocked by Google Cloud](https://cloud.google.com/vpc/docs/firewalls#blockedtraffic), unless a higher-priority rule restricts egress.
 - The implied deny ingress rule (`DENY`, source `0.0.0.0/0`, priority `65535`) blocks unsolicited inbound connections to all instances unless a higher-priority rule explicitly allows ingress.
 
-You cannot delete the implied rules, so override them with explicit rules at higher priorities (`0` through `65534`).
+You cannot delete the implied rules, so override them with explicit rules at higher priorities (`0` through `65534` for classic rules, or lower numeric priorities inside network firewall policies).
 
 Enable Firewall Rules Logging individually on each allow or deny rule whose traffic you need to audit. When enabled, Google Cloud writes a connection record containing source and destination IP addresses, protocol, ports, timestamp, and matched rule reference to Cloud Logging for viewing or export; see [Using Firewall Rules Logging](https://cloud.google.com/vpc/docs/using-firewall-rules-logging) for details.
 
-Alongside VPC-level firewall rules, hierarchical firewall policies enforce consistent allow, deny, or `goto_next` delegation rules at the organization node or individual folders so lower-level VPC rules cannot override organization-wide security controls. Evaluation starts at the organization node and proceeds down folder levels; for Shared VPC workloads, policy inheritance follows the Shared VPC host project's folder path rather than the service project's folder path, and `targetResources` can scope rules to specific VPC networks.
+Alongside VPC-level firewall rules and network firewall policies, hierarchical firewall policies enforce consistent allow, deny, or `goto_next` delegation rules at the organization node or individual folders (`<prefix>-net-default` on `Networking`) so lower-level project rules cannot override organization-wide security controls. Evaluation starts at the organization node and proceeds down folder levels; for Shared VPC workloads, policy inheritance follows the Shared VPC host project's folder path rather than the service project's folder path, and `targetResources` can scope rules to specific VPC networks.
 
 Apply these firewall governance recommendations across environments:
 
-1. Scope rules by dedicated workload service accounts rather than network tags wherever possible, because service accounts are project-specific and changing a VM's service account requires stopping and restarting the instance.
-2. Restrict network tag-based firewall rules tightly because any user able to edit VM metadata can attach an arbitrary network tag across projects.
-3. Use specific subnet ranges or summarized CIDR blocks when broader network-level rules are required.
-4. Create an explicit high-priority egress-deny catch-all rule ahead of the implied `65535` allow-egress rule so both ingress and egress traffic require explicit authorization.
+1. Scope rules by dedicated workload service accounts (`target_service_accounts`) or IAM-governed Secure Tags (`target_secure_tags`) rather than mutable classic network tags wherever possible, because service accounts are project-scoped and Secure Tags require explicit Resource Manager IAM tag bindings.
+2. Restrict classic network tag-based firewall rules tightly because any user able to edit VM metadata can attach an arbitrary classic network tag, and ensure `BEFORE_CLASSIC_FIREWALL` policy evaluation accounts for higher-priority policy rules in Stage `2-networking-a-fedramp`.
+3. Use specific subnet ranges or summarized CIDR blocks when broader network-level rules are required, relying on `custom.restrictFirewallRanges` to reject broad `0.0.0.0/0` and `::/0` ingress allow rules.
+4. Create an explicit high-priority egress-deny rule ahead of the implied `65535` allow-egress rule so both ingress and egress traffic require explicit authorization.
 5. Enforce a deterministic firewall naming convention and populate rule descriptions to preserve audit context.
 6. Modify firewall rules managed automatically by Google Cloud service agents such as Google Kubernetes Engine only as documented by that service to avoid cluster disruptions or SLA invalidation.
 7. Enable Firewall Rules Logging on security-relevant allow and deny rules for continuous verification.
 8. Use Network Intelligence Center [Firewall Insights](https://cloud.google.com/network-intelligence-center/docs/firewall-insights/concepts/overview) to identify shadowed rules, overly permissive ranges, and unused rulesets.
-9. Manage all custom firewall rules centrally in [Terraform](https://www.terraform.io/docs/providers/google/r/compute_firewall.html) through peer-reviewed CI/CD pipelines for full audit traceability.
-10. Use [hierarchical firewall policies](https://cloud.google.com/vpc/docs/firewall-policies) to enforce organization-wide baseline rules above individual project administrators.
+9. Manage all custom firewall policies and rules centrally in [Terraform](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_network_firewall_policy_rule) through peer-reviewed CI/CD pipelines for full audit traceability.
+10. Use [hierarchical firewall policies](https://cloud.google.com/vpc/docs/firewall-policies) such as `<prefix>-net-default` to enforce organization-wide baseline rules above individual project administrators.
 
 #### Data management
 
 ##### Sensitive data inspection
 
-Use Cloud Data Loss Prevention to scan application and Kubernetes container logs on a recurring schedule and generate reports identifying any inadvertently logged PII or sensitive tokens.
+Use Sensitive Data Protection (Cloud Data Loss Prevention) to scan application logs and storage repositories on a recurring schedule where supported by regional residency rules, generating reports that identify inadvertently logged PII or sensitive tokens.
 
 ### 5.8 Vulnerability management
 
-Vulnerability management tooling has limited service availability inside IL5 enclaves; this section documents the target architecture where Security Command Center scanning services are supported.
+Google Cloud retired Rapid Vulnerability Detection on July 14, 2024. Stellar Engine environments combine active host, container, and platform posture capabilities across supported compliance boundaries alongside required DoD and federal assessment scanners.
 
-#### Rapid Vulnerability Detection
+#### OS and host vulnerability scanning
 
-Security Command Center Premium includes [Rapid Vulnerability Detection](https://cloud.google.com/security-command-center/docs/concepts-rapid-vulnerability-detection-overview#overview) to identify critical exposures across public-facing endpoints.
+Use [VM Manager OS inventory and vulnerability management](https://cloud.google.com/compute/docs/os-inventory-management) together with Security Command Center [vulnerability findings](https://cloud.google.com/security-command-center/docs/concepts-vulnerabilities-findings) to detect missing OS patches and vulnerable packages on Compute Engine VMs running the OS Config agent. Automate recurring OS patch jobs for fleets rather than relying on manual host inspection.
 
-#### Supported scan targets
+#### Container and artifact scanning
 
-- Compute Engine
-- External Cloud Load Balancing
-- Google Kubernetes Engine ingress
-- Cloud Run
-- App Engine
+Enable [Artifact Analysis on-demand and automated container scanning](https://cloud.google.com/artifact-analysis/docs/container-scanning-overview) on Artifact Registry repositories so container images built for GKE, Cloud Run, and Dataflow pipelines are scanned for known CVEs prior to deployment and monitored continuously as new advisories publish. Enforce Binary Authorization policies in `blueprints/il5/gke-hardened` and compatible workloads to block unattested or vulnerable images at admission time.
 
-#### Managed scans
+#### Security Command Center posture and threat findings
 
-Rapid Vulnerability Detection runs automated weekly scans using [Cloud Asset Inventory](https://cloud.google.com/asset-inventory/docs/overview#features) discovery without requiring manual target URL lists to [detect](https://cloud.google.com/security-command-center/docs/concepts-rapid-vulnerability-detection-overview#scan_findings_and_remediations):
+Where Security Command Center is enabled under your regime's authorization boundary (see the [Security Command Center deployment guide](./scc-deployment-guide.md)), use Security Health Analytics and Event Threat Detection to monitor misconfigurations, exposed services, and runtime threats, and export findings via Pub/Sub to your SIEM or query them through the [Security Command Center API](https://cloud.google.com/security-command-center/docs/how-to-api-list-findings#list_all_findings).
 
-- Weak credentials
-- Exposed network interfaces
-- Incomplete software installations
-- Known vulnerable software versions
-- Exposed administrative user interfaces
+#### Regime scanning requirements
 
-#### Service enablement
-
-Enable [Rapid Vulnerability Detection](https://cloud.google.com/security-command-center/docs/how-to-use-rapid-vulnerability-detection#enabling) on the Security Command Center Services page in the Google Cloud console. Initial scans run automatically within 24 hours of activation and repeat weekly thereafter.
-
-##### Testing
-
-Deploy the open-source [Tsunami Security Scanner Testbed](https://github.com/google/tsunami-security-scanner-testbed/tree/master/truepositives/secure) in a non-production sandbox to generate sample vulnerability findings and validate alerting pipelines.
-
-##### Reviewing findings
-
-Review project-level vulnerability findings in the Security Command Center console dashboard or query them programmatically through the [Security Command Center API](https://cloud.google.com/security-command-center/docs/how-to-api-list-findings#list_all_findings).
-
-##### Viewing findings
-
-Inspect Rapid Vulnerability Detection and integrated VM Manager [vulnerability findings](https://cloud.google.com/security-command-center/docs/concepts-vulnerabilities-findings) filtered by IP address or port in the Google Cloud console under [Findings](https://cloud.google.com/security-command-center/docs/how-to-use-rapid-vulnerability-detection#display-findings-for-port-or-ip) or through the [Security Command Center API](https://cloud.google.com/security-command-center/docs/how-to-api-list-findings#list_all_findings).
+Security Command Center and certain managed Cloud DLP or Web Security Scanner features carry regional and regime approval constraints inside DoD IL5 enclaves. Regardless of managed Google Cloud add-ons, IL5 and FedRAMP High authorization boundaries require running Defense Information Systems Agency Security Technical Implementation Guides (STIG) checks and Assured Compliance Assessment Solution (ACAS) scans against hosts and containers as outlined in the [Path to authorization guide](./path-to-authorization.md).
