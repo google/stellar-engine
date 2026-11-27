@@ -35,7 +35,7 @@ variable "gcs_config" {
   description = "GCS for Object Storage config."
   type = object({
     enable_versioning = optional(bool, false)
-    location          = optional(string, "EU")
+    location          = optional(string)
     storage_class     = optional(string, "STANDARD")
   })
   default  = {}
@@ -85,7 +85,7 @@ variable "gitlab_instance_config" {
     }), {})
     data_disk = optional(object({
       size         = optional(number, 100)
-      type         = optional(string, "pd-ssd")
+      type         = optional(string, "pd-balanced")
       replica_zone = optional(string)
     }), {})
   })
