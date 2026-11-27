@@ -761,7 +761,7 @@ Terraform:
 
 ## 6. Stage 0: Infrastructure Foundation
 
-This blueprint deploys the necessary infrastructure to host a Gemini Enterprise application on Google Cloud Platform, adhering to the selected compliance regime (`FedRAMP High`, `FedRAMP Moderate`, `IL4`, or `IL5`). It provisions a secure environment with networking, load balancing, access controls, and data stores for Vertex AI Search.
+This blueprint deploys the necessary infrastructure to host a Gemini Enterprise application on Google Cloud Platform, adhering to the selected compliance regime (`FedRAMP Moderate`, `FedRAMP High`, `IL4`, or `IL5`). It provisions a secure environment with networking, load balancing, access controls, and data stores for Vertex AI Search.
 
 ### Prerequisites & Manual Steps Before Apply
 
@@ -793,11 +793,11 @@ Before applying this Terraform module, ensure the following manual steps and con
 
 5.  **CMEK Configuration:**
     - The `deploy.sh` script automatically handles the creation of a Customer-Managed Encryption Key (CMEK) for the Terraform state bucket and passes this key to Terraform for use with Discovery Engine resources.
-    - **Greenfield:** The key is created with a **90-day rotation period** and a regime-appropriate protection level (**HSM** for `FedRAMP High`, `IL4`, and `IL5`; **Software** for `FedRAMP Moderate`).
+    - **Greenfield:** The key is created with a **90-day rotation period** and a regime-appropriate protection level (**Software** for `FedRAMP Moderate`; **HSM** for `FedRAMP High`, `IL4`, and `IL5`).
     - **Brownfield:** The script discovers and reuses the existing Stage 3 `sec-core` (or Tenant `iac-core`) KMS keys, with optional operator override.
     - Ensure your project has sufficient quota for Cloud KMS keys and HSM usage.
 
-**IMPORTANT:** This blueprint is designed to be deployed in an **Assured Workloads GCP project** matching your target compliance regime (`FedRAMP High`, `FedRAMP Moderate`, `IL4`, or `IL5`), ensuring a clean slate for meeting stringent security and compliance requirements.
+**IMPORTANT:** This blueprint is designed to be deployed in an **Assured Workloads GCP project** matching your target compliance regime (`FedRAMP Moderate`, `FedRAMP High`, `IL4`, or `IL5`), ensuring a clean slate for meeting stringent security and compliance requirements.
 
 ### IAM Permissions for Deployment
 
@@ -895,7 +895,7 @@ The blueprint sets up the following key components:
         - `access_end_hour`: End hour (0-23 ET, default: 17)
         - `access_start_day`: Start day (0=Sun, 6=Sat, default: 1 for Monday)
         - `access_end_day`: End day (0=Sun, 6=Sat, default: 5 for Friday)
-    - **Model Armor:** Template defined in `model_armor.tf` and optionally configured for supported compliance regimes (`FedRAMP High`, `FedRAMP Moderate`, and `None`; skipped for `IL4` and `IL5` where the regional endpoint is unavailable) to provide an extra layer of security by filtering user prompts and model responses to conform to responsible AI practices.
+    - **Model Armor:** Template defined in `model_armor.tf` and optionally configured for supported compliance regimes (`FedRAMP Moderate`, `FedRAMP High`, and `None`; skipped for `IL4` and `IL5` where the regional endpoint is unavailable) to provide an extra layer of security by filtering user prompts and model responses to conform to responsible AI practices.
 
 4.  **Data Stores:** CMEK-encrypted GCS buckets and BigQuery datasets for Vertex AI Search, managed by the `discovery-engine` module.
 
