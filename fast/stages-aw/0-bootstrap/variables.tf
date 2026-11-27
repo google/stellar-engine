@@ -289,7 +289,12 @@ variable "iam_by_principals" {
 variable "kms_protection_level" {
   description = "KMS protection level."
   type        = string
+  default     = null
   nullable    = true
+  validation {
+    condition     = var.kms_protection_level == null || contains(["SOFTWARE", "HSM"], var.kms_protection_level)
+    error_message = "KMS protection level must be null, \"SOFTWARE\", or \"HSM\"."
+  }
 }
 
 variable "locations" {

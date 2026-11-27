@@ -163,15 +163,16 @@ def test_tenant_key_limit_matches_validation_block(repo):
         assert (found == []) is ok
 
 
-def test_kms_comment_contradicts_no_default(repo):
-    # The renderer replaces the sample comment because Stage 0 declares the
-    # variable without a default; fail if that changes.
+def test_kms_default_and_validation(repo):
+    # Stage 0 defaults kms_protection_level to null (so kms.tf derives it from
+    # the regime) and validates explicit values. Fail if that changes.
     text = (repo.bootstrap_dir / "variables.tf").read_text(encoding="utf-8")
     block = re.search(
         r'variable "kms_protection_level" \{(.*?)\n\}', text, re.DOTALL
     )
     assert block is not None
-    assert "default" not in block.group(1)
+    assert "default     = null" in block.group(1)
+    assert "validation {" in block.group(1)
 
 
 def test_billing_export_count_matches_import_warning(repo):

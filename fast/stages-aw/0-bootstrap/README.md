@@ -332,9 +332,8 @@ Feature toggles in `fast_features` are experimental and not officially supported
 | [alert_email](variables.tf#L17) | Email to receive log alerts. | <code>string</code> | ✓ |  |
 | [billing_account](variables.tf#L35) | Billing account id. If billing account is not part of the same org set `is_org_level` to `false`. To disable handling of billing IAM roles set `no_iam` to `true`. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [bootstrap_project](variables.tf#L63) | Bootstrap project ID. | <code>string</code> | ✓ |  |
-| [kms_protection_level](variables.tf#L289) | KMS protection level. | <code>string</code> | ✓ |  |
-| [organization](variables.tf#L377) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [prefix](variables.tf#L392) | Prefix used for resources that need unique names. Use 7 characters or less. | <code>string</code> | ✓ |  |
+| [organization](variables.tf#L382) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [prefix](variables.tf#L397) | Prefix used for resources that need unique names. Use 7 characters or less. | <code>string</code> | ✓ |  |
 | [assured_workloads](variables.tf#L22) | Configuration for Assured Workloads. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
 | [billing_budget_amount](variables.tf#L45) | Optional Budget configuration for the AW folder. Includes amount and optional threshold rules (defaults to 0.5, 0.75, 0.9). If null, no budget will be created. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [billing_override](variables.tf#L54) | Optional billing override configuration. If set, disables service account impersonation for project billing linkage and runs under the user account using the specified quota projects. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
@@ -351,17 +350,18 @@ Feature toggles in `fast_features` are experimental and not officially supported
 | [iam](variables.tf#L260) | Organization-level custom IAM settings in role => [principal] format. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam_bindings_additive](variables.tf#L267) | Organization-level custom additive IAM bindings. Keys are arbitrary. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam_by_principals](variables.tf#L282) | Authoritative IAM binding in {PRINCIPAL => [ROLES]} format. Principals need to be statically defined to avoid cycle errors. Merged internally with the `iam` variable. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [locations](variables.tf#L295) | Optional locations for GCS, BigQuery, and logging buckets created here. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [log_sinks](variables.tf#L311) | Org-level log sinks, in name => {type, filter} format. Valid types: 'logging' (routes to Cloud Logging bucket with 365-day default retention), 'pubsub' (routes to Pub/Sub topic with 7-day default retention; requires an active consumer to avoid log loss), 'storage' (routes to GCS bucket), 'bigquery' (routes to BigQuery dataset). | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
-| [logging_bucket_retention](variables.tf#L347) | Retention period (in days) for the Cloud Logging buckets created for organization log exports. | <code>number</code> |  | <code>365</code> |
-| [logging_kms_key](variables.tf#L353) | value of the KMS key used for logging. | <code>string</code> |  | <code>null</code> |
-| [org_policies_config](variables.tf#L359) | Organization policies customization. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [outputs_location](variables.tf#L386) | Enable writing provider, tfvars and CI/CD workflow files to local filesystem. Leave null to disable. | <code>string</code> |  | <code>null</code> |
-| [project_deletion_policies](variables.tf#L401) | Deletion policy of each Stage 0 project. Use ABANDON for projects that you create outside Terraform and import, so terraform destroy leaves them in place. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [project_parent_ids](variables.tf#L419) | Optional parents for projects created here in folders/nnnnnnn format. Null values will use the organization as parent. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [regime_mapping](variables.tf#L430) | Mapping of compliance regime names to short codes. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
-| [regions](variables.tf#L463) | Region definitions. Must be specified in terraform.tfvars. Example: us-east4 for FedRAMP High compliance. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
-| [workforce_identity_pool](variables.tf#L474) | Workforce Identity Federation pool configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
+| [kms_protection_level](variables.tf#L289) | KMS protection level. | <code>string</code> |  | <code>null</code> |
+| [locations](variables.tf#L300) | Optional locations for GCS, BigQuery, and logging buckets created here. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [log_sinks](variables.tf#L316) | Org-level log sinks, in name => {type, filter} format. Valid types: 'logging' (routes to Cloud Logging bucket with 365-day default retention), 'pubsub' (routes to Pub/Sub topic with 7-day default retention; requires an active consumer to avoid log loss), 'storage' (routes to GCS bucket), 'bigquery' (routes to BigQuery dataset). | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [logging_bucket_retention](variables.tf#L352) | Retention period (in days) for the Cloud Logging buckets created for organization log exports. | <code>number</code> |  | <code>365</code> |
+| [logging_kms_key](variables.tf#L358) | value of the KMS key used for logging. | <code>string</code> |  | <code>null</code> |
+| [org_policies_config](variables.tf#L364) | Organization policies customization. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [outputs_location](variables.tf#L391) | Enable writing provider, tfvars and CI/CD workflow files to local filesystem. Leave null to disable. | <code>string</code> |  | <code>null</code> |
+| [project_deletion_policies](variables.tf#L406) | Deletion policy of each Stage 0 project. Use ABANDON for projects that you create outside Terraform and import, so terraform destroy leaves them in place. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [project_parent_ids](variables.tf#L424) | Optional parents for projects created here in folders/nnnnnnn format. Null values will use the organization as parent. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [regime_mapping](variables.tf#L435) | Mapping of compliance regime names to short codes. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [regions](variables.tf#L468) | Region definitions. Must be specified in terraform.tfvars. Example: us-east4 for FedRAMP High compliance. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [workforce_identity_pool](variables.tf#L479) | Workforce Identity Federation pool configuration. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 
 ## Outputs
 

@@ -44,8 +44,7 @@ PLACEHOLDER_RE = re.compile(r"<[a-z_]+>")
 _KMS_COMMENT_DERIVED = (
     "# KMS protection level for CMEK keys. stellar derives it from the",
     "# regime: SOFTWARE for FEDRAMP_MODERATE, HSM for every other regime.",
-    "# The variable has no default, so stellar always writes it. Set",
-    "# kms_protection_level in answers.yaml to choose another level.",
+    "# Set kms_protection_level in answers.yaml to choose another level.",
 )
 _KMS_COMMENT_EXPLICIT = (
     "# KMS protection level for CMEK keys, which answers.yaml sets.",
@@ -233,8 +232,8 @@ def _comments(
     comments = {key: list(sample.comments.get(key, [])) for key in keys}
     overridden = answers.overrides.get(stage, {})
     if "kms_protection_level" in comments:
-        # The sample says to leave it unset, which only works when the
-        # variable has a default; Stage 0 declares none.
+        # The sample says to leave it unset; when stellar renders, it writes
+        # the explicit or regime-derived value.
         comments["kms_protection_level"] = list(
             _KMS_COMMENT_EXPLICIT
             if answers.kms_protection_level
