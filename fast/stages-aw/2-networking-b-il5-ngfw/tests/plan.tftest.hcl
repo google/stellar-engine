@@ -651,3 +651,28 @@ run "plan_rejects_null_psa_ranges_entry" {
     var.psa_ranges,
   ]
 }
+
+run "plan_rejects_prefix_over_7_chars" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    tls                 = tls
+    random              = random
+    time                = time
+    local               = local
+    null                = null
+  }
+
+  variables {
+    prefix = "abcdefgh"
+  }
+
+  expect_failures = [
+    var.prefix,
+  ]
+}
