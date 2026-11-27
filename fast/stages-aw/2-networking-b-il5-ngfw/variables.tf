@@ -204,10 +204,20 @@ variable "groups" {
 
 variable "kms_protection_level" {
   # tfdoc:variable:source 0-bootstrap
-  description = "KMS protection level."
+  description = "Cloud KMS protection level for the VDSS keyring key (defaults to HSM when null)."
   type        = string
   nullable    = true
   default     = null
+  validation {
+    condition = (
+      var.kms_protection_level == null ||
+      contains(
+        ["SOFTWARE", "HSM", "EXTERNAL", "EXTERNAL_VPC"],
+        coalesce(var.kms_protection_level, "HSM")
+      )
+    )
+    error_message = "kms_protection_level must be null, SOFTWARE, HSM, EXTERNAL, or EXTERNAL_VPC."
+  }
 }
 
 variable "logging" {
@@ -251,23 +261,23 @@ variable "proxy_subnets" {
 }
 
 variable "psa_ranges" {
-  description = "IP ranges used for Private Service Access (e.g. CloudSQL). Ranges is in name => range format."
-  type = object({
-    dev = optional(list(object({
-      ranges         = map(string)
-      export_routes  = optional(bool, false)
-      import_routes  = optional(bool, false)
-      peered_domains = optional(list(string), [])
-    })), [])
-    prod = optional(list(object({
-      ranges         = map(string)
-      export_routes  = optional(bool, false)
-      import_routes  = optional(bool, false)
-      peered_domains = optional(list(string), [])
-    })), [])
-  })
+  description = "IP ranges used for Private Service Access (e.g. CloudSQL) keyed by lowercase environment name (for example prod, int, test, or dev fallback)."
+  type = map(list(object({
+    deletion_policy  = optional(string)
+    ranges           = map(string)
+    labels           = optional(map(string), {})
+    export_routes    = optional(bool, false)
+    import_routes    = optional(bool, false)
+    peered_domains   = optional(list(string), [])
+    range_prefix     = optional(string)
+    service_producer = optional(string, "servicenetworking.googleapis.com")
+  })))
   nullable = false
   default  = {}
+  validation {
+    condition     = alltrue([for v in values(var.psa_ranges) : v != null])
+    error_message = "Values in psa_ranges must be non-null lists."
+  }
 }
 
 variable "regime_mapping" {

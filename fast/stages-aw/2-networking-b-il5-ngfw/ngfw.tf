@@ -402,7 +402,7 @@ module "kms" {
       purpose         = "ENCRYPT_DECRYPT"
       version_template = {
         algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
-        protection_level = "HSM"
+        protection_level = coalesce(var.kms_protection_level, "HSM")
       }
     }
   }

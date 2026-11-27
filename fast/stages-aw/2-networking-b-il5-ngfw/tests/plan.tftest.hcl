@@ -337,3 +337,317 @@ run "plan_spoke_subnets_with_reserved_internal_range" {
     error_message = "Spoke subnet must forward reserved_internal_range on secondary_ip_range."
   }
 }
+
+run "plan_kms_protection_level_defaults_to_hsm" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    tls                 = tls
+    random              = random
+    time                = time
+    local               = local
+    null                = null
+  }
+
+  assert {
+    condition = (
+      module.kms.keys["default"].version_template[0].protection_level == "HSM"
+    )
+    error_message = "VDSS KMS key must default protection_level to HSM when kms_protection_level is null."
+  }
+}
+
+run "plan_kms_protection_level_honors_software" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    tls                 = tls
+    random              = random
+    time                = time
+    local               = local
+    null                = null
+  }
+
+  variables {
+    kms_protection_level = "SOFTWARE"
+  }
+
+  assert {
+    condition = (
+      module.kms.keys["default"].version_template[0].protection_level == "SOFTWARE"
+    )
+    error_message = "VDSS KMS key must honor var.kms_protection_level when set."
+  }
+}
+
+run "plan_rejects_invalid_kms_protection_level" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    tls                 = tls
+    random              = random
+    time                = time
+    local               = local
+    null                = null
+  }
+
+  variables {
+    kms_protection_level = "INVALID"
+  }
+
+  expect_failures = [
+    var.kms_protection_level,
+  ]
+}
+
+run "plan_psa_ranges_supports_int_and_test_envs" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    tls                 = tls
+    random              = random
+    time                = time
+    local               = local
+    null                = null
+  }
+
+  variables {
+    envs_folders = {
+      Prod = { admin = "group:prod-admins@example.com" }
+      Int  = { admin = "group:int-admins@example.com" }
+      Test = { admin = "group:test-admins@example.com" }
+    }
+    proxy_subnets = {
+      Prod = "10.1.1.0/24"
+      Int  = "10.1.2.0/24"
+      Test = "10.1.3.0/24"
+    }
+    subnets = {
+      landing = [{ name = "landing-default", ip_cidr_range = "10.64.0.0/24", region = "us-east4" }]
+      dmz     = [{ name = "dmz-default", ip_cidr_range = "10.64.128.0/24", region = "us-east4" }]
+      mgmt    = [{ name = "mgmt-default", ip_cidr_range = "10.64.129.0/24", region = "us-east4" }]
+      prod    = [{ name = "prod-tenant-1-subnet", ip_cidr_range = "10.201.0.0/16", region = "us-east4", tenant = "ten-1" }]
+      int     = [{ name = "int-tenant-1-subnet", ip_cidr_range = "10.150.0.0/16", region = "us-east4", tenant = "ten-1" }]
+      test    = [{ name = "test-tenant-1-subnet", ip_cidr_range = "10.100.0.0/16", region = "us-east4", tenant = "ten-1" }]
+    }
+    psa_ranges = {
+      prod = [{ ranges = { default = "10.250.0.0/22" } }]
+      int  = [{ ranges = { default = "10.250.4.0/22" } }]
+      test = [{ ranges = { default = "10.250.8.0/22" } }]
+    }
+  }
+
+  assert {
+    condition = (
+      length(google_service_networking_connection.default) == 0 &&
+      length(google_compute_global_address.private_service_connect_ip) == 0
+    )
+    error_message = "Custom psa_ranges for prod, int, and test must skip default PSA peering on every env."
+  }
+}
+
+run "plan_psa_ranges_selective_env_and_explicit_empty" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    tls                 = tls
+    random              = random
+    time                = time
+    local               = local
+    null                = null
+  }
+
+  variables {
+    envs_folders = {
+      Prod = { admin = "group:prod-admins@example.com" }
+      Int  = { admin = "group:int-admins@example.com" }
+      Test = { admin = "group:test-admins@example.com" }
+    }
+    proxy_subnets = {
+      Prod = "10.1.1.0/24"
+      Int  = "10.1.2.0/24"
+      Test = "10.1.3.0/24"
+    }
+    subnets = {
+      landing = [{ name = "landing-default", ip_cidr_range = "10.64.0.0/24", region = "us-east4" }]
+      dmz     = [{ name = "dmz-default", ip_cidr_range = "10.64.128.0/24", region = "us-east4" }]
+      mgmt    = [{ name = "mgmt-default", ip_cidr_range = "10.64.129.0/24", region = "us-east4" }]
+      prod    = [{ name = "prod-tenant-1-subnet", ip_cidr_range = "10.201.0.0/16", region = "us-east4", tenant = "ten-1" }]
+      int     = [{ name = "int-tenant-1-subnet", ip_cidr_range = "10.150.0.0/16", region = "us-east4", tenant = "ten-1" }]
+      test    = [{ name = "test-tenant-1-subnet", ip_cidr_range = "10.100.0.0/16", region = "us-east4", tenant = "ten-1" }]
+    }
+    psa_ranges = {
+      int = [{ ranges = { int-psa = "10.250.4.0/22" } }]
+    }
+  }
+
+  assert {
+    condition = (
+      toset(keys(google_service_networking_connection.default)) == toset(["Prod", "Test"]) &&
+      toset(keys(google_compute_global_address.private_service_connect_ip)) == toset(["Prod", "Test"])
+    )
+    error_message = "Setting psa_ranges for int alone must keep Prod and Test on default-peering."
+  }
+}
+
+run "plan_psa_ranges_dev_fallback_and_explicit_empty_opt_out" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    tls                 = tls
+    random              = random
+    time                = time
+    local               = local
+    null                = null
+  }
+
+  variables {
+    envs_folders = {
+      Prod = { admin = "group:prod-admins@example.com" }
+      Int  = { admin = "group:int-admins@example.com" }
+      Test = { admin = "group:test-admins@example.com" }
+    }
+    proxy_subnets = {
+      Prod = "10.1.1.0/24"
+      Int  = "10.1.2.0/24"
+      Test = "10.1.3.0/24"
+    }
+    subnets = {
+      landing = [{ name = "landing-default", ip_cidr_range = "10.64.0.0/24", region = "us-east4" }]
+      dmz     = [{ name = "dmz-default", ip_cidr_range = "10.64.128.0/24", region = "us-east4" }]
+      mgmt    = [{ name = "mgmt-default", ip_cidr_range = "10.64.129.0/24", region = "us-east4" }]
+      prod    = [{ name = "prod-tenant-1-subnet", ip_cidr_range = "10.201.0.0/16", region = "us-east4", tenant = "ten-1" }]
+      int     = [{ name = "int-tenant-1-subnet", ip_cidr_range = "10.150.0.0/16", region = "us-east4", tenant = "ten-1" }]
+      test    = [{ name = "test-tenant-1-subnet", ip_cidr_range = "10.100.0.0/16", region = "us-east4", tenant = "ten-1" }]
+    }
+    psa_ranges = {
+      dev = [{ ranges = { dev-psa = "10.250.12.0/22" } }]
+      int = []
+    }
+  }
+
+  assert {
+    condition = (
+      toset(keys(google_service_networking_connection.default)) == toset(["Int"]) &&
+      toset(keys(google_compute_global_address.private_service_connect_ip)) == toset(["Int"])
+    )
+    error_message = "dev fallback must apply to unlisted envs while explicit int = [] uses default-peering."
+  }
+}
+
+run "plan_forwards_int_psa_ranges_to_spoke_vpc_module" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    tls                 = tls
+    random              = random
+    time                = time
+    local               = local
+    null                = null
+  }
+
+  variables {
+    envs_folders = {
+      Prod = { admin = "group:prod-admins@example.com" }
+      Int  = { admin = "group:int-admins@example.com" }
+      Test = { admin = "group:test-admins@example.com" }
+    }
+    proxy_subnets = {
+      Prod = "10.1.1.0/24"
+      Int  = "10.1.2.0/24"
+      Test = "10.1.3.0/24"
+    }
+    subnets = {
+      landing = [{ name = "landing-default", ip_cidr_range = "10.64.0.0/24", region = "us-east4" }]
+      dmz     = [{ name = "dmz-default", ip_cidr_range = "10.64.128.0/24", region = "us-east4" }]
+      mgmt    = [{ name = "mgmt-default", ip_cidr_range = "10.64.129.0/24", region = "us-east4" }]
+      prod    = [{ name = "prod-tenant-1-subnet", ip_cidr_range = "10.201.0.0/16", region = "us-east4", tenant = "ten-1" }]
+      int     = [{ name = "int-tenant-1-subnet", ip_cidr_range = "10.150.0.0/16", region = "us-east4", tenant = "ten-1" }]
+      test    = [{ name = "test-tenant-1-subnet", ip_cidr_range = "10.100.0.0/16", region = "us-east4", tenant = "ten-1" }]
+    }
+    psa_ranges = {
+      int = [{
+        deletion_policy = "ABANDON"
+        ranges          = { int-psa = "10.250.4.0/22" }
+        labels          = { env = "int" }
+        export_routes   = true
+        import_routes   = true
+        peered_domains  = ["example.internal."]
+        range_prefix    = "custom"
+      }]
+      test = [{
+        ranges = { test-psa = "10.250.8.0/22" }
+      }]
+    }
+  }
+
+  assert {
+    condition = (
+      toset(keys(google_service_networking_connection.default)) == toset(["Prod"]) &&
+      toset(keys(google_compute_global_address.private_service_connect_ip)) == toset(["Prod"])
+    )
+    error_message = "Forwarding full psa_ranges options for int and test must leave only Prod on default-peering."
+  }
+}
+
+run "plan_rejects_null_psa_ranges_entry" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    tls                 = tls
+    random              = random
+    time                = time
+    local               = local
+    null                = null
+  }
+
+  variables {
+    psa_ranges = {
+      int = null
+    }
+  }
+
+  expect_failures = [
+    var.psa_ranges,
+  ]
+}

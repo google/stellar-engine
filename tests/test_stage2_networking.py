@@ -197,13 +197,19 @@ class TestStage2Networking(unittest.TestCase):
         # The filter must select on the same expression the spoke VPC gets.
         self.assertRegex(
             branch_tf,
-            r"psa_configs\s*= "
-            r"try\(var\.psa_ranges\[lower\(each\.key\)\], "
-            r"var\.psa_ranges\.dev\)",
+            r"psa_configs\s*=\s*try\(\s*"
+            r"var\.psa_ranges\[lower\(each\.key\)\],\s*"
+            r"var\.psa_ranges\[each\.key\],\s*"
+            r'var\.psa_ranges\["dev"\],\s*'
+            r"\[\]\s*\)",
         )
-        self.assertIn(
-            "if length(try(var.psa_ranges[lower(k)], var.psa_ranges.dev)) == 0",
+        self.assertRegex(
             psc_tf,
+            r"if length\(try\(\s*"
+            r"var\.psa_ranges\[lower\(k\)\],\s*"
+            r"var\.psa_ranges\[k\],\s*"
+            r'var\.psa_ranges\["dev"\],\s*'
+            r"\[\]\s*\)\) == 0",
         )
         self.assertEqual(
             re.findall(r"^\s*for_each\s*= (.+)$", psc_tf, re.MULTILINE),
