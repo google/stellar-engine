@@ -25,6 +25,7 @@ Stage 0 enables organization-level Google Cloud capabilities that require broad 
   - [Federated identity providers](#federated-identity-providers)
   - [CI/CD repositories](#cicd-repositories)
   - [Feature toggles](#feature-toggles)
+  - [Organization-level resources](#organization-level-resources)
 - [Variables](#variables)
 - [Outputs](#outputs)
 <!-- END TOC -->
@@ -324,6 +325,14 @@ Feature toggles in `fast_features` are experimental and not officially supported
 - The `project_factory` toggle provisions prerequisites for the [3-project-factory](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/3-project-factory) stage.
 - The `sandbox` toggle creates a top-level `Sandbox` folder with relaxed policies for experimentation.
 - The `teams` toggle creates a top-level `Teams` folder for the [Stage 1 teams feature](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/1-resman#team-folders).
+
+### Organization-level resources
+
+Use `deploy_org_resources` when sharing a Google Cloud organization across multiple environments or lacking organization-level administrative permissions:
+
+- Each attribute (`iam`, `custom_roles`, `logging_sinks`, `logging_settings`, `audit_config`, `org_policies`, and `workforce_identity_pool`) defaults to `true` and can be set to `false` independently.
+- Setting `deploy_org_resources.org_policies = false` omits organization-level policy deployment and applies non-Assured Workloads baseline policies on `module.root-folder-config[0]` instead (excluding `custom.*`, `org_only_policies`, and the 12 Assured Workloads baseline policies).
+- Running `./import.sh` detects `var.deploy_org_resources.org_policies`: when `true`, it imports organization policies into `module.organization`; when `false`, it queries `local.assured_workload_folder` and imports folder-level policies into `module.root-folder-config[0]`.
 <!-- BEGIN TFDOC -->
 ## Variables
 
