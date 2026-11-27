@@ -47,10 +47,12 @@ The service accounts have no access to a bucket, dataset, subnet or service acco
 ## Instructions
 ### Deploy the experimentation environment
 - Create a `terraform.tfvars` file and specify the variables to match your desired configuration. You can use the provided `terraform.tfvars.sample` as reference.
+- Set `project_config.billing_account_id` to `null` (default in the sample) to reuse an existing Stage 1 tenant project without creating a new project, or set `billing_account_id` and `parent` to create a new project.
+- Set `network_config.attach` to `true` only when Terraform should manage the Shared VPC service project attachment (default is `true` for newly created projects and `false` when reusing an existing project so `terraform destroy` does not detach it and `roles/compute.xpnAdmin` is not required).
 - Set the optional `owner` of a notebook to the user email that should be listed as the Workbench instance owner.
-- Before choosing a region to create your resources in, it is recommended to view your system [quotas](https://console.cloud.google.com/iam-admin/quotas) in order to check which regions have access to GPU and TPU accelerators. If you choose a region where the quota is 0, you will have to request a quota increase (common accelerators are NVIDIA_A100 and NVIDIA_H100). It is recommended to create project resources in the 'us-central1' region.
-- When configuring your network settings, remeber that you must use a shared VPC. It is recomended that you have a separate 'networking project' that manages network traffic, and share this VPC to any projects that need access to it. This shared VPC must have internet access or JupyterLabs will not work. In addition, the account that runs the terraform code must have the Compute Shared VPC Admin role at an organization level. 
-- Run `terraform init` and `terraform apply`
+- Before choosing a region to create your resources in, view your system [quotas](https://console.cloud.google.com/iam-admin/quotas) to check which regions have access to GPU and TPU accelerators. If you choose a region where the quota is 0, request a quota increase (common accelerators are NVIDIA_A100 and NVIDIA_H100). Ensure `region` matches the Cloud KMS key region (for example `us-east4`).
+- When configuring your network settings, remember that you must use a Shared VPC. Have a separate networking host project that shares the VPC to workload projects, with internet access or JupyterLab will not work. When `network_config.attach` is `true`, the deploying principal needs `roles/compute.xpnAdmin` at the organization level; when `false`, the principal only needs subnet IAM permission (`roles/compute.networkAdmin` or `roles/compute.securityAdmin` on the host subnet) to bind `roles/compute.networkUser` for the Notebooks service agent.
+- Run `terraform init` and `terraform apply`.
 - Every entry in the `notebooks` variable creates a Vertex AI Workbench instance. The `type` attribute accepts only `USER_MANAGED`, because Google-managed notebooks reached end of life and Google provider 8 removed the `google_notebooks_runtime` resource.
 
 ## Demo
@@ -60,16 +62,16 @@ To try out the new notebook, you can use the provided code sample (the .ipynb fi
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [network_config](variables.tf#L43) | Shared VPC network configurations to use. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [notebooks](variables.tf#L57) | Vertex AI Workbench instances to be deployed, keyed by name. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [project_config](variables.tf#L83) | Provide 'billing_account_id' value if project creation is needed, uses existing 'project_id' if null. Parent is in 'folders/nnn' or 'organizations/nnn' format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [network_config](variables.tf#L43) | Shared VPC network configurations to use. Set attach to false when reusing an existing project already attached to the Shared VPC host project; defaults to true when creating a new project and false when reusing one. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
+| [notebooks](variables.tf#L58) | Vertex AI Workbench instances to be deployed, keyed by name. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [project_config](variables.tf#L84) | Provide 'billing_account_id' value if project creation is needed, uses existing 'project_id' if null. Parent is in 'folders/nnn' or 'organizations/nnn' format. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [bucket_name](variables.tf#L18) | GCS bucket name to store the Vertex AI artifacts. | <code>string</code> |  | <code>null</code> |
 | [dataset_name](variables.tf#L24) | BigQuery Dataset to store the training data. | <code>string</code> |  | <code>null</code> |
 | [deletion_protection](variables.tf#L30) | Prevent Terraform from destroying data storage resources (storage buckets, GKE clusters, CloudSQL instances) in this blueprint. When this field is set in Terraform state, a terraform destroy or terraform apply that would delete data storage resources will fail. | <code>bool</code> |  | <code>true</code> |
 | [labels](variables.tf#L37) | Labels to be assigned at project level. | <code>map&#40;string&#41;</code> |  | <code>&#123;&#125;</code> |
-| [prefix](variables.tf#L77) | Prefix used for various resource creation. | <code>string</code> |  | <code>null</code> |
-| [region](variables.tf#L97) | Region used for regional resources. | <code>string</code> |  | <code>&#34;us-central1&#34;</code> |
-| [service_encryption_keys](variables.tf#L103) | Cloud KMS to use to encrypt different services. Key location should match service region. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [prefix](variables.tf#L78) | Prefix used for various resource creation. | <code>string</code> |  | <code>null</code> |
+| [region](variables.tf#L98) | Region used for regional resources. | <code>string</code> |  | <code>&#34;us-central1&#34;</code> |
+| [service_encryption_keys](variables.tf#L104) | Cloud KMS to use to encrypt different services. Key location should match service region. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 

@@ -110,7 +110,14 @@ class TestVertexMlopsIam(unittest.TestCase):
             self.vertex_tf, 'resource "google_workbench_instance" "playground"'
         )
         self.assertRegex(
-            instance, r"depends_on\s*=\s*\[\s*module\.project,?\s*\]"
+            instance,
+            r"depends_on\s*=\s*\[[\s\S]*\bmodule\.project\b[\s\S]*\]",
+        )
+        self.assertRegex(
+            instance,
+            r"depends_on\s*=\s*\[[\s\S]*"
+            r"\bgoogle_compute_subnetwork_iam_member\.notebooks_subnet_user\b"
+            r"[\s\S]*\]",
         )
 
     def test_project_bindings_hold_no_scoped_role(self):

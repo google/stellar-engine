@@ -31,7 +31,7 @@ resource "google_workbench_instance" "playground" {
     disable_public_ip = var.notebooks[each.key].internal_ip_only
 
     container_image {
-      repository = "gcr.io/deeplearning-platform-release/base-cpu"
+      repository = "us-docker.pkg.dev/deeplearning-platform-release/gcr.io/base-cpu"
       tag        = "latest"
     }
 
@@ -74,8 +74,10 @@ resource "google_workbench_instance" "playground" {
 
   instance_owners = var.notebooks[each.key].owner == null ? null : [var.notebooks[each.key].owner]
 
-  # the project module grants the Notebooks service agent access to the subnet
+  # the project module or fallback binding grants the Notebooks service agent
+  # access to the subnet
   depends_on = [
     module.project,
+    google_compute_subnetwork_iam_member.notebooks_subnet_user,
   ]
 }

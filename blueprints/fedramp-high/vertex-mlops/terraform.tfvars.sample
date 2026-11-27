@@ -3,15 +3,15 @@ project_config = {
 }
 
 network_config = {
-  network_project_id = "xxxx-xxxx-net-host"
-  network_name       = "xxxx-spoke-0"
-  subnetwork_name    = "default-us-east4"
+  network_project_id = "xxxx-prod-net-host"
+  network_name       = "prod-spoke-0"
+  subnetwork_name    = "prod-tenant-1-subnet"
 }
 
 bucket_name  = "vertex-bucket-name-00"
 dataset_name = "vertex_dataset_name_00" # Cannot contain dashes '-'
 prefix       = "xxxx"
-region       = "us-central" # us-central1 is recommended
+region       = "us-east4"
 
 notebooks = {
   "notebook-00" = {

@@ -41,8 +41,9 @@ variable "labels" {
 }
 
 variable "network_config" {
-  description = "Shared VPC network configurations to use."
+  description = "Shared VPC network configurations to use. Set attach to false when reusing an existing project already attached to the Shared VPC host project; defaults to true when creating a new project and false when reusing one."
   type = object({
+    attach             = optional(bool)
     network_project_id = string
     network_name       = string
     subnetwork_name    = string
