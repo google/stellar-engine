@@ -13,8 +13,9 @@
 # limitations under the License.
 
 variable "core_project_id" {
-  description = "The Google Cloud Project ID where shared core services like KMS keys are located. Used for referencing existing KMS keys."
+  description = "Deprecated unused input retained for backwards compatibility; Cloud KMS keys in var.secrets encode their host project in each CryptoKey self-link."
   type        = string
+  default     = null
 }
 
 variable "gcp_region" {
@@ -35,7 +36,7 @@ variable "main_project_id" {
 }
 
 variable "secrets" {
-  description = "Map of secret configurations. Each key is the `secret_id` (name) of the secret. Each value is an object with optional `expire_time`, `version_destroy_ttl`, `locations` (list of regions for user-managed replication), and `keys` (a map where keys are replication locations (or 'global') and values are full KMS CryptoKey self-links for encryption)."
+  description = "Map of secret configurations keyed by secret ID. Each value specifies regional replication 'location', a matching-region KMS CryptoKey self-link 'key', and optional 'expire_time' and 'version_destroy_ttl'."
   type = map(object({
     location            = string # A location is required for every secret
     key                 = string # A key is required for the location (the key and secret must be in the same region)
