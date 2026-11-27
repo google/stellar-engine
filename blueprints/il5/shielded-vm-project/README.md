@@ -68,7 +68,6 @@ terraform destroy
 
 ## Verification of a successful deployment
 The apply will take about 1 minute to complete. The Shielded VM be deployed in the main project. To see the Shielded VM, browse to the [Compute Engine Instances](https://console.cloud.google.com/compute/instances) page. Select the VM. Scroll down to the "Security and access" block to see the "Shielded VM" options. Each option (Secure Boot, vTPM and Integrity Monitoring) will be set to ```On```. Additionally, both the boot disk and additional disk should list ```Customer-managed``` under "Encryption". Clicking on either disk will bring you to the "Manage disk" page. Here you will see the Key name for your KMS key.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
@@ -86,7 +85,7 @@ The apply will take about 1 minute to complete. The Shielded VM be deployed in t
 | [subnetwork_name](variables.tf#L90) | The name of the subnet. | <code>string</code> | ✓ |  |
 | [disksize](variables.tf#L34) | Provide the Size of the size in GB. | <code>number</code> |  | <code>40</code> |
 | [instance_name](variables.tf#L40) | Provide the name of the Shielded Compute VM. | <code>string</code> |  | <code>&#34;shieled-vm-inst&#34;</code> |
-| [instance_type](variables.tf#L46) | The Machine Type for the Shielded Compute VM. | <code>string</code> |  | <code>&#34;e2-micro&#34;</code> |
+| [instance_type](variables.tf#L46) | The Machine Type for the Shielded Compute VM. | <code>string</code> |  | <code>&#34;n2d-standard-2&#34;</code> |
 | [region](variables.tf#L78) | Region of the Shielded Compute VM. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
 | [zone](variables.tf#L95) | Zone of the Shielded Compute VM us-east4-c , us-east4-a, us-east4-b. | <code>string</code> |  | <code>&#34;us-east4-c&#34;</code> |
 

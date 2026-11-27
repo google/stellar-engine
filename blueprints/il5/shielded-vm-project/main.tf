@@ -113,7 +113,10 @@ module "shielded-vm" {
     }
   }
 
-  depends_on = [google_service_account.compute]
+  depends_on = [
+    google_service_account.compute,
+    google_kms_crypto_key_iam_member.compute,
+  ]
 }
 
 resource "google_compute_firewall" "default" {
