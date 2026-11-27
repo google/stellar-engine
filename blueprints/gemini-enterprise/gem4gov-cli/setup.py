@@ -19,6 +19,8 @@ setup(
     version="0.1.0",
     py_modules=["gem4gov", "data_stores", "auth"],
     include_package_data=True,
+    package_data={"": ["engine_features.yaml"]},
+    data_files=[("share/gem4gov", ["engine_features.yaml"])],
     install_requires=[
         "click",
         "google-api-python-client",

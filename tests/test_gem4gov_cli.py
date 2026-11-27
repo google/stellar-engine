@@ -14,13 +14,16 @@
 
 """Unit tests for the gem4gov CLI."""
 
+from pathlib import Path
 import subprocess
+import tempfile
 import unittest
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 from click.testing import CliRunner
 import gem4gov
+import yaml
 
 
 class TestGem4GovPrivateKnowledgeGraph(unittest.TestCase):
@@ -374,6 +377,229 @@ class TestGem4GovLicenseAssign(unittest.TestCase):
             "userLicenses"
         ][0]
         self.assertNotIn("licenseConfig", entry)
+
+
+class TestGem4GovDefaultsAndValidation(unittest.TestCase):
+    """Verify #543 gem4gov-cli defaults, KMS check, schema patch, packaging."""
+
+    def test_engine_features_yaml_disables_agent_sharing(self):
+        """Ensure disable-agent-sharing is FEATURE_STATE_ON in config."""
+        features = gem4gov._load_engine_features()["features"]
+        self.assertEqual(features["disable-agent-sharing"], "FEATURE_STATE_ON")
+        self.assertEqual(
+            features["agent-sharing-without-admin-approval"],
+            "FEATURE_STATE_OFF",
+        )
+
+    def test_load_engine_features_falls_back_to_data_prefix(self):
+        """Ensure _load_engine_features falls back to sys.prefix/share."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            prefix_dir = Path(tmpdir) / "prefix"
+            share_dir = prefix_dir / "share" / "gem4gov"
+            share_dir.mkdir(parents=True)
+            yaml_file = share_dir / "engine_features.yaml"
+            yaml_file.write_text(
+                yaml.safe_dump(
+                    {"features": {"disable-agent-sharing": "FEATURE_STATE_ON"}}
+                ),
+                encoding="utf-8",
+            )
+            fake_script = str(Path(tmpdir) / "site-packages" / "gem4gov.py")
+            with (
+                patch.object(gem4gov, "__file__", fake_script),
+                patch.object(gem4gov.sys, "prefix", str(prefix_dir)),
+                patch.object(
+                    gem4gov.sysconfig,
+                    "get_path",
+                    return_value=str(prefix_dir),
+                ),
+                patch.object(gem4gov.site, "USER_BASE", ""),
+            ):
+                loaded = gem4gov._load_engine_features()
+        self.assertEqual(
+            loaded["features"]["disable-agent-sharing"], "FEATURE_STATE_ON"
+        )
+
+    def test_setup_py_and_manifest_package_engine_features(self):
+        """Ensure setup.py and MANIFEST.in include engine_features.yaml."""
+        cli_dir = (
+            Path(__file__).resolve().parent.parent
+            / "blueprints"
+            / "gemini-enterprise"
+            / "gem4gov-cli"
+        )
+        setup_text = (cli_dir / "setup.py").read_text(encoding="utf-8")
+        manifest_text = (cli_dir / "MANIFEST.in").read_text(encoding="utf-8")
+        self.assertIn("data_files=", setup_text)
+        self.assertIn("engine_features.yaml", setup_text)
+        self.assertIn("include engine_features.yaml", manifest_text)
+
+    def test_license_distribute_and_retract_default_location_to_us(self):
+        """Ensure license distribute and retract default --location to us."""
+        runner = CliRunner()
+        mock_creds = MagicMock()
+        mock_creds.with_quota_project.return_value = mock_creds
+        de_service = MagicMock()
+        ba_configs = de_service.billingAccounts().billingAccountLicenseConfigs()
+        dist_cfg = ba_configs.distributeLicenseConfig
+        dist_cfg.return_value.execute.return_value = {}
+        ba_configs.retractLicenseConfig.return_value.execute.return_value = {}
+
+        with (
+            patch.object(gem4gov, "get_credentials", return_value=mock_creds),
+            patch.object(
+                gem4gov, "build", return_value=de_service
+            ) as mock_build,
+        ):
+            res_dist = runner.invoke(
+                gem4gov.cli,
+                [
+                    "license",
+                    "distribute",
+                    "--billing-account",
+                    "BA-1",
+                    "--config-id",
+                    "cfg-1",
+                    "--target-project-number",
+                    "123456",
+                    "--count",
+                    "5",
+                ],
+            )
+            res_retract = runner.invoke(
+                gem4gov.cli,
+                [
+                    "license",
+                    "retract",
+                    "--billing-account",
+                    "BA-1",
+                    "--config-id",
+                    "cfg-1",
+                    "--target-project-number",
+                    "123456",
+                    "--count",
+                    "2",
+                    "--license-config-id",
+                    "lic-1",
+                ],
+            )
+
+        self.assertEqual(res_dist.exit_code, 0, res_dist.output)
+        self.assertEqual(res_retract.exit_code, 0, res_retract.output)
+        dist_body = ba_configs.distributeLicenseConfig.call_args.kwargs["body"]
+        self.assertEqual(dist_body["location"], "us")
+        for call in mock_build.call_args_list:
+            self.assertEqual(
+                call.kwargs["client_options"].api_endpoint,
+                "https://us-discoveryengine.googleapis.com",
+            )
+
+    def test_validate_kms_key_checks_locations_segment_strictly(self):
+        """Reject substring matches like project 'custom' or 'us-central1'."""
+        cases = (
+            (
+                "projects/custom-proj/locations/us/keyRings/kr/cryptoKeys/k",
+                True,
+            ),
+            (
+                "projects/custom-proj/locations/us-central1/keyRings/kr/cryptoKeys/k",
+                False,
+            ),
+            (
+                "projects/us-proj/locations/europe-west1/keyRings/kr/cryptoKeys/k",
+                False,
+            ),
+        )
+        for resource_name, expected in cases:
+            with self.subTest(resource_name=resource_name):
+                kms_service = MagicMock()
+                keys = (
+                    kms_service.projects().locations().keyRings().cryptoKeys()
+                )
+                keys.get.return_value.execute.return_value = {
+                    "name": resource_name,
+                    "purpose": "ENCRYPT_DECRYPT",
+                    "versionTemplate": {
+                        "algorithm": "GOOGLE_SYMMETRIC_ENCRYPTION"
+                    },
+                }
+                with patch.object(gem4gov, "build", return_value=kms_service):
+                    self.assertEqual(
+                        gem4gov.validate_kms_key(MagicMock(), resource_name),
+                        expected,
+                    )
+
+    def test_bigquery_import_patches_default_schema_before_import(self):
+        """Ensure BQ import calls create_data_store_schema before import."""
+        mock_creds = MagicMock()
+        sample_bq_schema = {
+            "fields": [
+                {"name": "doc_id", "type": "STRING"},
+                {"name": "body", "type": "STRING"},
+            ]
+        }
+        call_order = []
+
+        def record_schema(*args, **kwargs):
+            call_order.append(("schema", args, kwargs))
+
+        def record_import(*args, **kwargs):
+            call_order.append(("import", args, kwargs))
+
+        with (
+            patch.object(
+                gem4gov, "validate_data_store", return_value={"valid": True}
+            ),
+            patch.object(
+                gem4gov, "get_bq_schema", return_value=sample_bq_schema
+            ),
+            patch.object(
+                gem4gov, "create_data_store_schema", side_effect=record_schema
+            ),
+            patch.object(
+                gem4gov, "import_bq_documents", side_effect=record_import
+            ),
+        ):
+            gem4gov.import_documents_helper(
+                mock_creds,
+                project_id="proj-1",
+                source_type="bigquery",
+                data_store_id="ds-1",
+                dataset_id="ds",
+                table_id="tbl",
+                id_field="doc_id",
+            )
+
+        self.assertEqual([c[0] for c in call_order], ["schema", "import"])
+        patched_schema = call_order[0][1][3]
+        self.assertIn("doc_id", patched_schema["properties"])
+        self.assertIn("body", patched_schema["properties"])
+
+    def test_bigquery_import_handles_missing_schema_gracefully(self):
+        """Skip schema patch when get_bq_schema returns None."""
+        mock_creds = MagicMock()
+        with (
+            patch.object(
+                gem4gov, "validate_data_store", return_value={"valid": True}
+            ),
+            patch.object(gem4gov, "get_bq_schema", return_value=None),
+            patch.object(
+                gem4gov, "create_data_store_schema"
+            ) as mock_create_schema,
+            patch.object(gem4gov, "import_bq_documents") as mock_import_bq,
+        ):
+            gem4gov.import_documents_helper(
+                mock_creds,
+                project_id="proj-1",
+                source_type="bigquery",
+                data_store_id="ds-1",
+                dataset_id="ds",
+                table_id="tbl",
+                id_field="auto",
+            )
+
+        mock_create_schema.assert_not_called()
+        mock_import_bq.assert_called_once()
 
 
 if __name__ == "__main__":

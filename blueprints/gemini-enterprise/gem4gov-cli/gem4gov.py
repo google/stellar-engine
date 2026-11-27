@@ -15,9 +15,11 @@
 import json
 import os
 import secrets
+import site
 import string
 import subprocess
 import sys
+import sysconfig
 import time
 
 from auth import check_roles
@@ -1565,7 +1567,7 @@ def list_licenses(billing_account, quota_project, format):
 )
 @click.option(
     "--location",
-    default="global",
+    default="us",
     type=click.Choice(["global", "us", "eu"]),
     help="The location.",
 )
@@ -1661,7 +1663,7 @@ def distribute_licenses(
 )
 @click.option(
     "--location",
-    default="global",
+    default="us",
     type=click.Choice(["global", "us", "eu"]),
     help="The location.",
 )
@@ -1729,7 +1731,7 @@ def _retract_project_licenses(
     config_id,
     target_project_number=None,
     target_project_numbers=None,
-    location="global",
+    location="us",
     count=None,
     retract_all=False,
     license_config_id=None,
@@ -2200,15 +2202,14 @@ def import_documents_helper(
                 type=str,
             ).strip()
 
+        bq_schema = get_bq_schema(credentials, project_id, dataset_id, table_id)
+
         if id_field:
             if id_field.strip().lower() == "auto":
                 id_property = {"id": "auto"}
             else:
                 id_property = {"id": id_field.strip()}
         else:
-            bq_schema = get_bq_schema(
-                credentials, project_id, dataset_id, table_id
-            )
             fields = (
                 [field["name"] for field in (bq_schema or {}).get("fields", [])]
                 if bq_schema
@@ -2258,6 +2259,30 @@ def import_documents_helper(
             f"{project_id}.{dataset_id}.{table_id}"
         )
         if non_interactive or click.confirm("Proceed with import?"):
+            if bq_schema:
+                discovery_engine_schema = transform_bq_schema(
+                    bq_schema,
+                    {
+                        "title": "",
+                        "description": "",
+                        "uri": "",
+                        "category": "",
+                    },
+                )
+                create_data_store_schema(
+                    credentials,
+                    project_id,
+                    data_store_id,
+                    discovery_engine_schema,
+                )
+            else:
+                click.echo(
+                    click.style(
+                        "Warning: Could not retrieve BigQuery table schema; "
+                        "skipping default_schema patch before import.",
+                        fg="yellow",
+                    )
+                )
             import_bq_documents(
                 credentials,
                 project_id,
@@ -2468,6 +2493,30 @@ def _echo_unauthorized_features(regime_label, include_model_armor=False):
     )
     for feature in features:
         click.echo(click.style(f"- {feature}", fg="yellow"))
+
+
+def _load_engine_features():
+    """Loads Discovery Engine feature defaults from engine_features.yaml."""
+    candidate_dirs = [
+        os.path.dirname(os.path.abspath(__file__)),
+        os.path.join(sys.prefix, "share", "gem4gov"),
+        os.path.join(sysconfig.get_path("data"), "share", "gem4gov"),
+    ]
+    user_base = getattr(site, "USER_BASE", None)
+    if user_base:
+        candidate_dirs.append(os.path.join(user_base, "share", "gem4gov"))
+
+    checked_paths = []
+    for directory in dict.fromkeys(candidate_dirs):
+        candidate = os.path.join(directory, "engine_features.yaml")
+        checked_paths.append(candidate)
+        if os.path.isfile(candidate):
+            with open(candidate, "r") as f:
+                return yaml.safe_load(f)
+
+    raise FileNotFoundError(
+        "Could not locate engine_features.yaml in: " + ", ".join(checked_paths)
+    )
 
 
 def get_project_number(credentials, project_id):
@@ -2711,8 +2760,15 @@ def validate_kms_key(credentials, kms_key_name):
         )
         response = request.execute()
 
-        # Validate the key's location
-        if "us" not in response["name"]:
+        # Validate the key's location segment specifically
+        name_parts = response["name"].split("/")
+        key_location = (
+            name_parts[name_parts.index("locations") + 1]
+            if "locations" in name_parts
+            and name_parts.index("locations") + 1 < len(name_parts)
+            else None
+        )
+        if key_location != "us":
             click.echo("KMS key is not in the 'us' multi-region.")
             return False
 
@@ -2860,14 +2916,7 @@ def create_engine(
 
     is_regulated = compliance_regime not in ("5", "NONE")
 
-    # Get the absolute path to the directory containing the script
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    # Construct the absolute path to the YAML file
-    yaml_path = os.path.join(script_dir, "engine_features.yaml")
-
-    # Load features from the YAML file
-    with open(yaml_path, "r") as f:
-        engine_features = yaml.safe_load(f)
+    engine_features = _load_engine_features()
 
     engine = {
         "displayName": display_name,
@@ -3170,11 +3219,7 @@ def configure_gemini_enterprise_for_regime(
         client_options=client_options,
     )
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    yaml_path = os.path.join(script_dir, "engine_features.yaml")
-
-    with open(yaml_path, "r") as f:
-        engine_features = yaml.safe_load(f)
+    engine_features = _load_engine_features()
 
     engine_name = (
         f"projects/{project_id}/locations/us/collections/"
