@@ -4,6 +4,7 @@ This blueprint demonstrates how to deploy a Private Service Connection on Google
 <!-- BEGIN TOC -->
 - [Introduction to PSC](#introduction-to-psc)
 - [Disclaimer](#disclaimer)
+- [Stage 2 Networking Considerations](#stage-2-networking-considerations)
 - [Deployment Steps](#deployment-steps)
 - [Variables](#variables)
 - [Outputs](#outputs)
@@ -14,6 +15,10 @@ Private Service Connect is a capability of Google Cloud networking that allows c
 
 ## Disclaimer
 - The present GCP Terraform Module in this project is set up and intended to be implemented in an IL5 or FEDRAMP High environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
+
+## Stage 2 Networking Considerations
+- In FedRAMP High deployments using `2-networking-a-fedramp`, Stage 2 creates Private Service Connect forwarding rules and private DNS zones for Google APIs when `psc_google_apis.enabled = true`. Deploying this blueprint onto the same Stage 2 VPC network collides with those Stage 2 addresses, forwarding rules, and managed Cloud DNS zones unless `psc_google_apis.enabled` is set to `false` in Stage 2 or this blueprint targets a separate VPC network with distinct `ip_name`, `psc_name`, `address`, and `dns_code` values.
+- When deploying into an IL5 environment using `2-networking-b-il5-ngfw` without Stage 2 PSC enabled, configure `main_project_id` to the VPC host project (`xxxx-prod-net-host`) and `network_name` to the full VPC self-link (`projects/xxxx-prod-net-host/global/networks/prod-spoke-0`).
 
 ## Deployment Steps
 1. Run ```cp terraform.tfvars.sample terraform.tfvars``` to copy the sample variables to your own tfvars file.
