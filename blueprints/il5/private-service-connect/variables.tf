@@ -36,7 +36,7 @@ variable "main_project_id" {
 }
 
 variable "network_name" {
-  description = "The network ID where the PSC will be created."
+  description = "The full VPC network self-link or resource path (`projects/<project>/global/networks/<network>`) where the PSC will be created."
   type        = string
 }
 
