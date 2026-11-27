@@ -82,5 +82,5 @@ To see the bucket, browse to [Cloud Storage Bucket](https://console.cloud.google
 | [region](variables.tf#L69) | Bucket region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
 | [retention_policy](variables.tf#L75) | Retention policy. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
 | [storage_class](variables.tf#L87) | Bucket storage class. | <code>string</code> |  | <code>&#34;STANDARD&#34;</code> |
-| [uniform_bucket_level_access](variables.tf#L97) | This provides the ability to toggle Uniform Bucket Level Acess for the GCS Storage bucket. By settng this variable to true, the CIS Compliance Benchmark 5.2 control is satsified. | <code>bool</code> |  | <code>true</code> |
+| [uniform_bucket_level_access](variables.tf#L101) | This provides the ability to toggle Uniform Bucket Level Acess for the GCS Storage bucket. By settng this variable to true, the CIS Compliance Benchmark 5.2 control is satsified. | <code>bool</code> |  | <code>true</code> |
 <!-- END TFDOC -->

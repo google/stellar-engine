@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-# tflint-ignore: terraform_unused_declarations
+# Autoclass requires storage_class to be set to STANDARD when enabled.
 variable "autoclass" {
   description = "Enable autoclass to automatically transition objects to appropriate storage classes based on their access pattern. If set to true, storage_class must be set to STANDARD. When set to true, All objects added to the bucket begin in Standard storage, even if a different storage class is specified in the request."
   type        = bool
@@ -91,6 +91,10 @@ variable "storage_class" {
   validation {
     condition     = contains(["STANDARD", "MULTI_REGIONAL", "REGIONAL", "NEARLINE", "COLDLINE", "ARCHIVE"], var.storage_class)
     error_message = "Storage class must be one of STANDARD, MULTI_REGIONAL, REGIONAL, NEARLINE, COLDLINE, ARCHIVE."
+  }
+  validation {
+    condition     = !coalesce(var.autoclass, false) || var.storage_class == "STANDARD"
+    error_message = "storage_class must be STANDARD when autoclass is true."
   }
 }
 
