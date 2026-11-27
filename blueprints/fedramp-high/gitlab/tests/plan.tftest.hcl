@@ -93,6 +93,39 @@ run "default_self_signed_https_load_balancer_and_secret_manager" {
     condition     = module.gke-node-pool.service_account_email == module.gke-node-sa.email && module.gke-node-sa.email != google_service_account.gitlab_sa.email
     error_message = "GKE node pool must use dedicated least-privilege gke-node-sa."
   }
+
+  assert {
+    condition     = !contains(tolist(module.net-firewall.rules["gitlab-allow"].source_ranges), "10.1.3.0/24") && length(module.cluster.cluster.master_authorized_networks_config[0].cidr_blocks) == 0
+    error_message = "Stage 2 Test CIDRs must not be hardcoded by default."
+  }
+}
+
+run "custom_stage2_proxy_and_gke_authorized_cidrs" {
+  command = plan
+
+  variables {
+    proxy_subnetwork_cidrs = ["10.42.0.0/24"]
+    gke_authorized_ranges = {
+      prod-spoke = "10.40.0.0/16"
+    }
+  }
+
+  assert {
+    condition     = contains(tolist(module.net-firewall.rules["gitlab-allow"].source_ranges), "10.42.0.0/24") && contains(tolist([for b in module.cluster.cluster.master_authorized_networks_config[0].cidr_blocks : b.cidr_block]), "10.40.0.0/16")
+    error_message = "Configured proxy_subnetwork_cidrs and gke_authorized_ranges must propagate to firewall and GKE master authorized networks."
+  }
+}
+
+run "rejects_invalid_proxy_cidr" {
+  command = plan
+
+  variables {
+    proxy_subnetwork_cidrs = ["not-a-cidr"]
+  }
+
+  expect_failures = [
+    var.proxy_subnetwork_cidrs,
+  ]
 }
 
 run "custom_certificate_id_skips_self_signed_generation" {

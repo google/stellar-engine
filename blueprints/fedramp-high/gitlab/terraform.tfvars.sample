@@ -1,12 +1,16 @@
-gitlab_uri         = "https://gitlab.mine.com"
-network            = "projects/<net_project_id>/global/networks/<spoke>"
-subnetwork         = "projects/<net_project_id>/regions/us-east4/subnetworks/<subnet>"
-project_id         = "xxxx-xxxx-main-0"
-kms_key            = "projects/<core_project_id>/locations/us-east4/keyRings/keyring/cryptoKeys/gcs"
-zone               = "us-east4-a"
-net_project        = "int-net-host"
-sa                 = "gitlab-sa"
+gitlab_uri  = "https://gitlab.example.com"
+network     = "projects/xxxx-prod-net-host/global/networks/prod-spoke-0"
+subnetwork  = "projects/xxxx-prod-net-host/regions/us-east4/subnetworks/prod-tenant-1-subnet"
+project_id  = "xxxx-xxxx-main-0"
+kms_key     = "projects/<core_project_id>/locations/us-east4/keyRings/keyring/cryptoKeys/gcs"
+zone        = "us-east4-a"
+net_project = "xxxx-prod-net-host"
+sa          = "gitlab-sa"
 nodepool_node_count = {
   initial = 1
 }
-network_name = "test-spoke-0"
+network_name           = "prod-spoke-0"
+proxy_subnetwork_cidrs = ["10.0.1.0/24"]
+gke_authorized_ranges = {
+  internal-vms = "10.0.0.0/16"
+}

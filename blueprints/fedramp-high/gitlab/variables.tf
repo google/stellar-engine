@@ -37,6 +37,17 @@ variable "gitlab_uri" {
   }
 }
 
+variable "gke_authorized_ranges" {
+  description = "Map of display names to IPv4 CIDR ranges authorized to access the GKE control plane endpoint."
+  type        = map(string)
+  default     = {}
+  nullable    = false
+  validation {
+    condition     = alltrue([for cidr in values(var.gke_authorized_ranges) : can(cidrhost(cidr, 0))])
+    error_message = "Every entry in gke_authorized_ranges must be a valid IPv4 CIDR block."
+  }
+}
+
 variable "gke_initial_node_per_zone" {
   description = "Initial node amount per zone."
   type        = number
@@ -77,7 +88,7 @@ variable "network" {
 }
 
 variable "network_name" {
-  description = "Network name to use for Firewall rules. E.G. test-net-spoke."
+  description = "Network name to use for firewall rules (for example, prod-spoke-0)."
   type        = string
 }
 
@@ -93,6 +104,17 @@ variable "nodepool_node_count" {
 variable "project_id" {
   type        = string
   description = "Project ID where the GitLab cluster, VM, and load balancer will be deployed to."
+}
+
+variable "proxy_subnetwork_cidrs" {
+  description = "CIDR ranges of the regional managed proxy subnets permitted to reach the GitLab backend VM through the firewall rule."
+  type        = list(string)
+  default     = []
+  nullable    = false
+  validation {
+    condition     = alltrue([for cidr in var.proxy_subnetwork_cidrs : can(cidrhost(cidr, 0))])
+    error_message = "Every entry in proxy_subnetwork_cidrs must be a valid IPv4 CIDR block."
+  }
 }
 
 variable "region" {
