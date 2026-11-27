@@ -40,10 +40,6 @@ locals {
   }
 }
 
-data "google_project" "current" {
-  project_id = var.main_project_id
-}
-
 # Enable the API service
 resource "google_project_service" "secretmanager" {
   project            = var.main_project_id
@@ -60,14 +56,21 @@ resource "google_project_service_identity" "secretmanager" {
   depends_on = [google_project_service.secretmanager]
 }
 
+resource "time_sleep" "secretmanager_agent_propagation" {
+  count           = length(local.all_kms_keys) > 0 ? 1 : 0
+  create_duration = "60s"
+
+  depends_on = [google_project_service_identity.secretmanager]
+}
+
 # Grant permissions to secret manager service account
 resource "google_kms_crypto_key_iam_member" "secretmanager" {
   for_each      = toset(local.all_kms_keys)
   crypto_key_id = each.value
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-secretmanager.iam.gserviceaccount.com"
+  member        = google_project_service_identity.secretmanager.member
 
-  depends_on = [google_project_service_identity.secretmanager]
+  depends_on = [time_sleep.secretmanager_agent_propagation]
 }
 
 # The secret-manager module rewrite in Cloud Foundation Fabric v44.2.0

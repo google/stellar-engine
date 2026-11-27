@@ -6,11 +6,11 @@ This blueprint provisions CMEK-encrypted Secret Manager secrets and IAM bindings
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [core_project_id](variables.tf#L15) | The Google Cloud Project ID where shared core services like KMS keys are located. Used for referencing existing KMS keys. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L32) | The Google Cloud Project ID where the secrets will be created. | <code>string</code> | ✓ |  |
-| [gcp_region](variables.tf#L20) | The Google Cloud region to be used as the default for regional resources and the provider. Note: Secret Manager secrets are regional resources. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [iam](variables.tf#L26) | IAM bindings in {SECRET => {ROLE => [MEMBERS]}} format. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [secrets](variables.tf#L37) | Map of secret configurations. Each key is the `secret_id` (name) of the secret. Each value is an object with optional `expire_time`, `version_destroy_ttl`, `locations` (list of regions for user-managed replication), and `keys` (a map where keys are replication locations (or 'global') and values are full KMS CryptoKey self-links for encryption). | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [main_project_id](variables.tf#L33) | The Google Cloud Project ID where the secrets will be created. | <code>string</code> | ✓ |  |
+| [core_project_id](variables.tf#L15) | Deprecated unused input retained for backwards compatibility; Cloud KMS keys in var.secrets encode their host project in each CryptoKey self-link. | <code>string</code> |  | <code>null</code> |
+| [gcp_region](variables.tf#L21) | The Google Cloud region to be used as the default for regional resources and the provider. Note: Secret Manager secrets are regional resources. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [iam](variables.tf#L27) | IAM bindings in {SECRET => {ROLE => [MEMBERS]}} format. | <code>map&#40;map&#40;list&#40;string&#41;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [secrets](variables.tf#L38) | Map of secret configurations keyed by secret ID. Each value specifies regional replication 'location', a matching-region KMS CryptoKey self-link 'key', and optional 'expire_time' and 'version_destroy_ttl'. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 
 ## Outputs
 
@@ -19,7 +19,6 @@ This blueprint provisions CMEK-encrypted Secret Manager secrets and IAM bindings
 | [ids](outputs.tf#L15) | Secret IDs. |  |
 | [secrets](outputs.tf#L20) | Secret resources. |  |
 <!-- END TFDOC -->
-
 ## 1 Secret Manager overview
 
 Secret Manager stores API keys, passwords, certificates, and other sensitive configuration values with IAM access control, audit logging, versioning, and automated rotation. Provisioning secret metadata and CMEK bindings in Terraform while uploading secret payloads out of band keeps plaintext secret values out of Terraform state files.
@@ -33,14 +32,14 @@ Secret Manager stores API keys, passwords, certificates, and other sensitive con
 
 Verify that the following projects, keys, permissions, and scripts are available before running Terraform:
 
-- Provision `main_project_id` to host the Secret Manager secrets and `core_project_id` to host your existing Cloud KMS key rings and encryption keys.
-- Provision regional Cloud KMS keys in `core_project_id` ahead of time; this blueprint references existing KMS keys rather than creating new ones.
-- Grant the deploying identity `roles/secretmanager.admin`, `roles/serviceusage.serviceUsageAdmin`, and `roles/resourcemanager.projectIamAdmin` on `main_project_id`, `roles/cloudkms.viewer` on `core_project_id`, and `roles/cloudkms.cryptoKeyEncrypterDecrypter` for the Secret Manager service agent on each referenced KMS key.
+- Provision `main_project_id` to host the Secret Manager secrets and a project holding your existing Cloud KMS key rings and encryption keys referenced in `secrets[*].key`.
+- Provision regional Cloud KMS keys ahead of time; this blueprint references existing KMS keys rather than creating new ones.
+- Grant the deploying identity `roles/secretmanager.admin`, `roles/serviceusage.serviceUsageAdmin`, and `roles/resourcemanager.projectIamAdmin` on `main_project_id`, and `roles/cloudkms.admin` (or `cloudkms.cryptoKeys.setIamPolicy`) on each referenced KMS key so Terraform can grant `roles/cloudkms.cryptoKeyEncrypterDecrypter` to the Secret Manager service agent automatically after creating its service identity.
 - Keep `add_secret_versions.sh` and the `gcloud` CLI available in your operator environment to upload secret payload versions outside Terraform state.
 
 ## 4 Deployment steps
 
-1. Copy the sample variables file and update `terraform.tfvars` with your `main_project_id`, `core_project_id`, `gcp_region`, and Cloud KMS CryptoKey self-links:
+1. Copy the sample variables file and update `terraform.tfvars` with your `main_project_id`, `gcp_region`, `secrets`, and optional `iam` bindings:
 
 ```bash
 cp terraform.tfvars.sample terraform.tfvars

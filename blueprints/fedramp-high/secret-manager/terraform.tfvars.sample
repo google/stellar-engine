@@ -2,9 +2,6 @@ main_project_id = "xxxx-xxxx-main-0" # Replace with your main project ID
 
 gcp_region      = "us-east4"        # Renamed from 'region'
 
-# core_project_id is needed for KMS keys; replace with your core project ID
-core_project_id = "xxxx-xxxx-iac-core-0"
-
 secrets = {
   "secret-id-one" = {
     location = "us-east4"
