@@ -73,7 +73,7 @@ Stellar Engine keeps these changes on top of the upstream modules and tracked pa
 | `net-lb-app-ext` | The module passes `port_name` through without a protocol-derived default. |
 | `net-vpc-firewall` | Firewall rules log with all metadata unless a rule opts out. |
 | `datafusion`, `datafusion-se` | The instance logs with all metadata, and the copy carries a Stellar Engine implementation. |
-| `gke-cluster-standard`, `gke-cluster-autopilot` | The control plane public endpoint stays disabled unless a caller enables it. |
+| `gke-cluster-standard`, `gke-cluster-standard-se`, `gke-cluster-autopilot` | The control plane public endpoint stays disabled unless a caller enables it. |
 | `gke-cluster-standard-se` | Every cluster registers with a fleet, by default in its own project. |
 | `gke-cluster-standard`, `gke-cluster-standard-se` | Shielded GKE Nodes default to on. |
 | `pubsub` | The module keeps the `name` output. |

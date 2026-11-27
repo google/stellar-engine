@@ -24,7 +24,7 @@ variable "access_config" {
     }), {})
     ip_access = optional(object({
       authorized_ranges                              = optional(map(string))
-      disable_public_endpoint                        = optional(bool)
+      disable_public_endpoint                        = optional(bool, true)
       gcp_public_cidrs_access_enabled                = optional(bool)
       private_endpoint_authorized_ranges_enforcement = optional(bool)
       private_endpoint_config = optional(object({
