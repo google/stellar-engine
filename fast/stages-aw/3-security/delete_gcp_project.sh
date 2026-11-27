@@ -17,6 +17,7 @@
 # Initialize variables
 PROJECT_ID=""
 CURRENT_USER=""
+DELETER_ROLE_ADDED=false
 
 # Function to display help
 usage() {
@@ -102,6 +103,7 @@ check_permissions() {
 
   if [ -z "$has_deleter_role" ]; then
     manage_project_deleter "add"
+    DELETER_ROLE_ADDED=true
   fi
 }
 
@@ -120,12 +122,15 @@ get_confirmation() {
 delete_project() {
   echo "Deleting project $PROJECT_ID..."
   if ! gcloud projects delete "$PROJECT_ID" --quiet; then
-    manage_project_deleter "remove"
+    if [ "$DELETER_ROLE_ADDED" == "true" ]; then
+      local current_status
+      current_status=$(gcloud projects describe "$PROJECT_ID" --format="value(lifecycleState)" 2>/dev/null || true)
+      if [ "$current_status" != "DELETE_REQUESTED" ]; then
+        manage_project_deleter "remove"
+      fi
+    fi
     error_exit "Failed to delete project $PROJECT_ID"
   fi
-
-  # Always remove the projectDeleter role
-  manage_project_deleter "remove"
 
   echo "Project $PROJECT_ID has been successfully deleted."
 }
