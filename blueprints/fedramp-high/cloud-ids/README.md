@@ -27,17 +27,16 @@ This blueprint demonstrates how to deploy a cloud IDS service into a network pro
 For more information, please look at the the Cloud IDS [Overview](https://cloud.google.com/intrusion-detection-system/docs/overview).
 
 ## Disclaimer
-- The present GCP Terraform Module in this project is set up and intended to be implemented in a FEDRAMP High environment using the Assured Workloads within the Google Cloud Platform (GCP) organization.
+- This blueprint targets a FedRAMP High Assured Workloads environment.
+- Stage 2 networking pre-configures Private Service Access peering (`create_service_networking_connection = false` by default). Set `create_service_networking_connection = true` only when deploying onto a standalone VPC without an existing Service Networking connection.
 
 ## Deployment Steps
 
-You should see this README and some terraform files.
-1. Run cp terraform.tfvars.sample terraform.tfvars to copy the sample variables to your own tfvars file.
+1. Copy `terraform.tfvars.sample` to `terraform.tfvars` (`cp terraform.tfvars.sample terraform.tfvars`).
+2. Update `main_project_id`, `network_project_id`, `network_name` (for example `prod-spoke-0`), and `subnetwork_name` (for example `prod-tenant-1-subnet`) in `terraform.tfvars`.
+3. Provision the configuration from this directory:
 
-2. Update the variables as necessary in your tfvars file.
-3. The usual terraform commands will do the work. To provision this example, run the following from within this directory:
-
-```terraform init ```<br />
+```terraform init```<br />
 ```terraform plan``` to see the infrastructure plan<br />
 ```terraform apply``` to apply the infrastructure build<br />
 ```terraform destroy``` to destroy the built infrastructure<br />
@@ -55,17 +54,18 @@ Use GCP console to verify if the resources have been created.
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [ids_name](variables.tf#L15) | Name for IDS. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L26) | Main project ID. | <code>string</code> | ✓ |  |
-| [network_name](variables.tf#L31) | The name of the existing VPC network to use. | <code>string</code> | ✓ |  |
-| [network_project_id](variables.tf#L36) | The Landing Project ID. | <code>string</code> | ✓ |  |
-| [ids_private_ip_prefix_length](variables.tf#L20) | The length of the IDS Private IP Prefix. | <code>number</code> |  | <code>24</code> |
-| [packet_mirroring_policy_name](variables.tf#L41) | Name of packet mirror policy. | <code>string</code> |  | <code>&#34;cnap-packet-mirror&#34;</code> |
-| [prefix](variables.tf#L47) | Prefix for naming resources in this blueprint. | <code>string</code> |  | <code>&#34;cnap&#34;</code> |
-| [region](variables.tf#L53) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
-| [severity](variables.tf#L59) | Impact of an incident on a system. | <code>string</code> |  | <code>&#34;INFORMATIONAL&#34;</code> |
-| [subnetwork_list](variables.tf#L65) | Subnet list to monitor with Cloud IDS. | <code>list&#40;any&#41;</code> |  | <code>null</code> |
-| [subnetwork_name](variables.tf#L71) | The name of the existing subnetwork to use within the specified VPC network and region. | <code>string</code> |  | <code>&#34;default-us-east4&#34;</code> |
+| [ids_name](variables.tf#L21) | Name for IDS. | <code>string</code> | ✓ |  |
+| [main_project_id](variables.tf#L32) | Main project ID. | <code>string</code> | ✓ |  |
+| [network_name](variables.tf#L37) | The name of the existing VPC network to use. | <code>string</code> | ✓ |  |
+| [network_project_id](variables.tf#L42) | The Landing Project ID. | <code>string</code> | ✓ |  |
+| [create_service_networking_connection](variables.tf#L15) | Whether to create a new Service Networking private IP allocation and VPC peering connection for Cloud IDS. Leave false when reusing the Private Service Access allocation from Stage 2. | <code>bool</code> |  | <code>false</code> |
+| [ids_private_ip_prefix_length](variables.tf#L26) | The length of the IDS Private IP Prefix. | <code>number</code> |  | <code>24</code> |
+| [packet_mirroring_policy_name](variables.tf#L47) | Name of packet mirror policy. | <code>string</code> |  | <code>&#34;cnap-packet-mirror&#34;</code> |
+| [prefix](variables.tf#L53) | Prefix for naming resources in this blueprint. | <code>string</code> |  | <code>&#34;cnap&#34;</code> |
+| [region](variables.tf#L59) | Google Cloud Region. | <code>string</code> |  | <code>&#34;us-east4&#34;</code> |
+| [severity](variables.tf#L65) | Impact of an incident on a system. | <code>string</code> |  | <code>&#34;INFORMATIONAL&#34;</code> |
+| [subnetwork_list](variables.tf#L71) | Subnet list to monitor with Cloud IDS. | <code>list&#40;any&#41;</code> |  | <code>null</code> |
+| [subnetwork_name](variables.tf#L77) | The name of the existing subnetwork to use within the specified VPC network and region. | <code>string</code> |  | <code>&#34;prod-tenant-1-subnet&#34;</code> |
 
 ## Outputs
 

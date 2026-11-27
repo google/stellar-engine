@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "create_service_networking_connection" {
+  description = "Whether to create a new Service Networking private IP allocation and VPC peering connection for Cloud IDS. Leave false when reusing the Private Service Access allocation from Stage 2."
+  type        = bool
+  default     = false
+}
+
 variable "ids_name" {
   description = "Name for IDS."
   type        = string
@@ -71,5 +77,5 @@ variable "subnetwork_list" {
 variable "subnetwork_name" {
   description = "The name of the existing subnetwork to use within the specified VPC network and region."
   type        = string
-  default     = "default-us-east4"
+  default     = "prod-tenant-1-subnet"
 }

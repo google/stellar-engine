@@ -26,6 +26,13 @@
 ##  See the License for the specific language governing permissions and
 ##  limitations under the License.
 
+locals {
+  mirrored_subnetworks = distinct(compact(concat(
+    var.subnet != null ? [var.subnet] : [],
+    coalesce(var.subnet_list, [])
+  )))
+}
+
 data "google_compute_network" "vpc_network" {
   name    = var.landing_network
   project = var.project
@@ -82,8 +89,15 @@ resource "google_compute_packet_mirroring" "cloud_ids_packet_mirroring" {
   }
   mirrored_resources {
     tags = var.tag_list == null ? [] : var.tag_list
-    subnetworks {
-      url = "https://www.googleapis.com/compute/v1/projects/${var.project}/regions/${var.network_region}/subnetworks/${var.subnet}"
+    dynamic "subnetworks" {
+      for_each = local.mirrored_subnetworks
+      content {
+        url = (
+          startswith(subnetworks.value, "https://") || startswith(subnetworks.value, "projects/")
+          ? subnetworks.value
+          : "https://www.googleapis.com/compute/v1/projects/${var.project}/regions/${var.network_region}/subnetworks/${subnetworks.value}"
+        )
+      }
     }
   }
   filter {
