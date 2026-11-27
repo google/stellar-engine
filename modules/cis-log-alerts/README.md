@@ -38,13 +38,16 @@ module "cis-log-alerts" {
 
 ## Requirements
 
-No requirements.
+| Name                                                                     | Version           |
+| ------------------------------------------------------------------------ | ----------------- |
+| <a name="requirement_terraform"></a> [terraform](#requirement_terraform) | >= 1.12.2         |
+| <a name="requirement_google"></a> [google](#requirement_google)          | >= 8.6.0, < 9.0.0 |
 
 ## Providers
 
-| Name                                                      | Version |
-| --------------------------------------------------------- | ------- |
-| <a name="provider_google"></a> [google](#provider_google) | n/a     |
+| Name                                                      | Version           |
+| --------------------------------------------------------- | ----------------- |
+| <a name="provider_google"></a> [google](#provider_google) | >= 8.6.0, < 9.0.0 |
 
 ## Modules
 
@@ -59,15 +62,16 @@ No modules.
 
 ## Inputs
 
-| Name                                                                                    | Description         | Type     | Default | Required |
-| --------------------------------------------------------------------------------------- | ------------------- | -------- | ------- | :------: |
-| <a name="input_alert_email"></a> [alert_email](#input_alert_email)                      | Alert email.        | `string` | n/a     |   yes    |
-| <a name="input_alignment_period"></a> [alignment_period](#input_alignment_period)       | Alignment period.   | `string` | n/a     |   yes    |
-| <a name="input_combiner"></a> [combiner](#input_combiner)                               | Combiner (AND/OR).  | `string` | n/a     |   yes    |
-| <a name="input_comparison"></a> [comparison](#input_comparison)                         | Comparison.         | `string` | n/a     |   yes    |
-| <a name="input_duration"></a> [duration](#input_duration)                               | Duration for alert. | `string` | n/a     |   yes    |
-| <a name="input_per_series_aligner"></a> [per_series_aligner](#input_per_series_aligner) | Per series aligner. | `string` | n/a     |   yes    |
-| <a name="input_project"></a> [project](#input_project)                                  | Project ID.         | `string` | n/a     |   yes    |
+| Name                                                                                             | Description                                          | Type           | Default | Required |
+| ------------------------------------------------------------------------------------------------ | ---------------------------------------------------- | -------------- | ------- | :------: |
+| <a name="input_alert_email"></a> [alert_email](#input_alert_email)                               | Alert email.                                         | `string`       | n/a     |   yes    |
+| <a name="input_alignment_period"></a> [alignment_period](#input_alignment_period)                | Alignment period.                                    | `string`       | n/a     |   yes    |
+| <a name="input_combiner"></a> [combiner](#input_combiner)                                        | Combiner (AND/OR).                                   | `string`       | n/a     |   yes    |
+| <a name="input_comparison"></a> [comparison](#input_comparison)                                  | Comparison.                                          | `string`       | n/a     |   yes    |
+| <a name="input_duration"></a> [duration](#input_duration)                                        | Duration for alert.                                  | `string`       | n/a     |   yes    |
+| <a name="input_notification_channels"></a> [notification_channels](#input_notification_channels) | Additional notification channels for alert policies. | `list(string)` | `[]`    |    no    |
+| <a name="input_per_series_aligner"></a> [per_series_aligner](#input_per_series_aligner)          | Per series aligner.                                  | `string`       | n/a     |   yes    |
+| <a name="input_project"></a> [project](#input_project)                                           | Project ID.                                          | `string`       | n/a     |   yes    |
 
 ## Outputs
 
