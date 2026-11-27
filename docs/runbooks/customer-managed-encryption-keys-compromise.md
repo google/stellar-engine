@@ -120,10 +120,12 @@ Rotating a Cloud KMS key encrypts new writes with the new primary key version, w
 
 1. Inventory all Cloud Storage buckets, BigQuery tables, and Compute Engine persistent disks protected by the compromised key version.
 2. Rewrite existing data so Google Cloud re-encrypts every object, table, and disk under the new primary key version:
-   - Rewrite Cloud Storage objects in place under the new key version:
+   - Rewrite Cloud Storage objects in place under the new key version. `gcloud storage objects update` rewrites each object when `--encryption-key` is set, so the command below re-encrypts every matching object under the key you name:
      ```bash
-     gcloud storage rewrite gs://[BUCKET_NAME]/** --encryption-key=[NEW_KEY_RESOURCE_PATH]
+     gcloud storage objects update "gs://[BUCKET_NAME]/**" --all-versions --encryption-key=projects/[KMS_PROJECT_ID]/locations/[LOCATION]/keyRings/[KEYRING_NAME]/cryptoKeys/[KEY_NAME]
      ```
+     - Keep `--all-versions` for buckets with Object Versioning enabled: without it only the live version is rewritten, and noncurrent versions stay encrypted under the compromised key version. Alternatively, delete the noncurrent versions that your retention policy allows you to remove.
+     - Cloud Storage cannot decrypt objects while their key version is disabled. If the version was disabled in section 5.1, re-enable it for the rewrite window under strictly scoped IAM, then disable it again as soon as the rewrite finishes.
    - Copy BigQuery tables or write `SELECT *` query results into destination tables configured with the new key version.
    - Snapshot Compute Engine persistent disks using the new key version and recreate instances and disks from those snapshots.
 3. Schedule the compromised key version for destruction only after verifying that all affected resources use the new key version.
