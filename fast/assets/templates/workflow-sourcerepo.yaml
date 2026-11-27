@@ -43,9 +43,9 @@ steps:
     - pipefail
     - -c
     - |-
-      /google-cloud-sdk/bin/gsutil cp \
+      /google-cloud-sdk/bin/gcloud storage cp \
         gs://$${_FAST_OUTPUTS_BUCKET}/providers/$${_TF_PROVIDERS_FILE} ./
-      /google-cloud-sdk/bin/gsutil cp -r \
+      /google-cloud-sdk/bin/gcloud storage cp -r \
         gs://$${_FAST_OUTPUTS_BUCKET}/tfvars ./
       for f in $${_TF_VAR_FILES}; do
         ln -s tfvars/$f ./
@@ -95,4 +95,4 @@ substitutions:
   _FAST_OUTPUTS_BUCKET: ${outputs_bucket}
   _TF_PROVIDERS_FILE: ${tf_providers_files.apply}
   _TF_VAR_FILES: ${tf_var_files == [] ? "''" : join("\n    ", tf_var_files)}
-  _TF_VERSION: 1.4.4
+  _TF_VERSION: 1.13.3

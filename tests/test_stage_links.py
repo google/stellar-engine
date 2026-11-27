@@ -173,6 +173,27 @@ class TestStageLinksImpersonation(unittest.TestCase):
         )
         self.assertIn("WARNING: Active shell impersonation", output)
 
+    def test_gcs_uri_uses_gcloud_storage_cp(self):
+        bucket = "gs://test-prod-iac-core-outputs-0"
+        for stage_name in ("0-bootstrap", "1-resman"):
+            with self.subTest(stage=stage_name):
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    stage_dir = pathlib.Path(tmpdir) / stage_name
+                    stage_dir.mkdir(parents=True, exist_ok=True)
+                    env = os.environ.copy()
+                    env.pop("GOOGLE_IMPERSONATE_SERVICE_ACCOUNT", None)
+                    env.pop("CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT", None)
+                    result = subprocess.run(
+                        ["bash", str(_STAGE_LINKS), bucket],
+                        cwd=str(stage_dir),
+                        env=env,
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    )
+                    self.assertIn(f"gcloud storage cp {bucket}/", result.stdout)
+                    self.assertNotIn("gcloud alpha storage", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

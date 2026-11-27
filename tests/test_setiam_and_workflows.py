@@ -28,6 +28,13 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 _BOOTSTRAP_DIR = _REPO_ROOT / "fast/stages-aw/0-bootstrap"
 _RESMAN_DIR = _REPO_ROOT / "fast/stages-aw/1-resman"
 _ASSETS_DIR = _REPO_ROOT / "fast/assets"
+_STAGES_AW_DIRS = (
+    _REPO_ROOT / "fast/stages-aw/0-bootstrap",
+    _REPO_ROOT / "fast/stages-aw/1-resman",
+    _REPO_ROOT / "fast/stages-aw/2-networking-a-fedramp",
+    _REPO_ROOT / "fast/stages-aw/2-networking-b-il5-ngfw",
+    _REPO_ROOT / "fast/stages-aw/3-security",
+)
 _SETIAM_SH = _BOOTSTRAP_DIR / "setIAM.sh"
 _SETIAM_SAMPLE = _BOOTSTRAP_DIR / "setIAM.yaml.sample"
 _SETIAM_TEST_SH = _REPO_ROOT / "tests/test_setiam.sh"
@@ -41,6 +48,11 @@ _GITLAB_TEMPLATES = (
     _BOOTSTRAP_DIR / "templates/workflow-gitlab.yaml",
     _RESMAN_DIR / "templates/workflow-gitlab.yaml",
     _ASSETS_DIR / "templates/workflow-gitlab.yaml",
+)
+_SOURCEREPO_TEMPLATES = (
+    _BOOTSTRAP_DIR / "templates/workflow-sourcerepo.yaml",
+    _RESMAN_DIR / "templates/workflow-sourcerepo.yaml",
+    _ASSETS_DIR / "templates/workflow-sourcerepo.yaml",
 )
 
 _APPLY_SA = "apply@my-project.iam.gserviceaccount.com"
@@ -348,6 +360,57 @@ class TestCicdWorkflowHardening(unittest.TestCase):
         gl_contents = [p.read_text(encoding="utf-8") for p in _GITLAB_TEMPLATES]
         self.assertEqual(gl_contents[0], gl_contents[1])
         self.assertEqual(gl_contents[0], gl_contents[2])
+
+        sr_contents = [
+            p.read_text(encoding="utf-8") for p in _SOURCEREPO_TEMPLATES
+        ]
+        self.assertEqual(sr_contents[0], sr_contents[1])
+        self.assertEqual(sr_contents[0], sr_contents[2])
+
+    def test_workflows_use_gcloud_storage_and_supported_tf_version(self):
+        for tpl_path in (
+            _GITHUB_TEMPLATES + _GITLAB_TEMPLATES + _SOURCEREPO_TEMPLATES
+        ):
+            with self.subTest(template=str(tpl_path.relative_to(_REPO_ROOT))):
+                content = tpl_path.read_text(encoding="utf-8")
+                self.assertNotIn("gcloud alpha storage", content)
+                self.assertNotIn("install_components: alpha", content)
+                self.assertNotIn("gsutil", content)
+                self.assertIn("gcloud storage cp", content)
+
+        for tpl_path in _SOURCEREPO_TEMPLATES:
+            with self.subTest(sourcerepo=str(tpl_path.relative_to(_REPO_ROOT))):
+                placeholder = (
+                    "${tf_var_files == [] ? \"''\" : "
+                    'join("\\n    ", tf_var_files)}'
+                )
+                raw = tpl_path.read_text(encoding="utf-8").replace(
+                    placeholder,
+                    "0-bootstrap.auto.tfvars.json",
+                )
+                rendered = _render_template(
+                    raw,
+                    ["0-bootstrap.auto.tfvars.json"],
+                )
+                parsed = yaml.safe_load(rendered)
+                self.assertEqual(
+                    parsed["substitutions"]["_TF_VERSION"],
+                    _EXPECTED_TF_VERSION,
+                )
+
+    def test_stages_aw_declare_versions_tf(self):
+        for stage_dir in _STAGES_AW_DIRS:
+            with self.subTest(stage=stage_dir.name):
+                versions_tf = stage_dir / "versions.tf"
+                self.assertTrue(
+                    versions_tf.is_file(),
+                    f"Missing {versions_tf.relative_to(_REPO_ROOT)}",
+                )
+                content = versions_tf.read_text(encoding="utf-8")
+                self.assertIn('required_version = ">= 1.12.2"', content)
+                self.assertIn('source  = "hashicorp/google"', content)
+                self.assertIn('source  = "hashicorp/google-beta"', content)
+                self.assertIn('version = ">= 8.10.0, < 9.0.0"', content)
 
 
 class TestSetIamHardening(unittest.TestCase):

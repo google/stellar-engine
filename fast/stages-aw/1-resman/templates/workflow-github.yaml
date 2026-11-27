@@ -77,18 +77,16 @@ jobs:
       - id: gcp-sdk
         name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-        with:
-          install_components: alpha
 
       # Copy read-only Terraform provider file and stage tfvars
       - id: tf-config-provider
         name: Copy Terraform provider file
         run: |
           umask 077
-          gcloud alpha storage cp -r \
+          gcloud storage cp -r \
             "gs://${outputs_bucket}/providers/$${{ env.TF_PROVIDERS_FILE_PLAN }}" ./
           %{~ for f in tf_var_files ~}
-          gcloud alpha storage cp -r \
+          gcloud storage cp -r \
             "gs://${outputs_bucket}/tfvars/${f}" ./
           %{~ endfor ~}
 
@@ -261,18 +259,16 @@ jobs:
       - id: gcp-sdk
         name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-        with:
-          install_components: alpha
 
       # Copy apply Terraform provider file and stage tfvars
       - id: tf-config-provider
         name: Copy Terraform provider file
         run: |
           umask 077
-          gcloud alpha storage cp -r \
+          gcloud storage cp -r \
             "gs://${outputs_bucket}/providers/$${{ env.TF_PROVIDERS_FILE }}" ./
           %{~ for f in tf_var_files ~}
-          gcloud alpha storage cp -r \
+          gcloud storage cp -r \
             "gs://${outputs_bucket}/tfvars/${f}" ./
           %{~ endfor ~}
 
