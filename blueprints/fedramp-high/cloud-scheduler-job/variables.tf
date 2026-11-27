@@ -13,10 +13,16 @@
 # limitations under the License.
 
 variable "data" {
-  description = "The base64-encoded data to be sent as the Pub/Sub message payload."
+  description = "Message payload to send as the Pub/Sub message body. Base64-encoded by Terraform unless `data_is_base64` is true."
   type        = string
   default     = null
   sensitive   = true
+}
+
+variable "data_is_base64" {
+  description = "Set to true when `data` is already base64-encoded to avoid double encoding."
+  type        = bool
+  default     = false
 }
 
 variable "description" {
@@ -83,4 +89,8 @@ variable "schedule" {
 variable "topic_id" {
   description = "The full resource path of the existing Pub/Sub topic (e.g., `projects/<PROJECT_ID>/topics/<TOPIC_NAME>`) to which messages will be published."
   type        = string
+  validation {
+    condition     = can(regex("^projects/[^/]+/topics/[^/]+$", var.topic_id))
+    error_message = "topic_id must match projects/<PROJECT_ID>/topics/<TOPIC_NAME>."
+  }
 }
