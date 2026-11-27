@@ -1,7 +1,7 @@
 # Google Cloud service Blueprint projects
-The directory provide multiple Google Cloud Services that contains all the necessary Terraform modules to build and deploy a GCP service in an IL5 (Impact Level 5) Assured workload environment.
+The directory provides multiple Google Cloud Services that contain all the necessary Terraform modules to build and deploy a GCP service in an IL5 (Impact Level 5) Assured workload environment.
 - Enable Necessary APIs: Depending on the services your project will use (e.g., Compute Engine, Cloud Storage, Cloud SQL), enable the corresponding APIs in the Google Cloud Console.
-- When implementing IL5 Assured workloads in Google Cloud Platform (GCP), several stringent security controls and measures must be in place to meet the requirements. The GCP Services in the Blueprint project are designed to meet the requirements for  IL5 (Impact Level 5) Assured workload environment.
+- When implementing IL5 Assured workloads in Google Cloud Platform (GCP), several stringent security controls and measures must be in place to meet the requirements. The GCP Services in the Blueprint project are designed to meet the requirements for IL5 (Impact Level 5) Assured workload environment.
 - The GCP Services are designed and configurations that align with IL5 security standards.
 - [IL5 Impact Level 5](https://cloud.google.com/blog/products/identity-security/introducing-google-cloud-support-for-impact-level-5-workloads)
 
