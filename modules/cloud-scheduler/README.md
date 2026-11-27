@@ -54,14 +54,14 @@ module "http-job" {
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
 | [description](variables.tf#L15) | Job description. | <code>string</code> | ✓ |  |
-| [http_target](variables.tf#L20) | HTTP Target for job. | <code>object&#40;&#123;&#8230;default &#61; null</code> | ✓ |  |
 | [name](variables.tf#L38) | Job name. | <code>string</code> | ✓ |  |
 | [project_id](variables.tf#L43) | Project ID. | <code>string</code> | ✓ |  |
-| [pubsub_target](variables.tf#L48) | Pubsub target for job. | <code>object&#40;&#123;&#8230;&#125;</code> | ✓ |  |
-| [retry_config](variables.tf#L69) | Retry config. | <code>object&#40;&#123;&#8230;default &#61; null</code> | ✓ |  |
 | [schedule](variables.tf#L82) | Schedule to run job. | <code>string</code> | ✓ |  |
 | [trigger_type](variables.tf#L88) | Type of trigger for the function. Valid values are 'pubsub' or 'http'. | <code>string</code> | ✓ |  |
+| [http_target](variables.tf#L20) | HTTP Target for job. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 | [kms_key](variables.tf#L32) | KMS key name. | <code>string</code> |  | <code>null</code> |
+| [pubsub_target](variables.tf#L48) | Pubsub target for job. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#8230;&#125;</code> |
+| [retry_config](variables.tf#L69) | Retry config. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>null</code> |
 
 ## Outputs
 
