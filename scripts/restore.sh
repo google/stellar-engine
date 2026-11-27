@@ -14,10 +14,31 @@
 # limitations under the License.
 
 
-#### This script is an experemental state, and is designed to help restore environment where the prefix has not been changed
+#### This script is in an experimental state, and is designed to help restore an environment where the prefix has not been changed
 #### It is currently best used via copy-and-paste of commands as needed (after sourcing config.env)
-#### You may still need to change the name of custom org policies in the yaml files for a succesful deployment
+#### You may still need to change the name of custom org policies in the yaml files for a successful deployment
 #### Use this script at your own risk. The author assumes no responsibility for any damages or losses incurred through its use.
+
+set -uo pipefail
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+if [[ -f "${SCRIPT_DIR}/common-functions.sh" ]]; then
+  # shellcheck source=scripts/common-functions.sh
+  source "${SCRIPT_DIR}/common-functions.sh"
+else
+  echo "Error: common-functions.sh not found in ${SCRIPT_DIR}." >&2
+  exit 1
+fi
+
+if [[ -f "${SCRIPT_DIR}/config.env" ]]; then
+  if ! load_config "${SCRIPT_DIR}" "PREFIX" "BILLING_ACCOUNT"; then
+    exit 1
+  fi
+elif ! validate_env_vars "PREFIX" "BILLING_ACCOUNT"; then
+  log_error "config.env not found in ${SCRIPT_DIR}."
+  exit 1
+fi
 
 HOST_PROJECT="${PREFIX}-net-hub-host"
 HOST_PROJECT_MODULE="module.hub-project"
@@ -29,21 +50,36 @@ if promptUser "Stage 2 - Networking"; then
   echo "1) IL2"
   echo "2) FedRAMP High/Moderate"
   echo "3) IL4/IL5"
-  read -r choice
-
-  ########### IL2 / FedRAMP High/Moderate ###########
-  if [ "$choice" == 1 ] || [ "$choice" == 2 ]; then
-    HOST_PROJECT="${PREFIX}-net-hub-host"
-    HOST_PROJECT_MODULE="module.hub-project"
-    cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-a-fedramp || exit
-
-  ########### IL4/IL5 ###########
-  elif [ "$choice" == 3 ]; then
-    HOST_PROJECT="${PREFIX}-net-vdss-host"
-    HOST_PROJECT_MODULE="module.vdss-host-project"
-    IS_IL5=true
-    cd "${SCRIPT_DIR}"/../fast/stages-aw/2-networking-b-il5-ngfw || exit
+  if ! read -r choice; then
+    log_error "No networking paradigm selected."
+    exit 1
   fi
+
+  case "$choice" in
+    ########### IL2 / FedRAMP High/Moderate ###########
+    1|2)
+      HOST_PROJECT="${PREFIX}-net-hub-host"
+      HOST_PROJECT_MODULE="module.hub-project"
+      cd "${SCRIPT_DIR}/../fast/stages-aw/2-networking-a-fedramp" || exit 1
+      ;;
+    ########### IL4/IL5 ###########
+    3)
+      if ! validate_env_vars "REGION"; then
+        exit 1
+      fi
+      HOST_PROJECT="${PREFIX}-net-vdss-host"
+      HOST_PROJECT_MODULE="module.vdss-host-project"
+      IS_IL5=true
+      cd "${SCRIPT_DIR}/../fast/stages-aw/2-networking-b-il5-ngfw" || exit 1
+      ;;
+    *)
+      log_error "Invalid choice '${choice}'. Expected 1, 2, or 3."
+      exit 1
+      ;;
+  esac
+else
+  log_info "Stage 2 restore skipped."
+  exit 0
 fi
 
 # Undelete Projects
@@ -56,7 +92,7 @@ gcloud projects undelete "${PREFIX}"-prod-net-host
 sleep 60
 
 # Reenable Billing
-gcloud alpha billing projects link "${HOST_PROJECT}" --billing-account "${BILLING_ACCOUNT}"
+gcloud billing projects link "${HOST_PROJECT}" --billing-account "${BILLING_ACCOUNT}"
 
 # Import Projects
 terraform import "${HOST_PROJECT_MODULE}.google_project.project[0]" "${HOST_PROJECT}"
