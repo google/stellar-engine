@@ -282,6 +282,12 @@ firewall_rules = {
 }
 
 # Private DNS Zone Response Policy Rules
+# With psc_google_apis.enabled = false (the default), the landing response
+# policy resolves Google APIs from these rules alone. Before enabling
+# psc_google_apis, delete these Google APIs entries and keep only custom rules
+# (for example on-premises names): data/dns-policy-rules.yaml then owns Google
+# API names, and plan fails if an entry reuses one of its keys or dns_names or
+# targets private.googleapis.com. or restricted.googleapis.com.
 dns_policy_rules = {
   accounts                      = { dns_name = "accounts.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }
   aiplatform-notebook-cloud-all = { dns_name = "*.aiplatform-notebook.cloud.google.com.", local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } } }

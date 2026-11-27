@@ -140,6 +140,30 @@ variable "dns_policy_rules" {
   }))
   default  = {}
   nullable = false
+  validation {
+    # local._psc_reserved_dns_rules in psc-google-apis.tf explains this check.
+    condition = !var.psc_google_apis.enabled || alltrue([
+      for k, v in var.dns_policy_rules : !(
+        contains(keys(local._psc_reserved_dns_rules), k) ||
+        contains(
+          values(local._psc_reserved_dns_rules),
+          trimsuffix(lower(v.dns_name), ".")
+        ) ||
+        anytrue([
+          for r in flatten(values(v.local_data)[*].rrdatas) : contains(
+            local._psc_pga_targets, trimsuffix(lower(trimspace(r)), ".")
+          )
+        ])
+      )
+    ])
+    error_message = <<-EOT
+      With psc_google_apis.enabled, dns_policy_rules must not reuse a rules
+      factory key or dns_name, or point local_data at private.googleapis.com.,
+      restricted.googleapis.com., or their 199.36.153.4/30 and 199.36.153.8/30
+      VIPs. Remove the legacy Google APIs entries and customize Google APIs
+      handling through factories_config.dns_policy_rules_file instead.
+    EOT
+  }
 }
 
 variable "envs_folders" {
@@ -167,7 +191,7 @@ variable "factories_config" {
   description = "Configuration for network resource factories."
   type = object({
     data_dir              = optional(string, "data")
-    dns_policy_rules_file = optional(string, "data/dns-policy-rules.yaml")
+    dns_policy_rules_file = optional(string)
     firewall_policy_name  = optional(string)
     ncc_hubs              = optional(string)
   })
@@ -178,6 +202,17 @@ variable "factories_config" {
   validation {
     condition     = var.factories_config.data_dir != null
     error_message = "Data folder needs to be non-null."
+  }
+  validation {
+    condition = (
+      !var.psc_google_apis.enabled ||
+      var.factories_config.dns_policy_rules_file == null ||
+      try(
+        fileexists(pathexpand(var.factories_config.dns_policy_rules_file)),
+        false
+      )
+    )
+    error_message = "factories_config.dns_policy_rules_file does not exist."
   }
 }
 
@@ -381,7 +416,13 @@ variable "ncc_hubs" {
 }
 
 variable "ngfw_admin_password_secret" {
-  description = "Optional regional CMEK-encrypted Secret Manager secret storing the NGFW administrator password using write-only secret versions. When enabled, the legacy ngfw_password output returns null."
+  description = "Opt-in NGFW password secret; raise wo_version on rotation."
+  # Regional CMEK-encrypted secret with write-only versions; when enabled, the
+  # ngfw_password output returns null. Write-only versions resend the password
+  # only when wo_version changes, so increment wo_version whenever
+  # random_password.password is replaced (for example after raising
+  # ngfw_stig_config.min_password_length above 16), otherwise Secret Manager
+  # keeps the previous password.
   type = object({
     enabled          = optional(bool, false)
     secret_id        = optional(string, "ngfw-admin-password")
@@ -424,8 +465,9 @@ variable "ngfw_health_check" {
   default  = {}
   nullable = false
   validation {
-    condition     = contains(["TCP", "HTTPS", "HTTP"], var.ngfw_health_check.protocol)
-    error_message = "ngfw_health_check.protocol must be TCP, HTTPS, or HTTP."
+    # bootstrap.xml disables HTTP on both dataplane management profiles.
+    condition     = contains(["TCP", "HTTPS"], var.ngfw_health_check.protocol)
+    error_message = "ngfw_health_check.protocol must be TCP or HTTPS."
   }
   validation {
     condition = (
@@ -439,7 +481,7 @@ variable "ngfw_health_check" {
       var.ngfw_health_check.protocol == "TCP" ||
       startswith(coalesce(var.ngfw_health_check.request_path, ""), "/")
     )
-    error_message = "ngfw_health_check.request_path must start with '/' for HTTP and HTTPS health checks."
+    error_message = "ngfw_health_check.request_path must start with '/'."
   }
 }
 

@@ -44,11 +44,11 @@ locals {
       "&gt;"
     )
   )
+  # ngfw_health_check.protocol is TCP or HTTPS (bootstrap.xml disables HTTP).
+  _ngfw_hc_https = var.ngfw_health_check.protocol == "HTTPS"
   _ngfw_hc_port = coalesce(
     var.ngfw_health_check.port,
-    var.ngfw_health_check.protocol == "HTTPS" ? 443 : (
-      var.ngfw_health_check.protocol == "HTTP" ? 80 : 22
-    )
+    local._ngfw_hc_https ? 443 : 22
   )
   _ngfw_mig_health_check_config = {
     check_interval_sec  = var.ngfw_health_check.check_interval_sec
@@ -56,27 +56,15 @@ locals {
     timeout_sec         = var.ngfw_health_check.timeout_sec
     unhealthy_threshold = var.ngfw_health_check.unhealthy_threshold
     enable_logging      = coalesce(var.ngfw_health_check.enable_logging, false)
-    http = (
-      var.ngfw_health_check.protocol == "HTTP"
-      ? {
-        port         = local._ngfw_hc_port
-        request_path = var.ngfw_health_check.request_path
-      }
-      : null
-    )
     https = (
-      var.ngfw_health_check.protocol == "HTTPS"
+      local._ngfw_hc_https
       ? {
         port         = local._ngfw_hc_port
         request_path = var.ngfw_health_check.request_path
       }
       : null
     )
-    tcp = (
-      var.ngfw_health_check.protocol == "TCP"
-      ? { port = local._ngfw_hc_port }
-      : null
-    )
+    tcp = local._ngfw_hc_https ? null : { port = local._ngfw_hc_port }
   }
   _ngfw_ilb_health_check_config = {
     check_interval_sec  = var.ngfw_health_check.check_interval_sec
@@ -85,27 +73,15 @@ locals {
     is_regional         = var.ngfw_health_check.is_regional
     timeout_sec         = var.ngfw_health_check.timeout_sec
     unhealthy_threshold = var.ngfw_health_check.unhealthy_threshold
-    http = (
-      var.ngfw_health_check.protocol == "HTTP"
-      ? {
-        port         = local._ngfw_hc_port
-        request_path = var.ngfw_health_check.request_path
-      }
-      : null
-    )
     https = (
-      var.ngfw_health_check.protocol == "HTTPS"
+      local._ngfw_hc_https
       ? {
         port         = local._ngfw_hc_port
         request_path = var.ngfw_health_check.request_path
       }
       : null
     )
-    tcp = (
-      var.ngfw_health_check.protocol == "TCP"
-      ? { port = local._ngfw_hc_port }
-      : null
-    )
+    tcp = local._ngfw_hc_https ? null : { port = local._ngfw_hc_port }
   }
   _ngfw_ilb_connection_tracking = (
     var.ngfw_ilb_config.persist_conn_on_unhealthy == null &&

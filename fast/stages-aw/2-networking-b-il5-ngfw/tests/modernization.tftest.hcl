@@ -690,3 +690,315 @@ run "rejects_colliding_psc_forwarding_rule_names" {
     var.psc_google_apis,
   ]
 }
+
+run "defaults_keep_legacy_dns_policy_rules_without_psc" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    local               = local
+    random              = random
+    time                = time
+    tls                 = tls
+  }
+
+  variables {
+    dns_policy_rules = {
+      googleapis-all = {
+        dns_name   = "*.googleapis.com."
+        local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } }
+      }
+      googleapis-private = {
+        dns_name = "private.googleapis.com."
+        local_data = {
+          A = {
+            rrdatas = [
+              "199.36.153.8", "199.36.153.9", "199.36.153.10", "199.36.153.11"
+            ]
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition     = local._psc_hub_dns_rules == var.dns_policy_rules
+    error_message = "Default mode must pass dns_policy_rules through as-is."
+  }
+
+  assert {
+    condition = (
+      length(module.vdss-mgmt-dmz-dns-policy-googleapis) == 0 &&
+      length(module.env-dns-policy-googleapis) == 0
+    )
+    error_message = "Default mode must not plan PSC DNS response policies."
+  }
+}
+
+run "psc_keeps_custom_dns_rules_and_factory_google_api_rules" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    local               = local
+    random              = random
+    time                = time
+    tls                 = tls
+  }
+
+  variables {
+    factories_config = {
+      data_dir = "./data"
+    }
+    psc_google_apis = {
+      enabled = true
+      bundle  = "vpc-sc"
+    }
+    dns_policy_rules = {
+      onprem = {
+        dns_name = "onprem.example.com."
+        behavior = "bypassResponsePolicy"
+      }
+      onprem-api = {
+        dns_name   = "api.onprem.example.com."
+        local_data = { A = { rrdatas = ["10.10.0.80"] } }
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      local._psc_dns_policy_rules_file == "./data/dns-policy-rules.yaml"
+    )
+    error_message = "An unset dns_policy_rules_file must follow data_dir."
+  }
+
+  assert {
+    condition = (
+      local._psc_reserved_dns_rules["googleapis-all"] == "*.googleapis.com" &&
+      local._dns_policy_context.addresses.googleapis_cname ==
+      "restricted.googleapis.com."
+    )
+    error_message = "The rules factory must own googleapis-all under vpc-sc."
+  }
+
+  assert {
+    condition = alltrue([
+      for rules in [
+        local._psc_hub_dns_rules,
+        local._psc_spoke_dns_rules["Prod"],
+        local._psc_spoke_dns_rules["Int"],
+        local._pga_mgmt_dmz_dns_rules,
+      ] :
+      rules["onprem"].behavior == "bypassResponsePolicy" &&
+      contains(keys(rules), "onprem-api") &&
+      !contains(keys(rules), "googleapis-all")
+    ])
+    error_message = "Custom rules must merge without overriding the factory."
+  }
+
+  assert {
+    condition = (
+      local._psc_hub_dns_rules["googleapis-restricted"].local_data["A"]
+      .rrdatas == ["10.255.255.1"]
+    )
+    error_message = "Hub PSC DNS must answer with the hub PSC endpoint IP."
+  }
+}
+
+run "psc_rejects_legacy_google_api_dns_policy_rules" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    local               = local
+    random              = random
+    time                = time
+    tls                 = tls
+  }
+
+  variables {
+    psc_google_apis = {
+      enabled = true
+      bundle  = "vpc-sc"
+    }
+    dns_policy_rules = {
+      googleapis-all = {
+        dns_name   = "*.googleapis.com."
+        local_data = { CNAME = { rrdatas = ["private.googleapis.com."] } }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.dns_policy_rules,
+  ]
+}
+
+run "psc_rejects_dns_policy_rule_dns_name_collision" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    local               = local
+    random              = random
+    time                = time
+    tls                 = tls
+  }
+
+  variables {
+    psc_google_apis = {
+      enabled = true
+      bundle  = "vpc-sc"
+    }
+    dns_policy_rules = {
+      custom-storage = {
+        dns_name = "Storage.Cloud.Google.com"
+        behavior = "bypassResponsePolicy"
+      }
+    }
+  }
+
+  expect_failures = [
+    var.dns_policy_rules,
+  ]
+}
+
+run "psc_rejects_dns_policy_rule_targeting_pga_name" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    local               = local
+    random              = random
+    time                = time
+    tls                 = tls
+  }
+
+  variables {
+    psc_google_apis = {
+      enabled = true
+      bundle  = "all-apis"
+    }
+    dns_policy_rules = {
+      googleusercontent-all = {
+        dns_name   = "*.googleusercontent.com."
+        local_data = { CNAME = { rrdatas = ["restricted.googleapis.com"] } }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.dns_policy_rules,
+  ]
+}
+
+run "psc_rejects_dns_policy_rule_targeting_pga_vip" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    local               = local
+    random              = random
+    time                = time
+    tls                 = tls
+  }
+
+  variables {
+    psc_google_apis = {
+      enabled = true
+      bundle  = "vpc-sc"
+    }
+    dns_policy_rules = {
+      apis-onprem-alias = {
+        dns_name   = "apis.onprem.example.com."
+        local_data = { A = { rrdatas = ["199.36.153.8"] } }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.dns_policy_rules,
+  ]
+}
+
+run "psc_rejects_missing_dns_policy_rules_file" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    local               = local
+    random              = random
+    time                = time
+    tls                 = tls
+  }
+
+  variables {
+    factories_config = {
+      dns_policy_rules_file = "data/missing-dns-policy-rules.yaml"
+    }
+    psc_google_apis = {
+      enabled = true
+      bundle  = "vpc-sc"
+    }
+  }
+
+  expect_failures = [
+    var.factories_config,
+  ]
+}
+
+run "rejects_http_ngfw_health_check" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+    external            = external
+    local               = local
+    random              = random
+    time                = time
+    tls                 = tls
+  }
+
+  variables {
+    ngfw_health_check = {
+      protocol = "HTTP"
+      port     = 80
+    }
+  }
+
+  expect_failures = [
+    var.ngfw_health_check,
+  ]
+}

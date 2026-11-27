@@ -40,14 +40,48 @@ locals {
     var.factories_config.dns_policy_rules_file,
     "${var.factories_config.data_dir}/dns-policy-rules.yaml"
   )
+  # Only the data_dir candidate falls back to the stage default file. A
+  # missing explicit dns_policy_rules_file resolves to null here and fails the
+  # factories_config validation instead of silently using the default.
   _psc_dns_policy_rules_file = (
-    fileexists(pathexpand(local._dns_rules_file_candidate))
+    try(fileexists(pathexpand(local._dns_rules_file_candidate)), false)
     ? local._dns_rules_file_candidate
     : (
+      var.factories_config.dns_policy_rules_file == null &&
       fileexists("${path.module}/data/dns-policy-rules.yaml")
       ? "${path.module}/data/dns-policy-rules.yaml"
       : null
     )
+  )
+  # Rule keys and normalized DNS names that the stage owns when PSC is enabled:
+  # the rules factory plus the PSC rules injected in _psc_dns_rules_by_vpc and
+  # _pga_mgmt_dmz_dns_rules. dns-response-policy merges var.rules over the
+  # rules factory, so the dns_policy_rules validation rejects entries that
+  # would override these rules or target _psc_pga_targets.
+  _psc_reserved_dns_rules = merge(
+    try(
+      {
+        for k, v in yamldecode(
+          file(pathexpand(local._psc_dns_policy_rules_file))
+        ) : k => trimsuffix(lower(v.dns_name), ".")
+      },
+      {}
+    ),
+    {
+      accounts              = "accounts.google.com"
+      googleapis-private    = "private.googleapis.com"
+      googleapis-restricted = "restricted.googleapis.com"
+    },
+    {
+      for k, v in local._psc_non_vpcsc_bypass_rules :
+      k => trimsuffix(lower(v.dns_name), ".")
+    }
+  )
+  # Private Google Access names and their 199.36.153.4/30 and 199.36.153.8/30
+  # VIPs, which per-VPC PSC replaces on vdss-landing-0 and spoke VPCs.
+  _psc_pga_targets = concat(
+    ["private.googleapis.com", "restricted.googleapis.com"],
+    [for i in range(4, 12) : "199.36.153.${i}"]
   )
   _dns_policy_context = {
     addresses = {
@@ -58,9 +92,17 @@ locals {
       )
     }
   }
+  # Read PSC endpoint IPs from the net-address psc outputs, which also expose
+  # the PSC forwarding rules, so DNS rules that answer with a PSC IP are only
+  # created or updated after the PSC endpoints exist.
   _psc_ips_by_vpc = !var.psc_google_apis.enabled ? {} : merge(
-    { hub = var.psc_google_apis.hub_ip },
-    local._psc_spoke_ips
+    {
+      hub = module.hub-psc-addresses[0].psc["pschub0"].address.address
+    },
+    {
+      for k, v in module.env-psc-addresses :
+      k => v.psc[local._psc_spoke_fr_names[k]].address.address
+    }
   )
   _psc_service_directory_registration = {
     namespace = try(
