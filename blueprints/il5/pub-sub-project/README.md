@@ -116,7 +116,7 @@ To verify a successful deployment:
 |---|---|:---:|:---:|:---:|
 | [core_project_id](variables.tf#L23) | The Google Cloud Project ID where the existing KMS KeyRing and CryptoKeys are provisioned. | <code>string</code> | ✓ |  |
 | [gcp_region](variables.tf#L28) | The Google Cloud region to be used for Pub/Sub topic deployment and as the default for the provider. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L33) | The full resource path of the existing Cloud KMS CryptoKey to use for Customer-Managed Encryption Keys (CMEK) on the Pub/Sub topic. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L33) | Short name of the existing KMS crypto key (for example `my-key`) used for Pub/Sub topic CMEK, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. | <code>string</code> | ✓ |  |
 | [kms_keyring_name](variables.tf#L38) | The name of the existing Cloud KMS Key Ring to use for Pub/Sub topic encryption. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L43) | The Google Cloud Project ID where the Pub/Sub topic and associated service accounts will be created. | <code>string</code> | ✓ |  |
 | [pubsub_topic](variables.tf#L60) | The name of the Pub/Sub topic to be created by this blueprint. | <code>string</code> | ✓ |  |

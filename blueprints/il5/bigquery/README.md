@@ -82,7 +82,7 @@ views = {}
 | [core_project_id](variables.tf#L17) | Core project ID. | <code>string</code> | ✓ |  |
 | [dataset_description](variables.tf#L22) | Provides a discription of the deployed BigQuery Dataset. | <code>string</code> | ✓ |  |
 | [dataset_id](variables.tf#L27) | This is the dataset id. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L32) | The full self-link (projects/../locations/../keyRings/../cryptoKeys/..) of the existing KMS key to use for encryption. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L32) | Short name of the existing KMS crypto key (for example `my-key`) used for encryption, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. | <code>string</code> | ✓ |  |
 | [kms_keyring_name](variables.tf#L37) | KMS Keyring. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L42) | Project ID. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L47) | GCP Region to deploy into. | <code>string</code> | ✓ |  |

@@ -30,7 +30,7 @@ variable "dataset_id" {
 }
 
 variable "kms_key_name" {
-  description = "The full self-link (projects/../locations/../keyRings/../cryptoKeys/..) of the existing KMS key to use for encryption."
+  description = "Short name of the existing KMS crypto key (for example `my-key`) used for encryption, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`."
   type        = string
 }
 

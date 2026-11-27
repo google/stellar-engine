@@ -102,7 +102,7 @@ When `access_mode` is `bcap`, connect over the private BCAP network path directl
 | [core_project_id](variables.tf#L215) | Core project ID. | <code>string</code> | ✓ |  |
 | [disk_name](variables.tf#L220) | This is the disk name. | <code>string</code> | ✓ |  |
 | [instance_name](variables.tf#L238) | This is the instance name. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L249) | The Cloud KMS crypto key name within kms_keyring_name. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L249) | Short name of the existing KMS crypto key (for example `my-key`) used for disk encryption, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. | <code>string</code> | ✓ |  |
 | [kms_keyring_name](variables.tf#L254) | Keyring attributes. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L259) | This is the ID of project. | <code>string</code> | ✓ |  |
 | [network_name](variables.tf#L264) | VPC to use. | <code>string</code> | ✓ |  |

@@ -58,7 +58,7 @@ https://console.cloud.google.com/run
 |---|---|:---:|:---:|:---:|
 | [container_image](variables.tf#L35) | Container image to be hosted on cloud run. | <code>string</code> | ✓ |  |
 | [core_project_id](variables.tf#L40) | Core project ID. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L76) | Path to the kms key to use. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L76) | Short name of the existing KMS crypto key (for example `my-key`), not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. | <code>string</code> | ✓ |  |
 | [kms_keyring_name](variables.tf#L81) | KMS Keyring. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L86) | Main Project ID. | <code>string</code> | ✓ |  |
 | [name](variables.tf#L97) | Name of the cloud run instance to be created. | <code>string</code> | ✓ |  |
