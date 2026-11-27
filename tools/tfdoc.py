@@ -90,7 +90,7 @@ OUT_RE = re.compile(r"""(?smx)
     # output open
     (?:^\s*output\s*"([^"]+)"\s*\{\s*$) |
     # attribute
-    (?:^\n?\s{2}([a-z]+)\s*=\s*"?(.*?)"?\s*$) |
+    (?:^\n?\s{2}([a-z_]+)\s*=\s*"?(.*?)"?\s*$) |
     # output close
     (?:^\s?(\})\s*$) |
     # comment
@@ -113,7 +113,7 @@ VAR_RE = re.compile(r"""(?smx)
     # variable open
     (?:^\s*variable\s*"([^"]+)"\s*\{\s*$) |
     # attribute
-    (?:^\s{2}([a-z]+)\s*=\s*"?(.*?)"?\s*$) |
+    (?:^\n?\s{2}([a-z_]+)\s*=\s*"?(.*?)"?\s*$) |
     # validation
     (?:^\s+validation\s*(\{)\s*$) |
     # variable close
@@ -157,8 +157,147 @@ def _extract_tags(body):
     return {k: v for k, v in TAG_RE.findall(body)}
 
 
+def _strip_inline_comments(body):
+    """Strip inline # and // comments on HCL code lines, keeping line count."""
+    out = []
+    i = 0
+    n = len(body)
+    state_stack = []
+    heredoc_marker = None
+    heredoc_indent = False
+    line_has_code = False
+
+    while i < n:
+        ch = body[i]
+        if heredoc_marker is not None:
+            line_end = body.find("\n", i)
+            if line_end == -1:
+                line_end = n
+            line_text = body[i:line_end]
+            check = line_text.lstrip(" \t") if heredoc_indent else line_text
+            if check.rstrip("\r") == heredoc_marker:
+                heredoc_marker = None
+                heredoc_indent = False
+            out.append(line_text)
+            if line_end < n:
+                out.append("\n")
+                i = line_end + 1
+            else:
+                i = n
+            line_has_code = False
+            continue
+
+        top = state_stack[-1] if state_stack else None
+
+        if top == "str":
+            out.append(ch)
+            if ch == "\\" and i + 1 < n:
+                out.append(body[i + 1])
+                i += 2
+                continue
+            if ch == '"':
+                state_stack.pop()
+            elif ch in ("$", "%") and i + 1 < n and body[i + 1] == "{":
+                out.append("{")
+                state_stack.append(["interp", 1])
+                i += 2
+                continue
+            elif ch == "\n":
+                line_has_code = False
+            i += 1
+            continue
+
+        if ch == "\n":
+            out.append(ch)
+            line_has_code = False
+            i += 1
+            continue
+
+        if ch in (" ", "\t", "\r"):
+            out.append(ch)
+            i += 1
+            continue
+
+        if ch == "#" or body.startswith("//", i):
+            line_end = body.find("\n", i)
+            if line_end == -1:
+                line_end = n
+            if line_has_code:
+                while out and out[-1] in (" ", "\t"):
+                    out.pop()
+            else:
+                out.append(body[i:line_end])
+            i = line_end
+            continue
+
+        if body.startswith("/*", i):
+            end_idx = body.find("*/", i + 2)
+            if end_idx != -1:
+                block = body[i : end_idx + 2]
+                nl_count = block.count("\n")
+                if nl_count == 0:
+                    if line_has_code:
+                        while out and out[-1] in (" ", "\t"):
+                            out.pop()
+                    else:
+                        out.append(block)
+                else:
+                    if line_has_code:
+                        while out and out[-1] in (" ", "\t"):
+                            out.pop()
+                    out.append("\n" * nl_count)
+                    line_has_code = False
+                i = end_idx + 2
+                continue
+
+        line_has_code = True
+
+        if ch == '"':
+            state_stack.append("str")
+            out.append(ch)
+            i += 1
+            continue
+
+        if isinstance(top, list) and top[0] == "interp":
+            if ch == "{":
+                top[1] += 1
+            elif ch == "}":
+                top[1] -= 1
+                if top[1] == 0:
+                    state_stack.pop()
+            out.append(ch)
+            i += 1
+            continue
+
+        if body.startswith("<<", i):
+            m = re.match(r"<<(-?)\s*([A-Za-z_][A-Za-z0-9_]*)", body[i:])
+            if m:
+                out.append(m.group(0))
+                i += len(m.group(0))
+                line_end = body.find("\n", i)
+                if line_end == -1:
+                    rest = re.sub(r"[ \t]*(?:#|//).*$", "", body[i:])
+                    out.append(rest)
+                    i = n
+                else:
+                    rest = re.sub(r"[ \t]*(?:#|//).*$", "", body[i:line_end])
+                    out.append(rest)
+                    out.append("\n")
+                    i = line_end + 1
+                    heredoc_indent = m.group(1) == "-"
+                    heredoc_marker = m.group(2)
+                    line_has_code = False
+                continue
+
+        out.append(ch)
+        i += 1
+
+    return "".join(out)
+
+
 def _parse(body, enum=VAR_ENUM, re=VAR_RE, template=VAR_TEMPLATE):
     "Low-level parsing function for outputs and variables."
+    body = _strip_inline_comments(body)
     item = context = None
     for m in re.finditer(body):
         token = enum(m.lastindex)

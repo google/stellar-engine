@@ -44,11 +44,11 @@ _VALID_VERSIONS_TF = (
     _APACHE_HEADER
     + """
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.12.2"
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 5.0.0"
+      version = ">= 8.6.0, < 9.0.0"
     }
   }
 }
@@ -98,6 +98,10 @@ class TestLintSh(unittest.TestCase):
             self.repo_root / "tools" / "check_boilerplate.py",
             tools_dir / "check_boilerplate.py",
         )
+        shutil.copy2(
+            self.repo_root / "tools" / "check_versions.py",
+            tools_dir / "check_versions.py",
+        )
         tflint_stub = tools_dir / "tflint.sh"
         tflint_stub.write_text(
             "#!/bin/bash\n" + _APACHE_HEADER + "\nexit 0\n",
@@ -120,7 +124,7 @@ class TestLintSh(unittest.TestCase):
             )
             script_path.chmod(script_path.stat().st_mode | stat.S_IXUSR)
 
-        for dname in ("modules", "fast", "blueprints"):
+        for dname in ("modules", "fast", "blueprints", "docs"):
             (sandbox / dname).mkdir()
         (sandbox / "fast" / "stages-aw").mkdir()
         (sandbox / "default-versions.tf").write_text(
@@ -241,6 +245,62 @@ class TestLintSh(unittest.TestCase):
             self.assertIn("Invalid versions.tf", proc.stdout)
             self.assertIn("[FAIL] Version checks", proc.stdout)
             self.assertIn("- Version checks", proc.stdout)
+
+    def test_lint_sh_fails_on_outdated_provider_tf(self):
+        """Outdated constraints in provider.tf fail lint.sh version checks."""
+        with tempfile.TemporaryDirectory() as td:
+            sandbox, env = self._build_version_check_sandbox(td)
+            bad_bp = sandbox / "blueprints" / "bad_provider"
+            bad_bp.mkdir(parents=True)
+            (bad_bp / "provider.tf").write_text(
+                _APACHE_HEADER
+                + """
+terraform {
+  required_version = ">= 1.7.4"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = ">= 6.21.0, < 8.0.0"
+    }
+  }
+}
+""",
+                encoding="utf-8",
+            )
+
+            proc = subprocess.run(
+                ["bash", str(sandbox / "tools" / "lint.sh")],
+                cwd=str(sandbox),
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Invalid provider.tf", proc.stdout)
+            self.assertIn("[FAIL] Version checks", proc.stdout)
+
+    def test_lint_sh_fails_on_blueprint_missing_version_file(self):
+        """Blueprint dirs with .tf files must declare provider/versions."""
+        with tempfile.TemporaryDirectory() as td:
+            sandbox, env = self._build_version_check_sandbox(td)
+            bp = sandbox / "blueprints" / "missing_vfile"
+            bp.mkdir(parents=True)
+            (bp / "main.tf").write_text(
+                _APACHE_HEADER + '\nvariable "x" {}\n', encoding="utf-8"
+            )
+
+            proc = subprocess.run(
+                ["bash", str(sandbox / "tools" / "lint.sh")],
+                cwd=str(sandbox),
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            self.assertNotEqual(proc.returncode, 0)
+            self.assertIn("Invalid blueprint", proc.stdout)
+            self.assertIn("[FAIL] Version checks", proc.stdout)
 
     def test_ci_workflow_runs_repo_lint_on_push_and_pull_request(self):
         """CI workflow must run tools/lint.sh on push and pull_request."""

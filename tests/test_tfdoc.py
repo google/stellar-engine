@@ -170,6 +170,104 @@ output "vpc_id" {
             )
             self.assertIn("| [id](outputs.tf#L1) | Output ID. | ✓ |", rendered)
 
+    def test_variable_inline_comments_and_quotes(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            vars_path = os.path.join(tmpdir, "variables.tf")
+            with open(vars_path, "w", encoding="utf-8") as f:
+                f.write(
+                    'variable "image" { # container image override\n'
+                    "  # tfdoc:variable:source fast/stages-aw/0-bootstrap\n"
+                    '  description = "Keep #1 and https://example.com."\n'
+                    "  type        = string # image name\n"
+                    '  default     = "ENTERPRISE" # requires autoscaling\n'
+                    "}\n"
+                    'variable "notes" {\n'
+                    '  description = "Multiline script."\n'
+                    "  type        = string\n"
+                    "  default     = <<-END // heredoc opener note\n"
+                    "    echo ok # keep heredoc comment\n"
+                    "  END\n"
+                    "}\n"
+                )
+            stripped = tfdoc._strip_inline_comments(
+                "default = <<-END // strip\n# keep heredoc comment\nEND\n"
+            )
+            self.assertIn("# keep heredoc comment", stripped)
+            self.assertNotIn("// strip", stripped)
+
+            parsed = list(tfdoc.parse_variables(tmpdir))
+            self.assertEqual(len(parsed), 2)
+            image = parsed[0]
+            self.assertEqual(image.name, "image")
+            self.assertEqual(image.line, 1)
+            self.assertEqual(
+                image.description, "Keep #1 and https://example.com."
+            )
+            self.assertEqual(image.type, "string")
+            self.assertEqual(image.default, '"ENTERPRISE"')
+            self.assertEqual(image.source, "fast/stages-aw/0-bootstrap")
+            self.assertFalse(image.required)
+
+            notes = parsed[1]
+            self.assertEqual(notes.line, 7)
+            self.assertIn("echo ok # keep heredoc comment", notes.default)
+
+    def test_variable_blank_line_before_default_or_nullable(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            vars_path = os.path.join(tmpdir, "variables.tf")
+            with open(vars_path, "w", encoding="utf-8") as f:
+                f.write(
+                    'variable "feature_settings" {\n'
+                    '  description = "Feature settings."\n'
+                    "  type = object({\n"
+                    "    enabled = optional(bool, true)\n"
+                    "  })\n"
+                    "\n"
+                    "  nullable = true\n"
+                    "  default  = {}\n"
+                    "}\n"
+                    'variable "cleanup_policies" {\n'
+                    '  description = "Cleanup policies."\n'
+                    "  type = map(object({\n"
+                    "    action = string\n"
+                    "  }))\n"
+                    "\n"
+                    "  default = null\n"
+                    "}\n"
+                )
+            parsed = {v.name: v for v in tfdoc.parse_variables(tmpdir)}
+            fs = parsed["feature_settings"]
+            self.assertEqual(
+                fs.type, "object({\n    enabled = optional(bool, true)\n  })"
+            )
+            self.assertFalse(fs.required)
+            self.assertEqual(fs.default, "{}")
+
+            cp = parsed["cleanup_policies"]
+            self.assertEqual(
+                cp.type, "map(object({\n    action = string\n  }))"
+            )
+            self.assertFalse(cp.required)
+            self.assertEqual(cp.default, "null")
+
+    def test_output_depends_on_after_description(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            outs_path = os.path.join(tmpdir, "outputs.tf")
+            with open(outs_path, "w", encoding="utf-8") as f:
+                f.write(
+                    'output "endpoint" {\n'
+                    '  description = "Endpoint IP."\n'
+                    "  depends_on = [\n"
+                    "    google_compute_forwarding_rule.default\n"
+                    "  ]\n"
+                    "  value = google_compute_address.default.address\n"
+                    "}\n"
+                )
+            parsed = list(tfdoc.parse_outputs(tmpdir))
+            self.assertEqual(len(parsed), 1)
+            self.assertEqual(parsed[0].name, "endpoint")
+            self.assertEqual(parsed[0].description, "Endpoint IP.")
+
 
 if __name__ == "__main__":
     unittest.main()

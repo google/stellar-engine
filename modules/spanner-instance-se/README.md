@@ -171,7 +171,7 @@ module "spanner_instance" {
 | [instance](variables.tf#L105) | Instance attributes. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [project_id](variables.tf#L152) | Project id. | <code>string</code> | ✓ |  |
 | [databases](variables.tf#L17) | Databases. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
-| [edition](variables.tf#L64) | The Spanner instance edition used when `instance.edition` is not set. Valid values are 'EDITION_UNSPECIFIED', 'STANDARD', 'ENTERPRISE', or 'ENTERPRISE_PLUS'. | <code>string</code> |  | <code>&#34;ENTERPRISE&#34; &#35; ENTERPRISE is required for autoscaling&#34;</code> |
+| [edition](variables.tf#L64) | The Spanner instance edition used when `instance.edition` is not set. Valid values are 'EDITION_UNSPECIFIED', 'STANDARD', 'ENTERPRISE', or 'ENTERPRISE_PLUS'. | <code>string</code> |  | <code>&#34;ENTERPRISE&#34;</code> |
 | [iam](variables.tf#L74) | IAM bindings in {ROLE => [MEMBERS]} format. | <code>map&#40;list&#40;string&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam_bindings](variables.tf#L80) | Authoritative IAM bindings in {KEY => {role = ROLE, members = [], condition = {}}}. Keys are arbitrary. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [iam_bindings_additive](variables.tf#L95) | Individual additive IAM bindings. Keys are arbitrary. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> |  | <code>&#123;&#125;</code> |

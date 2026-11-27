@@ -18,8 +18,8 @@ App Engine applications cannot be deleted once they're created; you have to dele
 | [project](variables.tf#L53) | Project to create your App Engine resource. | <code>string</code> | ✓ |  |
 | [auth_domain](variables.tf#L15) | The domain to authenticate users with when using App Engine's User API. | <code>string</code> |  | <code>null</code> |
 | [database_type](variables.tf#L21) | The type of the Cloud Firestore or Cloud Datastore database associated with this application. | <code>string</code> |  | <code>null</code> |
-| [feature_settings](variables.tf#L27) | A block of optional settings to configure specific App Engine features. | <code>object&#40;&#123;&#8230;nullable &#61; true</code> |  | <code>&#123;&#125;</code> |
-| [iap](variables.tf#L37) | Settings for enabling Cloud Identity Aware Proxy. | <code>object&#40;&#123;&#8230;nullable &#61; true</code> |  | <code>&#123;&#125;</code> |
+| [feature_settings](variables.tf#L27) | A block of optional settings to configure specific App Engine features. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
+| [iap](variables.tf#L37) | Settings for enabling Cloud Identity Aware Proxy. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> |  | <code>&#123;&#125;</code> |
 | [serving_status](variables.tf#L58) | The serving status of the app. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs

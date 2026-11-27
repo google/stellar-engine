@@ -35,7 +35,7 @@ run_check "Terraform format" terraform fmt -recursive -check -diff "$PWD"
 
 run_check "Terraform lint" bash tools/tflint.sh -f compact
 
-run_check "READMEs" uv run --locked python tools/check_documentation.py --no-show-summary modules fast blueprints
+run_check "READMEs" uv run --locked python tools/check_documentation.py --no-show-summary modules fast blueprints docs
 
 run_check "Links" uv run --locked python tools/check_links.py --no-show-summary "$PWD"
 
@@ -47,21 +47,7 @@ run_check "Python lint" uv run --locked ruff check "$PWD"
 
 run_check "Blueprint metadata" uv run --locked python tools/validate_metadata.py -v blueprints --verbose --failed-only
 
-echo -- Version checks --
-version_failed=0
-while IFS= read -r -d '' vfile; do
-  if ! grep -q 'required_version' "$vfile" || ! grep -q 'hashicorp/google' "$vfile"; then
-    echo "Invalid versions.tf (missing required_version or hashicorp/google): $vfile"
-    version_failed=1
-  fi
-done < <(find . \( -name '.git' -o -name '.terraform' -o -name '.venv' -o -name 'venv' -o -name 'node_modules' -o -name '__pycache__' \) -prune -o -type f -name 'versions.tf' -print0)
-
-if [ $version_failed -eq 0 ]; then
-  echo "[PASS] Version checks"
-else
-  echo "[FAIL] Version checks"
-  FAILED_CHECKS+=("Version checks")
-fi
+run_check "Version checks" uv run --locked python tools/check_versions.py "$PWD"
 
 echo ""
 echo "================================================================================"
