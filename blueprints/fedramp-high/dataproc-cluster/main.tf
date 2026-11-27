@@ -18,14 +18,6 @@ data "google_project" "current" {
   project_id = var.main_project_id
 }
 
-data "google_project" "landing_project" {
-  project_id = var.network_project_id
-}
-
-data "google_project" "core_project" {
-  project_id = var.core_project_id
-}
-
 data "google_compute_network" "network" {
   name    = var.network_name
   project = var.network_project_id
@@ -48,13 +40,46 @@ data "google_kms_crypto_key" "default" {
   key_ring = data.google_kms_key_ring.default.id
 }
 
-resource "google_project_service" "dataproc_api" {
+moved {
+  from = google_project_service.dataproc_api
+  to   = google_project_service.dataproc_apis["dataproc.googleapis.com"]
+}
+
+resource "google_project_service" "dataproc_apis" {
+  for_each = toset([
+    "compute.googleapis.com",
+    "dataproc.googleapis.com",
+    "storage.googleapis.com",
+  ])
+
   project            = var.main_project_id
-  service            = "dataproc.googleapis.com"
+  service            = each.value
   disable_on_destroy = false
 }
 
+resource "google_project_service_identity" "dataproc_agent" {
+  provider   = google-beta
+  project    = var.main_project_id
+  service    = "dataproc.googleapis.com"
+  depends_on = [google_project_service.dataproc_apis]
+}
+
+data "google_storage_project_service_account" "gcs_sa" {
+  project    = var.main_project_id
+  depends_on = [google_project_service.dataproc_apis]
+}
+
+resource "time_sleep" "dataproc_agent_propagation" {
+  create_duration = "60s"
+  depends_on = [
+    google_project_service.dataproc_apis,
+    google_project_service_identity.dataproc_agent,
+    data.google_storage_project_service_account.gcs_sa,
+  ]
+}
+
 resource "google_service_account" "dataproc_vm" {
+  project      = var.main_project_id
   account_id   = "dp-${var.main_project_id}"
   display_name = "Dataproc Worker Service Account"
 }
@@ -106,7 +131,8 @@ module "gcs" {
   force_destroy = true
 
   depends_on = [
-    google_kms_crypto_key_iam_member.dataproc_kms
+    google_project_service.dataproc_apis,
+    google_kms_crypto_key_iam_member.dataproc_kms,
   ]
 }
 
@@ -139,6 +165,12 @@ module "dataproc-cluster" {
     }
   }
   depends_on = [
-    google_kms_crypto_key_iam_member.dataproc_kms
+    google_project_service.dataproc_apis,
+    google_project_iam_member.worker,
+    google_project_iam_member.dataproc_service_agent,
+    google_project_iam_member.dataproc_network_user,
+    google_project_iam_member.dataproc_compute_viewer,
+    google_kms_crypto_key_iam_member.dataproc_kms,
+    module.gcs,
   ]
 }

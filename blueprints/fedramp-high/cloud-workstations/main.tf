@@ -25,7 +25,7 @@ locals {
   # Without an image there is nothing to pull, so the repository is ignored.
   image_repository = var.image == null ? null : var.image_repository
 
-  workstation_default_sa = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-workstations.iam.gserviceaccount.com"
+  workstation_default_sa = google_project_service_identity.workstations_sa.member
 
   workstations = {
     for workstation, config in var.workstations : workstation => merge(
@@ -54,6 +54,21 @@ resource "google_project_service" "workstations" {
 
 data "google_project" "project" {
   project_id = var.main_project_id
+}
+
+resource "google_project_service_identity" "workstations_sa" {
+  provider   = google-beta
+  project    = var.main_project_id
+  service    = "workstations.googleapis.com"
+  depends_on = [google_project_service.workstations]
+}
+
+resource "time_sleep" "kms_iam_propagation" {
+  create_duration = "60s"
+  depends_on = [
+    google_project_service.workstations,
+    google_project_service_identity.workstations_sa,
+  ]
 }
 
 module "workstations" {
@@ -89,6 +104,7 @@ module "workstations" {
   }
   depends_on = [
     google_kms_crypto_key_iam_member.workstations_sa_kms_permissions,
+    google_kms_crypto_key_iam_member.compute_sa_kms_permissions,
     google_artifact_registry_repository_iam_member.artifact_registry_reader,
     google_compute_subnetwork_iam_member.network_user,
     module.workstation-vm-sa
