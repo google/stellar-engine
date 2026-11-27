@@ -89,9 +89,10 @@ Stop active data exfiltration, block lateral movement, and sever threat actor ac
    ```bash
    [Insert emergency CLI command template, e.g., gcloud iam service-accounts disable ...]
    ```
-2. Isolate affected network paths, apply emergency quarantine firewall rules, or attach restrictive network tags:
+2. Isolate affected network paths by binding a quarantine Secure Tag and adding top-priority deny rules to the global or hierarchical network firewall policy when `BEFORE_CLASSIC_FIREWALL` is active, or attach restrictive classic network tags where classic firewall evaluation applies:
    ```bash
-   [Insert emergency CLI command template, e.g., gcloud compute instances add-tags ...]
+   # Global network firewall policy (BEFORE_CLASSIC_FIREWALL, Stage 2a) or classic tag fallback (Stage 2b)
+   # gcloud compute network-firewall-policies rules create 1 --firewall-policy=[FW_POLICY] --global-firewall-policy --project=[NETWORK_HOST_PROJECT_ID] --direction=INGRESS --action=deny --layer4-configs=all --src-ip-ranges=0.0.0.0/0 --target-secure-tags=[QUARANTINE_TAG_VALUE_ID]
    ```
 3. Update VPC Service Controls perimeters or Cloud Armor security policies to enforce strict boundaries around the incident zone.
 

@@ -24,13 +24,14 @@ This runbook guides security operators and incident responders through identifyi
 ### 2.2 Responder prerequisites
 
 - The `roles/compute.viewer` and `roles/container.viewer` roles for resource scoping.
-- The `roles/compute.securityAdmin` role to modify network tags and firewall rules during virtual machine containment.
+- The `roles/compute.orgFirewallPolicyAdmin` role to add emergency deny rules to organization or folder hierarchical firewall policies such as `<prefix>-net-default`.
+- The `roles/compute.securityAdmin` and `roles/resourcemanager.tagUser` roles to bind quarantine Secure Tags and add deny rules to global or regional network firewall policies such as `<prefix>-<env>-fw-policy-0`, or to apply classic VPC firewall rules and tags when `BEFORE_CLASSIC_FIREWALL` is not active.
 - The `roles/container.developer` role or an equivalent Kubernetes RBAC `ClusterRole` binding to relabel pods and apply `NetworkPolicy` resources.
 - The `roles/compute.storageAdmin` role to snapshot persistent disks for forensic analysis.
 
 ## 3. Operational scope
 
-This runbook applies to all Stellar Engine environments, including FedRAMP High, FedRAMP Moderate, IL4, and IL5 landing zones. The procedures assume Shielded VMs, OS Login, Workload Identity, and immutable infrastructure managed through Terraform.
+This runbook applies to all Stellar Engine environments, including FedRAMP High, FedRAMP Moderate, IL4, and IL5 landing zones. The procedures assume Shielded VMs, Workload Identity, and immutable infrastructure managed through Terraform. Note that `compute.requireOsLogin` is enforced by organization policy in FedRAMP High and FedRAMP Moderate deployments, but is skipped by default in IL4 and IL5 custom organization policies.
 
 ## 4. Identification and scoping
 
@@ -63,10 +64,41 @@ Isolate the compromised workload to stop lateral movement and data exfiltration 
 ### 5.1 Virtual machine containment
 
 1. Keep the compromised virtual machine running rather than stopping or restarting it so volatile memory and temporary files remain intact for forensic capture.
-2. Quarantine the instance on the network after confirming that a VPC firewall rule at priority `1` denies all ingress and egress traffic for the `ir-quarantine` network tag:
-   ```bash
-   gcloud compute instances add-tags [INSTANCE_NAME] --zone=[ZONE] --project=[PROJECT_ID] --tags=ir-quarantine
-   ```
+2. Quarantine the instance on the network using the mechanism that matches the VPC firewall evaluation order of the environment:
+   - In Stage 2a Shared VPCs created by `fast/stages-aw/2-networking-a-fedramp`, `BEFORE_CLASSIC_FIREWALL` evaluates the folder hierarchical firewall policy `<prefix>-net-default` and global network firewall policies such as `<prefix>-hub-fw-policy-0` and `<prefix>-<env>-fw-policy-0` before classic VPC rules, so classic `--tags=ir-quarantine` rules cannot override higher-priority policy allow rules. Resolve the numeric `[PROJECT_NUMBER]` and `[INSTANCE_ID]`, bind a quarantine Secure Tag value to the instance, and add top-priority `INGRESS` and `EGRESS` deny rules targeting that Secure Tag on the global network firewall policy in the network host project, adding matching higher-priority deny rules on `<prefix>-net-default` if an existing hierarchical allow rule would otherwise match:
+     ```bash
+     # Resolve numeric project number and instance ID required by Resource Manager TagBindings
+     PROJECT_NUMBER=$(gcloud projects describe [PROJECT_ID] --format='value(projectNumber)')
+     INSTANCE_ID=$(gcloud compute instances describe [INSTANCE_NAME] --zone=[ZONE] --project=[PROJECT_ID] --format='value(id)')
+     gcloud resource-manager tags bindings create \
+         --parent=//compute.googleapis.com/projects/${PROJECT_NUMBER}/zones/[ZONE]/instances/${INSTANCE_ID} \
+         --tag-value=[QUARANTINE_TAG_VALUE_ID] \
+         --location=[ZONE]
+     gcloud compute network-firewall-policies rules create 1 \
+         --firewall-policy=[ENV_FW_POLICY_NAME] \
+         --global-firewall-policy \
+         --project=[NETWORK_HOST_PROJECT_ID] \
+         --direction=INGRESS \
+         --action=deny \
+         --layer4-configs=all \
+         --src-ip-ranges=0.0.0.0/0 \
+         --target-secure-tags=[QUARANTINE_TAG_VALUE_ID] \
+         --enable-logging
+     gcloud compute network-firewall-policies rules create 2 \
+         --firewall-policy=[ENV_FW_POLICY_NAME] \
+         --global-firewall-policy \
+         --project=[NETWORK_HOST_PROJECT_ID] \
+         --direction=EGRESS \
+         --action=deny \
+         --layer4-configs=all \
+         --dest-ip-ranges=0.0.0.0/0 \
+         --target-secure-tags=[QUARANTINE_TAG_VALUE_ID] \
+         --enable-logging
+     ```
+   - In Stage 2b deployments using `fast/stages-aw/2-networking-b-il5-ngfw` or any VPC using default classic evaluation order without overriding NGFW allow policies, apply the `ir-quarantine` network tag only after verifying that priority `1` VPC firewall rules deny all ingress and egress traffic for `ir-quarantine`:
+     ```bash
+     gcloud compute instances add-tags [INSTANCE_NAME] --zone=[ZONE] --project=[PROJECT_ID] --tags=ir-quarantine
+     ```
 3. Remove the instance from load balancer target pools and backend services so it stops receiving production traffic.
 4. Block new SSH sessions through OS Login.
 5. Disable the attached dedicated service account so the attacker cannot use the virtual machine identity to call Google Cloud APIs.
@@ -91,14 +123,15 @@ Collect immutable evidence from the isolated workload to determine the initial a
 
 ### 6.1 Virtual machine forensics
 
-1. Snapshot every persistent disk attached to the instance for offline digital forensics analysis:
+1. Snapshot every persistent disk attached to the instance inside an approved Assured Workloads region for offline digital forensics analysis:
    ```bash
    gcloud compute disks snapshot [DISK_NAME] \
        --zone=[ZONE] \
+       --storage-location=[REGION] \
        --snapshot-names=ir-snap-[INSTANCE_NAME]-[TIMESTAMP] \
        --project=[PROJECT_ID]
    ```
-2. Capture volatile memory on SEV 1 incidents using a memory acquisition tool such as LiME or Volatility over the serial console or a dedicated forensic sidecar before terminating the instance.
+2. Capture volatile memory on SEV 1 incidents using LiME or an authenticated forensic sidecar over an Identity-Aware Proxy SSH tunnel or dedicated forensics collection agent before terminating the instance, writing the capture to an isolated CMEK-protected Cloud Storage bucket for offline analysis with Volatility. Do not rely on serial console access because `compute.disableSerialPortAccess` is enforced by organization policy.
 3. Export the instance metadata to inspect for injected SSH keys or unauthorized startup scripts.
 
 ### 6.2 GKE pod forensics
@@ -123,7 +156,7 @@ Replace compromised resources completely rather than attempting in-place cleanup
 
 1. Delete the compromised pod, node, or virtual machine once disk snapshots and logs are preserved:
    - Delete a GKE pod with `kubectl delete pod [POD_NAME] -n [NAMESPACE]`.
-   - Delete a Compute Engine instance with `gcloud compute instances delete [INSTANCE_NAME] --zone=[ZONE]`.
+   - Delete a Compute Engine instance with `gcloud compute instances delete [INSTANCE_NAME] --zone=[ZONE] --project=[PROJECT_ID]`.
 2. Analyze the collected forensic artifacts to pinpoint the root vulnerability, such as an unpatched container CVE, a server-side request forgery flaw, or leaked credentials.
 
 ### 7.2 Workload recovery
