@@ -1,10 +1,10 @@
 # Google Cloud Naming Convention
 
-Google Cloud services and assets have strict naming conventions in the form of character count, capitalization or lowercase, dashes, hyphens, underscores and reserved internal words.  There are also several Google Cloud services that require globally unique naming to avoid collisions, while also forever "burning" the name so it cannot be used again ever, anywhere on Google Cloud.  
+Google Cloud services and assets enforce strict naming constraints across character limits, casing, hyphens, underscores, and reserved prefixes. Several Google Cloud resources also require globally unique names to avoid cross-tenant collisions or keep deleted project identifiers reserved against immediate reuse.
 
-To architect to these Google Cloud naming requirements we establish a "naming standard" that will determine how we name all Google Cloud resources, assets, and services to ensure compliance with the requirements.
+Use this naming standard across Google Cloud resources, assets, and Terraform configurations to maintain compliance and prevent deployment failures.
 
-_Throughout this documentation we use example naming and diagrams to show examples of how the naming fits.  The example company is named ACME._
+Example names throughout this guide use the fictional organization `ACME` (`acme`).
 
 # Table of Contents
 
@@ -27,81 +27,65 @@ _Throughout this documentation we use example naming and diagrams to show exampl
 
 ## Prefix
 
-_acme_ - `ACME` is the example prefix we will use for this codebase.
+_acme_ (`ACME`) serves as the example prefix in this guide.
 
-A short prefix of no more than 7 characters representing the company name and or team name that will flow down through the infrastructure for all named resources.  We use this `prefix` to ensure we comply with any globally unique naming, like `Google Cloud Projects`.
+Choose a short `prefix` of 7 characters or fewer (`var.prefix`, enforced by `length(var.prefix) < 8` in `fast/stages-aw/*`) representing the organization or landing zone. Stages and blueprints prepend this `prefix` to globally unique resources such as projects, service accounts, and Cloud Storage buckets so identifiers remain unique without exceeding Google Cloud length limits.
 
-_Note: The only place we _do not_ use or need the prefix is in the `Google Cloud Folders` which are only viewable within the Google Cloud WebUI.  Brevity in the Google Cloud Folder structure is paramount for clean Resource Management._
+Folder display names in `fast/stages-aw/0-bootstrap` (`StellarEngine-<prefix>`) include the prefix at the Assured Workloads root, while child administrative and tenant folders omit the prefix for readability.
 
 ## Google Cloud Folders
 
-Spec:
+Stellar Engine Stage `0-bootstrap` and Stage `1-resman` generate a standardized folder hierarchy inside the Assured Workloads boundary:
 
-`{compliance regime}` - `{operations role}` - `{common services}`
+- Root Assured Workloads folder: `StellarEngine-<prefix>`
+- Common services folder: `<RegimeCode> Common Services` (containing `Networking` and `Security`)
+- Environment folders: `<RegimeCode> <Env>` (such as `IL5 Prod` and `IL5 Dev`)
+- Tenant folders: `Project <tenant> <env>` (such as `Project ten-1 prod`)
 
-Example:
+For custom workload subfolders created outside the core FAST stage naming pattern, prefer short descriptive display names (`1` to `30` characters, avoiding reserved control characters):
 
-`fedramp-high` - `logs` - `common`
+- Example stage folders: `StellarEngine-acme`, `IL5 Common Services`, `IL5 Prod`, `Project ten-1 prod`
+- Example custom subfolder: `fh-logs-common`
 
 [Google Cloud Folders Documentation](https://cloud.google.com/resource-manager/docs/creating-managing-folders#creating-folders)
 
-Google Cloud Folders should be following Google Cloud best practices by following these naming standards:
+Google Cloud Folder naming properties:
 
-- [ ] lowercase
-- [ ] dashes
-- [ ] no spaces
-
-Google Cloud Folder naming is:
-
-- [ ] _only_ viewable within the Google Cloud Org
-- [ ] _not_ globally unique
-- [ ] _not_ burnable
-- [ ] _does not use_ the `prefix` block
+- Only viewable within the Google Cloud organization
+- Not globally unique (unique only within the same parent folder or organization)
+- Not permanently consumed on deletion
+- Supports letters, digits, spaces, hyphens, and underscores up to 30 characters
 
 ## Google Cloud Projects
 
+Stage `fast/stages-aw` core and tenant project IDs follow predictable prefix-based patterns (and blueprints append short suffixes within Google Cloud's 30-character maximum):
+
 Spec:
 
-`{prefix}-{compliance regime}-{environment}-{role}-{0-9}`
+- Stage projects: `<prefix>-<env>-<role>-<index>` or `<prefix>-net-<role>-host`
+- Tenant projects: `<prefix>-<env>-<tenant>-<role>-<index>`
+- Workload projects: `<prefix>-<regime>-<env>-<role>-<index>`
 
-`{prefix}-org-{environment}-{role}-{0-9}`
+Examples:
 
-Example:
-
-Google Cloud Project - Log Warehouse at the Google Cloud Org level
-
-`acme-org-logs-warehouse-0`
-
-Google Cloud Project - Log Warehouse at the IL2 level
-
-`acme-il2-logs-warehouse-0`
-
-Google Cloud Project - IL2 Ops Terraform Host
-
-`acme-il2-ops-iac-0`
-
-Google Cloud Project - IL5 Wing Directorate Sandbox Environment
-
-`acme-il5-sbx-wingdir-0`
+- Stage 0 core IaC project: `acme-prod-iac-core-0`
+- Stage 0 centralized audit logging project: `acme-prod-audit-logs-0`
+- Stage 0 billing export project: `acme-prod-billing-exp-0`
+- Stage 2 networking host projects: `acme-net-hub-host` (`2-networking-a-fedramp`) or `acme-net-vdss-host` (`2-networking-b-il5-ngfw`), and `acme-prod-net-host`
+- Stage 3 security project: `acme-prod-sec-core-0`
+- Stage 1 tenant self-service IaC project: `acme-prod-ten-1-iac-core-0`
 
 [Google Cloud Projects Documentation](https://cloud.google.com/resource-manager/docs/creating-managing-projects)
 
-Google Cloud Projects should be following Google Cloud best practices by following these naming standards:
+Google Cloud Project ID rules:
 
-- [ ] lowercase
-- [ ] dashes
-- [ ] no spaces
-
-Google Cloud Projects naming is:
-
-- [ ] _globally_ known
-- [ ] _must be_ globally unique
-- [ ] _forever burnable_ - once created that name can never be created again to infinity
-- [ ] _must be_ 6 to 30 characters in length
-- [ ] _must_ contain _only_ lowercase letters, numbers, hyphens
-- [ ] _must_ start with a letter
-- [ ] _cannot_ end with a hyphen
-- [ ] _cannot_ contain restricted strings, such as `google` and `ssl`
+- Lowercase letters, digits, and hyphens only (`^[a-z][a-z0-9-]{4,28}[a-z0-9]$`)
+- No spaces or uppercase characters
+- Globally unique across all Google Cloud customers
+- Treat deleted project IDs as permanently consumed once created (unavailable after deletion)
+- Must be 6 to 30 characters in length (enforced in `modules/project` preconditions)
+- Must start with a lowercase letter and cannot end with a hyphen
+- Cannot contain restricted substrings such as `google` or `ssl`
 
 ## Google Cloud Networks
 
@@ -123,119 +107,102 @@ IP Route
 
 [Google Cloud VPCs Documentation](https://cloud.google.com/architecture/best-practices-vpc-design#naming)
 
-Google Cloud Networks should be following Google Cloud best practices by following these naming standards:
+Google Cloud Networks naming rules:
 
-- [ ] lowercase
-- [ ] dashes
-- [ ] no spaces
-
-Google Cloud Networks naming is:
-
-- [ ] _visible_ only from the Google Cloud Org
-- [ ] _not_ globally unique
-- [ ] _not_ burnable
-- [ ] _not_ character number limited
+- Lowercase letters, digits, and hyphens only (`1` to `63` characters following RFC 1035 label syntax, starting with a lowercase letter and not ending with a hyphen)
+- No spaces or uppercase letters
+- Visible only inside the Google Cloud organization
+- Not globally unique (unique per project for VPCs and per project/region for subnets)
+- Not permanently consumed on deletion
 
 ## Google Cloud Org Policy Custom Constraints
 
 Spec:
 
-`custom.{prefix}{custom constraint}{00}`
+`custom.<camelCaseName>`
 
-Example:
+Examples from `fast/stages-aw/0-bootstrap/data/custom-constraint-policies/`:
 
-`custom.acmeDoNotAllowPublicIPsonGCEVMs00`
+- `custom.kmsRotation`
+- `custom.restrictFirewallRanges`
 
 [Google Cloud Organization Policy Custom Constraints Documentation](https://cloud.google.com/resource-manager/docs/organization-policy/creating-managing-custom-constraints#custom_constraints)
 
-Google Cloud Org Policy Custom Constraints should be following Google Cloud best practices by following these naming standards:
+Google Cloud Organization Policy Custom Constraints naming rules:
 
-- [ ] lowercase
-- [ ] camelCase
-- [ ] no spaces
-
-Google Cloud Org Policy Custom Constraints naming is:
-
-- [ ] _only_ viewable outside the Google Cloud Org
-- [ ] _is_ globally unique
-- [ ] _is_ burnable
+- `custom.` prefix followed by alphanumeric camelCase characters starting with a lowercase letter (`custom.[a-z][a-zA-Z0-9]{0,61}`)
+- No hyphens, underscores, or spaces
+- Scoped to and viewable only inside the owning Google Cloud organization
+- Unique only within the owning organization (not globally unique)
+- Not permanently consumed on deletion
 
 ## IAM Custom Roles
 
 Spec:
 
-`{prefix}-{compliance regime}-{environment}-{rolename}-{rw ro}`
+`<camelCaseRoleId>` or `<prefix>_<role>_<rw_ro>` (must match `^[a-zA-Z0-9_.]{3,64}$`; hyphens are not allowed by Google Cloud IAM)
 
-Example:
+Examples from `fast/stages-aw/0-bootstrap/data/custom-roles/`:
 
-`acme-il2-ops-terraformsa-rw`
-
-`acme-il2-ops-terraformsa-ro`
+- `organizationAdminViewer`
+- `tenantNetworkAdmin`
+- `storageViewer`
+- `acme_il5_ops_terraform_rw`
 
 [Google Cloud IAM Custom Roles Documentation](https://cloud.google.com/iam/docs/creating-custom-roles#creating)
 
-IAM Custom Roles should be following Google Cloud best practices by following these naming standards:
+IAM Custom Role ID rules:
 
-- [ ] lowercase
-- [ ] dashes
-- [ ] no spaces
-
-IAM Custom Roles naming is:
-
-- [ ] _only_ viewable inside the Google Cloud Org
-- [ ] _is not_ globally unique
-- [ ] _is not_ burnable
+- Letters, digits, underscores, and periods only (`3` to `64` characters)
+- No hyphens (`-`) or spaces
+- Viewable only inside the owning Google Cloud organization or project
+- Not globally unique
+- Deleted role IDs remain unavailable for 37 days (7-day undelete grace period plus 30-day permanent deletion delay) before reuse
 
 ## GCS Buckets
 
 Spec:
 
-`{prefix}-{compliance regime}-{environment}-{role}-({public})`
+`<prefix>-<env>-<purpose>-<index>`
 
-Example:
+Examples matching `fast/stages-aw/0-bootstrap/automation.tf` and `fast/stages-aw/1-resman/branch-tenants.tf`:
 
-`acme-il2-ops-terraform-tfstate`
-
-`acme-il2-ops-terraformsa-ro`
+- `acme-prod-iac-core-bootstrap-0`
+- `acme-prod-iac-core-resman-0`
+- `acme-prod-iac-core-outputs-0`
+- `acme-tn-prod-ten-1-0`
+- `acme-prod-ten-1-iac-0`
+- `acme-prod-ten-1-iac-outputs-0`
 
 [Google Cloud Storage Documentation](https://cloud.google.com/storage/docs/buckets)
 
-GCS Buckets should be following Google Cloud best practices by following these naming standards:
+GCS Bucket naming rules:
 
-- [ ] lowercase
-- [ ] dashes
-- [ ] no spaces
-
-GCS Bucket naming is:
-
-- [ ] _only_ viewable inside the Google Cloud Org (unless set to Public)
-- [ ] _is_ globally unique
-- [ ] _is not_ burnable
+- Lowercase letters, digits, and hyphens only (`3` to `63` characters; avoid dots and underscores)
+- No spaces or uppercase characters
+- Stellar Engine enforces `storage.uniformBucketLevelAccess`, `storage.publicAccessPrevention`, and `iam.allowedPolicyMemberDomains`, keeping buckets private within the organization
+- Globally unique across all Google Cloud customers
+- Not permanently consumed on deletion (names become reusable after bucket deletion completes)
 
 ## GCE
 
 Spec:
 
-`{prefix}-{compliance regime}-{environment}-{role}-{000-999}`
+`<prefix>-<regime>-<env>-<role>-<000-999>`
 
 Example:
 
-`acme-fedramphigh-ops-terraform-server-001`
+`acme-fh-prod-app-001`
 
 [Google Cloud GCE VM Documentation](https://cloud.google.com/compute/docs/naming-resources)
 
-GCE should be following Google Cloud best practices by following these naming standards:
+GCE instance naming rules:
 
-- [ ] lowercase
-- [ ] dashes
-- [ ] no spaces
-
-GCE naming is:
-
-- [ ] _only_ viewable inside the Google Cloud Org
-- [ ] _is not_ globally unique
-- [ ] _is not_ burnable
-- [ ] _must be_ 1-64 characters
+- Lowercase letters, digits, and hyphens only (`1` to `63` characters following RFC 1035 syntax, starting with a lowercase letter and not ending with a hyphen)
+- No spaces or uppercase characters
+- Only viewable inside the owning Google Cloud project and organization
+- Not globally unique (unique per project and zone)
+- Not permanently consumed on deletion
 
 ## Terraform labels
 
