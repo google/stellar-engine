@@ -54,6 +54,8 @@ A few examples are:
 - When choosing the interval time in "rate_limit_threshold", you can only select 10, 30, 60, 120, 180, 240, 300, 600, 900, 1200, 1800, 2700, or 3600 seconds.
 - When selecting "deny(STATUS)" for the "action", STATUS must be 403, 404, or 502.
 - Each sample policy starts with a request body limit rule that denies requests whose `Content-Length` is over 8KB. Regional policies only inspect the first 8KB of a body with preconfigured WAF rules, so anything past that is never checked ([request body inspection](https://cloud.google.com/armor/docs/configure-waf#request-body)). Keep the rule above any `throttle` or `allow` rule, because traffic matching those is not evaluated further. If a backend must accept larger bodies (for example file uploads or git pushes), remove the rule for that policy and accept that the excess is not inspected.
+- Because `throttle` and `rate_based_ban` conform with `allow` and terminate evaluation for matching requests, place them after all WAF `deny` rules and scope non-deny rules without a CEL `expression` to explicit `src_ip_ranges` allowlists so unmatched traffic reaches the catch-all `deny(403)` default rule.
+- Adjust the `10.0.0.0/8` and `10.0.0.0/16` placeholder CIDRs in `rules.yaml` to match your authorized client or corporate IP ranges before applying.
 <!-- BEGIN TFDOC -->
 ## Variables
 
