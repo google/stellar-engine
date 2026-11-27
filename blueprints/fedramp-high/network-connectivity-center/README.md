@@ -71,11 +71,13 @@ Confirm the hub and attached VPC spokes in the Google Cloud console or with the 
 
 ```bash
 gcloud network-connectivity hubs describe <NCC_HUB_NAME> --project=<MAIN_PROJECT_ID>
-gcloud network-connectivity spokes list --hub=<NCC_HUB_NAME> --project=<MAIN_PROJECT_ID>
+gcloud network-connectivity hubs list-spokes <NCC_HUB_NAME> --project=<MAIN_PROJECT_ID>
 ```
 
 ## 6 Operational notes
 
+- Stage 2 networking (`2-networking-a-fedramp` and `2-networking-b-il5-ngfw`) creates a default Network Connectivity Center hub (`main`) when `enable_default_ncc_hub = true` and attaches its landing and spoke VPC networks to it. Google Cloud limits each VPC network to a single Network Connectivity Center spoke, so either manage spoke connectivity through Stage 2 or set `enable_default_ncc_hub = false` before attaching those VPCs to a hub deployed by this blueprint.
+- This blueprint configures `auto_accept_projects` across `main_project_id` and every host project present in `spokes` so cross-project spoke attachments accept automatically without requiring `auto-accept-spoke` manually.
 - This blueprint attaches VPC spokes only; see the [Network Connectivity Center overview](https://cloud.google.com/network-connectivity/docs/network-connectivity-center/concepts/overview) for Cloud VPN, Cloud Interconnect, and router appliance spokes.
 - Under `STAR` topology, VPCs residing in `main_project_id` join the `center` group while VPCs in other projects join the `edge` group; under `MESH` topology, all spokes join the `default` group.
 - Set `psc_prop = true` to enable Private Service Connect [connection propagation](https://cloud.google.com/network-connectivity/docs/network-connectivity-center/concepts/psc-propagated-connection-overview) across spokes.

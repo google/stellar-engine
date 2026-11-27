@@ -6,10 +6,7 @@ psc_prop            = true              # Whether PSC propagation is enabled
 gcp_region          = "us-east4"        # The GCP region for regional resources and provider default
 
 spokes = {
-  "my-spoke-1" = "projects/my-network-project-id-1/global/networks/my-vpc-network-1" # Replace with actual spoke name and VPC self-link
-  "my-spoke-2" = "projects/my-network-project-id-2/global/networks/my-vpc-network-2" # Add more spokes as needed - they must already exist!
+  "prod-spoke-0" = "projects/xxxx-prod-net-host/global/networks/prod-spoke-0" # Replace with actual spoke name and VPC self-link
+  "my-spoke-2"   = "projects/my-network-project-id-2/global/networks/my-vpc-network-2" # Add more spokes as needed - they must already exist!
 }
-
-# Example of how to add a custom service account ID if needed
-# workflow_service_account_id = "custom-workflows-sa"
 
