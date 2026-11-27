@@ -16,7 +16,9 @@ import datetime
 import os
 import re
 
+from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
+import pandas as pd
 import plotly.express as px
 import streamlit as st
 
@@ -39,6 +41,24 @@ client = bigquery.Client(project=PROJECT_ID)
 # ==========================================
 # DATA LOADING & CACHING
 # ==========================================
+def _run_analytics_query(query, start_date, end_date, view_name):
+    job_config = bigquery.QueryJobConfig(
+        query_parameters=[
+            bigquery.ScalarQueryParameter("start_date", "DATE", start_date),
+            bigquery.ScalarQueryParameter("end_date", "DATE", end_date),
+        ]
+    )
+    try:
+        return client.query(query, job_config=job_config).to_dataframe()
+    except NotFound:
+        st.warning(
+            f"Analytics view `{view_name}` was not found in "
+            f"`{PROJECT_ID}.{DATASET_ID}`. Create the BigQuery reporting views "
+            "after generating Discovery Engine activity."
+        )
+        return pd.DataFrame()
+
+
 @st.cache_data(ttl=3600)  # Cache for 1 hour to reduce BQ costs
 def load_user_activity(start_date, end_date):
     query = f"""
@@ -46,13 +66,9 @@ def load_user_activity(start_date, end_date):
     FROM `{PROJECT_ID}.{DATASET_ID}.vw_discovery_engine_user_activity`
     WHERE activity_date BETWEEN @start_date AND @end_date
     """
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[
-            bigquery.ScalarQueryParameter("start_date", "DATE", start_date),
-            bigquery.ScalarQueryParameter("end_date", "DATE", end_date),
-        ]
+    return _run_analytics_query(
+        query, start_date, end_date, "vw_discovery_engine_user_activity"
     )
-    return client.query(query, job_config=job_config).to_dataframe()
 
 
 @st.cache_data(ttl=3600)
@@ -62,13 +78,9 @@ def load_session_activity(start_date, end_date):
     FROM `{PROJECT_ID}.{DATASET_ID}.vw_discovery_engine_sessions`
     WHERE session_date BETWEEN @start_date AND @end_date
     """
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[
-            bigquery.ScalarQueryParameter("start_date", "DATE", start_date),
-            bigquery.ScalarQueryParameter("end_date", "DATE", end_date),
-        ]
+    return _run_analytics_query(
+        query, start_date, end_date, "vw_discovery_engine_sessions"
     )
-    return client.query(query, job_config=job_config).to_dataframe()
 
 
 @st.cache_data(ttl=3600)
@@ -78,13 +90,9 @@ def load_agent_activity(start_date, end_date):
     FROM `{PROJECT_ID}.{DATASET_ID}.vw_discovery_engine_agent_activity`
     WHERE activity_date BETWEEN @start_date AND @end_date
     """
-    job_config = bigquery.QueryJobConfig(
-        query_parameters=[
-            bigquery.ScalarQueryParameter("start_date", "DATE", start_date),
-            bigquery.ScalarQueryParameter("end_date", "DATE", end_date),
-        ]
+    df = _run_analytics_query(
+        query, start_date, end_date, "vw_discovery_engine_agent_activity"
     )
-    df = client.query(query, job_config=job_config).to_dataframe()
     if not df.empty:
         df["agent_id"] = df["agent_id"].astype(str)
     return df
@@ -124,10 +132,18 @@ with tab1:
         df_sessions["session_id"].nunique() if not df_sessions.empty else 0
     )
 
-    search_count = len(df_users[df_users["interaction_type"] == "Search"])
-    answer_count = df_users[df_users["interaction_type"] == "Assistant"][
-        "operation_id"
-    ].nunique()
+    search_count = (
+        len(df_users[df_users["interaction_type"] == "Search"])
+        if not df_users.empty
+        else 0
+    )
+    answer_count = (
+        df_users[df_users["interaction_type"] == "Assistant"][
+            "operation_id"
+        ].nunique()
+        if not df_users.empty
+        else 0
+    )
 
     col1.metric("Total Unique Users", f"{total_users:,}")
     col2.metric("Total Sessions", f"{total_sessions:,}")
