@@ -1,11 +1,11 @@
-# Access Control Manager
+# Access Context Manager
 
 <!-- BEGIN TOC -->
 - [Introduction to ACM](#introduction-to-acm)
-- [Access Context Manager Blueprint](#access-context-manager-blueprint)
+- [Access Context Manager blueprint](#access-context-manager-blueprint)
 - [Disclaimer](#disclaimer)
-- [Prerequisites Steps](#prerequisites-steps)
-- [Deployment Steps](#deployment-steps)
+- [Prerequisites steps](#prerequisites-steps)
+- [Deployment steps](#deployment-steps)
 - [Verification of a successful deployment](#verification-of-a-successful-deployment)
 - [Variables](#variables)
 - [Outputs](#outputs)
@@ -14,72 +14,88 @@
 ## Introduction to ACM
 The primary purpose of ACM is to define and manage access levels and access policies to control access to GCP resources based on contextual attributes, such as:
 
-<mark>User identity:</mark> Restrict access to specific users or groups. <br />
-<mark>Device attributes:</mark> Require users to access resources only from approved devices. <br />
-<mark>Location:</mark> Allow or deny access based on geographic location. <br />
-<mark>IP address:</mark> Restrict access to specific IP ranges. <br />
+- User identity to restrict access to specific users or groups.
+- Device attributes to require users to access resources only from approved devices.
+- Location to allow or deny access based on geographic location.
+- IP address to restrict access to specific IP ranges.
 
-These controls help implement zero-trust security, ensuring that access is granted only under specific conditions, regardless of whether the request originates from inside or outside your network. <br />
+These controls help implement zero-trust security, ensuring that access is granted only under specific conditions, regardless of whether the request originates from inside or outside your network.
 
-# Access Context Manager Blueprint
-This blueprint demonstrates how to deploy Access Context Manager (ACM) on Google Cloud Platform (GCP). Access Context Manager (ACM) in Google Cloud Platform (GCP) is a security service that allows you to define and enforce fine-grained access controls for your resources. This blueprint runs create two different resources:
+## Access Context Manager blueprint
+This blueprint demonstrates how to deploy Access Context Manager (ACM) on Google Cloud Platform (GCP). Access Context Manager (ACM) in Google Cloud Platform (GCP) is a security service that allows you to define and enforce fine-grained access controls for your resources. This blueprint creates two different resources:
 
-<mark>Service Perimeters:</mark> A core feature of Access Context Manager, service perimeters provide a way to define and enforce boundaries around GCP services to enhance security and control data access. They help protect sensitive data, restrict access to services (based on definded policies) and prevent data from being exfiltrated to unauthoried networks or regions.
+- Service perimeters define and enforce boundaries around GCP services to enhance security and control data access. They protect sensitive data, restrict access to services based on defined policies, and prevent data from being exfiltrated to unauthorized networks or regions.
+- Access levels define and enforce fine-grained access control policies for resources and services, providing an additional layer of security.
 
-<mark>Access Levels:</mark> Allow you to define and enforce fine-grained access control policies for resources and services; providing an additional layer of security
-
-By using Access Levels and Service Perimeters, you can control access based on attributes like user identity, device security, IP address, and more. For more information: please look at the Access Context Manager [Overview](https://cloud.google.com/access-context-manager/docs/overview#:~:text=Service%20perimeters%20define%20sandboxes%20of,to%20describe%20the%20desired%20rules.).
+By using Access Levels and Service Perimeters, you can control access based on attributes like user identity, device security, IP address, and more. For more information, review the Access Context Manager [Overview](https://cloud.google.com/access-context-manager/docs/overview).
 
 ## Disclaimer
 This blueprint uses the CNAP Blueprint deployment as its foundation.
-To view and manage Access levels in your project, an access policy must be created in the organization level that is scoped to the project.
-You cannot edit the policy title once it is created.
-An access policy collects the service perimeters and access levels you create for your organization. An organization can have one access policy for the entire organization and multiple scoped access policies for the folders and projects.
+To view and manage Access levels in your project, an access policy must exist at the organization level and be scoped appropriately.
+An access policy collects the service perimeters and access levels you create for your organization. An organization can have one access policy for the entire organization and multiple scoped access policies for folders and projects.
 
-## Prerequisites Steps
-Determine your Organization number
-```gcloud organizations list```
+## Prerequisites steps
+Determine your Organization number:
 
-Determine if there is a policy
-```gcloud access-context-manager policies list --organization="<ORGANIZATION_ID>"```
+```bash
+gcloud organizations list
+```
 
-Note: Replace `ORGANIZATION_ID` (numeric ID of your organization) and `POLICY_TITLE` (human-readable title for your policy) with the appropriate values in the commands below where:
+Determine if there is an existing access policy:
 
-If no results were returned, then an Access Policy doesn't exist. Please follow the [Create an Organization-Level Access Policy](https://cloud.google.com/access-context-manager/docs/create-access-policy#organization-access-policy) instructions or use the gcloud command below before proceding to the [Deployment Steps](#deployment-steps).
-   * `gcloud access-context-manager policies create --organization="<ORGANIZATION_ID>" --title="<POLICY_TITLE>"`
+```bash
+gcloud access-context-manager policies list --organization="<ORGANIZATION_ID>"
+```
 
-## Deployment Steps
-1. Review and follow necessary [Prerequisites Steps](#prerequisites-steps).
-2. Run ```cp terraform.tfvars.sample terraform.tfvars``` to copy the sample variables to your own tfvars file & update the variables as necessary in your tfvars file.
-3. Set your region (https://cloud.google.com/compute/docs/regions-zones). 
-4. Create a new `access_policy_title` ; "default" is the default policy title.
-5. Create a new `access_levels` i.e. ```gcloud access-context-manager levels list```
-  a. REGIONS should contains ISO3166-1 alpha-2 country code.
-6. Create a new `service_perimeter` i.e., like restrict_storage.
-  a. Obtain your projectNumber if you're identifying resources using ```'gcloud projects describe <project ID> --format='value(projectNumber'``` (In the sample provided is based off utility from the CNAP Blueprint).
-7. The usual terraform commands will do the work. To provision this example, run the following from within this directory:
+Replace `ORGANIZATION_ID` (numeric ID of your organization) and `POLICY_TITLE` (human-readable title for your policy) with the appropriate values in the commands below.
 
-```terraform init```<br />
-```terraform plan``` to see the infrastructure plan<br />
-```terraform apply``` to apply the infrastructure build<br />
-```terraform destroy``` only if you wish to destroy the built infrastructure<br />
+If no results are returned, an Access Policy does not exist yet. Follow the [Create an Organization-Level Access Policy](https://cloud.google.com/access-context-manager/docs/create-access-policy#organization-access-policy) instructions or run the following command before proceeding to [Deployment steps](#deployment-steps):
+
+```bash
+gcloud access-context-manager policies create --organization="<ORGANIZATION_ID>" --title="<POLICY_TITLE>"
+```
+
+## Deployment steps
+1. Review and follow the [Prerequisites steps](#prerequisites-steps).
+2. Run `cp terraform.tfvars.sample terraform.tfvars` to copy the sample variables to your own tfvars file and update the variables as necessary.
+3. Set `region` to your Google Cloud region (`us-east4` is used in the sample) for provider quota billing context.
+4. Note that `access_policy_title` and `domain` are optional unused legacy variables retained for backwards compatibility because the module looks up the existing organization access policy automatically.
+5. Configure `access_levels` (compare existing levels with `gcloud access-context-manager levels list --policy=<POLICY_ID>`):
+   - Set `regions` to ISO 3166-1 alpha-2 country codes such as `["US"]`, not GCP region names.
+   - Set `ip_subnetworks` to valid CIDR blocks such as `["203.0.113.0/24"]`.
+6. Configure `service_perimeters` (for example `gcs_perimeter` using `name`, `description`, and `status`, without an extra `parent` key):
+   - Obtain the numeric project number for each project in `status.resources` (`projects/<PROJECT_NUMBER>`) by running:
+
+```bash
+gcloud projects describe <PROJECT_ID> --format='value(projectNumber)'
+```
+
+7. Provision the resources from within this directory:
+
+```bash
+terraform init
+terraform plan
+terraform apply
+```
+
+Run `terraform destroy` only if you wish to destroy the built infrastructure.
 
 ## Verification of a successful deployment
-Use GCP console to verify if the resources have been created. NOTE: Everything is checked on the ORG level <br />
-To check access level: Go to Access Context Manager and it should be listed if it was created. <br />
-To check service perimeters: Go to VPC Service Control and it should be listed if it was created. <br />
+Use the Google Cloud console to verify that the organization-level resources exist:
+- Open Access Context Manager in the console to verify the access levels.
+- Open VPC Service Controls in the console to verify the service perimeters.
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
 | [access_levels](variables.tf#L15) | List of access levels to create. Each access level is a map containing 'name', 'description', and 'conditions'. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [access_policy_title](variables.tf#L32) | The title for the Access Context Manager policy. | <code>string</code> | ✓ |  |
-| [domain](variables.tf#L37) | Domain of the project that you will be using. | <code>string</code> | ✓ |  |
-| [main_project_id](variables.tf#L42) | The project ID where the Access Context Manager resources will be created. | <code>string</code> | ✓ |  |
-| [organization_id](variables.tf#L47) | The organization ID. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L52) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
-| [service_perimeters](variables.tf#L57) | List of service perimeters to create. Each service perimeter is a map containing 'name', 'description', 'status', and 'resources'. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [main_project_id](variables.tf#L44) | The project ID where the Access Context Manager resources will be created. | <code>string</code> | ✓ |  |
+| [organization_id](variables.tf#L49) | The organization ID. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L54) | GCP Region to deploy into. | <code>string</code> | ✓ |  |
+| [service_perimeters](variables.tf#L59) | List of service perimeters to create. Each service perimeter is a map containing 'name', 'description', 'status', and 'resources'. | <code>list&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
+| [access_policy_title](variables.tf#L32) | Deprecated unused input retained for backwards compatibility; the module looks up the existing organization access policy. | <code>string</code> |  | <code>null</code> |
+| [domain](variables.tf#L38) | Deprecated unused input retained for backwards compatibility. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs
 

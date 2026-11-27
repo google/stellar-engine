@@ -1,24 +1,21 @@
-organization_id = "1234567890"
-domain          = "your-company.com"
-region          = "us-central1"
+organization_id = "123456789012"
+region          = "us-east4"
 
 main_project_id = "xxxx-xxxx-xxxx-main-0"
 
-access_policy_title = "your_access_policy_title"
 access_levels = [
   {
-    name = "accessPolicies/<YOUR_ACCESS_POLICY_ID>/accessLevels/<YOUR_ACCESS_POLICY_NAME>"
-
+    name        = "accessPolicies/123456789012/accessLevels/corp_network"
     description = "Access only from the company network."
     conditions = [
       {
-        ip_subnetworks = ["x.x.x.x/24"]
-        members        = ["user:john.doe@your-company.com", "group:engineering@your-company.com"]
+        ip_subnetworks = ["203.0.113.0/24"]
+        members        = ["user:admin@example.com", "group:engineering@example.com"]
         negate         = false
-        device_policy  = {
+        device_policy = {
           require_screen_lock = true
         }
-        regions = ["us-central1" "europe-west1"]
+        regions = ["US"]
       }
     ]
   }
@@ -26,12 +23,11 @@ access_levels = [
 
 service_perimeters = [
   {
-    parent = "accessPolicies/<YOUR_ACCESS_POLICY>"
-    name = "accessPolicies/<YOUR_ACCESS_POLICY>/servicePerimeters/gcs_perimeter>"
+    name        = "accessPolicies/123456789012/servicePerimeters/gcs_perimeter"
     description = "Perimeter for accessing GCP buckets."
     status = {
       restricted_services = ["storage.googleapis.com"]
-      resources           = ["projects/project_number"]
+      resources           = ["projects/123456789012"]
     }
   }
 ]
