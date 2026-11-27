@@ -36,7 +36,7 @@ Complete the [Prepare](https://csrc.nist.gov/Projects/risk-management/about-rmf/
 [Categorize](https://csrc.nist.gov/Projects/risk-management/about-rmf/categorize-step) the system and the information it processes, stores, and transmits based on an impact analysis:
 
 - Determine the system security categorization under [NIST SP 800-60](https://csrc.nist.gov/pubs/sp/800/60/v1/r1/final) according to the organizational impact of a loss of confidentiality, integrity, or availability:
-  - Review the [Categorization References](/docs/artifacts/categorization-references/).
+  - Review the [Categorization References](./artifacts/categorization-references/).
   - Request the [System Security Plan Templates](https://forms.gle/zdv7Gip4opmdhBqk7) for IL5 H-H-X and FedRAMP High baselines; the FedRAMP Moderate template is planned.
 
 ### Step 2 select
@@ -89,12 +89,12 @@ Continuously [Monitor](https://csrc.nist.gov/Projects/risk-management/about-rmf/
 
 Include these supporting artifacts in your authorization package as required by your authorizing agency:
 
-- [Privacy Impact Assessment](/docs/artifacts/PIA-PCIL-SORN/)
-- [PII Confidentiality Impact Level](/docs/artifacts/PIA-PCIL-SORN/)
-- [System of Records Notice](/docs/artifacts/PIA-PCIL-SORN/)
-- [Hardware List](/docs/artifacts/hw-sw-list/)
-- [Software List](/docs/artifacts/hw-sw-list/)
-- [Ports, Protocols, and Services Management](/docs/artifacts/ppsms/)
+- [Privacy Impact Assessment](./artifacts/PIA-PCIL-SORN/)
+- [PII Confidentiality Impact Level](./artifacts/PIA-PCIL-SORN/)
+- [System of Records Notice](./artifacts/PIA-PCIL-SORN/)
+- [Hardware List](./artifacts/hw-sw-list/)
+- [Software List](./artifacts/hw-sw-list/)
+- [Ports, Protocols, and Services Management](./artifacts/ppsms/)
 
 ## 4. Operational considerations
 

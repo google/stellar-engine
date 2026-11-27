@@ -43,7 +43,7 @@ Setting up a production-ready Google Cloud organization requires coordinated ide
 
 ## 6. Terraform modules
 
-The modules under `modules/` support rapid composition and remain simple enough to fork and audit in environments that restrict third-party dependencies. Modules ending in `-se` carry Stellar Engine extensions on top of upstream Cloud Foundation Fabric modules while preserving upstream sync compatibility. Follow this convention whenever you extend an upstream module.
+The modules under `modules/` support rapid composition and remain simple enough to fork and audit in environments that restrict third-party dependencies. Upstream Cloud Foundation Fabric modules are synced in place via three-way merge as documented in the [upstream sync guide](./docs/upstream-sync.md); legacy `-se` copies remain only where listed there rather than creating new `-se` module copies.
 
 Every module stays close to the underlying provider resources, manages IAM bindings alongside resource creation, supports multi-resource instantiation where appropriate, and avoids external command side effects.
 
