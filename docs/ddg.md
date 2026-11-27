@@ -247,7 +247,7 @@ kms_protection_level = "HSM"
 # use `gcloud organizations list`
 organization = {
  domain = "<domain>" # DISPLAY_NAME
- id = "<organization_id>"
+ id = <organization_id>
  customer_id = "<customer_id>"
 }
 outputs_location = "~/fast-config"
