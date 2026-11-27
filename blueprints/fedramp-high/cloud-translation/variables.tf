@@ -13,7 +13,7 @@
 # limitations under the License.
 
 variable "deletion_protection" {
-  description = "Deletion proteciton."
+  description = "Deletion protection."
   type        = bool
   default     = true
 }
@@ -25,9 +25,19 @@ variable "file" {
 }
 
 variable "kms_key_self_link" {
-  description = "The full self-link of the existing KMS key to use for Workflow encryption (CMEK)."
+  description = "The full self-link of the existing Cloud KMS CryptoKey in var.region to use for Cloud Storage bucket and Workflow encryption (CMEK)."
   type        = string
   default     = null
+  validation {
+    condition = var.kms_key_self_link == null || (
+      can(regex(
+        "^projects/[^/]+/locations/[^/]+/keyRings/[^/]+/cryptoKeys/[A-Za-z0-9_-]+$",
+        var.kms_key_self_link
+      )) &&
+      try(split("/", var.kms_key_self_link)[3], "") == var.region
+    )
+    error_message = "kms_key_self_link must be null or a Cloud KMS CryptoKey in var.region (projects/../locations/<region>/keyRings/../cryptoKeys/..)."
+  }
 }
 
 variable "main_project_id" {
