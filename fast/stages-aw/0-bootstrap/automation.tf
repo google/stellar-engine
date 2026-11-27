@@ -17,6 +17,20 @@
 # tfdoc:file:description Automation project and resources.
 
 locals {
+  automation_project_iam_bindings_additive = {
+    serviceusage_bootstrap_r = {
+      member = module.automation-tf-bootstrap-r-sa.iam_email
+      role   = "roles/serviceusage.serviceUsageConsumer"
+    }
+    serviceusage_resman = {
+      member = module.automation-tf-resman-sa.iam_email
+      role   = "roles/serviceusage.serviceUsageConsumer"
+    }
+    serviceusage_resman_r = {
+      member = module.automation-tf-resman-r-sa.iam_email
+      role   = "roles/serviceusage.serviceUsageConsumer"
+    }
+  }
   cicd_resman_sa   = try(module.automation-tf-cicd-sa["resman"].iam_email, "")
   cicd_resman_r_sa = try(module.automation-tf-cicd-r-sa["resman"].iam_email, "")
 }
@@ -136,16 +150,7 @@ module "automation-project" {
       }
     }
   }
-  iam_bindings_additive = {
-    serviceusage_resman = {
-      member = module.automation-tf-resman-sa.iam_email
-      role   = "roles/serviceusage.serviceUsageConsumer"
-    }
-    serviceusage_resman_r = {
-      member = module.automation-tf-resman-r-sa.iam_email
-      role   = "roles/serviceusage.serviceUsageViewer"
-    }
-  }
+  iam_bindings_additive = local.automation_project_iam_bindings_additive
   org_policies = var.bootstrap_user != null ? {} : {
     "compute.skipDefaultNetworkCreation" = {
       rules = [{ enforce = true }]

@@ -48,28 +48,28 @@ locals {
       bucket            = module.automation-tf-bootstrap-gcs.name
       name              = "bootstrap"
       sa                = module.automation-tf-bootstrap-sa.email
-      bootstrap_project = var.bootstrap_project
+      bootstrap_project = module.automation-project.project_id
     })
     "0-bootstrap-r" = templatefile(local._tpl_providers, {
       backend_extra     = null
       bucket            = module.automation-tf-bootstrap-gcs.name
       name              = "bootstrap"
       sa                = module.automation-tf-bootstrap-r-sa.email
-      bootstrap_project = var.bootstrap_project
+      bootstrap_project = module.automation-project.project_id
     })
     "1-resman" = templatefile(local._tpl_providers, {
       backend_extra     = null
       bucket            = module.automation-tf-resman-gcs.name
       name              = "resman"
       sa                = module.automation-tf-resman-sa.email
-      bootstrap_project = var.bootstrap_project
+      bootstrap_project = module.automation-project.project_id
     })
     "1-resman-r" = templatefile(local._tpl_providers, {
       backend_extra     = null
       bucket            = module.automation-tf-resman-gcs.name
       name              = "resman"
       sa                = module.automation-tf-resman-r-sa.email
-      bootstrap_project = var.bootstrap_project
+      bootstrap_project = module.automation-project.project_id
     })
     "0-bootstrap-tenant" = templatefile(local._tpl_providers, {
       backend_extra = join("\n", [
@@ -80,7 +80,7 @@ locals {
       bucket            = module.automation-tf-resman-gcs.name
       name              = "bootstrap-tenant"
       sa                = module.automation-tf-resman-sa.email
-      bootstrap_project = var.bootstrap_project
+      bootstrap_project = module.automation-project.project_id
     })
   }
   tfvars = {
