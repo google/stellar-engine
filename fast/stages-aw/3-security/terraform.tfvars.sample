@@ -2,6 +2,8 @@
 
 # KMS Keys Configuration
 # Keys are opt-in: no keyrings or keys are provisioned by default until kms_keys is populated.
+# Leave version_template unset to inherit the kms_protection_level propagated from 0-bootstrap
+# (SOFTWARE for FEDRAMP_MODERATE, HSM for FEDRAMP_HIGH / IL4 / IL5), or uncomment it to override.
 kms_keys = {
   default = {
     rotation_period = "7776000s" # 90 days - CIS Benchmark 1.10
@@ -9,13 +11,13 @@ kms_keys = {
       environment = "security"
     }
     locations = [
-      "us",          # Multi-region
-      "us-east4",    # Primary region
-      "us-central1"  # Secondary region
+      "us",         # Multi-region
+      "us-east4",   # Primary region
+      "us-central1" # Secondary region
     ]
-    version_template = {
-      algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
-      protection_level = "HSM" # FedRAMP / IL4 / IL5 compliance
-    }
+    # version_template = {
+    #   algorithm        = "GOOGLE_SYMMETRIC_ENCRYPTION"
+    #   protection_level = "HSM" # Or "SOFTWARE"
+    # }
   }
 }
