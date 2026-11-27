@@ -40,7 +40,6 @@ module "branch-security-cicd-repo" {
       template = {
         project_id  = null
         branch_name = each.value.branch == null ? null : "^${trim(each.value.branch, "^$")}$"
-        repo_name   = each.value.name
         tag_name    = null
       }
     }

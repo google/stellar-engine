@@ -146,3 +146,107 @@ run "plan_tenant_gcs_locations" {
     error_message = "Expected tenant buckets to be REGIONAL unless the tenant sets a multi-region GCS location."
   }
 }
+
+run "plan_sourcerepo_cicd_triggers" {
+  command = plan
+
+  providers = {
+    google              = google
+    google-beta         = google-beta
+    google.billing      = google.billing
+    google-beta.billing = google-beta.billing
+  }
+
+  variables {
+    cicd_repositories = {
+      data_platform_dev = {
+        branch = "dev"
+        name   = "test-dp-dev"
+        type   = "sourcerepo"
+      }
+      data_platform_prod = {
+        branch = "main"
+        name   = "test-dp-prod"
+        type   = "sourcerepo"
+      }
+      gcve_dev = {
+        branch = "dev"
+        name   = "test-gcve-dev"
+        type   = "sourcerepo"
+      }
+      gcve_prod = {
+        branch = "main"
+        name   = "test-gcve-prod"
+        type   = "sourcerepo"
+      }
+      gke_dev = {
+        branch = "dev"
+        name   = "test-gke-dev"
+        type   = "sourcerepo"
+      }
+      gke_prod = {
+        branch = "main"
+        name   = "test-gke-prod"
+        type   = "sourcerepo"
+      }
+      networking = {
+        branch = "main"
+        name   = "test-networking"
+        type   = "sourcerepo"
+      }
+      project_factory_dev = {
+        branch = "dev"
+        name   = "test-pf-dev"
+        type   = "sourcerepo"
+      }
+      project_factory_prod = {
+        branch = "main"
+        name   = "test-pf-prod"
+        type   = "sourcerepo"
+      }
+      security = {
+        branch = "main"
+        name   = "test-security"
+        type   = "sourcerepo"
+      }
+    }
+    fast_features = {
+      data_platform   = true
+      envs            = true
+      gcve            = true
+      gke             = true
+      project_factory = true
+      teams           = true
+    }
+    team_folders = {
+      alpha = {
+        descriptive_name         = "Alpha team"
+        iam_by_principals        = {}
+        impersonation_principals = []
+        cicd = {
+          branch            = "main"
+          identity_provider = null
+          name              = "test-team-alpha"
+          type              = "sourcerepo"
+        }
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      length(module.branch-dp-dev-cicd-repo) == 1
+      && length(module.branch-dp-prod-cicd-repo) == 1
+      && length(module.branch-gcve-dev-cicd-repo) == 1
+      && length(module.branch-gcve-prod-cicd-repo) == 1
+      && length(module.branch-gke-dev-cicd-repo) == 1
+      && length(module.branch-gke-prod-cicd-repo) == 1
+      && length(module.branch-network-cicd-repo) == 1
+      && length(module.branch-pf-dev-cicd-repo) == 1
+      && length(module.branch-pf-prod-cicd-repo) == 1
+      && length(module.branch-security-cicd-repo) == 1
+      && length(module.branch-teams-team-cicd-repo) == 1
+    )
+    error_message = "Expected all 11 sourcerepo CI/CD modules across 1-resman to plan cleanly."
+  }
+}

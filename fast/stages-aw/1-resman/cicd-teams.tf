@@ -39,7 +39,6 @@ module "branch-teams-team-cicd-repo" {
       template = {
         project_id  = null
         branch_name = each.value.cicd.branch == null ? null : "^${trim(each.value.cicd.branch, "^$")}$"
-        repo_name   = each.value.cicd.name
         tag_name    = null
       }
     }
