@@ -166,7 +166,7 @@ variable "enable_default_ncc_hub" {
 variable "envs_folders" {
   description = "List of environments to be created for projects to go into."
   type = map(object({
-    admin = string
+    admin = optional(string)
   }))
 }
 

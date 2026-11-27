@@ -206,9 +206,9 @@ variable "deploy_org_resources" {
 }
 
 variable "envs_folders" {
-  description = "List of environments to be created for projects to go into."
+  description = "List of environments to be created for projects to go into. The optional admin attribute is unused and kept for compatibility; manage environment folder IAM via folder_iam.envs."
   type = map(object({
-    admin = string
+    admin = optional(string)
   }))
 }
 
@@ -223,7 +223,7 @@ variable "factories_config" {
 }
 
 variable "fast_features" {
-  # tfdoc:variable:source 0-0-bootstrap
+  # tfdoc:variable:source 0-bootstrap
   description = "Selective control for top-level FAST features."
   type = object({
     data_platform   = optional(bool, false)

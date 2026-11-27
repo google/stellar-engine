@@ -517,7 +517,7 @@ output "sandbox" {
 
 output "security" {
   # tfdoc:output:consumers 03-security
-  description = "Data for the networking stage."
+  description = "Data for the security stage."
   value = {
     folder          = module.branch-security-folder.id
     gcs_bucket      = module.branch-security-gcs.name
