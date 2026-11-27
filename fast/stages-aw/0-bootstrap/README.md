@@ -59,7 +59,7 @@ Deploying organization policies during Stage 0 enforces location restrictions, d
 Stage 0 manages organization policy exceptions through a dedicated tag hierarchy rooted at the `org-policies` tag key. A built-in condition on `iam.allowedPolicyMemberDomains` relaxes domain restrictions on resources that bind or inherit the `org-policies/allowed-policy-member-domains-all` tag value.
 
 - Define additional tag values and `tagUser` IAM bindings through the `org_policies_config.tag_values` variable.
-- Stage 0 exports managed tag keys and values into `0-bootstrap.auto.tfvars` so downstream stages can reference their IDs.
+- Stage 0 exports managed tag keys and values into `0-bootstrap.auto.tfvars.json` so downstream stages can reference their IDs.
 - Stage 1 manages the remaining resource hierarchy tags alongside the folder structure.
 
 The following example defines a custom tag value under `org-policies` via `org_policies_config` and grants `roles/resourcemanager.tagUser` to a group:
@@ -80,7 +80,7 @@ org_policies_config = {
 }
 ```
 
-Reference that tag value inside a constraint condition in `data/org-policies/compute.yaml` or another policy factory file using your numeric organization ID and tag key name:
+Reference that tag value inside a constraint condition in `data/org-policies/compute_policy.yaml` or `data/custom-org-policies/compute_policy.yaml` using your numeric organization ID and tag key name:
 
 ```yaml
 compute.requireOsLogin:
@@ -88,7 +88,7 @@ compute.requireOsLogin:
   - enforce: true
   - enforce: false
     condition:
-      expression: resource.matchTag('12345678/org-policies-config', 'compute-require-oslogin-false')
+      expression: resource.matchTag('12345678/org-policies', 'compute-require-oslogin-false')
 ```
 
 ### Automation project
@@ -170,20 +170,15 @@ Most required variables such as `billing_account` and `organization` supply envi
 
 The `groups` variable maps logical group keys from the [Google Cloud Enterprise Setup Checklist](https://cloud.google.com/docs/enterprise/setup-checklist) to your organization's group local-parts so you can customize group addresses without modifying module code.
 
-For example, to map the network administrator group to `net-rockstars@example.com`, specify the group name without the domain, which Terraform appends from `organization.domain`:
+For example, to map the network administrator group to `net-rockstars@example.com`, set the override in `terraform.tfvars` without modifying `variables.tf` (`var.groups` uses an `object` type with defaults matching the setup checklist):
 
-```hcl
-variable "groups" {
-  description = "Group names to grant organization-level permissions."
-  type        = map(string)
-  default = {
-    gcp-vpc-network-admins = "net-rockstars"
-    # [...]
-  }
+```tfvars
+groups = {
+  gcp-vpc-network-admins = "net-rockstars"
 }
 ```
 
-If your group structure differs from the checklist layout, define your group keys in `groups` and update the role mappings in `organization-iam.tf`.
+In `variables.tf`, `var.groups` defines the six supported group keys as optional object attributes (`gcp-billing-admins`, `gcp-devops`, `gcp-vpc-network-admins`, `gcp-organization-admins`, `gcp-security-admins`, and `gcp-support`). If your group structure requires additional custom group keys beyond those six, add them to `variables.tf` and update the role mappings in `organization-iam.tf`.
 
 ### IAM bindings
 
@@ -318,9 +313,11 @@ Complete the repository setup manually after `terraform apply`:
 
 ### Feature toggles
 
-Feature toggles in `fast_features` are experimental and not officially supported in Stellar Engine. Downstream stages read `fast_features` to conditionally provision optional hierarchy branches:
+Feature toggles in `fast_features` are experimental (except `envs`, which Stage 1 requires for environment folders) and control optional hierarchy branches provisioned by Stage 1:
 
 - The `data_platform` toggle provisions folders, service accounts, buckets, and IAM bindings for the [3-data-platform](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/3-data-platform) stage.
+- The `envs` toggle provisions environment folders (`Int`, `Test`, `Prod`) and the `prod-resman-envs-0` service account consumed by Stage 2 and Stage 3.
+- The `gcve` toggle provisions `dev` and `prod` folders, automation service accounts, state buckets, and IAM bindings for Google Cloud VMware Engine (`3-gcve`) stages.
 - The `gke` toggle provisions prerequisites for the [3-gke-multitenant](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/3-gke-multitenant) stage.
 - The `project_factory` toggle provisions prerequisites for the [3-project-factory](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/tree/master/fast/stages/3-project-factory) stage.
 - The `sandbox` toggle creates a top-level `Sandbox` folder with relaxed policies for experimentation.
