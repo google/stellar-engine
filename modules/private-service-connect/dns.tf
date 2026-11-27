@@ -19,32 +19,26 @@
  *****************************************/
 
 module "googleapis" {
-  source      = "terraform-google-modules/cloud-dns/google"
-  version     = "~> 5.0"
+  source      = "../dns"
   project_id  = var.project_id
-  type        = "private"
   name        = "${local.dns_code}apis"
-  domain      = "googleapis.com."
   description = "Private DNS zone to configure ${local.googleapis_url}"
-
-  private_visibility_config_networks = [
-    var.network_self_link
-  ]
-
-  recordsets = [
-    {
-      name    = "*"
-      type    = "CNAME"
+  zone_config = {
+    domain = "googleapis.com."
+    private = {
+      client_networks = [var.network_self_link]
+    }
+  }
+  recordsets = {
+    "CNAME *" = {
       ttl     = 300
       records = [local.googleapis_url]
-    },
-    {
-      name    = local.recordsets_name
-      type    = "A"
+    }
+    "A ${local.recordsets_name}" = {
       ttl     = 300
       records = [var.private_service_connect_ip]
-    },
-  ]
+    }
+  }
 }
 
 /******************************************
@@ -52,32 +46,26 @@ module "googleapis" {
  *****************************************/
 
 module "gcr" {
-  source      = "terraform-google-modules/cloud-dns/google"
-  version     = "~> 5.0"
+  source      = "../dns"
   project_id  = var.project_id
-  type        = "private"
   name        = "${local.dns_code}gcr"
-  domain      = "gcr.io."
   description = "Private DNS zone to configure gcr.io"
-
-  private_visibility_config_networks = [
-    var.network_self_link
-  ]
-
-  recordsets = [
-    {
-      name    = "*"
-      type    = "CNAME"
+  zone_config = {
+    domain = "gcr.io."
+    private = {
+      client_networks = [var.network_self_link]
+    }
+  }
+  recordsets = {
+    "CNAME *" = {
       ttl     = 300
       records = ["gcr.io."]
-    },
-    {
-      name    = ""
-      type    = "A"
+    }
+    "A " = {
       ttl     = 300
       records = [var.private_service_connect_ip]
-    },
-  ]
+    }
+  }
 }
 
 /***********************************************
@@ -90,30 +78,24 @@ moved {
 }
 
 module "pkg-dev" {
-  source      = "terraform-google-modules/cloud-dns/google"
-  version     = "~> 5.0"
+  source      = "../dns"
   project_id  = var.project_id
-  type        = "private"
   name        = "${local.dns_code}pkg-dev"
-  domain      = "pkg.dev."
   description = "Private DNS zone to configure pkg.dev"
-
-  private_visibility_config_networks = [
-    var.network_self_link
-  ]
-
-  recordsets = [
-    {
-      name    = "*"
-      type    = "CNAME"
+  zone_config = {
+    domain = "pkg.dev."
+    private = {
+      client_networks = [var.network_self_link]
+    }
+  }
+  recordsets = {
+    "CNAME *" = {
       ttl     = 300
       records = ["pkg.dev."]
-    },
-    {
-      name    = ""
-      type    = "A"
+    }
+    "A " = {
       ttl     = 300
       records = [var.private_service_connect_ip]
-    },
-  ]
+    }
+  }
 }
