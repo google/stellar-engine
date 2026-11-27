@@ -91,6 +91,10 @@ class PreflightInputs(pydantic.BaseModel):
     # imports, from `existing_org_policies` in answers.yaml. None when the
     # inputs come without answers.yaml, which has nowhere to list them.
     existing_org_policies: tuple[str, ...] | None = None
+    # Whether Stage 0 also creates the optional separation-of-duties custom
+    # roles under `data/custom-roles-sod/`, as a Stage 0
+    # `enable_tenant_sod_roles` of true does.
+    enable_tenant_sod_roles: bool = False
 
 
 def read_config_env(path):

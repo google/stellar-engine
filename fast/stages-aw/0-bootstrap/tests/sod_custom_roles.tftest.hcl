@@ -274,3 +274,47 @@ run "plan_opt_in_merges_with_caller_custom_roles" {
     error_message = "Expected opt-in SoD roles and caller-supplied custom_roles to merge cleanly."
   }
 }
+
+run "plan_opt_in_rejects_custom_role_key_collision" {
+  command = plan
+
+  providers = {
+    google      = google
+    google-beta = google-beta
+    local       = local
+    time        = time
+  }
+
+  variables {
+    enable_tenant_sod_roles = true
+    custom_roles = {
+      tag_editor = ["resourcemanager.projects.get"]
+    }
+  }
+
+  expect_failures = [
+    google_organization_iam_custom_role.sod,
+  ]
+}
+
+run "plan_opt_in_rejects_custom_role_id_collision" {
+  command = plan
+
+  providers = {
+    google      = google
+    google-beta = google-beta
+    local       = local
+    time        = time
+  }
+
+  variables {
+    enable_tenant_sod_roles = true
+    custom_roles = {
+      tenantKeyManager = ["cloudkms.keyRings.get"]
+    }
+  }
+
+  expect_failures = [
+    google_organization_iam_custom_role.sod,
+  ]
+}

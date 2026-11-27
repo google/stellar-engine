@@ -1725,7 +1725,9 @@ def check_shared_org(ctx):
     try:
         existing = [
             f"custom role {role_id}"
-            for role_id in ctx.repo.custom_role_ids()
+            for role_id in ctx.repo.custom_role_ids(
+                include_optional=ctx.inputs.enable_tenant_sod_roles
+            )
             if ctx.cloud.custom_role_exists(org_id, role_id)
         ]
         existing += [

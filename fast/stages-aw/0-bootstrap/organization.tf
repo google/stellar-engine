@@ -353,6 +353,31 @@ resource "google_organization_iam_custom_role" "sod" {
   description = coalesce(each.value.description, "Terraform-managed.")
   stage       = each.value.stage
   permissions = each.value.permissions
+  lifecycle {
+    # Fail the plan when var.custom_roles or factories_config.custom_roles
+    # reuses an SoD map key or role_id, instead of silently overwriting the
+    # exported custom_roles entry or failing the apply with AlreadyExists.
+    precondition {
+      condition = !contains(
+        keys(module.organization.custom_role_id), each.key
+      )
+      error_message = join(" ", [
+        "SoD custom role key ${each.key} is already defined by custom_roles",
+        "or factories_config.custom_roles; rename or remove that role.",
+      ])
+    }
+    precondition {
+      condition = !contains(
+        values(module.organization.custom_role_id),
+        "organizations/${var.organization.id}/roles/${each.value.name}"
+      )
+      error_message = join(" ", [
+        "SoD custom role_id ${each.value.name} is already defined by",
+        "custom_roles or factories_config.custom_roles; rename or remove",
+        "that role.",
+      ])
+    }
+  }
 }
 
 module "organization" {

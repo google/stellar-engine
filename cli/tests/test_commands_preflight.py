@@ -144,6 +144,26 @@ def test_billing_no_iam(cli_runner, fake_cloud):
     assert "iam.roles/billing.admin" not in checks_by_id
 
 
+@pytest.mark.parametrize(
+    ("extra_args", "enabled", "status"),
+    [
+        ((), False, "pass"),
+        (("--enable-tenant-sod-roles",), True, "warn"),
+    ],
+)
+def test_enable_tenant_sod_roles(
+    cli_runner, fake_cloud, extra_args, enabled, status
+):
+    fake_cloud.custom_roles = {"tenantReadOnly"}
+    args = [*BASE_ARGS, "--json", *extra_args]
+    document = json.loads(cli_runner.invoke(cli.app, args).stdout)
+    checks_by_id = {c["check_id"]: c for c in document["checks"]}
+    assert document["inputs"]["enable_tenant_sod_roles"] is enabled
+    resources = checks_by_id["shared.resources"]
+    assert resources["status"] == status
+    assert ("tenantReadOnly" in resources["detail"]) is enabled
+
+
 def test_service_account_with_bootstrap_user(cli_runner, fake_cloud):
     sa = "sa@example-project.iam.gserviceaccount.com"
     fake_cloud.principal = conftest.api.Principal(

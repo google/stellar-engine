@@ -769,6 +769,19 @@ def test_custom_roles_parses_repo_definitions(repo):
     assert all_roles["tenant_readonly.yaml"].role_id == "tenantReadOnly"
 
 
+def test_custom_role_ids_include_optional_sod_roles(repo):
+    sod_role_ids = {
+        "tagEditor",
+        "tenantKeyManager",
+        "tenantProjectAdmin",
+        "tenantReadOnly",
+    }
+    assert sod_role_ids.isdisjoint(repo.custom_role_ids())
+    all_ids = repo.custom_role_ids(include_optional=True)
+    assert sod_role_ids <= set(all_ids)
+    assert set(repo.custom_role_ids()) <= set(all_ids)
+
+
 def test_custom_roles_handles_missing_and_invalid_files(tmp_path):
     empty_repo = repo_lib.Repo(tmp_path)
     assert empty_repo.custom_roles() == []

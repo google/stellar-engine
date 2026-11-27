@@ -657,13 +657,18 @@ class Repo:
                 roles.append(CustomRole(path.name, role_id, perms))
         return roles
 
-    def custom_role_ids(self):
+    def custom_role_ids(self, *, include_optional: bool = False):
         """Returns the organization custom role IDs that Stage 0 creates.
 
         A role file without a `name` key falls back to its file name, which
-        matches how the organization module names it.
+        matches how the organization module names it. With
+        `include_optional`, the IDs also cover the opt-in roles under
+        `data/custom-roles-sod/`.
         """
-        return [role.role_id for role in self.custom_roles()]
+        return [
+            role.role_id
+            for role in self.custom_roles(include_optional=include_optional)
+        ]
 
     def custom_constraint_names(self):
         """Returns the organization custom constraint names Stage 0 creates."""

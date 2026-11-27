@@ -413,6 +413,9 @@ order of the DDG prerequisites section.
   soft-deleted project holds them.
 - Organization-wide custom roles, custom constraints, and log sinks that
   Stage 0 creates do not exist yet.
+- The `--enable-tenant-sod-roles` flag, or an `enable_tenant_sod_roles`
+  value of true in the `overrides.0-bootstrap` answer, adds the optional
+  Stage 0 separation-of-duties custom roles to that check.
 - The `existing_org_policies` answer lists every existing organization
   policy that Stage 0 declares, so the final Stage 0 apply imports it.
 - The organization IAM policy lists every existing grant that the first

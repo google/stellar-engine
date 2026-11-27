@@ -14,10 +14,13 @@
 
 name: tenantProjectAdmin
 title: "Tenant Project Administrator"
-description: "Hardened project administrator for tenant workloads across compute, data, CI/CD, and analytics services. Excludes central networking, Cloud KMS, organization policy, IAM policy modification, service account impersonation, and service account key creation."
+description: "Hardened tenant workload administrator for compute, data, CI/CD, and analytics. Excludes central networking, Cloud KMS, organization policy, IAM policy changes, tag binding writes, and service account impersonation, key creation, enable, or undelete."
 stage: "GA"
 includedPermissions:
-  # Resource Manager, service discovery, and non-escalating service account lifecycle
+  # Resource Manager, service discovery, read-only tag discovery, and
+  # non-escalating service account lifecycle. Tag binding writes belong to
+  # tagEditor, and this role cannot enable, disable, delete, or undelete
+  # service accounts.
   - resourcemanager.hierarchyNodes.listEffectiveTags
   - resourcemanager.hierarchyNodes.listTagBindings
   - resourcemanager.projects.get
@@ -28,20 +31,14 @@ includedPermissions:
   - resourcemanager.tagKeys.list
   - resourcemanager.tagValues.get
   - resourcemanager.tagValues.list
-  - resourcemanager.tagValueBindings.create
-  - resourcemanager.tagValueBindings.delete
   - iam.roles.get
   - iam.roles.list
   - iam.serviceAccounts.create
-  - iam.serviceAccounts.createTagBinding
-  - iam.serviceAccounts.deleteTagBinding
-  - iam.serviceAccounts.enable
   - iam.serviceAccounts.get
   - iam.serviceAccounts.getIamPolicy
   - iam.serviceAccounts.list
   - iam.serviceAccounts.listEffectiveTags
   - iam.serviceAccounts.listTagBindings
-  - iam.serviceAccounts.undelete
   - iam.serviceAccounts.update
   - serviceusage.services.get
   - serviceusage.services.list

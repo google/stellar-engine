@@ -119,6 +119,8 @@ _FORBIDDEN_PROJECT_ADMIN_PERMS = {
     "compute.instances.setMetadata",
     "iam.serviceAccounts.delete",
     "iam.serviceAccounts.disable",
+    "iam.serviceAccounts.enable",
+    "iam.serviceAccounts.undelete",
     "iam.serviceAccounts.setIamPolicy",
     "iam.serviceAccounts.getAccessToken",
     "iam.serviceAccounts.getOpenIdToken",
@@ -131,8 +133,13 @@ _FORBIDDEN_PROJECT_ADMIN_PERMS = {
     "iam.serviceAccountApiKeyBindings.delete",
     "iam.serviceAccountApiKeyBindings.undelete",
     "resourcemanager.projects.setIamPolicy",
+    "resourcemanager.tagValueBindings.create",
+    "resourcemanager.tagValueBindings.delete",
     "secretmanager.versions.access",
 }
+
+# Tag binding writes belong to tag_editor alone.
+_TAG_BINDING_WRITE_VERBS = {"createTagBinding", "deleteTagBinding"}
 
 _KNOWN_INVALID_OR_TESTING_GCP_PERMS = {
     "resourcemanager.resourceTagBindings.list",
@@ -322,6 +329,10 @@ class TestBootstrapSodCustomRoles(unittest.TestCase):
                 f"tag_editor must not touch orgpolicy: {perm}",
             )
             self.assertFalse(
+                perm.startswith("accesscontextmanager."),
+                f"tag_editor must not read VPC Service Controls: {perm}",
+            )
+            self.assertFalse(
                 perm.endswith(".setIamPolicy"),
                 f"tag_editor must not grant setIamPolicy: {perm}",
             )
@@ -376,6 +387,24 @@ class TestBootstrapSodCustomRoles(unittest.TestCase):
                 f"tenant_project_admin must exclude SA API key bindings: "
                 f"{perm}",
             )
+            verb = perm.rsplit(".", 1)[-1]
+            self.assertNotIn(
+                verb,
+                _TAG_BINDING_WRITE_VERBS,
+                f"tenant_project_admin must leave tag binding writes to "
+                f"tag_editor: {perm}",
+            )
+            self.assertFalse(
+                perm.startswith("resourcemanager.tagValueBindings."),
+                f"tenant_project_admin must leave tag value bindings to "
+                f"tag_editor: {perm}",
+            )
+            if perm.startswith("resourcemanager.tagHolds."):
+                self.assertEqual(
+                    verb,
+                    "list",
+                    f"tenant_project_admin must not change tag holds: {perm}",
+                )
 
     def test_stage0_wires_opt_in_default_false_and_snake_case_keys(self):
         variables_tf = (_BOOTSTRAP_DIR / "variables.tf").read_text(

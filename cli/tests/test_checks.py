@@ -1285,6 +1285,22 @@ class TestSharedOrg:
         for name in ("tagViewer", "custom.kmsRotation", "audit-logs"):
             assert name in detail
 
+    def test_existing_sod_roles_warn_only_when_opted_in(self, make_ctx, cloud):
+        sod_role_ids = (
+            "tagEditor",
+            "tenantKeyManager",
+            "tenantProjectAdmin",
+            "tenantReadOnly",
+        )
+        cloud.custom_roles = set(sod_role_ids)
+        found = by_id(checks.check_shared_org(resolved(make_ctx)))
+        assert found["shared.resources"].status == Status.PASS
+        ctx = resolved(make_ctx, enable_tenant_sod_roles=True)
+        item = by_id(checks.check_shared_org(ctx))["shared.resources"]
+        assert item.status == Status.WARN
+        for role_id in sod_role_ids:
+            assert f"custom role {role_id}" in item.detail
+
     def test_foreign_grants_on_authoritative_roles_warn(self, make_ctx, cloud):
         prefix_sa = (
             "serviceAccount:tst-prod-bootstrap-0@"

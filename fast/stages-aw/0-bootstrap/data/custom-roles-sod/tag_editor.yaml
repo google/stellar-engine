@@ -364,9 +364,3 @@ includedPermissions:
   - iam.roles.deleteTagBinding
   - iam.roles.listEffectiveTags
   - iam.roles.listTagBindings
-
-  # VPC Service Controls discovery
-  - accesscontextmanager.policies.get
-  - accesscontextmanager.policies.list
-  - accesscontextmanager.servicePerimeters.get
-  - accesscontextmanager.servicePerimeters.list
