@@ -34,6 +34,19 @@ resource "google_bigquery_dataset" "analytics_dataset" {
   location                   = var.geolocation
   description                = "Dataset for Gemini Enterprise Discovery Engine audit logs"
   delete_contents_on_destroy = true
+
+  dynamic "default_encryption_configuration" {
+    for_each = local.analytics_bq_kms_key_id != null ? [1] : []
+    content {
+      kms_key_name = local.analytics_bq_kms_key_id
+    }
+  }
+
+  depends_on = [
+    google_project_service.services,
+    time_sleep.wait_for_services,
+    google_kms_crypto_key_iam_member.bq_sa_kms_access,
+  ]
 }
 
 resource "google_logging_project_sink" "discovery_engine_sink" {
@@ -63,6 +76,13 @@ resource "google_artifact_registry_repository" "analytics_repo" {
   description   = "Docker repository for Gemini Analytics"
   format        = "DOCKER"
   project       = var.main_project_id
+  kms_key_name  = local.analytics_ar_kms_key_id
+
+  depends_on = [
+    google_project_service.services,
+    time_sleep.wait_for_services,
+    google_kms_crypto_key_iam_member.artifactregistry_sa_kms_access,
+  ]
 }
 
 resource "google_service_account" "analytics_sa" {
@@ -96,27 +116,41 @@ resource "google_artifact_registry_repository_iam_member" "analytics_sa_repo_rea
   member     = "serviceAccount:${google_service_account.analytics_sa[0].email}"
 }
 
-resource "google_project_iam_member" "compute_sa_storage_viewer" {
+resource "google_service_account" "analytics_build_sa" {
+  count        = var.enable_analytics ? 1 : 0
+  account_id   = "${trimsuffix(substr(var.prefix, 0, 11), "-")}-analytics-build-sa"
+  display_name = "Gemini Analytics Cloud Build Service Account"
+  project      = var.main_project_id
+}
+
+resource "google_project_iam_member" "analytics_build_sa_storage_viewer" {
   count   = var.enable_analytics ? 1 : 0
   project = var.main_project_id
   role    = "roles/storage.objectViewer"
-  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+  member  = "serviceAccount:${google_service_account.analytics_build_sa[0].email}"
 }
 
-resource "google_project_iam_member" "compute_sa_log_writer" {
+resource "google_project_iam_member" "analytics_build_sa_storage_creator" {
+  count   = var.enable_analytics ? 1 : 0
+  project = var.main_project_id
+  role    = "roles/storage.objectCreator"
+  member  = "serviceAccount:${google_service_account.analytics_build_sa[0].email}"
+}
+
+resource "google_project_iam_member" "analytics_build_sa_log_writer" {
   count   = var.enable_analytics ? 1 : 0
   project = var.main_project_id
   role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+  member  = "serviceAccount:${google_service_account.analytics_build_sa[0].email}"
 }
 
-resource "google_artifact_registry_repository_iam_member" "compute_sa_repo_writer" {
+resource "google_artifact_registry_repository_iam_member" "analytics_build_sa_repo_writer" {
   count      = var.enable_analytics ? 1 : 0
   project    = var.main_project_id
   location   = google_artifact_registry_repository.analytics_repo[0].location
   repository = google_artifact_registry_repository.analytics_repo[0].name
   role       = "roles/artifactregistry.writer"
-  member     = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+  member     = "serviceAccount:${google_service_account.analytics_build_sa[0].email}"
 }
 
 

@@ -12,6 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+locals {
+  resolved_state_bucket_name = (
+    var.terraform_state_bucket != null && trimspace(var.terraform_state_bucket) != ""
+    ? trimspace(var.terraform_state_bucket)
+    : null
+  )
+}
+
 data "google_storage_bucket" "terraform_state" {
-  name = var.terraform_state_bucket
+  count = local.resolved_state_bucket_name != null ? 1 : 0
+  name  = local.resolved_state_bucket_name
 }

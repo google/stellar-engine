@@ -37,6 +37,11 @@ output "admin_group" {
   description = "The principal for the Gemini Enterprise administrators group."
 }
 
+output "analytics_build_sa_email" {
+  value       = var.enable_analytics ? google_service_account.analytics_build_sa[0].email : null
+  description = "The email of the Cloud Build service account for Gemini Analytics."
+}
+
 output "analytics_dataset_id" {
   value       = var.enable_analytics ? google_bigquery_dataset.analytics_dataset[0].dataset_id : null
   description = "The BigQuery dataset ID for Gemini Analytics."
@@ -111,6 +116,42 @@ output "gemini_enterprise_ip" {
   description = "The reserved IP address for the load balancer."
 }
 
+output "iap_admin_access_level" {
+  description = "The resolved Access Context Manager Access Level resource name required for IAP admin access, or null when no access level applies."
+  value = var.enable_chrome_enterprise_premium ? try(
+    coalesce(
+      try(google_access_context_manager_access_level.strict_device[0].name, null),
+      try(google_access_context_manager_access_level.moderate_device[0].name, null),
+      try(google_access_context_manager_access_level.lenient_device[0].name, null),
+    ),
+    null,
+    ) : try(
+    coalesce(
+      try(google_access_context_manager_access_level.moderate_device[0].name, null),
+      try(google_access_context_manager_access_level.lenient_device[0].name, null),
+    ),
+    null,
+  )
+}
+
+output "iap_user_access_level" {
+  description = "The resolved Access Context Manager Access Level resource name required for IAP user access, or null when no access level applies."
+  value = var.enable_chrome_enterprise_premium ? try(
+    coalesce(
+      try(google_access_context_manager_access_level.moderate_device[0].name, null),
+      try(google_access_context_manager_access_level.strict_device[0].name, null),
+      try(google_access_context_manager_access_level.lenient_device[0].name, null),
+    ),
+    null,
+    ) : try(
+    coalesce(
+      try(google_access_context_manager_access_level.lenient_device[0].name, null),
+      try(google_access_context_manager_access_level.moderate_device[0].name, null),
+    ),
+    null,
+  )
+}
+
 output "main_project_id" {
   value       = var.main_project_id
   description = "The GCP Project name."
@@ -152,7 +193,7 @@ output "shared_vpc_subnet_name" {
 }
 
 output "tf_state_bucket_name" {
-  value       = data.google_storage_bucket.terraform_state.name
+  value       = length(data.google_storage_bucket.terraform_state) > 0 ? data.google_storage_bucket.terraform_state[0].name : null
   description = "The name of the GCS bucket used for Terraform state."
 }
 
