@@ -107,14 +107,14 @@ variable "golden_image" {
 }
 
 variable "grant_shared_vpc_subnet_iam" {
-  description = "Grant Shared VPC subnet networkUser IAM to collector agents."
+  description = "Grant Shared VPC subnet networkUser to the Google APIs agent."
   type        = bool
   default     = false
   nullable    = false
 }
 
 variable "health_check_port" {
-  description = "Unprivileged TCP port for Fluent Bit /api/v1/health."
+  description = "Unprivileged TCP port for the Fluent Bit HTTP health API."
   type        = number
   default     = 2020
   nullable    = false

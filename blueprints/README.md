@@ -45,6 +45,7 @@ For more information, please see the individual README files in each blueprint's
 |  [Pub Sub Project](./il5/pub-sub-project/)                                   |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [Secret Manager](./fedramp-high/secret-manager/)                            |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |
 |  [Shielded VM Project](./il5/shielded-vm-project/)                           |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
+|  [Syslog Collector](./il5/syslog-collector/)                                 |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [Vertex MLOps](./fedramp-high/vertex-mlops/)                                |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |
 |  [VPC Peering Project](./stand-alone/vpc-peering-project/)                           |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [Workflows](./fedramp-high/workflows/)                                      |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |

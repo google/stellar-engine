@@ -200,19 +200,53 @@ run "plan_shared_vpc_subnet_iam_enabled" {
   assert {
     condition = (
       length(google_compute_subnetwork_iam_member.shared_vpc_network_user)
-      == 2 &&
+      == 1 &&
       google_compute_subnetwork_iam_member.shared_vpc_network_user[
         "cloudservices"
       ].member
-      == "serviceAccount:123456789012@cloudservices.gserviceaccount.com" &&
-      google_compute_subnetwork_iam_member.shared_vpc_network_user[
-        "syslog_sa"
-        ].member == join("", [
-          "serviceAccount:syslog-collector-sa@",
-          "my-syslog-project.iam.gserviceaccount.com",
-      ])
+      == "serviceAccount:123456789012@cloudservices.gserviceaccount.com"
     )
-    error_message = "Expected Shared VPC networkUser for SA and cloudservices."
+    error_message = "Expected Shared VPC networkUser only for cloudservices."
+  }
+}
+
+run "apply_mock_four_zone_region_surge_floor" {
+  command = apply
+
+  variables {
+    region = "us-central1"
+    kms_key_id = join("", [
+      "projects/my-kms-project/locations/us-central1/",
+      "keyRings/syslog-kr/cryptoKeys/gce-disk-key",
+    ])
+  }
+
+  assert {
+    condition = (
+      module.syslog-mig.group_manager.update_policy[0].max_surge_fixed == 4 &&
+      module.syslog-mig.group_manager.update_policy[
+        0
+      ].max_unavailable_fixed == 0
+    )
+    error_message = "Expected regional MIG surge floor of 4 in us-central1."
+  }
+}
+
+run "apply_mock_explicit_zones_surge_floor" {
+  command = apply
+
+  variables {
+    distribution_zones = ["us-east4-a", "us-east4-b", "us-east4-c"]
+  }
+
+  assert {
+    condition = (
+      module.syslog-mig.group_manager.update_policy[0].max_surge_fixed == 4 &&
+      length(
+        module.syslog-mig.group_manager.distribution_policy_zones
+      ) == 3
+    )
+    error_message = "Expected surge floor of 4 with three explicit zones."
   }
 }
 
@@ -335,14 +369,6 @@ run "apply_mock_hardened_syslog_collector" {
       ) &&
       strcontains(
         module.syslog-template.template.metadata_startup_script,
-        "10-startup-order.conf",
-      ) &&
-      strcontains(
-        module.syslog-template.template.metadata_startup_script,
-        "After=google-startup-scripts.service",
-      ) &&
-      strcontains(
-        module.syslog-template.template.metadata_startup_script,
         "systemctl daemon-reload",
       ) &&
       strcontains(
@@ -370,6 +396,50 @@ run "apply_mock_hardened_syslog_collector" {
   }
 
   assert {
+    condition = alltrue([
+      for directive in [
+        "/usr/local/sbin/fluent-bit-tls-fetch",
+        "Type=oneshot",
+        "RemainAfterExit=yes",
+        "Wants=network-online.target",
+        "After=network-online.target",
+        "Before=fluent-bit.service",
+        "Requires=fluent-bit-tls.service",
+        "After=fluent-bit-tls.service",
+        "systemctl enable fluent-bit-tls.service fluent-bit.service",
+        "systemctl start fluent-bit-tls.service",
+        ] : strcontains(
+        module.syslog-template.template.metadata_startup_script,
+        directive,
+      )
+      ]) && !strcontains(
+      module.syslog-template.template.metadata_startup_script,
+      "=google-startup-scripts",
+    )
+    error_message = "Expected TLS oneshot unit ordered before fluent-bit."
+  }
+
+  assert {
+    condition = alltrue([
+      for directive in [
+        "STATE_DIR=\"/var/lib/fluent-bit\"",
+        "storage.path ",
+        "storage.type filesystem",
+        "Mem_Buf_Limit ",
+        "Retry_Limit no_limits",
+        "storage.total_limit_size 5G",
+        ] : strcontains(
+        module.syslog-template.template.metadata_startup_script,
+        directive,
+      )
+      ]) && !strcontains(
+      module.syslog-template.template.metadata_startup_script,
+      "Retry_Limit 5",
+    )
+    error_message = "Expected filesystem buffering and unlimited retries."
+  }
+
+  assert {
     condition = (
       module.syslog-mig.autoscaler.autoscaling_policy[0].min_replicas >= 2 &&
       module.syslog-mig.autoscaler.autoscaling_policy[0].max_replicas == 6
@@ -385,10 +455,15 @@ run "apply_mock_hardened_syslog_collector" {
       ].minimal_action == "REPLACE" &&
       module.syslog-mig.group_manager.update_policy[
         0
+      ].instance_redistribution_type == "PROACTIVE" &&
+      module.syslog-mig.group_manager.update_policy[
+        0
       ].max_unavailable_fixed == 0 &&
-      module.syslog-mig.group_manager.update_policy[0].max_surge_fixed >= 3
+      module.syslog-mig.group_manager.update_policy[0].max_surge_fixed == 4 &&
+      module.syslog-mig.group_manager.distribution_policy_target_shape
+      == "EVEN"
     )
-    error_message = "Expected PROACTIVE zero-downtime MIG update policy."
+    error_message = "Expected PROACTIVE zero-downtime EVEN MIG update policy."
   }
 
   assert {
@@ -405,9 +480,25 @@ run "apply_mock_hardened_syslog_collector" {
       ].force_update_on_repair == "YES" &&
       module.syslog-mig.group_manager.instance_lifecycle_policy[
         0
+      ].on_repair[0].allow_changing_zone == "NO" &&
+      module.syslog-mig.group_manager.instance_lifecycle_policy[
+        0
       ].on_failed_health_check == "DEFAULT_ACTION"
     )
-    error_message = "Expected active MIG autohealing and REPAIR policy."
+    error_message = "Expected active same-zone MIG REPAIR autohealing policy."
+  }
+
+  assert {
+    condition = (
+      module.syslog-mig.health_check.http_health_check[0].port == 2020 &&
+      module.syslog-mig.health_check.http_health_check[
+        0
+      ].request_path == "/api/v1/uptime" &&
+      module.syslog-mig.group_manager.auto_healing_policies[
+        0
+      ].health_check == module.syslog-mig.health_check.self_link
+    )
+    error_message = "Expected MIG autohealing on liveness /api/v1/uptime."
   }
 
   assert {

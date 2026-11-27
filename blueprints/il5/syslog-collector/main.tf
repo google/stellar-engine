@@ -17,9 +17,11 @@ locals {
     "35.191.0.0/16",
     "130.211.0.0/22",
   ]
-  # Regional MIGs require max_surge.fixed to be 0 or >= the number of zones.
+  # Regional MIGs require fixed max_surge and max_unavailable values of 0 or
+  # at least the number of zones. US regions have at most four zones, so a
+  # floor of 4 stays valid when distribution_zones is null.
   max_surge_fixed = max(
-    3,
+    4,
     length(coalesce(var.distribution_zones, []))
   )
   required_apis = toset([
@@ -29,6 +31,8 @@ locals {
     "secretmanager.googleapis.com",
   ])
   secret_project_id = coalesce(var.secret_project_id, var.project_id)
+  # Only the Google APIs service agent attaches MIG instance NICs to the
+  # Shared VPC subnet; the collector runtime service account needs no role.
   shared_vpc_subnet_members = (
     var.grant_shared_vpc_subnet_iam
     && var.network_project_id != var.project_id
@@ -37,28 +41,35 @@ locals {
         "serviceAccount:%s@cloudservices.gserviceaccount.com",
         data.google_project.current.number,
       )
-      syslog_sa = module.syslog-sa.iam_email
     }
     : {}
   )
   startup_script = templatefile(
     "${path.module}/templates/startup.sh.tpl",
     {
-      client_ca_secret_id   = var.tls_secret_ids.client_ca_cert
       health_check_port     = var.health_check_port
       log_project_id        = var.project_id
-      region                = var.region
-      secret_project_id     = local.secret_project_id
-      server_cert_secret_id = var.tls_secret_ids.server_cert
-      server_key_secret_id  = var.tls_secret_ids.server_key
       syslog_framing_format = var.syslog_framing_format
       syslog_port           = var.syslog_port
+      tls_fetch_script      = local.tls_fetch_script
     }
   )
   template_zone = (
     var.distribution_zones == null
     ? "${var.region}-a"
     : var.distribution_zones[0]
+  )
+  # Installed as /usr/local/sbin/fluent-bit-tls-fetch for the
+  # fluent-bit-tls.service oneshot unit that runs before fluent-bit.service.
+  tls_fetch_script = templatefile(
+    "${path.module}/templates/fluent-bit-tls-fetch.sh.tpl",
+    {
+      client_ca_secret_id   = var.tls_secret_ids.client_ca_cert
+      region                = var.region
+      secret_project_id     = local.secret_project_id
+      server_cert_secret_id = var.tls_secret_ids.server_cert
+      server_key_secret_id  = var.tls_secret_ids.server_key
+    }
   )
   tls_secret_ids = {
     client_ca_cert = var.tls_secret_ids.client_ca_cert
@@ -222,23 +233,28 @@ module "syslog-mig" {
     target_shape = "EVEN"
     zones        = var.distribution_zones
   }
+  # Autoheal on liveness only. /api/v1/health also fails on Cloud Logging
+  # output errors, which would repair every collector at once, so only the
+  # ILB readiness probe uses it.
   health_check_config = {
     check_interval_sec  = 10
-    description         = "MIG autohealing probe for Fluent Bit health API."
+    description         = "MIG liveness probe for Fluent Bit /api/v1/uptime."
     enable_logging      = true
     healthy_threshold   = 2
     timeout_sec         = 5
     unhealthy_threshold = 3
     http = {
       port         = var.health_check_port
-      request_path = "/api/v1/health"
+      request_path = "/api/v1/uptime"
     }
   }
   instance_lifecycle_policy = {
     default_action_on_failure = "REPAIR"
     on_failed_health_check    = "DEFAULT_ACTION"
+    # Compute Engine does not support alternate-zone repair for regional MIGs
+    # with target_shape EVEN, so repairs stay in the original zone.
     on_repair = {
-      allow_changing_zone = "YES"
+      allow_changing_zone = "NO"
       force_update        = "YES"
     }
   }
@@ -292,7 +308,7 @@ module "syslog-ilb" {
   }
   health_check_config = {
     check_interval_sec  = 5
-    description         = "Regional ILB probe for Fluent Bit health API."
+    description         = "ILB readiness probe for Fluent Bit /api/v1/health."
     enable_logging      = true
     healthy_threshold   = 2
     is_regional         = true

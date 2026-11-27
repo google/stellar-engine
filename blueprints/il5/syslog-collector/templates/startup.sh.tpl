@@ -16,32 +16,19 @@
 set -euo pipefail
 umask 077
 
-readonly REGION="${region}"
 readonly LOG_PROJECT_ID="${log_project_id}"
-readonly SECRET_PROJECT_ID="${secret_project_id}"
-readonly SERVER_CERT_SECRET_ID="${server_cert_secret_id}"
-readonly SERVER_KEY_SECRET_ID="${server_key_secret_id}"
-readonly CLIENT_CA_SECRET_ID="${client_ca_secret_id}"
 readonly SYSLOG_PORT="${syslog_port}"
 readonly HEALTH_CHECK_PORT="${health_check_port}"
 
-# Store TLS material in a dedicated tmpfs directory outside systemd
-# RuntimeDirectory=fluent-bit cleanup paths.
 readonly RUNTIME_DIR="/run/fluent-bit-tls"
 readonly CONFIG_DIR="/etc/fluent-bit"
 readonly CONFIG_FILE="$${CONFIG_DIR}/fluent-bit.conf"
+readonly STATE_DIR="/var/lib/fluent-bit"
+readonly STORAGE_DIR="$${STATE_DIR}/buffer"
+readonly TLS_FETCH_BIN="/usr/local/sbin/fluent-bit-tls-fetch"
+readonly TLS_UNIT_FILE="/etc/systemd/system/fluent-bit-tls.service"
 readonly SYSTEMD_DROPIN_DIR="/etc/systemd/system/fluent-bit.service.d"
-readonly SYSTEMD_DROPIN_FILE="$${SYSTEMD_DROPIN_DIR}/10-startup-order.conf"
-
-# Route Secret Manager API requests strictly to the regional endpoint.
-readonly SM_ENDPOINT="https://secretmanager.$${REGION}.rep.googleapis.com/"
-export CLOUDSDK_API_ENDPOINT_OVERRIDES_SECRETMANAGER="$${SM_ENDPOINT}"
-export CLOUDSDK_CORE_DISABLE_PROMPTS=1
-
-cleanup_tmp() {
-  rm -f "$${RUNTIME_DIR}"/*.tmp.*
-}
-trap cleanup_tmp EXIT
+readonly SYSTEMD_DROPIN_FILE="$${SYSTEMD_DROPIN_DIR}/10-tls-dependency.conf"
 
 require_binary() {
   local bin="$1"
@@ -51,7 +38,20 @@ require_binary() {
   fi
 }
 
-require_binary gcloud
+# Write stdin to dest through an atomic rename so systemd, Fluent Bit, and a
+# running fluent-bit-tls.service never read a partially written file.
+write_file() {
+  local mode="$1"
+  local owner="$2"
+  local dest="$3"
+  local tmp
+  tmp="$(mktemp "$${dest}.tmp.XXXXXX")"
+  cat > "$${tmp}"
+  chown "$${owner}" "$${tmp}"
+  chmod "$${mode}" "$${tmp}"
+  mv -f "$${tmp}" "$${dest}"
+}
+
 require_binary systemctl
 
 if command -v fluent-bit >/dev/null 2>&1; then
@@ -63,15 +63,6 @@ else
   exit 1
 fi
 readonly FB_BIN
-
-# Fail closed if /run is not RAM-backed tmpfs so private keys never touch disk.
-if command -v findmnt >/dev/null 2>&1; then
-  run_fstype="$(findmnt -n -o FSTYPE /run || true)"
-  if [[ "$${run_fstype}" != "tmpfs" ]]; then
-    echo "ERROR: /run must be mounted as tmpfs (found '$${run_fstype}')." >&2
-    exit 1
-  fi
-fi
 
 # Resolve service account identity configured on the pre-baked systemd unit.
 fb_user="$(
@@ -87,8 +78,11 @@ if [[ -z "$${fb_group}" ]]; then
   fb_group="$(id -gn "$${fb_user}")"
 fi
 
-install -d -m 0700 -o "$${fb_user}" -g "$${fb_group}" "$${RUNTIME_DIR}"
 install -d -m 0750 -o root -g "$${fb_group}" "$${CONFIG_DIR}"
+# Keep filesystem buffer chunks private to the Fluent Bit service identity.
+install -d -m 0700 -o "$${fb_user}" -g "$${fb_group}" \
+  "$${STATE_DIR}" "$${STORAGE_DIR}"
+install -d -m 0755 "$${SYSTEMD_DROPIN_DIR}" "$(dirname "$${TLS_FETCH_BIN}")"
 
 if [[ ! -f "$${CONFIG_DIR}/parsers.conf" && \
   -f /opt/fluent-bit/etc/parsers.conf ]]; then
@@ -96,45 +90,47 @@ if [[ ! -f "$${CONFIG_DIR}/parsers.conf" && \
     "$${CONFIG_DIR}/parsers.conf"
 fi
 
-fetch_regional_secret() {
-  local secret_id="$1"
-  local dest_path="$2"
-  local tmp_path="$${dest_path}.tmp.$$"
-  local attempt=1
-  local max_attempts=5
-  local delay=2
+# Install the TLS fetch script and a oneshot unit that systemd runs before
+# fluent-bit.service on every boot. The unit has no ordering dependency on
+# google-startup-scripts.service, so starting it from this script cannot
+# deadlock, and reboots fetch TLS material without this script.
+write_file 0700 root:root "$${TLS_FETCH_BIN}" <<'TLS_FETCH_EOF'
+${tls_fetch_script}
+TLS_FETCH_EOF
 
-  while (( attempt <= max_attempts )); do
-    rm -f "$${tmp_path}"
-    if gcloud secrets versions access latest \
-      --project="$${SECRET_PROJECT_ID}" \
-      --location="$${REGION}" \
-      --secret="$${secret_id}" \
-      --out-file="$${tmp_path}"; then
-      if [[ -s "$${tmp_path}" ]]; then
-        chown "$${fb_user}:$${fb_group}" "$${tmp_path}"
-        chmod 0600 "$${tmp_path}"
-        mv -f "$${tmp_path}" "$${dest_path}"
-        return 0
-      fi
-    fi
-    rm -f "$${tmp_path}"
-    if (( attempt < max_attempts )); then
-      sleep "$${delay}"
-      delay=$(( delay * 2 ))
-    fi
-    attempt=$(( attempt + 1 ))
-  done
+write_file 0644 root:root "$${TLS_UNIT_FILE}" <<EOF
+[Unit]
+Description=Fetch Fluent Bit TLS material from Regional Secret Manager
+Wants=network-online.target
+After=network-online.target
+Before=fluent-bit.service
 
-  echo "ERROR: Failed to fetch regional secret '$${secret_id}'." >&2
-  return 1
-}
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+UMask=0077
+TimeoutStartSec=300
+ExecStart=$${TLS_FETCH_BIN}
 
-fetch_regional_secret "$${SERVER_CERT_SECRET_ID}" "$${RUNTIME_DIR}/server.crt"
-fetch_regional_secret "$${SERVER_KEY_SECRET_ID}" "$${RUNTIME_DIR}/server.key"
-fetch_regional_secret "$${CLIENT_CA_SECRET_ID}" "$${RUNTIME_DIR}/client-ca.crt"
+[Install]
+WantedBy=multi-user.target
+EOF
 
-cat > "$${CONFIG_FILE}" <<EOF
+# fluent-bit.service never starts without TLS material, and it stops or
+# restarts whenever fluent-bit-tls.service is stopped or restarted.
+write_file 0644 root:root "$${SYSTEMD_DROPIN_FILE}" <<'EOF'
+[Unit]
+Requires=fluent-bit-tls.service
+After=fluent-bit-tls.service
+EOF
+
+# Buffer chunks on the CMEK boot disk so Cloud Logging outages delay delivery
+# instead of dropping logs or pausing the TLS listener. Filesystem storage
+# bounds memory with storage.max_chunks_up (Mem_Buf_Limit only caps a
+# storage.type memory fallback) and disk with storage.total_limit_size,
+# which discards the oldest chunks first. Retry_Limit no_limits retries until
+# delivery or eviction, and scheduler.cap limits retry backoff to 300 seconds.
+write_file 0640 "root:$${fb_group}" "$${CONFIG_FILE}" <<EOF
 [SERVICE]
     Flush 5
     Daemon Off
@@ -147,6 +143,9 @@ cat > "$${CONFIG_FILE}" <<EOF
     HC_Errors_Count 5
     HC_Retry_Failure_Count 5
     HC_Period 60
+    scheduler.cap 300
+    storage.path $${STORAGE_DIR}/
+    storage.max_chunks_up 128
 
 [INPUT]
     Name syslog
@@ -158,6 +157,8 @@ cat > "$${CONFIG_FILE}" <<EOF
     Parser syslog-rfc5424
     Buffer_Chunk_Size 32k
     Buffer_Max_Size 64k
+    Mem_Buf_Limit 64M
+    storage.type filesystem
     tls On
     tls.verify On
     tls.verify_client_cert On
@@ -174,20 +175,9 @@ cat > "$${CONFIG_FILE}" <<EOF
     tls On
     tls.verify On
     tls.min_version TLSv1.2
-    Retry_Limit 5
+    Retry_Limit no_limits
+    storage.total_limit_size 5G
 EOF
-
-chown "root:$${fb_group}" "$${CONFIG_FILE}"
-chmod 0640 "$${CONFIG_FILE}"
-
-# Ensure fluent-bit starts after startup scripts populate tmpfs TLS material on
-# reboot so systemd does not crash-loop into StartLimitBurst.
-install -d -m 0755 "$${SYSTEMD_DROPIN_DIR}"
-cat > "$${SYSTEMD_DROPIN_FILE}" <<'EOF'
-[Unit]
-After=google-startup-scripts.service
-EOF
-chmod 0644 "$${SYSTEMD_DROPIN_FILE}"
 
 # Open only syslog and health-check ports without flushing host nftables rules.
 if command -v firewall-cmd >/dev/null 2>&1 && \
@@ -199,15 +189,18 @@ fi
 
 if command -v restorecon >/dev/null 2>&1; then
   restorecon -R \
-    "$${RUNTIME_DIR}" "$${CONFIG_DIR}" "$${SYSTEMD_DROPIN_DIR}" || true
+    "$${CONFIG_DIR}" "$${STATE_DIR}" "$${SYSTEMD_DROPIN_DIR}" \
+    "$${TLS_UNIT_FILE}" "$${TLS_FETCH_BIN}" || true
 fi
+
+systemctl daemon-reload
+systemctl enable fluent-bit-tls.service fluent-bit.service
+systemctl start fluent-bit-tls.service
 
 # Validate config syntax and mTLS directives before restarting the service so
 # older Fluent Bit binaries or broken TLS inputs fail closed immediately.
 "$${FB_BIN}" --dry-run -c "$${CONFIG_FILE}"
 
-systemctl daemon-reload
-systemctl enable fluent-bit.service
 systemctl reset-failed fluent-bit.service || true
 systemctl restart fluent-bit.service
 systemctl is-active --quiet fluent-bit.service
