@@ -23,6 +23,7 @@ locals {
     "roles/container.hostServiceAgentUser",
     "roles/vpcaccess.user",
   ])
+  _api_regex = "^[a-z0-9-]+\\.googleapis\\.com$"
   _cmek_companion_apis = {
     "composer.googleapis.com" = [
       "storage.googleapis.com",
@@ -44,12 +45,28 @@ locals {
   _default_lien_reason = (
     "Managed by 4-tenant-factory. Set lifecycle_state to archived first."
   )
+  # Roles that tenant IAM inputs never grant on folders, projects, or through
+  # iam_self_roles unless var.allowed_privileged_roles exempts them. Keep in
+  # sync with definitions.forbidden_role in schemas/tenant.schema.json.
   _forbidden_roles = toset([
+    "roles/cloudkms.admin",
+    "roles/compute.networkAdmin",
+    "roles/compute.securityAdmin",
     "roles/compute.xpnAdmin",
+    "roles/dns.admin",
     "roles/editor",
+    "roles/iam.denyAdmin",
     "roles/iam.organizationRoleAdmin",
+    "roles/iam.roleAdmin",
     "roles/iam.securityAdmin",
+    "roles/iam.serviceAccountAdmin",
     "roles/iam.serviceAccountKeyAdmin",
+    "roles/iam.serviceAccountTokenCreator",
+    "roles/iam.serviceAccountUser",
+    "roles/iam.workloadIdentityPoolAdmin",
+    "roles/iam.workloadIdentityUser",
+    "roles/logging.admin",
+    "roles/logging.configWriter",
     "roles/orgpolicy.policyAdmin",
     "roles/owner",
     "roles/resourcemanager.folderAdmin",
@@ -57,8 +74,61 @@ locals {
     "roles/resourcemanager.lienModifier",
     "roles/resourcemanager.organizationAdmin",
     "roles/resourcemanager.projectIamAdmin",
+    "roles/resourcemanager.tagAdmin",
+    "roles/resourcemanager.tagUser",
+    "roles/serviceusage.serviceUsageAdmin",
   ])
+  _forbidden_roles_lower = toset([
+    for role in local._forbidden_roles : lower(role)
+  ])
+  _allowed_privileged_roles = toset([
+    for role in var.allowed_privileged_roles : trimspace(lower(role))
+  ])
+  _forbidden_project_roles = setsubtract(
+    local._forbidden_roles_lower, local._allowed_privileged_roles
+  )
+  # actAs, token minting, and Workload Identity bound on a single tenant
+  # service account are legitimate, so service_accounts.*.iam allows these
+  # roles while every project and folder scoped input still rejects them.
+  _sa_scoped_privileged_roles = toset([
+    "roles/iam.serviceAccountTokenCreator",
+    "roles/iam.serviceAccountUser",
+    "roles/iam.workloadIdentityUser",
+  ])
+  _forbidden_sa_roles = setsubtract(
+    local._forbidden_project_roles,
+    toset([for role in local._sa_scoped_privileged_roles : lower(role)])
+  )
+  _allowed_custom_roles = toset([
+    for role in var.allowed_custom_roles : trimspace(role)
+  ])
+  _custom_role_refs = {
+    for k, v in var.custom_roles : "$custom_roles:${k}" => v
+  }
+  _role_id_regexes = {
+    organization = "^organizations/[0-9]+/roles/[A-Za-z0-9_.]{3,64}$"
+    predefined   = "^roles/[A-Za-z0-9_.-]+$"
+    project      = "^projects/[a-z0-9.:-]+/roles/[A-Za-z0-9_.]{3,64}$"
+    reference    = "^\\$custom_roles:[A-Za-z0-9_-]+$"
+  }
   _gcp_id_regex = "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+  _kms_key_id_regex = join("", [
+    "^projects/[^/]+/locations/[^/]+/",
+    "keyRings/[^/]+/cryptoKeys/[^/]+$",
+  ])
+  _project_template_keys = toset([
+    "contacts",
+    "kms_services",
+    "labels",
+    "metric_scopes",
+    "services",
+    "shared_vpc_service_grants",
+  ])
+  _subnet_regex       = "^[a-z]+-[a-z]+[0-9]+/[a-z][a-z0-9-]*$"
+  _svpc_grant_regex   = "^\\$service_agents:[a-z0-9-]+\\.googleapis\\.com$"
+  _tenant_key_regex   = "^[a-z][a-z0-9-]*/[a-z]([a-z0-9-]{0,18}[a-z0-9])?$"
+  _tenant_slug_regex  = "^[a-z]([a-z0-9-]{0,18}[a-z0-9])?$"
+  _yaml_content_regex = "(?m)^[ \\t]*[^#\\s]"
   _gcs_resman_outputs = (
     length(data.google_storage_bucket_object_content.resman_outputs) > 0
     ? try(
@@ -100,6 +170,18 @@ locals {
       )
     ))
   }
+  # Host project roles that each modules/project Shared VPC preset grants.
+  _svpc_grant_roles = {
+    for entry in local._svpc_grants_raw : entry.service => toset(flatten(
+      values(try(entry.agents, {}))
+    ))
+  }
+  # Presets granting host project roles outside the agent role allowlist,
+  # such as GKE (compute.securityAdmin) and Datastream (compute.networkAdmin).
+  _privileged_svpc_grant_apis = toset([
+    for svc, roles in local._svpc_grant_roles : svc
+    if length(setsubtract(roles, local._allowed_shared_vpc_agent_roles)) > 0
+  ])
   _project_templates_path = (
     var.factories_config.project_templates_path == null
     ? null
@@ -110,16 +192,25 @@ locals {
       : "${path.module}/${var.factories_config.project_templates_path}"
     )
   )
-  _project_templates = {
+  # Template and tenant files are decoded without try() so YAML syntax errors
+  # abort the plan. Empty or comment-only files skip yamldecode and, like
+  # non-mapping documents, fail tenant_validation instead of being dropped.
+  _project_template_docs = {
     for f in try(fileset(local._project_templates_path, "**/*.yaml"), []) :
-    trimsuffix(f, ".yaml") => try(
-      {
-        for k, v in yamldecode(
-          file("${local._project_templates_path}/${f}")
-        ) : k => v
-      },
-      {}
+    trimsuffix(f, ".yaml") => (
+      length(regexall(
+        local._yaml_content_regex,
+        file("${local._project_templates_path}/${f}")
+      )) == 0
+      ? null
+      : yamldecode(file("${local._project_templates_path}/${f}"))
     )
+  }
+  _invalid_project_templates = sort([
+    for k, doc in local._project_template_docs : k if !can(keys(doc))
+  ])
+  _project_templates = {
+    for k, doc in local._project_template_docs : k => doc if can(keys(doc))
   }
   _tenants_data_path = (
     var.factories_config.tenants_data_path == null
@@ -131,16 +222,23 @@ locals {
       : "${path.module}/${var.factories_config.tenants_data_path}"
     )
   )
-  _yaml_tenant_files = {
+  _yaml_tenant_docs = {
     for f in try(fileset(local._tenants_data_path, "**/*.yaml"), []) :
-    replace(trimsuffix(f, ".yaml"), "/", "-") => try(
-      {
-        for k, v in yamldecode(
-          file("${local._tenants_data_path}/${f}")
-        ) : k => v
-      },
-      {}
+    f => (
+      length(regexall(
+        local._yaml_content_regex,
+        file("${local._tenants_data_path}/${f}")
+      )) == 0
+      ? null
+      : yamldecode(file("${local._tenants_data_path}/${f}"))
     )
+  }
+  _invalid_yaml_tenant_files = sort([
+    for f, doc in local._yaml_tenant_docs : f if !can(keys(doc))
+  ])
+  _yaml_tenant_files = {
+    for f, doc in local._yaml_tenant_docs :
+    replace(trimsuffix(f, ".yaml"), "/", "-") => doc if can(keys(doc))
   }
   _yaml_tenants = {
     for f, data in local._yaml_tenant_files :
@@ -152,7 +250,6 @@ locals {
       data        = data
       tenant_slug = coalesce(try(data.tenant_id, null), f)
     }
-    if length(data) > 0
   }
   _hcl_tenants = {
     for tk, tv in var.tenants :
@@ -178,13 +275,14 @@ locals {
       ]
     )
   ]))
-  _all_assigned_roles = flatten([
+  # Folder, project, and iam_self_roles grants (project scope) versus grants
+  # on a tenant workload service account resource (service account scope).
+  _project_scoped_roles = flatten([
     for tk, tv in local.tenants : concat(
       keys(tv.iam),
       flatten([
         for pk, pv in tv.projects : concat(
           keys(pv.iam),
-          keys(pv.shared_vpc_service_agent_iam),
           flatten(values(pv.iam_by_principals)),
           [for bk, bv in pv.iam_bindings_additive : bv.role],
           flatten([
@@ -194,6 +292,16 @@ locals {
       ])
     )
   ])
+  _sa_scoped_roles = flatten([
+    for tk, tv in local.tenants : [
+      for pk, pv in tv.projects : [
+        for sk, sv in pv.service_accounts : keys(sv.iam)
+      ]
+    ]
+  ])
+  _all_tenant_roles = concat(
+    local._project_scoped_roles, local._sa_scoped_roles
+  )
   _all_shared_vpc_agent_roles = flatten([
     for pk, pv in local.tenant_projects :
     keys(pv.shared_vpc_service_agent_iam)
@@ -202,12 +310,29 @@ locals {
     for pk, pv in local.tenant_projects :
     flatten(values(pv.shared_vpc_service_agent_iam))
   ])
+  _all_shared_vpc_grant_apis = flatten([
+    for pk, pv in local.tenant_projects : [
+      for grant in pv.shared_vpc_service_grants :
+      trimprefix(grant, "$service_agents:")
+    ]
+  ])
   _all_shared_vpc_grants = flatten([
     for pk, pv in local.tenant_projects : pv.shared_vpc_service_grants
   ])
   _all_shared_vpc_subnets = flatten([
     for pk, pv in local.tenant_projects : pv.shared_vpc_subnets
   ])
+  _all_kms_services = flatten([
+    for pk, pv in local.tenant_projects : keys(pv.kms_services)
+  ])
+  _all_kms_key_refs = concat(
+    flatten([
+      for pk, pv in local.tenant_projects : flatten(values(pv.kms_services))
+    ]),
+    compact([
+      for tk, tv in local.tenants : try(tv.automation.bucket_kms_key, null)
+    ])
+  )
   _all_computed_project_ids = [
     for pk, pv in local.tenant_projects : "${var.prefix}-${pv.name}"
   ]
@@ -223,19 +348,35 @@ locals {
     local._gcs_environment_folders,
     var.environment_folders
   )
+  # Stage 2 host_project_ids is a per-environment fallback and explicit
+  # shared_vpc_host_projects entries take precedence. The Stage 2 hub host
+  # project is never a tenant attachment target.
+  environment_host_projects = merge(
+    {
+      for k, v in var.host_project_ids : lower(k) => v
+      if v != null && lower(k) != "hub"
+    },
+    var.shared_vpc_host_projects
+  )
   tenants = {
     for tk, entry in local._tenants_raw : tk => {
       automation = (
         try(entry.data.automation, null) == null
         ? null
         : {
-          bucket_kms_key = try(
-            coalesce(
-              try(entry.data.automation.bucket_kms_key, null),
-              try(var.automation.kms_keys.gcs, null)
-            ),
-            null
-          )
+          # The Stage 0 state key is a fallback only inside the Stage 0
+          # automation project, whose GCS service agent Stage 0 authorizes.
+          bucket_kms_key = try(coalesce(
+            try(entry.data.automation.bucket_kms_key, null),
+            (
+              try(coalesce(
+                try(entry.data.automation.project_id, null),
+                try(var.automation.project_id, null)
+              ), null) == try(var.automation.project_id, null)
+              ? try(var.automation.kms_keys.gcs, null)
+              : null
+            )
+          ), null)
           bucket_location = try(entry.data.automation.bucket_location, null)
           create_bucket = coalesce(
             try(entry.data.automation.create_bucket, null),
@@ -294,6 +435,7 @@ locals {
             for sk, sv in try(pv.service_accounts, {}) : sk => {
               description    = try(sv.description, null)
               display_name   = try(sv.display_name, null)
+              iam            = try(sv.iam, {})
               iam_self_roles = try(sv.iam_self_roles, [])
             }
           }
@@ -362,7 +504,11 @@ locals {
                     tv.automation.bucket_kms_key
                   )
                 )
-                force_destroy = var.force_destroy
+                # Only archived tenants can arm state bucket destruction, so a
+                # sandbox teardown never arms it on active tenants.
+                force_destroy = (
+                  tv.lifecycle_state == "archived" && var.force_destroy
+                )
                 iam = merge(
                   contains(keys(tv.automation.service_accounts), "rw") ? {
                     "roles/storage.objectAdmin" = [
@@ -395,36 +541,42 @@ locals {
       )
     )
   }
+  # Templates merge only these attributes into each project; unknown template
+  # keys fail tenant_validation.
   _tenant_projects_flat = flatten([
     for tk, tv in local.tenants : [
-      for pk, pv in tv.projects : {
-        key             = "${tv.environment}/${tv.tenant_slug}/${pk}"
-        tenant_slug     = tv.tenant_slug
-        project_key     = pk
-        environment     = tv.environment
-        folder_key      = tv.folder_key
-        lifecycle_state = tv.lifecycle_state
-        template = (
-          pv.project_template == null
-          ? {}
-          : lookup(local._project_templates, pv.project_template, {})
-        )
-        tenant  = tv
-        project = pv
-      }
+      for pk, pv in tv.projects : [
+        for tpl in [
+          try(local._project_templates[pv.project_template], {})
+          ] : {
+          key             = "${tv.environment}/${tv.tenant_slug}/${pk}"
+          tenant_slug     = tv.tenant_slug
+          project_key     = pk
+          environment     = tv.environment
+          folder_key      = tv.folder_key
+          lifecycle_state = tv.lifecycle_state
+          kms_services    = merge(try(tpl.kms_services, {}), pv.kms_services)
+          shared_vpc_service_grants = distinct(concat(
+            try(tpl.shared_vpc_service_grants, []),
+            pv.shared_vpc_service_grants
+          ))
+          template = {
+            contacts      = try(tpl.contacts, {})
+            labels        = try(tpl.labels, {})
+            metric_scopes = try(tpl.metric_scopes, [])
+            services      = try(tpl.services, [])
+          }
+          tenant  = tv
+          project = pv
+        }
+      ]
     ]
   ])
   tenant_projects = {
     for item in local._tenant_projects_flat : item.key => {
       bigquery_kms_keys = distinct([
-        for ref in lookup(
-          merge(
-            try(item.template.kms_services, {}),
-            item.project.kms_services
-          ),
-          "bigquery.googleapis.com",
-          []
-        ) : lookup(var.kms_keys, ref, ref)
+        for ref in lookup(item.kms_services, "bigquery.googleapis.com", []) :
+        lookup(var.kms_keys, ref, ref)
       ])
       billing_account = (
         var.billing_linkage_mode == "managed"
@@ -432,7 +584,7 @@ locals {
         : null
       )
       contacts = merge(
-        try(item.template.contacts, {}),
+        item.template.contacts,
         item.tenant.contacts,
         item.project.contacts
       )
@@ -450,8 +602,9 @@ locals {
       iam                   = item.project.iam
       iam_bindings_additive = item.project.iam_bindings_additive
       iam_by_principals     = item.project.iam_by_principals
+      kms_services          = item.kms_services
       labels = merge(
-        try(item.template.labels, {}),
+        item.template.labels,
         item.tenant.labels,
         item.project.labels,
         {
@@ -466,55 +619,51 @@ locals {
         : null
       )
       metric_scopes = distinct(concat(
-        try(item.template.metric_scopes, []),
+        item.template.metric_scopes,
         item.project.metric_scopes
       ))
       name = coalesce(
         item.project.name,
         "${item.environment}-${item.tenant_slug}-${item.project_key}"
       )
+      # shared_vpc_service_grants merges template and project grants, so
+      # template-inherited grants also attach the project.
       needs_shared_vpc = (
         item.project.shared_vpc_host_project != null ||
         length(item.project.shared_vpc_subnets) > 0 ||
         length(item.project.shared_vpc_network_users) > 0 ||
         length(item.project.shared_vpc_service_agent_iam) > 0 ||
-        length(item.project.shared_vpc_service_grants) > 0
+        length(item.shared_vpc_service_grants) > 0
       )
       project_template = item.project.project_template
-      resolved_host_project = try(coalesce(
-        item.project.shared_vpc_host_project,
-        lookup(var.shared_vpc_host_projects, item.environment, null)
-      ), null)
+      # The host project always comes from the stage environment mapping;
+      # shared_vpc_host_project is only an assertion checked at plan time.
+      resolved_host_project = lookup(
+        local.environment_host_projects, item.environment, null
+      )
       service_accounts = item.project.service_accounts
       service_encryption_key_ids = {
-        for svc, key_refs in merge(
-          try(item.template.kms_services, {}),
-          item.project.kms_services
-          ) : svc => [
+        for svc, key_refs in item.kms_services : svc => [
           for ref in key_refs : lookup(var.kms_keys, ref, ref)
         ]
-        if svc != "bigquery.googleapis.com"
+        if(
+          svc != "bigquery.googleapis.com" &&
+          can(regex(local._api_regex, svc))
+        )
       }
       services = distinct(concat(
-        try(item.template.services, []),
+        item.template.services,
         item.project.services,
         [
-          for svc in keys(merge(
-            try(item.template.kms_services, {}),
-            item.project.kms_services
-          )) : svc if endswith(svc, ".googleapis.com")
+          for svc in keys(item.kms_services) : svc
+          if can(regex(local._api_regex, svc))
         ],
         flatten([
-          for svc in keys(merge(
-            try(item.template.kms_services, {}),
-            item.project.kms_services
-          )) : lookup(local._cmek_companion_apis, svc, [])
+          for svc in keys(item.kms_services) :
+          lookup(local._cmek_companion_apis, svc, [])
         ]),
         flatten([
-          for grant in distinct(concat(
-            try(item.template.shared_vpc_service_grants, []),
-            item.project.shared_vpc_service_grants
-            )) : lookup(
+          for grant in item.shared_vpc_service_grants : lookup(
             local._svpc_grant_companion_apis,
             trimprefix(grant, "$service_agents:"),
             [trimprefix(grant, "$service_agents:")]
@@ -534,14 +683,12 @@ locals {
           )
         ])
       ))
+      shared_vpc_host_project      = item.project.shared_vpc_host_project
       shared_vpc_network_users     = item.project.shared_vpc_network_users
       shared_vpc_service_agent_iam = item.project.shared_vpc_service_agent_iam
-      shared_vpc_service_grants = distinct(concat(
-        try(item.template.shared_vpc_service_grants, []),
-        item.project.shared_vpc_service_grants
-      ))
-      shared_vpc_subnets = item.project.shared_vpc_subnets
-      tag_bindings       = item.project.tag_bindings
+      shared_vpc_service_grants    = item.shared_vpc_service_grants
+      shared_vpc_subnets           = item.project.shared_vpc_subnets
+      tag_bindings                 = item.project.tag_bindings
       vpc_sc = (
         item.project.vpc_sc_perimeter == null
         ? null
@@ -577,9 +724,9 @@ locals {
             subnet => v.shared_vpc_network_users
           }
         )
-        network_users = (
-          length(v.shared_vpc_subnets) > 0 ? [] : v.shared_vpc_network_users
-        )
+        # Never grant host-project-wide roles/compute.networkUser to tenant
+        # principals; tenant_validation requires shared_vpc_subnets instead.
+        network_users     = []
         service_agent_iam = v.shared_vpc_service_agent_iam
         service_agent_subnet_iam = {
           for subnet in v.shared_vpc_subnets : subnet => distinct(compact([
@@ -616,6 +763,7 @@ locals {
       for sk, sv in pv.service_accounts : "${pk}/${sk}" => {
         description    = sv.description
         display_name   = sv.display_name
+        iam            = sv.iam
         iam_self_roles = sv.iam_self_roles
         name           = sk
         project_key    = pk
@@ -623,8 +771,9 @@ locals {
     }
   ]...)
   project_context = {
-    folder_ids = module.project-factory.folder_ids
-    kms_keys   = var.kms_keys
+    custom_roles = var.custom_roles
+    folder_ids   = module.project-factory.folder_ids
+    kms_keys     = var.kms_keys
   }
 }
 
@@ -649,7 +798,7 @@ resource "terraform_data" "tenant_validation" {
     precondition {
       condition = alltrue([
         for tk, tv in local.tenants :
-        can(regex("^[a-z]([a-z0-9-]{0,18}[a-z0-9])?$", tv.tenant_slug))
+        can(regex(local._tenant_slug_regex, tv.tenant_slug))
       ])
       error_message = "Tenant slug must be 1 to 20 lowercase slug characters."
     }
@@ -661,11 +810,76 @@ resource "terraform_data" "tenant_validation" {
       error_message = "Tenant lifecycle_state must be active or archived."
     }
     precondition {
+      condition = length(local._invalid_yaml_tenant_files) == 0
+      error_message = format(
+        "Tenant manifests must be non-empty YAML mappings: %s.",
+        join(", ", local._invalid_yaml_tenant_files)
+      )
+    }
+    precondition {
+      condition = length(local._invalid_project_templates) == 0
+      error_message = format(
+        "Project templates must be non-empty YAML mappings: %s.",
+        join(", ", local._invalid_project_templates)
+      )
+    }
+    precondition {
       condition = alltrue([
-        for role in local._all_assigned_roles :
-        !contains(local._forbidden_roles, role)
+        for k, tpl in local._project_templates :
+        length(setsubtract(keys(tpl), local._project_template_keys)) == 0
       ])
-      error_message = "Tenant IAM cannot grant forbidden high-privilege roles."
+      error_message = format(
+        "Project templates support only these keys: %s.",
+        join(", ", sort(local._project_template_keys))
+      )
+    }
+    precondition {
+      condition = alltrue([
+        for role in local._all_tenant_roles : (
+          startswith(role, "$custom_roles:")
+          ? (
+            contains(keys(local._custom_role_refs), role) && (
+              contains(local._allowed_custom_roles, role) ||
+              contains(
+                local._allowed_custom_roles,
+                lookup(local._custom_role_refs, role, "")
+              )
+            )
+          )
+          : (
+            can(regex(local._role_id_regexes.predefined, role)) || (
+              (
+                can(regex(local._role_id_regexes.organization, role)) ||
+                can(regex(local._role_id_regexes.project, role))
+              ) &&
+              contains(local._allowed_custom_roles, role)
+            )
+          )
+        )
+      ])
+      error_message = join(" ", [
+        "Tenant IAM roles must be predefined roles/ IDs, custom role IDs in",
+        "allowed_custom_roles, or allowlisted $custom_roles references.",
+      ])
+    }
+    precondition {
+      condition = alltrue(concat(
+        [
+          for role in local._project_scoped_roles :
+          !contains(local._forbidden_project_roles, trimspace(lower(role)))
+        ],
+        [
+          for role in local._sa_scoped_roles :
+          !contains(local._forbidden_sa_roles, trimspace(lower(role)))
+        ],
+        [
+          for role in local._all_tenant_roles : (
+            !strcontains(trimspace(lower(role)), "serviceagent") ||
+            contains(local._allowed_privileged_roles, trimspace(lower(role)))
+          )
+        ]
+      ))
+      error_message = "Tenant IAM cannot use forbidden or service agent roles."
     }
     precondition {
       condition = alltrue([
@@ -705,16 +919,66 @@ resource "terraform_data" "tenant_validation" {
     precondition {
       condition = alltrue([
         for grant in local._all_shared_vpc_grants :
-        can(regex("^\\$service_agents:[a-z0-9-]+\\.googleapis\\.com$", grant))
+        can(regex(local._svpc_grant_regex, grant))
       ])
       error_message = "shared_vpc_service_grants must match service agent API."
     }
     precondition {
       condition = alltrue([
+        for api in local._all_shared_vpc_grant_apis :
+        contains(keys(local._svpc_grant_roles), api)
+      ])
+      error_message = "shared_vpc_service_grants must name a known preset."
+    }
+    precondition {
+      condition = alltrue([
+        for api in local._all_shared_vpc_grant_apis :
+        !contains(local._privileged_svpc_grant_apis, api) ||
+        contains(var.privileged_shared_vpc_service_grants, api)
+      ])
+      error_message = join(" ", [
+        "Shared VPC presets that grant host project roles outside the agent",
+        "allowlist require privileged_shared_vpc_service_grants.",
+      ])
+    }
+    precondition {
+      condition = alltrue([
         for subnet in local._all_shared_vpc_subnets :
-        can(regex("^[a-z]+-[a-z]+[0-9]+/[a-z][a-z0-9-]*$", subnet))
+        can(regex(local._subnet_regex, subnet))
       ])
       error_message = "shared_vpc_subnets entries must use <region>/<subnet>."
+    }
+    precondition {
+      condition = alltrue([
+        for pk, pv in local.tenant_projects :
+        pv.shared_vpc_host_project == null ||
+        pv.shared_vpc_host_project == pv.resolved_host_project
+      ])
+      error_message = join(" ", [
+        "shared_vpc_host_project must match the host project resolved for",
+        "the tenant environment.",
+      ])
+    }
+    precondition {
+      condition = alltrue([
+        for pk, pv in local.tenant_projects :
+        length(pv.shared_vpc_network_users) == 0 ||
+        length(pv.shared_vpc_subnets) > 0
+      ])
+      error_message = "shared_vpc_network_users requires shared_vpc_subnets."
+    }
+    precondition {
+      condition = var.shared_vpc_subnet_allowlist == null ? true : alltrue(
+        flatten([
+          for pk, pv in local.tenant_projects : [
+            for subnet in pv.shared_vpc_subnets : contains(
+              lookup(var.shared_vpc_subnet_allowlist, pv.folder_key, []),
+              subnet
+            )
+          ]
+        ])
+      )
+      error_message = "Subnets must be listed in shared_vpc_subnet_allowlist."
     }
     precondition {
       condition = alltrue([
@@ -771,6 +1035,34 @@ resource "terraform_data" "tenant_validation" {
     }
     precondition {
       condition = alltrue([
+        for tk, tv in local.tenants :
+        tv.automation == null ? true : (
+          !tv.automation.create_bucket ||
+          tv.automation.bucket_kms_key != null ||
+          tv.automation.project_id == try(var.automation.project_id, null)
+        )
+      ])
+      error_message = join(" ", [
+        "automation.bucket_kms_key is required when automation.project_id",
+        "differs from the Stage 0 automation project.",
+      ])
+    }
+    precondition {
+      condition = alltrue([
+        for svc in local._all_kms_services : can(regex(local._api_regex, svc))
+      ])
+      error_message = "kms_services keys must be <api>.googleapis.com names."
+    }
+    precondition {
+      condition = alltrue([
+        for ref in local._all_kms_key_refs :
+        contains(keys(var.kms_keys), ref) ||
+        can(regex(local._kms_key_id_regex, ref))
+      ])
+      error_message = "KMS references must be kms_keys aliases or key IDs."
+    }
+    precondition {
+      condition = alltrue([
         for pid in local._all_computed_project_ids :
         can(regex(local._gcp_id_regex, pid))
       ])
@@ -802,12 +1094,15 @@ resource "terraform_data" "tenant_validation" {
 module "project-factory" {
   source = "../../../modules/project-factory"
   context = {
-    folder_ids = local.environment_folders
-    kms_keys   = var.kms_keys
+    custom_roles = var.custom_roles
+    folder_ids   = local.environment_folders
+    kms_keys     = var.kms_keys
   }
   data_defaults = {
     bucket = {
-      force_destroy = var.force_destroy
+      # Never enable bucket destruction globally; archived tenants opt in
+      # per bucket through pf_folders.
+      force_destroy = false
     }
     locations = {
       storage = var.storage_location
@@ -850,9 +1145,8 @@ module "tenant-projects" {
 }
 
 data "google_bigquery_default_service_account" "tenant_bq" {
-  for_each   = local.tenant_bigquery_projects
-  project    = module.tenant-projects[each.key].project_id
-  depends_on = [module.tenant-projects]
+  for_each = local.tenant_bigquery_projects
+  project  = module.tenant-projects[each.key].project_id
 }
 
 resource "time_sleep" "tenant_bq_sa_propagation" {
@@ -874,15 +1168,19 @@ resource "google_kms_crypto_key_iam_member" "tenant_bigquery_cmek" {
 }
 
 module "tenant-service-accounts" {
-  source      = "../../../modules/iam-service-account"
-  for_each    = local.tenant_workload_sas
-  project_id  = module.tenant-projects[each.value.project_key].project_id
-  name        = each.value.name
+  source     = "../../../modules/iam-service-account"
+  for_each   = local.tenant_workload_sas
+  project_id = module.tenant-projects[each.value.project_key].project_id
+  name       = each.value.name
+  context = {
+    custom_roles = var.custom_roles
+  }
   description = each.value.description
   display_name = coalesce(
     each.value.display_name,
     "Workload service account ${each.value.name}."
   )
+  iam = each.value.iam
   iam_project_roles = (
     length(each.value.iam_self_roles) == 0
     ? {}

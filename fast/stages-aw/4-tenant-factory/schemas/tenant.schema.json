@@ -50,8 +50,7 @@
           "minLength": 2
         },
         "bucket_kms_key": {
-          "type": "string",
-          "minLength": 1
+          "$ref": "#/definitions/kms_key_ref"
         },
         "service_accounts": {
           "type": "object",
@@ -91,6 +90,26 @@
         "^[a-z][a-z0-9-]{0,20}$": {
           "type": "object",
           "additionalProperties": false,
+          "if": {
+            "required": [
+              "shared_vpc_network_users"
+            ],
+            "properties": {
+              "shared_vpc_network_users": {
+                "minItems": 1
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "shared_vpc_subnets"
+            ],
+            "properties": {
+              "shared_vpc_subnets": {
+                "minItems": 1
+              }
+            }
+          },
           "properties": {
             "name": {
               "type": "string",
@@ -122,12 +141,14 @@
             },
             "kms_services": {
               "type": "object",
+              "propertyNames": {
+                "pattern": "^[a-z0-9-]+\\.googleapis\\.com$"
+              },
               "additionalProperties": {
                 "type": "array",
                 "minItems": 1,
                 "items": {
-                  "type": "string",
-                  "minLength": 1
+                  "$ref": "#/definitions/kms_key_ref"
                 }
               }
             },
@@ -158,6 +179,9 @@
                     },
                     "display_name": {
                       "type": "string"
+                    },
+                    "iam": {
+                      "$ref": "#/definitions/sa_iam_role_map"
                     },
                     "iam_self_roles": {
                       "type": "array",
@@ -238,22 +262,20 @@
   },
   "definitions": {
     "allowed_role": {
-      "type": "string",
-      "minLength": 1,
+      "description": "Folder, project, and iam_self_roles grant role.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/role_id"
+        }
+      ],
       "not": {
-        "enum": [
-          "roles/compute.xpnAdmin",
-          "roles/editor",
-          "roles/iam.organizationRoleAdmin",
-          "roles/iam.securityAdmin",
-          "roles/iam.serviceAccountKeyAdmin",
-          "roles/orgpolicy.policyAdmin",
-          "roles/owner",
-          "roles/resourcemanager.folderAdmin",
-          "roles/resourcemanager.folderIamAdmin",
-          "roles/resourcemanager.lienModifier",
-          "roles/resourcemanager.organizationAdmin",
-          "roles/resourcemanager.projectIamAdmin"
+        "anyOf": [
+          {
+            "$ref": "#/definitions/forbidden_role"
+          },
+          {
+            "$ref": "#/definitions/service_agent_role"
+          }
         ]
       }
     },
@@ -287,6 +309,39 @@
           ]
         }
       }
+    },
+    "forbidden_role": {
+      "description": "Mirrors local._forbidden_roles in main.tf.",
+      "enum": [
+        "roles/cloudkms.admin",
+        "roles/compute.networkAdmin",
+        "roles/compute.securityAdmin",
+        "roles/compute.xpnAdmin",
+        "roles/dns.admin",
+        "roles/editor",
+        "roles/iam.denyAdmin",
+        "roles/iam.organizationRoleAdmin",
+        "roles/iam.roleAdmin",
+        "roles/iam.securityAdmin",
+        "roles/iam.serviceAccountAdmin",
+        "roles/iam.serviceAccountKeyAdmin",
+        "roles/iam.serviceAccountTokenCreator",
+        "roles/iam.serviceAccountUser",
+        "roles/iam.workloadIdentityPoolAdmin",
+        "roles/iam.workloadIdentityUser",
+        "roles/logging.admin",
+        "roles/logging.configWriter",
+        "roles/orgpolicy.policyAdmin",
+        "roles/owner",
+        "roles/resourcemanager.folderAdmin",
+        "roles/resourcemanager.folderIamAdmin",
+        "roles/resourcemanager.lienModifier",
+        "roles/resourcemanager.organizationAdmin",
+        "roles/resourcemanager.projectIamAdmin",
+        "roles/resourcemanager.tagAdmin",
+        "roles/resourcemanager.tagUser",
+        "roles/serviceusage.serviceUsageAdmin"
+      ]
     },
     "iam_binding_additive": {
       "type": "object",
@@ -350,12 +405,96 @@
         }
       }
     },
+    "kms_key_ref": {
+      "description": "kms_keys alias or full Cloud KMS crypto key ID.",
+      "type": "string",
+      "anyOf": [
+        {
+          "pattern": "^[^/\\s]+$"
+        },
+        {
+          "pattern": "^projects/[^/]+/locations/[^/]+/keyRings/[^/]+/cryptoKeys/[^/]+$"
+        }
+      ]
+    },
     "labels_map": {
       "type": "object",
       "additionalProperties": {
         "type": "string",
         "pattern": "^[a-z0-9_-]{0,63}$"
       }
+    },
+    "role_id": {
+      "description": "Mirrors local._role_id_regexes in main.tf.",
+      "type": "string",
+      "anyOf": [
+        {
+          "pattern": "^organizations/[0-9]+/roles/[A-Za-z0-9_.]{3,64}$"
+        },
+        {
+          "pattern": "^roles/[A-Za-z0-9_.-]+$"
+        },
+        {
+          "pattern": "^projects/[a-z0-9.:-]+/roles/[A-Za-z0-9_.]{3,64}$"
+        },
+        {
+          "pattern": "^\\$custom_roles:[A-Za-z0-9_-]+$"
+        }
+      ]
+    },
+    "sa_allowed_role": {
+      "description": "Role granted on a tenant workload service account.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/role_id"
+        }
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/definitions/forbidden_role"
+              },
+              {
+                "not": {
+                  "$ref": "#/definitions/sa_scoped_role"
+                }
+              }
+            ]
+          },
+          {
+            "$ref": "#/definitions/service_agent_role"
+          }
+        ]
+      }
+    },
+    "sa_iam_role_map": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/sa_allowed_role"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "sa_scoped_role": {
+      "description": "Mirrors local._sa_scoped_privileged_roles in main.tf.",
+      "enum": [
+        "roles/iam.serviceAccountTokenCreator",
+        "roles/iam.serviceAccountUser",
+        "roles/iam.workloadIdentityUser"
+      ]
+    },
+    "service_agent_role": {
+      "description": "Case-insensitive serviceAgent role name match.",
+      "type": "string",
+      "pattern": "[Ss][Ee][Rr][Vv][Ii][Cc][Ee][Aa][Gg][Ee][Nn][Tt]"
     },
     "shared_vpc_service_agent_iam_map": {
       "type": "object",

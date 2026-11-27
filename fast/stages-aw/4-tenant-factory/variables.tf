@@ -16,6 +16,41 @@
 
 # tfdoc:file:description Stage variables and plan-time guardrails.
 
+# Validations reuse the role, regex, and preset locals in main.tf so this
+# layer and the terraform_data.tenant_validation preconditions share one
+# definition of every guardrail.
+
+variable "allowed_custom_roles" {
+  description = "Custom role IDs or $custom_roles refs tenant IAM may grant."
+  type        = list(string)
+  default     = []
+  nullable    = false
+  validation {
+    condition = alltrue([
+      for role in var.allowed_custom_roles : anytrue([
+        for k in ["organization", "project", "reference"] :
+        can(regex(local._role_id_regexes[k], role))
+      ])
+    ])
+    error_message = "allowed_custom_roles must list custom role IDs or refs."
+  }
+}
+
+variable "allowed_privileged_roles" {
+  description = "Denylisted or service agent roles deliberately exempted."
+  type        = list(string)
+  default     = []
+  nullable    = false
+  validation {
+    condition = alltrue([
+      for role in var.allowed_privileged_roles :
+      contains(local._forbidden_roles_lower, trimspace(lower(role))) ||
+      strcontains(lower(role), "serviceagent")
+    ])
+    error_message = "Only denylisted or service agent roles can be exempted."
+  }
+}
+
 variable "automation" {
   description = "Optional Stage 0 outputs bucket, KMS keys, and project ID."
   type = object({
@@ -65,6 +100,22 @@ variable "billing_linkage_mode" {
   }
 }
 
+variable "custom_roles" {
+  # tfdoc:variable:source 0-bootstrap
+  description = "Optional Stage 0 custom role IDs keyed by role name."
+  type        = map(string)
+  default     = {}
+  nullable    = false
+  validation {
+    condition = alltrue([
+      for k, v in var.custom_roles :
+      can(regex(local._role_id_regexes.organization, v)) ||
+      can(regex(local._role_id_regexes.project, v))
+    ])
+    error_message = "custom_roles values must be custom role IDs."
+  }
+}
+
 variable "environment_folders" {
   description = "Map of environment keys to folders/<id> parent folder IDs."
   type        = map(string)
@@ -111,10 +162,25 @@ variable "folder_ids" {
 }
 
 variable "force_destroy" {
-  description = "Allow DELETE on archived projects and state bucket destroy."
+  description = "Allow DELETE and state bucket destroy for archived tenants."
   type        = bool
   default     = false
   nullable    = false
+}
+
+variable "host_project_ids" {
+  # tfdoc:variable:source 2-networking
+  description = "Optional Stage 2 host project IDs keyed by environment."
+  type        = map(string)
+  default     = {}
+  nullable    = false
+  validation {
+    condition = alltrue([
+      for k, v in var.host_project_ids :
+      v == null || can(regex(local._gcp_id_regex, v))
+    ])
+    error_message = "host_project_ids values must be project IDs."
+  }
 }
 
 variable "kms_keys" {
@@ -122,6 +188,12 @@ variable "kms_keys" {
   type        = map(string)
   default     = {}
   nullable    = false
+  validation {
+    condition = alltrue([
+      for k, v in var.kms_keys : can(regex(local._kms_key_id_regex, v))
+    ])
+    error_message = "kms_keys values must be Cloud KMS crypto key IDs."
+  }
 }
 
 variable "prefix" {
@@ -137,6 +209,20 @@ variable "prefix" {
       regex("^[a-z]([a-z0-9-]*[a-z0-9])?$", var.prefix)
     )
     error_message = "prefix must use lowercase letters, digits, and hyphens."
+  }
+}
+
+variable "privileged_shared_vpc_service_grants" {
+  description = "APIs allowed to use privileged Shared VPC service presets."
+  type        = list(string)
+  default     = []
+  nullable    = false
+  validation {
+    condition = alltrue([
+      for api in var.privileged_shared_vpc_service_grants :
+      can(regex(local._api_regex, api))
+    ])
+    error_message = "Entries must be <api>.googleapis.com names."
   }
 }
 
@@ -159,6 +245,31 @@ variable "shared_vpc_host_projects" {
   type        = map(string)
   default     = {}
   nullable    = false
+  validation {
+    condition = alltrue([
+      for k, v in var.shared_vpc_host_projects :
+      can(regex("^[a-z][a-z0-9-]*$", k)) &&
+      can(regex(local._gcp_id_regex, v))
+    ])
+    error_message = "Keys must be environment slugs and values project IDs."
+  }
+}
+
+variable "shared_vpc_subnet_allowlist" {
+  description = "Optional <env>/<tenant> map of allocated Shared VPC subnets."
+  type        = map(list(string))
+  default     = null
+  validation {
+    condition = var.shared_vpc_subnet_allowlist == null ? true : alltrue(
+      flatten([
+        for k, v in var.shared_vpc_subnet_allowlist : concat(
+          [can(regex(local._tenant_key_regex, k))],
+          [for subnet in v : can(regex(local._subnet_regex, subnet))]
+        )
+      ])
+    )
+    error_message = "Use <env>/<tenant> keys and <region>/<subnet> values."
+  }
 }
 
 variable "storage_location" {
@@ -210,6 +321,7 @@ variable "tenants" {
       service_accounts = optional(map(object({
         description    = optional(string)
         display_name   = optional(string)
+        iam            = optional(map(list(string)), {})
         iam_self_roles = optional(list(string), [])
       })), {})
       services                     = optional(list(string), [])
@@ -251,7 +363,7 @@ variable "tenants" {
     condition = alltrue([
       for k, v in var.tenants :
       can(regex(
-        "^[a-z]([a-z0-9-]{0,18}[a-z0-9])?$",
+        local._tenant_slug_regex,
         coalesce(v.tenant_id, trimprefix(k, "${v.environment}/"))
       ))
     ])
@@ -273,36 +385,88 @@ variable "tenants" {
   validation {
     condition = alltrue(flatten([
       for tk, tv in var.tenants : [
-        for role in distinct(concat(
+        for scoped in [{
+          project = concat(
+            keys(tv.iam),
+            flatten([
+              for pk, pv in tv.projects : concat(
+                keys(pv.iam),
+                flatten(values(pv.iam_by_principals)),
+                [for bk, bv in pv.iam_bindings_additive : bv.role],
+                flatten([
+                  for sk, sv in pv.service_accounts : sv.iam_self_roles
+                ])
+              )
+            ])
+          )
+          sa = flatten([
+            for pk, pv in tv.projects : [
+              for sk, sv in pv.service_accounts : keys(sv.iam)
+            ]
+          ])
+          }] : concat(
+          [
+            for role in scoped.project :
+            !contains(local._forbidden_project_roles, trimspace(lower(role)))
+          ],
+          [
+            for role in scoped.sa :
+            !contains(local._forbidden_sa_roles, trimspace(lower(role)))
+          ],
+          [
+            for role in concat(scoped.project, scoped.sa) : (
+              !strcontains(trimspace(lower(role)), "serviceagent") ||
+              contains(local._allowed_privileged_roles, trimspace(lower(role)))
+            )
+          ]
+        )
+      ]
+    ]))
+    error_message = "Tenant IAM cannot use forbidden or service agent roles."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for tk, tv in var.tenants : [
+        for role in concat(
           keys(tv.iam),
           flatten([
             for pk, pv in tv.projects : concat(
               keys(pv.iam),
-              keys(pv.shared_vpc_service_agent_iam),
               flatten(values(pv.iam_by_principals)),
               [for bk, bv in pv.iam_bindings_additive : bv.role],
               flatten([
-                for sk, sv in pv.service_accounts : sv.iam_self_roles
+                for sk, sv in pv.service_accounts :
+                concat(sv.iam_self_roles, keys(sv.iam))
               ])
             )
           ])
-          )) : !contains([
-          "roles/compute.xpnAdmin",
-          "roles/editor",
-          "roles/iam.organizationRoleAdmin",
-          "roles/iam.securityAdmin",
-          "roles/iam.serviceAccountKeyAdmin",
-          "roles/orgpolicy.policyAdmin",
-          "roles/owner",
-          "roles/resourcemanager.folderAdmin",
-          "roles/resourcemanager.folderIamAdmin",
-          "roles/resourcemanager.lienModifier",
-          "roles/resourcemanager.organizationAdmin",
-          "roles/resourcemanager.projectIamAdmin",
-        ], role)
+          ) : (
+          startswith(role, "$custom_roles:")
+          ? (
+            contains(keys(local._custom_role_refs), role) && (
+              contains(local._allowed_custom_roles, role) ||
+              contains(
+                local._allowed_custom_roles,
+                lookup(local._custom_role_refs, role, "")
+              )
+            )
+          )
+          : (
+            can(regex(local._role_id_regexes.predefined, role)) || (
+              (
+                can(regex(local._role_id_regexes.organization, role)) ||
+                can(regex(local._role_id_regexes.project, role))
+              ) &&
+              contains(local._allowed_custom_roles, role)
+            )
+          )
+        )
       ]
     ]))
-    error_message = "Tenant IAM cannot grant forbidden high-privilege roles."
+    error_message = join(" ", [
+      "Tenant IAM roles must be predefined roles/ IDs, custom role IDs in",
+      "allowed_custom_roles, or allowlisted $custom_roles references.",
+    ])
   }
   validation {
     condition = alltrue(flatten([
@@ -310,12 +474,7 @@ variable "tenants" {
         for pk, pv in tv.projects : concat(
           [
             for role in keys(pv.shared_vpc_service_agent_iam) :
-            contains([
-              "roles/composer.sharedVpcAgent",
-              "roles/compute.networkUser",
-              "roles/container.hostServiceAgentUser",
-              "roles/vpcaccess.user",
-            ], role)
+            contains(local._allowed_shared_vpc_agent_roles, role)
           ],
           [
             for member in flatten(values(pv.shared_vpc_service_agent_iam)) :
@@ -331,25 +490,89 @@ variable "tenants" {
       for tk, tv in var.tenants : [
         for pk, pv in tv.projects : [
           for grant in pv.shared_vpc_service_grants :
-          can(regex(
-            "^\\$service_agents:[a-z0-9-]+\\.googleapis\\.com$",
-            grant
-          ))
+          can(regex(local._svpc_grant_regex, grant)) && contains(
+            keys(local._svpc_grant_roles),
+            trimprefix(grant, "$service_agents:")
+          )
         ]
       ]
     ]))
-    error_message = "shared_vpc_service_grants requires service agent APIs."
+    error_message = "shared_vpc_service_grants must name a known preset."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for tk, tv in var.tenants : [
+        for pk, pv in tv.projects : [
+          for api in [
+            for grant in pv.shared_vpc_service_grants :
+            trimprefix(grant, "$service_agents:")
+            ] : (
+            !contains(local._privileged_svpc_grant_apis, api) ||
+            contains(var.privileged_shared_vpc_service_grants, api)
+          )
+        ]
+      ]
+    ]))
+    error_message = join(" ", [
+      "Shared VPC presets that grant host project roles outside the agent",
+      "allowlist require privileged_shared_vpc_service_grants.",
+    ])
   }
   validation {
     condition = alltrue(flatten([
       for tk, tv in var.tenants : [
         for pk, pv in tv.projects : [
           for subnet in pv.shared_vpc_subnets :
-          can(regex("^[a-z]+-[a-z]+[0-9]+/[a-z][a-z0-9-]*$", subnet))
+          can(regex(local._subnet_regex, subnet))
         ]
       ]
     ]))
     error_message = "shared_vpc_subnets entries must use <region>/<subnet>."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for tk, tv in var.tenants : [
+        for pk, pv in tv.projects :
+        pv.shared_vpc_host_project == null ||
+        pv.shared_vpc_host_project == lookup(
+          local.environment_host_projects, tv.environment, null
+        )
+      ]
+    ]))
+    error_message = join(" ", [
+      "shared_vpc_host_project must match the host project resolved for",
+      "the tenant environment.",
+    ])
+  }
+  validation {
+    condition = alltrue(flatten([
+      for tk, tv in var.tenants : [
+        for pk, pv in tv.projects :
+        length(pv.shared_vpc_network_users) == 0 ||
+        length(pv.shared_vpc_subnets) > 0
+      ]
+    ]))
+    error_message = "shared_vpc_network_users requires shared_vpc_subnets."
+  }
+  validation {
+    condition = var.shared_vpc_subnet_allowlist == null ? true : alltrue(
+      flatten([
+        for tk, tv in var.tenants : [
+          for key in [format(
+            "%s/%s",
+            tv.environment,
+            coalesce(tv.tenant_id, trimprefix(tk, "${tv.environment}/"))
+            )] : [
+            for pk, pv in tv.projects : [
+              for subnet in pv.shared_vpc_subnets : contains(
+                lookup(var.shared_vpc_subnet_allowlist, key, []), subnet
+              )
+            ]
+          ]
+        ]
+      ])
+    )
+    error_message = "Subnets must be listed in shared_vpc_subnet_allowlist."
   }
   validation {
     condition = alltrue(flatten([
@@ -379,5 +602,48 @@ variable "tenants" {
       )
     ])
     error_message = "automation requires project_id and only rw or ro SA keys."
+  }
+  validation {
+    condition = alltrue([
+      for tk, tv in var.tenants :
+      tv.automation == null ? true : (
+        !tv.automation.create_bucket ||
+        tv.automation.bucket_kms_key != null ||
+        try(coalesce(
+          tv.automation.project_id,
+          try(var.automation.project_id, null)
+        ), null) == try(var.automation.project_id, null)
+      )
+    ])
+    error_message = join(" ", [
+      "automation.bucket_kms_key is required when automation.project_id",
+      "differs from the Stage 0 automation project.",
+    ])
+  }
+  validation {
+    condition = alltrue(flatten([
+      for tk, tv in var.tenants : [
+        for pk, pv in tv.projects : [
+          for svc in keys(pv.kms_services) : can(regex(local._api_regex, svc))
+        ]
+      ]
+    ]))
+    error_message = "kms_services keys must be <api>.googleapis.com names."
+  }
+  validation {
+    condition = alltrue(flatten([
+      for tk, tv in var.tenants : [
+        for ref in concat(
+          compact([try(tv.automation.bucket_kms_key, null)]),
+          flatten([
+            for pk, pv in tv.projects : flatten(values(pv.kms_services))
+          ])
+          ) : (
+          contains(keys(var.kms_keys), ref) ||
+          can(regex(local._kms_key_id_regex, ref))
+        )
+      ]
+    ]))
+    error_message = "KMS references must be kms_keys aliases or key IDs."
   }
 }

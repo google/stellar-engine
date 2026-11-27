@@ -32,6 +32,11 @@ variables {
     test = "folders/100000000002"
     prod = "folders/100000000003"
   }
+  # Test manifests live under tests/fixtures; data/tenants ships only the
+  # example-tenant.yaml.sample file, which the stage never loads.
+  factories_config = {
+    tenants_data_path = "tests/fixtures/tenants"
+  }
   kms_keys = {
     us-east4-tenant = (
       "projects/sec-0/locations/us-east4/keyRings/t/cryptoKeys/k"
@@ -238,6 +243,17 @@ run "plan_yaml_and_hcl_multi_project_tenants" {
 
   assert {
     condition = (
+      contains(
+        keys(local.tenant_workload_sas["dev/acme/app-0/app-runtime"].iam),
+        "roles/iam.workloadIdentityUser"
+      ) &&
+      local.tenant_project_shared_vpc["dev/acme/app-0"].network_users == []
+    )
+    error_message = "Expected SA-scoped WIF grant and no host-wide users."
+  }
+
+  assert {
+    condition = (
       output.tenant_projects["dev/acme/app-0"] == "se-dev-acme-app-0" &&
       output.tenant_projects["dev/acme/data-0"] == "se-dev-acme-data-0" &&
       output.tenant_projects["prod/beta/web-0"] == "se-prod-beta-web-0" &&
@@ -427,8 +443,8 @@ run "plan_archived_tenant_abandons_and_removes_lien" {
 }
 
 # 3b. lifecycle_state = archived + force_destroy = true switches archived
-#     projects to DELETE and sets force_destroy on state buckets while keeping
-#     active tenants at PREVENT.
+#     projects to DELETE and sets force_destroy on archived state buckets
+#     only, while active tenants keep PREVENT and non-destroyable buckets.
 run "plan_archived_tenant_with_force_destroy_deletes" {
   command = plan
 
@@ -439,6 +455,21 @@ run "plan_archived_tenant_with_force_destroy_deletes" {
         descriptive_name = "Sandbox Dev"
         environment      = "dev"
         lifecycle_state  = "archived"
+        automation = {
+          service_accounts = {
+            rw = {}
+          }
+        }
+        projects = {
+          app-0 = {
+            services = ["logging.googleapis.com"]
+          }
+        }
+      }
+      keeper = {
+        descriptive_name = "Keeper Dev"
+        environment      = "dev"
+        lifecycle_state  = "active"
         automation = {
           service_accounts = {
             rw = {}
@@ -464,6 +495,16 @@ run "plan_archived_tenant_with_force_destroy_deletes" {
       local.tenant_projects["dev/acme/app-0"].deletion_policy == "PREVENT"
     )
     error_message = "Expected DELETE on archived and PREVENT on active."
+  }
+
+  assert {
+    condition = (
+      local.pf_folders[
+        "dev/keeper"
+      ].automation.bucket.force_destroy == false &&
+      local.tenant_projects["dev/keeper/app-0"].deletion_policy == "PREVENT"
+    )
+    error_message = "Expected active tenant buckets to never force_destroy."
   }
 }
 
@@ -891,4 +932,1048 @@ run "plan_stage_1_folder_ids_envs_auto_wiring" {
     )
     error_message = "Expected folder_ids.envs fallback with explicit override."
   }
+}
+
+# 6a. Reject project-scoped service account token minting.
+run "reject_project_scoped_token_creator" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            iam = {
+              "roles/iam.serviceAccountTokenCreator" = [
+                "group:bad-admins@example.com",
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 6b. Normalized comparisons reject case variants of denylisted roles.
+run "reject_case_variant_denylisted_role" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            iam_bindings_additive = {
+              owner = {
+                member = "group:bad-admins@example.com"
+                role   = "roles/Owner"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 6c. Reject roles/iam.serviceAccountAdmin granted through iam_self_roles.
+run "reject_service_account_admin_in_iam_self_roles" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            service_accounts = {
+              app-runtime = {
+                iam_self_roles = ["roles/iam.serviceAccountAdmin"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 6d. Reject roles/compute.networkAdmin on the tenant folder.
+run "reject_network_admin_in_tenant_folder_iam" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        iam = {
+          "roles/compute.networkAdmin" = ["group:bad-admins@example.com"]
+        }
+        projects = {
+          app-0 = {}
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 6e. Service-account-scoped actAs and Workload Identity grants plan.
+run "plan_sa_scoped_actas_and_wif_allowed" {
+  command = plan
+
+  variables {
+    tenants = {
+      delta = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          run-0 = {
+            services = ["run.googleapis.com"]
+            service_accounts = {
+              run-runtime = {
+                iam = {
+                  "roles/iam.serviceAccountUser" = [
+                    "group:delta-deployers@example.com",
+                  ]
+                  "roles/iam.workloadIdentityUser" = [
+                    "serviceAccount:se-dev-delta-run-0.svc.id.goog[d/run]",
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      length(
+        local.tenant_workload_sas["dev/delta/run-0/run-runtime"].iam
+      ) == 2 &&
+      contains(
+        keys(module.tenant-service-accounts),
+        "dev/delta/run-0/run-runtime"
+      )
+    )
+    error_message = "Expected SA-scoped actAs and WIF grants to plan."
+  }
+}
+
+# 6f. Reject non-actAs denylisted roles on a service account resource.
+run "reject_sa_scoped_service_account_admin" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            service_accounts = {
+              app-runtime = {
+                iam = {
+                  "roles/iam.serviceAccountAdmin" = [
+                    "group:bad-admins@example.com",
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 6g. Reject service agent roles in authoritative project IAM.
+run "reject_service_agent_role_in_authoritative_iam" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            iam = {
+              "roles/container.serviceAgent" = [
+                "group:bad-admins@example.com",
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 6h. Reject service agent roles in additive project IAM.
+run "reject_service_agent_role_in_additive_iam" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            iam_bindings_additive = {
+              agent = {
+                member = "group:bad-admins@example.com"
+                role   = "roles/compute.serviceAgent"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 6i. allowed_privileged_roles deliberately exempts listed roles.
+run "plan_allowed_privileged_roles_escape_hatch" {
+  command = plan
+
+  variables {
+    allowed_privileged_roles = [
+      "roles/compute.networkAdmin",
+      "roles/gkehub.serviceAgent",
+    ]
+    tenants = {
+      echo = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          net-0 = {
+            iam = {
+              "roles/compute.networkAdmin" = ["group:echo-net@example.com"]
+            }
+            iam_bindings_additive = {
+              fleet = {
+                member = "serviceAccount:fleet-agent@example.com"
+                role   = "roles/gkehub.serviceAgent"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition = contains(
+      keys(local.tenant_projects["dev/echo/net-0"].iam),
+      "roles/compute.networkAdmin"
+    )
+    error_message = "Expected the exempted role to plan."
+  }
+}
+
+# 6j. allowed_privileged_roles accepts only denylisted or agent roles.
+run "reject_non_denylisted_allowed_privileged_role" {
+  command = plan
+
+  variables {
+    allowed_privileged_roles = ["roles/viewer"]
+  }
+
+  expect_failures = [
+    var.allowed_privileged_roles,
+  ]
+}
+
+# 6k. Reject custom role IDs that are not in allowed_custom_roles.
+run "reject_unallowlisted_custom_role" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            iam = {
+              "organizations/123456789012/roles/tenantViewer" = [
+                "group:bad-admins@example.com",
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 6l. Allowlisted custom role IDs and Stage 0 $custom_roles references plan
+#     and resolve through the forwarded custom_roles context.
+run "plan_allowlisted_custom_roles_and_stage_0_refs" {
+  command = plan
+
+  variables {
+    allowed_custom_roles = [
+      "$custom_roles:tenant_readonly",
+      "projects/se-dev-ops-0/roles/opsViewer",
+    ]
+    custom_roles = {
+      organization_iam_admin = (
+        "organizations/123456789012/roles/organizationIamAdmin"
+      )
+      tenant_readonly = "organizations/123456789012/roles/tenantReadonly"
+    }
+    tenants = {
+      foxtrot = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        iam = {
+          "$custom_roles:tenant_readonly" = [
+            "group:foxtrot-readers@example.com",
+          ]
+        }
+        projects = {
+          app-0 = {
+            iam = {
+              "projects/se-dev-ops-0/roles/opsViewer" = [
+                "group:foxtrot-ops@example.com",
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      local.project_context.custom_roles["tenant_readonly"] == (
+        "organizations/123456789012/roles/tenantReadonly"
+      ) &&
+      contains(
+        keys(local.pf_folders["dev/foxtrot"].iam),
+        "$custom_roles:tenant_readonly"
+      )
+    )
+    error_message = "Expected Stage 0 custom_roles in the IAM context."
+  }
+}
+
+# 6m. Stage 0 references still need allowlisting, so administrative Stage 0
+#     roles such as organization_iam_admin cannot be granted by tenants.
+run "reject_unallowlisted_stage_0_custom_role_ref" {
+  command = plan
+
+  variables {
+    custom_roles = {
+      organization_iam_admin = (
+        "organizations/123456789012/roles/organizationIamAdmin"
+      )
+    }
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        iam = {
+          "$custom_roles:organization_iam_admin" = [
+            "group:bad-admins@example.com",
+          ]
+        }
+        projects = {
+          app-0 = {}
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 6n. Reject allowlisted $custom_roles references that do not resolve.
+run "reject_unresolvable_custom_role_ref" {
+  command = plan
+
+  variables {
+    allowed_custom_roles = ["$custom_roles:missing"]
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            iam = {
+              "$custom_roles:missing" = ["group:bad-admins@example.com"]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 6o. Stage 0 exports custom_roles = null when it skips custom roles.
+run "plan_null_stage_0_custom_roles_defaults_to_empty" {
+  command = plan
+
+  variables {
+    custom_roles = null
+  }
+
+  assert {
+    condition     = length(var.custom_roles) == 0
+    error_message = "Expected null custom_roles to fall back to {}."
+  }
+}
+
+# 7a. Reject a dev tenant asserting the prod Shared VPC host project.
+run "reject_host_project_override_mismatch" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            services                = ["compute.googleapis.com"]
+            shared_vpc_host_project = "se-prod-net-host-0"
+            shared_vpc_subnets      = ["us-east4/dev-bad-app"]
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 7b. The same host project override in YAML fails tenant_validation.
+run "reject_host_project_override_mismatch_yaml" {
+  command = plan
+
+  variables {
+    factories_config = {
+      tenants_data_path = "tests/fixtures/invalid/host-override"
+    }
+  }
+
+  expect_failures = [
+    terraform_data.tenant_validation,
+  ]
+}
+
+# 7c. Reject network users without subnets (host-project-wide access).
+run "reject_network_users_without_subnets" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            services                 = ["compute.googleapis.com"]
+            shared_vpc_network_users = ["group:bad-users@example.com"]
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 7d. The same network users manifest in YAML fails tenant_validation.
+run "reject_network_users_without_subnets_yaml" {
+  command = plan
+
+  variables {
+    factories_config = {
+      tenants_data_path = "tests/fixtures/invalid/network-users"
+    }
+  }
+
+  expect_failures = [
+    terraform_data.tenant_validation,
+  ]
+}
+
+# 7e. shared_vpc_subnet_allowlist permits allocated subnets.
+run "plan_subnet_allowlist_permits_allocated_subnets" {
+  command = plan
+
+  variables {
+    shared_vpc_subnet_allowlist = {
+      "dev/acme" = [
+        "us-east4/dev-acme-app",
+        "us-east4/dev-acme-data",
+        "us-east4/dev-acme-gke",
+      ]
+    }
+  }
+
+  assert {
+    condition = length(keys(
+      local.tenant_project_shared_vpc["dev/acme/app-0"].network_subnet_users
+    )) == 2
+    error_message = "Expected allowlisted subnets to plan."
+  }
+}
+
+# 7f. An HCL tenant cannot attach another tenant's subnet.
+run "reject_subnet_outside_allowlist" {
+  command = plan
+
+  variables {
+    shared_vpc_subnet_allowlist = {
+      "dev/acme" = [
+        "us-east4/dev-acme-app",
+        "us-east4/dev-acme-data",
+        "us-east4/dev-acme-gke",
+      ]
+    }
+    tenants = {
+      other = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            services           = ["compute.googleapis.com"]
+            shared_vpc_subnets = ["us-east4/dev-acme-app"]
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 7g. YAML tenants outside their allowlist fail tenant_validation.
+run "reject_yaml_subnet_outside_allowlist" {
+  command = plan
+
+  variables {
+    shared_vpc_subnet_allowlist = {
+      "dev/acme" = ["us-east4/dev-acme-app"]
+    }
+  }
+
+  expect_failures = [
+    terraform_data.tenant_validation,
+  ]
+}
+
+# 7h. Stage 2 host_project_ids backfills environments, explicit
+#     shared_vpc_host_projects entries win, and the hub is never used.
+run "plan_stage_2_host_project_ids_fallback" {
+  command = plan
+
+  variables {
+    host_project_ids = {
+      dev  = "se-dev-net-spoke-0"
+      hub  = "se-hub-net-0"
+      prod = "se-prod-net-spoke-0"
+    }
+    shared_vpc_host_projects = {
+      prod = "se-prod-net-host-0"
+    }
+    tenants = {
+      beta = {
+        environment     = "prod"
+        lifecycle_state = "active"
+        projects = {
+          web-0 = {
+            services           = ["compute.googleapis.com"]
+            shared_vpc_subnets = ["us-east4/prod-beta-web"]
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      local.tenant_project_shared_vpc["dev/acme/app-0"].host_project == (
+        "se-dev-net-spoke-0"
+      ) &&
+      local.tenant_project_shared_vpc["prod/beta/web-0"].host_project == (
+        "se-prod-net-host-0"
+      ) &&
+      !contains(keys(local.environment_host_projects), "hub")
+    )
+    error_message = "Expected Stage 2 fallback with explicit precedence."
+  }
+}
+
+# 8a. Reject privileged Shared VPC presets without an explicit opt-in.
+run "reject_privileged_shared_vpc_service_grant" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          gke-0 = {
+            shared_vpc_service_grants = [
+              "$service_agents:container.googleapis.com",
+            ]
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 8b. privileged_shared_vpc_service_grants opts a preset in.
+run "plan_privileged_shared_vpc_service_grant_opt_in" {
+  command = plan
+
+  variables {
+    privileged_shared_vpc_service_grants = ["container.googleapis.com"]
+    tenants = {
+      golf = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          gke-0 = {
+            shared_vpc_subnets = ["us-east4/dev-golf-gke"]
+            shared_vpc_service_grants = [
+              "$service_agents:container.googleapis.com",
+            ]
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition = contains(
+      local.tenant_project_shared_vpc["dev/golf/gke-0"].service_iam_grants,
+      "$service_agents:container.googleapis.com"
+    )
+    error_message = "Expected the opted-in GKE preset to plan."
+  }
+}
+
+# 8c. Reject grants that do not name a sharedvpc-agent-iam.yaml preset.
+run "reject_unknown_shared_vpc_service_grant_preset" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            shared_vpc_service_grants = [
+              "$service_agents:storage.googleapis.com",
+            ]
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 8d. Template-inherited shared_vpc_service_grants attach the project.
+run "plan_template_inherited_shared_vpc_grants" {
+  command = plan
+
+  variables {
+    factories_config = {
+      project_templates_path = "tests/fixtures/templates"
+      tenants_data_path      = "tests/fixtures/tenants"
+    }
+    tenants = {
+      hotel = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          conn-0 = {
+            project_template = "connector"
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      local.tenant_projects["dev/hotel/conn-0"].needs_shared_vpc &&
+      local.tenant_project_shared_vpc["dev/hotel/conn-0"].host_project == (
+        "se-dev-net-host-0"
+      ) &&
+      contains(
+        local.tenant_project_shared_vpc["dev/hotel/conn-0"].service_iam_grants,
+        "$service_agents:vpcaccess.googleapis.com"
+      ) &&
+      local.tenant_projects["dev/hotel/conn-0"].labels.template == (
+        "connector"
+      ) &&
+      contains(
+        local.tenant_projects["dev/hotel/conn-0"].services,
+        "logging.googleapis.com"
+      )
+    )
+    error_message = "Expected template grants to attach the host project."
+  }
+}
+
+# 8e. Privileged presets inherited from a template still need opt-in.
+run "reject_template_inherited_privileged_grant" {
+  command = plan
+
+  variables {
+    factories_config = {
+      project_templates_path = "tests/fixtures/templates"
+      tenants_data_path      = "tests/fixtures/tenants"
+    }
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          gke-0 = {
+            project_template   = "gke-host"
+            shared_vpc_subnets = ["us-east4/dev-bad-gke"]
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    terraform_data.tenant_validation,
+  ]
+}
+
+# 8f. The same template plans once the operator opts the preset in, which
+#     ties the 8e failure to the privileged preset check.
+run "plan_template_inherited_privileged_grant_opt_in" {
+  command = plan
+
+  variables {
+    factories_config = {
+      project_templates_path = "tests/fixtures/templates"
+      tenants_data_path      = "tests/fixtures/tenants"
+    }
+    privileged_shared_vpc_service_grants = ["container.googleapis.com"]
+    tenants = {
+      kilo = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          gke-0 = {
+            project_template   = "gke-host"
+            shared_vpc_subnets = ["us-east4/dev-kilo-gke"]
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition = contains(
+      local.tenant_project_shared_vpc["dev/kilo/gke-0"].service_iam_grants,
+      "$service_agents:container.googleapis.com"
+    )
+    error_message = "Expected the opted-in template preset to plan."
+  }
+}
+
+# 8g. Reject template keys outside the documented merge scope.
+run "reject_unknown_template_key" {
+  command = plan
+
+  variables {
+    factories_config = {
+      project_templates_path = "tests/fixtures/templates-invalid"
+      tenants_data_path      = "tests/fixtures/tenants"
+    }
+    tenants = {
+      india = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            project_template = "bad-scope"
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    terraform_data.tenant_validation,
+  ]
+}
+
+# 9a. An empty or comment-only manifest fails instead of dropping a tenant.
+run "reject_empty_yaml_manifest" {
+  command = plan
+
+  variables {
+    factories_config = {
+      tenants_data_path = "tests/fixtures/invalid/empty"
+    }
+  }
+
+  expect_failures = [
+    terraform_data.tenant_validation,
+  ]
+}
+
+# 9b. A non-mapping manifest fails instead of dropping a tenant.
+run "reject_non_mapping_yaml_manifest" {
+  command = plan
+
+  variables {
+    factories_config = {
+      tenants_data_path = "tests/fixtures/invalid/not-mapping"
+    }
+  }
+
+  expect_failures = [
+    terraform_data.tenant_validation,
+  ]
+}
+
+# 9c. YAML manifests hit the same denylist through tenant_validation.
+run "reject_yaml_project_scoped_forbidden_role" {
+  command = plan
+
+  variables {
+    factories_config = {
+      tenants_data_path = "tests/fixtures/invalid/forbidden-role"
+    }
+  }
+
+  expect_failures = [
+    terraform_data.tenant_validation,
+  ]
+}
+
+# 10a. A non-Stage 0 automation project needs its own bucket KMS key.
+run "reject_custom_automation_project_without_bucket_kms_key" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        automation = {
+          project_id = "tenant-ctl-0"
+          service_accounts = {
+            rw = {}
+          }
+        }
+        projects = {
+          app-0 = {}
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 10b. A tenant-scoped bucket key plans for a custom automation project,
+#      and full crypto key IDs are accepted in kms_services.
+run "plan_custom_automation_project_with_tenant_key" {
+  command = plan
+
+  variables {
+    tenants = {
+      juliet = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        automation = {
+          bucket_kms_key = "us-east4-tenant"
+          project_id     = "tenant-ctl-0"
+          service_accounts = {
+            rw = {}
+          }
+        }
+        projects = {
+          app-0 = {
+            kms_services = {
+              "storage.googleapis.com" = [
+                "projects/sec-0/locations/us-east4/keyRings/t/cryptoKeys/j",
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  assert {
+    condition = (
+      local.pf_folders["dev/juliet"].automation.bucket.encryption_key == (
+        var.kms_keys["us-east4-tenant"]
+      ) &&
+      local.pf_folders["dev/juliet"].automation.project == "tenant-ctl-0"
+    )
+    error_message = "Expected the tenant bucket key in the custom project."
+  }
+}
+
+# 10c. Reject kms_services keys that are not service API names.
+run "reject_kms_services_key_without_api_suffix" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            kms_services = {
+              storage = ["us-east4-tenant"]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 10d. Reject kms_services references to unknown kms_keys aliases.
+run "reject_unknown_kms_alias" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        projects = {
+          app-0 = {
+            kms_services = {
+              "storage.googleapis.com" = ["us-east4-tenatn"]
+            }
+          }
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 10e. Reject automation bucket keys that are unknown aliases.
+run "reject_unknown_bucket_kms_alias" {
+  command = plan
+
+  variables {
+    tenants = {
+      bad = {
+        environment     = "dev"
+        lifecycle_state = "active"
+        automation = {
+          bucket_kms_key = "missing-alias"
+        }
+        projects = {
+          app-0 = {}
+        }
+      }
+    }
+  }
+
+  expect_failures = [
+    var.tenants,
+  ]
+}
+
+# 10f. kms_keys values must be full Cloud KMS crypto key IDs.
+run "reject_malformed_kms_keys_value" {
+  command = plan
+
+  variables {
+    kms_keys = {
+      broken = "keyRings/t/cryptoKeys/k"
+    }
+  }
+
+  expect_failures = [
+    var.kms_keys,
+  ]
 }

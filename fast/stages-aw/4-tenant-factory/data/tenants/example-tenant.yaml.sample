@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Copy this file to <tenant>.yaml under tenants_data_path to onboard a
+# tenant. The stage loads only *.yaml files, so the sample never deploys.
 tenant_id: acme
 descriptive_name: Acme Dev
 environment: dev
@@ -57,6 +59,12 @@ projects:
     service_accounts:
       app-runtime:
         display_name: Acme app runtime service account.
+        # Grants on the service account itself may use actAs and Workload
+        # Identity roles; project-level iam rejects them. Members use the
+        # <prefix>-<project name> project ID (prefix se here).
+        iam:
+          roles/iam.workloadIdentityUser:
+            - serviceAccount:se-dev-acme-app-0.svc.id.goog[acme/app-runtime]
         iam_self_roles:
           - roles/logging.logWriter
           - roles/monitoring.metricWriter
