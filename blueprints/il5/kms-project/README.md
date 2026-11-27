@@ -30,6 +30,7 @@ Google Cloud Key Management Service creates and manages cryptographic keys acros
 
 - Grants key-level IAM roles such as `roles/cloudkms.cryptoKeyEncrypterDecrypter` to users, groups, and service accounts.
 - Centralizes access governance across workload and security projects without duplicating key creation.
+- Accepts `rotation_period_s` on each entry of `existing_kms_keys`, but does not apply it: `main.tf` only reads the keys and manages IAM, so set rotation on the keys themselves where they are created.
 
 ## 2 Compliance scope
 
@@ -42,7 +43,7 @@ Verify that your projects, KMS resources, and IAM permissions exist before runni
 
 - Identify `main_project_id` and `core_project_id`, where `core_project_id` hosts the existing Cloud KMS key ring and CryptoKeys.
 - Provision the target Cloud KMS key ring (`existing_kms_keyring_name`) and CryptoKeys (`existing_kms_keys`) ahead of time; this blueprint references existing KMS keys rather than creating new ones.
-- Grant the deploying identity `roles/cloudkms.admin`, `roles/serviceusage.serviceUsageAdmin`, and `roles/resourcemanager.projectIamAdmin` on `main_project_id` and `core_project_id` so Terraform can enable `cloudkms.googleapis.com` and manage key-level IAM policies.
+- Grant the deploying identity `roles/cloudkms.admin` on `core_project_id` and project read access (for example, `roles/browser`) on `main_project_id` so Terraform can inspect the project and manage key-level IAM policies, and enable `cloudkms.googleapis.com` in both projects before you run Terraform. This blueprint does not enable the API itself.
 
 ## 4 Deployment steps
 
