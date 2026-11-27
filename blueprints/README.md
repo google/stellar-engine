@@ -36,8 +36,10 @@ For more information, please see the individual README files in each blueprint's
 |  [GCS Project](./il5/gcs-project/)                                           |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [Gemini Enterprise](./gemini-enterprise/)                                   |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [GitLab](./fedramp-high/gitlab/)                                            |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |
+|  [GitLab Community Edition](./third-party-solutions/gitlab/)              |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |
 |  [GKE](./il5/gke/)                                                           |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [GKE Hardened](./il5/gke-hardened/)                                         |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
+|  [HA VPN Multicloud](./il5/ha-vpn-multicloud/)                            |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [KMS Project](./il5/kms-project/)                                           |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [Network Connectivity Center](./fedramp-high/network-connectivity-center/)  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |
 |  [PostgreSQL](./il5/postgresql/)                                             |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
@@ -58,3 +60,9 @@ For more information, please see the individual README files in each blueprint's
 |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  Available         |  The blueprint **is** directly developed for the respective compliance regime                             |
 |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |  Not Available     |  The blueprint **is not** developed for the respective compliance regime.                                 |
 |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  Linked Blueprint  |  Indicates availability in the respective compliance regime via a symbolic link to its primary location.  |
+
+## Additional compliance and scope notes
+
+- [Gemini Enterprise](./gemini-enterprise/) supports FedRAMP Moderate (`FEDRAMP_MODERATE`) and DoD IL4 (`IL4`) in addition to FedRAMP High and DoD IL5.
+- [BigQuery](./il5/bigquery/) provisions a dataset encrypted with an existing Cloud KMS key in `core_project_id`, whereas [BQ Project](./il5/bq-project/) provisions its own Cloud KMS key ring and keys in `main_project_id` alongside the dataset.
+- [GitLab Community Edition](./third-party-solutions/gitlab/) targets general Google Cloud environments without Assured Workloads controls, whereas [GitLab](./fedramp-high/gitlab/) targets FedRAMP High environments.
