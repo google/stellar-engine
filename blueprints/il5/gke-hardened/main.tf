@@ -14,6 +14,21 @@
  * limitations under the License.
  */
 
+locals {
+  required_apis = toset([
+    "anthosconfigmanagement.googleapis.com",
+    "cloudkms.googleapis.com",
+    "cloudresourcemanager.googleapis.com",
+    "compute.googleapis.com",
+    "container.googleapis.com",
+    "gkehub.googleapis.com",
+    "iam.googleapis.com",
+    "logging.googleapis.com",
+    "monitoring.googleapis.com",
+    "storage.googleapis.com",
+  ])
+}
+
 data "google_project" "current" {
   project_id = var.main_project_id
 }
@@ -51,17 +66,40 @@ resource "google_service_account_iam_member" "gatekeeper_wi_binding" {
   depends_on         = [google_service_account.gatekeeper_sa]
 }
 
+resource "google_project_service" "required_apis" {
+  for_each           = local.required_apis
+  project            = var.main_project_id
+  service            = each.value
+  disable_on_destroy = false
+}
+
 resource "google_project_service" "storagetransfer_api" {
-  project = var.main_project_id
-  service = "storagetransfer.googleapis.com"
+  project            = var.main_project_id
+  service            = "storagetransfer.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service_identity" "container_engine_robot" {
+  provider   = google-beta
+  project    = var.main_project_id
+  service    = "container.googleapis.com"
+  depends_on = [google_project_service.required_apis]
+}
+
+data "google_storage_project_service_account" "gcs_sa" {
+  project    = var.main_project_id
+  depends_on = [google_project_service.required_apis]
 }
 
 resource "google_gke_hub_feature" "configmanagement_feature" {
-  name     = "configmanagement"
-  location = "global"
+  project    = var.main_project_id
+  name       = "configmanagement"
+  location   = "global"
+  depends_on = [google_project_service.required_apis]
 }
 
 resource "google_gke_hub_feature_membership" "configmanagement_feature_member" {
+  project  = var.main_project_id
   location = "global"
 
   feature             = google_gke_hub_feature.configmanagement_feature.name
@@ -100,10 +138,15 @@ module "kms" {
   iam = {
     "roles/cloudkms.cryptoKeyEncrypterDecrypter" = [
       google_service_account.gke.member,
-      "serviceAccount:service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com",
-      "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com"
+      data.google_storage_project_service_account.gcs_sa.member,
+      "serviceAccount:service-${data.google_project.current.number}@compute-system.iam.gserviceaccount.com",
+      google_project_service_identity.container_engine_robot.member,
     ]
   }
+  depends_on = [
+    google_project_service.required_apis,
+    google_project_service_identity.container_engine_robot,
+  ]
 }
 
 module "vpc" {
@@ -140,6 +183,7 @@ module "vpc" {
   create_googleapis_routes = {
     directpath = false
   }
+  depends_on = [google_project_service.required_apis]
 }
 
 module "cluster" {
@@ -240,7 +284,7 @@ module "compute-vm" {
   source       = "../../../modules/compute-vm"
   name         = "bastion-vm"
   project_id   = var.main_project_id
-  zone         = "us-east4-a"
+  zone         = coalesce(var.bastion_vm_zone, "${var.region}-a")
   machine_type = "e2-medium"
   service_account = {
     scopes = ["cloud-platform"]
@@ -262,7 +306,7 @@ module "compute-vm" {
   boot_disk = {
     snapshot_schedule = ["daily-backup"]
     source = {
-      image = "projects/cos-cloud/global/images/cos-105-17412-495-45"
+      image = "projects/cos-cloud/global/images/family/cos-stable"
     }
   }
   network_interfaces = [
@@ -332,6 +376,7 @@ resource "google_compute_router" "router" {
 }
 
 resource "google_compute_router_nat" "nat" {
+  project                            = var.main_project_id
   name                               = var.nat_gateway_name
   router                             = google_compute_router.router.name
   region                             = var.region
