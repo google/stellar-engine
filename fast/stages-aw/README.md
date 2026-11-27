@@ -9,7 +9,7 @@ Each stage consumes outputs from earlier stages and exports configuration contra
 - Data flows strictly forward through the stage sequence so earlier stages never depend on downstream outputs.
 - Stages use Google Cloud [delegated role grants](https://medium.com/google-cloud/managing-gcp-service-usage-through-delegated-role-grants-a843610f2226) to scope organization-level IAM administration to specific roles per stage.
 
-Refer to each stage `README.md` file for architectural details and deployment steps, and follow the cleanup instructions to tear down an existing deployment.
+Refer to each stage `README.md` file for architectural details and deployment steps, and follow the [cleanup instructions](../../scripts/README.md#destroysh) to tear down an existing deployment.
 
 ## 1 Stage architecture diagram
 
@@ -22,10 +22,10 @@ Refer to each stage `README.md` file for architectural details and deployment st
 
 ## 3 Networking stages
 
-- [2-networking-a-fedramp](/fast/stages-aw/2-networking-a-fedramp/README.md) deploys a Network Connectivity Center hub-and-spoke architecture for FedRAMP High, FedRAMP Moderate, and IL2 environments.
+- [2-networking-a-fedramp](2-networking-a-fedramp/README.md) deploys a Network Connectivity Center hub-and-spoke architecture for FedRAMP High, FedRAMP Moderate, and IL2 environments.
 - [2-networking-b-il5-ngfw](2-networking-b-il5-ngfw/README.md) deploys a Palo Alto VM-Series Next-Generation Firewall hub-and-spoke architecture for IL4 and IL5 environments.
 
-Stage 2 centralizes Shared VPC host projects, subnets, Cloud DNS zones, and firewall policies for the networking team. Design hybrid connectivity separately according to your on-premises transit requirements.
+Stage 2 centralizes Shared VPC host projects, subnets, Cloud DNS zones, and firewall policies for the networking team. `2-networking-a-fedramp` supports optional hybrid Network Connectivity Center spokes via `ncc_hubs` (`factory-ncc.tf`), and `2-networking-b-il5-ngfw` configures inbound Cloud DNS policies and peering alongside NGFW transit.
 
 ## 4 Security stage
 
