@@ -12,93 +12,102 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-moved {
-  from = google_access_context_manager_access_levels.access-levels
-  to   = google_access_context_manager_access_levels.access_levels
+# Additive access levels avoid replacing existing organization-wide access levels.
+resource "google_access_context_manager_access_level" "us" {
+  parent = "accessPolicies/${var.access_policy_number}"
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/us"
+  title  = "US Traffic Source IP"
+  basic {
+    conditions {
+      regions = [
+        "US",
+      ]
+    }
+  }
+  depends_on = [google_project_service.services]
 }
 
-resource "google_access_context_manager_access_levels" "access_levels" {
+# Business hours (7 AM to 9 PM America/New_York, Monday through Friday).
+resource "google_access_context_manager_access_level" "time" {
   parent = "accessPolicies/${var.access_policy_number}"
-
-  # Access level for US Region
-  access_levels {
-    name  = "accessPolicies/${var.access_policy_number}/accessLevels/us"
-    title = "US Traffic Source IP"
-    basic {
-      conditions {
-        regions = [
-          "US",
-        ]
-      }
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/time"
+  title  = "Business Hours East Coast"
+  custom {
+    expr {
+      expression = ("request.time.getHours(\"America/New_York\") >= 7 && request.time.getHours(\"America/New_York\") <= 21 && request.time.getDayOfWeek(\"America/New_York\") >= 1 && request.time.getDayOfWeek(\"America/New_York\") <= 5")
+      title      = "TimeBasedControls"
     }
   }
+  depends_on = [google_project_service.services]
+}
 
-  # Access level for Time (7AM-9PM Monday-Friday)
-  access_levels {
-    name  = "accessPolicies/${var.access_policy_number}/accessLevels/time"
-    title = "Business Hours East Coast"
-    custom {
-      expr {
-        expression = ("request.time.getHours(\"America/New_York\") >= 7 && request.time.getHours(\"America/New_York\") <= 21 && request.time.getDayOfWeek(\"America/New_York\") >= 1 && request.time.getDayOfWeek(\"America/New_York\") <= 5")
-        title      = "TimeBasedControls"
-      }
+# Optional expiring access level when access_expiry_timestamp is configured.
+resource "google_access_context_manager_access_level" "expire" {
+  count  = var.access_expiry_timestamp != null ? 1 : 0
+  parent = "accessPolicies/${var.access_policy_number}"
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/expire"
+  title  = "Expiring Access"
+  custom {
+    expr {
+      expression = "request.time < timestamp(\"${var.access_expiry_timestamp}\")"
     }
   }
+  depends_on = [google_project_service.services]
+}
 
-  # Access level for expiring access at midnight of 2024-12-31.
-  access_levels {
-    name  = "accessPolicies/${var.access_policy_number}/accessLevels/expire"
-    title = "Expire Access 2024"
-    custom {
-      expr {
-        expression = ("request.time < timestamp(\"2025-01-01T00:00:00Z\")")
-      }
+# Lenient device access level requiring US region source IPs.
+resource "google_access_context_manager_access_level" "lenient_device" {
+  parent = "accessPolicies/${var.access_policy_number}"
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/lenient_device"
+  title  = "Lenient Device Policy"
+  basic {
+    conditions {
+      required_access_levels = [
+        google_access_context_manager_access_level.us.name,
+      ]
     }
   }
+}
 
-  # Access level for "easy" service, including US Region devices.
-  access_levels {
-    name  = "accessPolicies/${var.access_policy_number}/accessLevels/lenient_device"
-    title = "Lenient Device Policy"
-    basic {
-      conditions {
-        required_access_levels = ["accessPolicies/${var.access_policy_number}/accessLevels/us"]
-      }
+# Moderate device access level requiring US region and business hours.
+resource "google_access_context_manager_access_level" "moderate_device" {
+  parent = "accessPolicies/${var.access_policy_number}"
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/moderate_device"
+  title  = "Moderate Device Policy"
+  basic {
+    conditions {
+      required_access_levels = [
+        google_access_context_manager_access_level.us.name,
+        google_access_context_manager_access_level.time.name,
+      ]
     }
   }
+}
 
-  # Access level for "moderate" service, including US Region & Time (7AM-9PM Monday-Friday).
-  access_levels {
-    name  = "accessPolicies/${var.access_policy_number}/accessLevels/moderate_device"
-    title = "Moderate Device Policy"
-    basic {
-      conditions {
-        required_access_levels = ["accessPolicies/${var.access_policy_number}/accessLevels/us", "accessPolicies/${var.access_policy_number}/accessLevels/time"]
-      }
-    }
-  }
-
-  # Access level for "strict" service, including Mac/Windows OS, Encryption enabled, Corp owned device, Time (7AM-9PM Monday-Friday), & US Region.
-  access_levels {
-    name  = "accessPolicies/${var.access_policy_number}/accessLevels/strict_device"
-    title = "Strict Device Policy"
-    basic {
-      conditions {
-        required_access_levels = ["accessPolicies/${var.access_policy_number}/accessLevels/us", "accessPolicies/${var.access_policy_number}/accessLevels/time"]
-        device_policy {
-          require_screen_lock = true
-          os_constraints {
-            os_type = "DESKTOP_MAC"
-          }
-          os_constraints {
-            os_type = "DESKTOP_WINDOWS"
-          }
-
-          allowed_encryption_statuses = [
-            "ENCRYPTED",
-          ]
-          require_corp_owned = true
+# Strict device access level requiring encrypted corp-owned Windows/macOS, business hours, and US region.
+resource "google_access_context_manager_access_level" "strict_device" {
+  parent = "accessPolicies/${var.access_policy_number}"
+  name   = "accessPolicies/${var.access_policy_number}/accessLevels/strict_device"
+  title  = "Strict Device Policy"
+  basic {
+    conditions {
+      required_access_levels = [
+        google_access_context_manager_access_level.us.name,
+        google_access_context_manager_access_level.time.name,
+      ]
+      device_policy {
+        require_screen_lock = true
+        os_constraints {
+          os_type = "DESKTOP_MAC"
         }
+        os_constraints {
+          os_type = "DESKTOP_WINDOWS"
+        }
+
+        allowed_encryption_statuses = [
+          "ENCRYPTED",
+        ]
+        require_corp_owned = true
       }
     }
   }

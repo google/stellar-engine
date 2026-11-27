@@ -15,6 +15,13 @@
 # These Cloud Run services are meant to represent real applications deployed behind the CNAP
 # This isn't mean to imply that *only* Cloud Run applications can be hosted behind the CNAP
 
+resource "google_project_service_identity" "cloudrun_sa" {
+  provider   = google-beta
+  project    = data.google_project.project.project_id
+  service    = "run.googleapis.com"
+  depends_on = [google_project_service.services]
+}
+
 resource "google_cloud_run_v2_service" "cloud_run_apps" {
   project  = data.google_project.project.project_id
   for_each = local.cloud_runs
@@ -23,6 +30,7 @@ resource "google_cloud_run_v2_service" "cloud_run_apps" {
   ingress  = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   template {
+    encryption_key = module.kms.keys.default.id
     containers {
       image = each.value.cloud_run_image
     }
@@ -30,5 +38,5 @@ resource "google_cloud_run_v2_service" "cloud_run_apps" {
   binary_authorization {
     use_default = true
   }
-  depends_on = [google_project_service.services]
+  depends_on = [google_project_service.services, module.kms]
 }
