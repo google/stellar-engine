@@ -222,3 +222,22 @@ run "override_skips_oslogin_under_an_external_constraint" {
     error_message = "manage_oslogin_metadata = false must not plan enable-oslogin items."
   }
 }
+
+run "rejects_prefix_over_7_chars" {
+  command = plan
+
+  providers = {
+    google              = google
+    google.billing      = google.billing
+    google-beta         = google-beta
+    google-beta.billing = google-beta.billing
+  }
+
+  variables {
+    prefix = "abcdefgh"
+  }
+
+  expect_failures = [
+    var.prefix,
+  ]
+}
