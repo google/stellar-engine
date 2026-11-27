@@ -25,7 +25,8 @@ This runbook guides security operators and incident responders through identifyi
 
 - The `roles/logging.viewer` and `roles/securitycenter.viewer` roles for log analysis and scoping.
 - The `roles/compute.networkViewer` role to trace IP addresses and inspect VPC topologies.
-- The `roles/compute.securityAdmin` role via break-glass emergency access to apply Cloud Armor security policies or VPC firewall rules.
+- The `roles/compute.orgFirewallPolicyAdmin` role via break-glass emergency access to add deny rules to hierarchical firewall policies such as `<prefix>-net-default`.
+- The `roles/compute.securityAdmin` role via break-glass emergency access to apply Cloud Armor security policies, global or regional network firewall policies, or classic VPC firewall rules.
 - Administrative access to third-party Next-Generation Firewall management consoles, such as Palo Alto Panorama, in deployments using virtual network appliances.
 
 ## 3. Operational scope
@@ -46,16 +47,16 @@ Monitor these telemetry sources for indicators of network intrusion:
 
 ### 4.2 Initial log assessment
 
-1. Locate the intrusion alert entry in Logs Explorer:
+1. Locate the intrusion alert entry in Logs Explorer scoped to the network host project where the Cloud IDS endpoint is deployed, such as `<prefix>-net-hub-host`, `<prefix>-net-vdss-host`, or the centralized `audit-logs` sink scope:
    ```text
-   logName="projects/[PROJECT_ID]/logs/ids.googleapis.com%2Fthreat"
+   log_id("ids.googleapis.com/threat")
    ```
-2. Record the network and signature fields from the alert payload:
-   - Record the `sourceIp` field for the originating IP address.
-   - Record the `destinationIp` field for the targeted IP address.
-   - Record the `threatName` and `threatId` fields for the matched CVE or malware signature.
-   - Record the `severity` field assigned by Cloud IDS or the firewall sensor.
-   - Record the `protocol` and `port` fields for the targeted transport protocol and destination port.
+2. Record the network and signature fields from the `jsonPayload` object:
+   - Record the `jsonPayload.source_ip_address` field for the originating IP address.
+   - Record the `jsonPayload.destination_ip_address` field for the targeted IP address.
+   - Record the `jsonPayload.name` and `jsonPayload.threat_id` fields for the matched CVE or malware signature.
+   - Record the `jsonPayload.alert_severity` field assigned by Cloud IDS or the firewall sensor.
+   - Record the `jsonPayload.ip_protocol` and `jsonPayload.destination_port` fields for the targeted transport protocol and destination port.
 
 ## 5. Triage and analysis
 
@@ -63,13 +64,13 @@ Verify whether the intrusion attempt succeeded, identify affected workloads, and
 
 ### 5.1 Alert verification
 
-1. Research the matched `threatName` signature to determine whether the traffic represents initial exploitation, lateral movement, or outbound exfiltration.
+1. Research the matched `jsonPayload.name` and `jsonPayload.threat_id` signature fields to determine whether the traffic represents initial exploitation, lateral movement, or outbound exfiltration.
 2. Check whether inline inspection blocked the traffic before it reached the target host:
    - Inspect the Next-Generation Firewall action field for `allow` versus `deny` outcomes, because a `deny` action confirms that the firewall blocked the packet inline.
    - Treat every Cloud IDS alert as delivered traffic and inspect the destination workload immediately because Cloud IDS mirrors packets out of band.
-3. Correlate the source IP address against VPC Flow Logs to measure traffic volume and verify whether a sustained connection completed:
+3. Correlate the source IP address against Shared VPC Flow Logs in the network host project to measure traffic volume and verify whether a sustained connection completed:
    ```text
-   logName="projects/[PROJECT_ID]/logs/compute.googleapis.com%2Fvpc_flows"
+   logName="projects/[NETWORK_HOST_PROJECT_ID]/logs/compute.googleapis.com%2Fvpc_flows"
    AND jsonPayload.connection.src_ip="[SOURCE_IP]"
    ```
 
@@ -88,8 +89,8 @@ Block malicious traffic, sever command-and-control channels, and isolate comprom
 ### 6.1 Immediate containment actions
 
 1. Block malicious external source IP addresses and autonomous system numbers at the perimeter:
-   - Add a deny rule to the Cloud Armor security policy when the attack targets an external Application Load Balancer.
-   - Add an emergency high-priority deny rule to the folder or organization hierarchical firewall policy to block the attacker IP address across all Stellar Engine landing zones.
+   - Add a deny rule to the Cloud Armor security policy when the attack targets HTTP or HTTPS workloads behind an external Application Load Balancer.
+   - Add an emergency high-priority deny rule to the Networking folder hierarchical firewall policy `<prefix>-net-default` or to the global network firewall policy (`<prefix>-hub-fw-policy-0`, `<prefix>-<env>-fw-policy-0`, or `<prefix>-egress-fw-policy-0`) in `fast/stages-aw/2-networking-a-fedramp` deployments, or update the NGFW security profile and firewall policy rules in `fast/stages-aw/2-networking-b-il5-ngfw` deployments.
 2. Execute the [IR-COMP-001](compute-resource-compromise.md) runbook immediately to quarantine the workload when outbound or lateral intrusion traffic originates from an internal virtual machine or GKE pod.
 3. Push an emergency blocklist update or explicit deny rule to the centralized inspection appliances when operating in-path Palo Alto or Fortinet firewalls.
 
@@ -111,7 +112,7 @@ Eliminate exploited workloads, remediate the targeted vulnerability, and confirm
 ### 7.2 Traffic recovery
 
 1. Confirm that legitimate application traffic flows normally and that emergency firewall rules did not block authorized clients.
-2. Monitor Cloud IDS and Next-Generation Firewall logs for the matched `threatName` signature and attacker IP ranges for 72 hours to detect evasion attempts.
+2. Monitor Cloud IDS and Next-Generation Firewall logs for the matched `jsonPayload.name` signature and attacker IP ranges for 72 hours to detect evasion attempts.
 
 ## 8. Lessons learned
 
