@@ -242,8 +242,9 @@ billing_account = {
 regions = {
  primary = "`<region>`"
 }
-# KMS protection level: "HSM" for FedRAMP High and IL5 compliance; "SOFTWARE" permitted for FedRAMP Moderate. Required by every stage that creates keys.
-kms_protection_level = "HSM"
+# KMS protection level for CMEK keys. Leave unset to get a regime-aware default:
+# SOFTWARE for FEDRAMP_MODERATE, HSM for all other regimes (including FEDRAMP_HIGH and IL5).
+# kms_protection_level = "HSM"
 # use `gcloud organizations list`
 organization = {
  domain = "`<domain>`" # DISPLAY_NAME
@@ -273,10 +274,12 @@ log_sinks = {
  }
 }
 org_policies_config = {
+  import_defaults = false # No policies to import as of 27 SEP 2024
   constraints = {
-    allowed_policy_member_domains = [] #Update with additional customer IDs if needed
-    }
+    allowed_policy_member_domains = [] # Update with additional customer IDs if needed
+    allowed_vpc_peering_producers = ["under:folders/832634261155"] # Google's Service Networking producer folder. Add other Google producers if needed
   }
+}
 fast_features = {
  envs = true
 }
@@ -396,7 +399,6 @@ ten-1 = { ## Change tenant_name here - 6 or less characters
   }
 ## You can have “n” number of tenants
 }
-kms_protection_level = "HSM"
 fast_features = {
  envs = true
 }
