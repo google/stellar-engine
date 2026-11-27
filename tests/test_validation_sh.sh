@@ -398,17 +398,18 @@ LOCKDOWN_IDS=(
   pfx-prod-resman-pf-0 pfx-prod-resman-pf-0r
   pfx-prod-resman-envs-0 pfx-dev-resman-sbox-0 pfx-prod-resman-teams-0
   pfx-prod-teams-alpha-0 pfx-prod-teams-beta-gamma-0
+  pfx-tn-alpha-prod-0 pfx-tn-prod-alpha-prod-0
 )
 
 # Accounts in the same project that sa_lockdown.sh does not cover, such as the
-# CI/CD accounts. They stay enabled in every test.
+# CI/CD and tenant self-service IaC accounts. They stay enabled in every test.
 OTHER_IDS=(
   pfx-bootstrap-1 pfx-bootstrap-1r pfx-resman-1 pfx-resman-1r
   pfx-prod-resman-net-1 pfx-prod-resman-net-1r
   pfx-prod-resman-sec-1 pfx-prod-resman-sec-1r
   pfx-dev-resman-dp-1 pfx-prod-resman-dp-1r
   pfx-dev-pf-resman-pf-1 pfx-prod-resman-pf-1r
-  pfx-billing-export pfx-app-runtime
+  pfx-billing-export pfx-app-runtime pfx-prod-alpha-iac-0
 )
 
 # Print one email in the IaC core project for each account ID.
@@ -467,10 +468,10 @@ count_lines() {
   grep -cF -- "$1" <<< "$VALIDATION_OUTPUT" || true
 }
 
-# Print the VALID_NAMES list and the team prefix that a script defines.
+# Print the VALID_NAMES list and the dynamic prefixes that a script defines.
 lockdown_keys() {
   awk '/^VALID_NAMES=\(/,/^\)/' "$1" | grep -o '"[^"]*"' | sort
-  grep '^TEAM_PREFIX=' "$1"
+  grep -E '^(TEAM_PREFIX|TENANT_CORE_PREFIX)=' "$1"
 }
 
 # Print the account IDs that a stage gives to the modules behind a tfvars
@@ -484,7 +485,7 @@ stage_account_ids() {
   while IFS= read -r module_name; do
     account_id=$(awk -v header="module \"${module_name}\" {" '
       $0 == header { found = 1 }
-      found && $1 == "name" { gsub(/"/, "", $3); print $3; exit }
+      found && $1 == "name" { gsub(/"|lower\(|\)/, "", $3); print $3; exit }
     ' "${stage_dir}"/*.tf)
     echo "pfx-${account_id//\$\{each.key\}/alpha}"
   done < <(awk "$block_range" "${stage_dir}/outputs.tf" \
@@ -494,8 +495,8 @@ stage_account_ids() {
 # 1. The tfvars keys match the keys that sa_lockdown.sh covers.
 assert_equals "the key list matches VALID_NAMES in sa_lockdown.sh" \
   "$(lockdown_keys "$SA_LOCKDOWN")" "$(lockdown_keys "$VALIDATION")"
-assert_equals "the key list holds 27 keys and the team prefix" \
-  "28" "$(lockdown_keys "$VALIDATION" | wc -l | tr -d ' ')"
+assert_equals "the key list holds 27 keys and both dynamic prefixes" \
+  "29" "$(lockdown_keys "$VALIDATION" | wc -l | tr -d ' ')"
 
 # 2. The sample account IDs are the IDs in the stage sources, so a renamed or
 # new account in a stage fails this test until the pattern covers it.
@@ -509,7 +510,7 @@ STAGE_IDS=$(
 )
 assert_equals "the sample account IDs match the stage sources" \
   "$STAGE_IDS" \
-  "$(printf '%s\n' "${LOCKDOWN_IDS[@]}" | grep -vx 'pfx-prod-teams-beta-gamma-0' | sort)"
+  "$(printf '%s\n' "${LOCKDOWN_IDS[@]}" | grep -vxE 'pfx-prod-teams-beta-gamma-0|pfx-tn-prod-alpha-prod-0' | sort)"
 
 # 3. The original invocation, with no arguments and no tfvars files, passes
 # when every covered account is disabled and ignores the other accounts.
@@ -677,7 +678,8 @@ cat > "${WORK_DIR}/1-resman.auto.tfvars.json" << EOF
     "sandbox": "sandbox-0@${SA_DOMAIN}",
     "security": "sec-0@${SA_DOMAIN}",
     "security-r": "sec-0r@${SA_DOMAIN}",
-    "team-alpha": "team-alpha-0@${SA_DOMAIN}"
+    "team-alpha": "team-alpha-0@${SA_DOMAIN}",
+    "tenant-core-prod-alpha": "tn-prod-alpha-prod-0@${SA_DOMAIN}"
   }
 }
 EOF
@@ -687,7 +689,7 @@ TFVARS_IDS=(
   dp-dev-0 dp-dev-0r dp-prod-0 dp-prod-0r
   gke-dev-0 gke-dev-0r
   pf-dev-0 pf-dev-0r pf-prod-0 pf-prod-0r
-  sandbox-0 team-alpha-0
+  sandbox-0 team-alpha-0 tn-prod-alpha-prod-0
 )
 TFVARS_EMAILS=$(
   for id in "${TFVARS_IDS[@]}"; do
@@ -847,7 +849,7 @@ for flag in "--project=${IAC_PROJECT}" "--prefix=pfx"; do
     "⚠️ WARNING: Skipped 2 accounts in ./0-bootstrap.auto.tfvars.json that are not in project ${IAC_PROJECT}." \
     "$VALIDATION_OUTPUT"
   assert_contains "${flag} reports the skipped 1-resman accounts" \
-    "⚠️ WARNING: Skipped 16 accounts in ./1-resman.auto.tfvars.json that are not in project ${IAC_PROJECT}." \
+    "⚠️ WARNING: Skipped 17 accounts in ./1-resman.auto.tfvars.json that are not in project ${IAC_PROJECT}." \
     "$VALIDATION_OUTPUT"
 done
 

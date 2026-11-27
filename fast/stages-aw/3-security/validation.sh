@@ -36,14 +36,17 @@ VALID_NAMES=(
   "envs" "sandbox" "teams"
 )
 
-# 1-resman also writes one "team-<name>" key for each entry in team_folders
+# 1-resman also writes one "team-<name>" key for each entry in team_folders and
+# one "tenant-core-<env>-<tenant>" key for each lightweight tenant environment.
 TEAM_PREFIX="team-"
+TENANT_CORE_PREFIX="tenant-core-"
 
 # Account IDs that the 0-bootstrap and 1-resman stages give to the accounts
 # behind those keys. The pattern has no anchor on the left because the stages
 # put the deployment prefix in front of each ID. It matches every account that
 # the previous four-name filter matched. It leaves out the "-1" and "-1r" CI/CD
-# accounts, which sa_lockdown.sh does not disable.
+# accounts and tenant self-service "<env>-<tenant>-iac-0" accounts, which
+# sa_lockdown.sh does not disable.
 # tests/test_validation_sh.sh fails when a stage names an account that this
 # pattern misses.
 SA_ID_PATTERN='(bootstrap-0r?'
@@ -55,7 +58,8 @@ SA_ID_PATTERN+='|prod-resman-sec-0r'
 SA_ID_PATTERN+='|(dev|prod)-resman-(dp|gcve|gke|pf)-0r?'
 SA_ID_PATTERN+='|dev-resman-sbox-0'
 SA_ID_PATTERN+='|prod-resman-teams-0'
-SA_ID_PATTERN+='|prod-teams-[^@]+-0)@'
+SA_ID_PATTERN+='|prod-teams-[^@]+-0'
+SA_ID_PATTERN+='|tn-[^@]+-prod-0)@'
 
 IAC_PROJECT=""
 PREFIX_FILTER=""
@@ -220,10 +224,10 @@ else
   for tfvars_file in "${TFVARS_FILES[@]}"; do
     # Extract the emails from every "service_accounts" block, for the same
     # keys that sa_lockdown.sh uses by default
-    if ! TFVARS_ACCOUNTS=$(jq -r --arg names "${VALID_NAMES[*]}" --arg prefix "$TEAM_PREFIX" '
+    if ! TFVARS_ACCOUNTS=$(jq -r --arg names "${VALID_NAMES[*]}" --arg prefix "$TEAM_PREFIX" --arg tenant_prefix "$TENANT_CORE_PREFIX" '
       ($names | split(" ")) as $valid
       | .. | .service_accounts? | objects | to_entries[]
-      | select(.key as $key | any($valid[]; . == $key) or ($key | startswith($prefix)))
+      | select(.key as $key | any($valid[]; . == $key) or ($key | startswith($prefix)) or ($key | startswith($tenant_prefix)))
       | .value | strings' "$tfvars_file"); then
       report_error "jq failed to read $tfvars_file. Its accounts were not checked."
       continue

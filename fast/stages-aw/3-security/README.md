@@ -32,6 +32,7 @@ The following diagram illustrates the high-level design of created resources and
   - [Disabling overpermissive service accounts](#disabling-overpermissive-service-accounts)
     - [Environment folders account](#environment-folders-account)
     - [CI/CD service accounts](#cicd-service-accounts)
+    - [Tenant service accounts](#tenant-service-accounts)
   - [Verifying service account lockdown](#verifying-service-account-lockdown)
   - [Deleting the bootstrap project](#deleting-the-bootstrap-project)
 - [Customizations](#customizations)
@@ -184,7 +185,7 @@ You can also run this script with the following flags
   - bootstrap-r, resman-r, networking-r, security-r for the read-only plan accounts
   - data-platform-dev, data-platform-prod, gcve-dev, gcve-prod, gke-dev, gke-prod, project-factory-dev, project-factory-prod, each also with an `-r` suffix for its read-only plan account
   - envs for the `prod-resman-envs-0` account, which holds `roles/owner` on every environment folder
-  - sandbox, teams, and one `team-<name>` value for each entry in `team_folders`
+  - sandbox, teams, one `team-<name>` value for each entry in `team_folders`, and one `tenant-core-<env>-<tenant>` value for each lightweight tenant environment (`tn-<env>-<tenant>-prod-0`, lowercased)
 
 Without the `sa` flag, the script covers every value in this list. It skips the accounts of branches that are not deployed. Re-enable the accounts of a branch before you run that branch again.
 
@@ -244,6 +245,26 @@ gcloud iam service-accounts disable <account-email> --project <iac-core-project-
 
 The filter also matches any other account in the project whose ID ends in `-1` or `-1r`, so review each email before you disable the account. Enable the account again with `gcloud iam service-accounts enable` before the pipeline runs.
 
+#### Tenant service accounts
+
+Stage 1 creates two automation service accounts per lightweight `(env, tenant)` pair when `tenants` is configured:
+
+- Lowercased core tenant service accounts (`<prefix>-tn-<env>-<tenant>-prod-0`) reside in the organization `<prefix>-prod-iac-core-0` project and hold broad privileges (`roles/owner` and folder and project administration) on the tenant top folder (`Project <tenant> <env>`). Stage 1 exports them under `tenant-core-<env>-<tenant>` keys in `1-resman.auto.tfvars.json`, so `sa_lockdown.sh` disables them by default (`--sa tenant-core-<env>-<tenant>` targets one directly) and `validation.sh` checks them.
+- Self-service tenant IaC service accounts (`<prefix>-<env>-<tenant>-iac-0`) reside inside each tenant-managed `<prefix>-<env>-<tenant>-iac-core-0` project rather than the organization IaC core project. As a documented operational exception, `sa_lockdown.sh` leaves `<env>-<tenant>-iac-0` enabled by default so tenant teams can run Day-2 infrastructure pipelines autonomously within their tenant boundary without re-enabling organization automation.
+
+Each enabled `<env>-<tenant>-iac-0` account retains these residual grants (project `roles/owner` on `<prefix>-<env>-<tenant>-iac-core-0` and `<prefix>-<env>-<tenant>-main-0` is held by Stage 1 `var.automation.service_accounts.resman` and inherited by `<prefix>-tn-<env>-<tenant>-prod-0`, not `<env>-<tenant>-iac-0`):
+
+- `roles/viewer` on the tenant top folder (`Project <tenant> <env>`), plus any optional custom folder roles in `var.tenants_config` (`top_folder_roles`, `core_folder_roles`, and `tenant_folder_roles`, all empty by default)
+- `roles/storage.admin` on the tenant outputs and state buckets (`<prefix>-<env>-<tenant>-iac-outputs-0` and `<prefix>-<env>-<tenant>-iac-0`)
+
+If your authorization boundary requires disabling tenant self-service accounts after initial provisioning, run the command below against each tenant IaC core project and re-enable the account before Day-2 tenant applies:
+
+```bash
+gcloud iam service-accounts disable \
+  <prefix>-<env>-<tenant>-iac-0@<prefix>-<env>-<tenant>-iac-core-0.iam.gserviceaccount.com \
+  --project <prefix>-<env>-<tenant>-iac-core-0
+```
+
 ### Verifying service account lockdown
 
 After running `sa_lockdown.sh`, verify that the deployment service accounts in the IaC core project are disabled:
@@ -252,7 +273,7 @@ After running `sa_lockdown.sh`, verify that the deployment service accounts in t
 ./validation.sh
 ```
 
-The script checks the same accounts that `sa_lockdown.sh` disables by default, which are the apply accounts, the read-only plan accounts, the Stage 1 branch accounts, and the `team-<name>` accounts. Run the script from this directory so that it also checks the accounts listed in the tfvars files that `sa_lockdown.sh` reads.
+The script checks the same accounts that `sa_lockdown.sh` disables by default, which are the apply accounts, the read-only plan accounts, the Stage 1 branch accounts, the `team-<name>` accounts, and the `tenant-core-<env>-<tenant>` accounts (`tn-<env>-<tenant>-prod-0`). Run the script from this directory so that it also checks the accounts listed in the tfvars files that `sa_lockdown.sh` reads.
 
 When multiple `-prod-iac-core-0` projects exist in the same organization (multi-tenant or multi-enclave deployments), target a single enclave using one of the following mutually exclusive flags:
 

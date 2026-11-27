@@ -157,6 +157,36 @@ class TestLockdownAccountCoverage(unittest.TestCase):
             "prod-resman-envs-0", _read(_SECURITY_DIR / "validation.sh")
         )
 
+    def test_tenant_core_account_is_written_to_tfvars(self):
+        self.assertRegex(
+            _resman_service_accounts_block(),
+            r"for k, v in module\.tenant-core-sa : "
+            r'"tenant-core-\$\{lower\(k\)\}" => v\.email',
+        )
+
+    def test_tenant_core_account_matches_expected_module(self):
+        body = _read(_RESMAN_DIR / _TENANT_FILE)
+        start = body.index('module "tenant-core-sa"')
+        match = _MODULE_BLOCK.search(body[start:])
+        self.assertIsNotNone(match)
+        self.assertRegex(
+            match.group("body"),
+            r'(?m)^\s+name\s+= lower\("tn-\$\{each\.key\}-prod-0"\)$',
+        )
+
+    def test_lockdown_and_validation_cover_tenant_core_accounts(self):
+        sa_lockdown = _read(_SECURITY_DIR / "sa_lockdown.sh")
+        validation = _read(_SECURITY_DIR / "validation.sh")
+        self.assertIn('TENANT_CORE_PREFIX="tenant-core-"', sa_lockdown)
+        self.assertIn('TENANT_CORE_PREFIX="tenant-core-"', validation)
+        self.assertIn("tn-[^@]+-prod-0", validation)
+
+    def test_tenant_self_iac_exception_documented_and_excluded(self):
+        self.assertNotIn("tenant-self-iac-sa", _resman_service_accounts_block())
+        readme = _read(_SECURITY_DIR / "README.md")
+        self.assertIn("<env>-<tenant>-iac-0", readme)
+        self.assertIn("gcloud iam service-accounts disable", readme)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -349,6 +349,9 @@ locals {
     {
       for k, v in module.branch-teams-team-sa : "team-${k}" => v.email
     },
+    {
+      for k, v in module.tenant-core-sa : "tenant-core-${lower(k)}" => v.email
+    },
   )
   team_cicd_workflows = {
     for k, v in local.team_cicd_repositories : k => templatefile(
