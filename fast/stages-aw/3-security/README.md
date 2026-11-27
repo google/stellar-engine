@@ -87,19 +87,19 @@ The commands to link or copy the provider and terraform variable files can be ea
 _Copy and paste the following commands for '3-security'_
 
 ```bash
-gcloud alpha storage cp gs://xxx-prod-iac-core-outputs-0/providers/3-security-providers.tf ./
-gcloud alpha storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./
-gcloud alpha storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./
-gcloud alpha storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
+gcloud storage cp gs://xxx-prod-iac-core-outputs-0/providers/3-security-providers.tf ./
+gcloud storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/0-globals.auto.tfvars.json ./
+gcloud storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./
+gcloud storage cp gs://xxx-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
 ```
 
 ### Impersonating the automation service account
 
-The preconfigured provider file uses impersonation to run with this stage's automation service account's credentials. The `gcp-devops` and `organization-admins` groups have the necessary IAM bindings in place to do that, so make sure the current user is a member of one of those groups.
+The preconfigured provider file uses impersonation to run with this stage's automation service account's credentials. The `gcp-devops` and `gcp-organization-admins` groups have the necessary IAM bindings in place to do that, so make sure the current user is a member of one of those groups.
 
-Make sure the `network` service account has the `Service Usage Consumer` role.
+Make sure the `security` service account has the `Service Usage Consumer` role.
 
-Find the network service account by changing directories to `1-resman` in order to run Terraform to query the values needed.
+Find the security service account by changing directories to `1-resman` in order to run Terraform to query the values needed.
 
 ```bash
 cd ../1-resman/
@@ -154,8 +154,8 @@ This configuration is possible but unsupported and only exists for development p
 - for each project resources in the project modules used in this stage (`dev-sec-project`, `prod-sec-project`)
   - apply using `-target`, for example
     `terraform apply -target 'module.prod-sec-project.google_project.project[0]'`
-  - untaint the project resource after applying, for example
-    `terraform untaint 'module.prod-sec-project.google_project.project[0]'`
+  - if a partial apply taints the project resource, recreate it cleanly with `terraform apply -replace` rather than running deprecated `terraform untaint`, for example
+    `terraform apply -replace 'module.prod-sec-project.google_project.project[0]'`
 - go through the process to associate the billing account with the two Google Cloud Projects
 - switch `billing_account.id` back to the real billing account id
 - resume applying normally
@@ -316,7 +316,7 @@ Cloud KMS configuration is controlled by `kms_keys`, which configures the actual
 > Stage 3 produces **no** KMS keyrings or keys by default since `var.kms_keys` defaults to `{}`. Key provisioning is entirely opt-in. A reference configuration is provided in `terraform.tfvars.sample`.
 > Downstream stages and blueprints can query created key paths via `terraform output kms_keys`, which returns a map of key IDs keyed by `{env}-{name}:{location}` (for example, `dev-default:us-east4` or `prod-default:us-east4`).
 
-The additional `kms_restricted_admins` variable allows granting `roles/cloudkms.admin` to specified principals, restricted via [delegated role grants](https://cloud.google.com/iam/docs/setting-limits-on-granting-roles) so that it only allows granting the roles needed for encryption/decryption on keys. This allows safe delegation of key management to subsequent Terraform stages like the Project Factory, for example to grant usage access on relevant keys to the service agent accounts for compute, storage, etc.
+Stage 3 grants `roles/cloudkms.admin` on the dev and prod KMS projects, restricted via [delegated role grants](https://cloud.google.com/iam/docs/setting-limits-on-granting-roles) to assigning encrypt and decrypt permissions on keys, to the downstream Stage 1 automation accounts supplied in `service_accounts` (`dev_kms_restricted_admins` and `prod_kms_restricted_admins` in `core-dev.tf` and `core-prod.tf`). Use `iam`, `iam_bindings`, and `iam_bindings_additive` inside `kms_keys` to grant key-level permissions directly.
 
 To support these scenarios, key IAM bindings are configured by default to be additive, to enable other stages or Terraform configuration to safely co-manage bindings on the same keys. If this is not desired, follow the comments in the `core-dev.tf` and `core-prod.tf` files to switch to authoritative bindings on keys.
 
@@ -446,7 +446,7 @@ Some references that might be useful in setting up this stage
 | [envs_folders](variables.tf#L84) | List of environments to be created for projects to go into. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
 | [folder_ids](variables.tf#L136) | Folder name => id mappings, the 'security' folder name must exist. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [organization](variables.tf#L218) | Organization details. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
-| [prefix](variables.tf#L234) | Prefix used for resources that need unique names. Use 9 characters or less. | <code>string</code> | ✓ |  |
+| [prefix](variables.tf#L234) | Prefix used for resources that need unique names. Use 7 characters or less. | <code>string</code> | ✓ |  |
 | [regions](variables.tf#L251) | Region definitions. Inherited from 0-bootstrap outputs. Must be specified in bootstrap terraform.tfvars. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [service_accounts](variables.tf#L260) | Automation service accounts that can assign the encrypt/decrypt roles on keys. | <code>object&#40;&#123;&#8230;&#125;&#41;</code> | ✓ |  |
 | [tenant_accounts](variables.tf#L275) | Base Tenant accounts that are created for each folder, provided as a combination of environment and tenant. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |

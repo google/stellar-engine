@@ -233,11 +233,11 @@ variable "outputs_location" {
 
 variable "prefix" {
   # tfdoc:variable:source 0-bootstrap
-  description = "Prefix used for resources that need unique names. Use 9 characters or less."
+  description = "Prefix used for resources that need unique names. Use 7 characters or less."
   type        = string
   validation {
-    condition     = try(length(var.prefix), 0) < 10
-    error_message = "Use a maximum of 9 characters for prefix."
+    condition     = try(length(var.prefix), 0) < 8
+    error_message = "Use a maximum of 7 characters for prefix."
   }
 }
 
