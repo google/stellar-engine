@@ -86,9 +86,9 @@ gcp-setup-plan:
       set -eu
       umask 077
       gcloud config set auth/credential_file_override "$GOOGLE_APPLICATION_CREDENTIALS"
-      gcloud alpha storage cp -r "gs://$FAST_OUTPUTS_BUCKET/providers/$TF_PROVIDERS_FILE" ./providers.tf
+      gcloud storage cp -r "gs://$FAST_OUTPUTS_BUCKET/providers/$TF_PROVIDERS_FILE" ./providers.tf
       %{~ for f in tf_var_files ~}
-      gcloud alpha storage cp -r "gs://$FAST_OUTPUTS_BUCKET/tfvars/${f}" ./
+      gcloud storage cp -r "gs://$FAST_OUTPUTS_BUCKET/tfvars/${f}" ./
       %{~ endfor ~}
   artifacts:
     expire_in: 2 hours
@@ -115,9 +115,9 @@ gcp-setup-apply:
       set -eu
       umask 077
       gcloud config set auth/credential_file_override "$GOOGLE_APPLICATION_CREDENTIALS"
-      gcloud alpha storage cp -r "gs://$FAST_OUTPUTS_BUCKET/providers/$TF_PROVIDERS_FILE" ./providers.tf
+      gcloud storage cp -r "gs://$FAST_OUTPUTS_BUCKET/providers/$TF_PROVIDERS_FILE" ./providers.tf
       %{~ for f in tf_var_files ~}
-      gcloud alpha storage cp -r "gs://$FAST_OUTPUTS_BUCKET/tfvars/${f}" ./
+      gcloud storage cp -r "gs://$FAST_OUTPUTS_BUCKET/tfvars/${f}" ./
       %{~ endfor ~}
   artifacts:
     expire_in: 2 hours
