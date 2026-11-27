@@ -21,6 +21,7 @@ a way the CLI must follow, or the documentation drifted from the code.
 import json
 import re
 import subprocess
+from urllib.parse import urlparse
 
 import pytest
 
@@ -33,6 +34,7 @@ from stellar_engine.preflight import regions
 from stellar_engine.render import hcl
 
 _DDG_ROLE_RE = re.compile(r"\((roles/[a-zA-Z.]+)\)")
+_DDG_URL_RE = re.compile(r"\((https://[^)\s]+)\)")
 
 
 def _ddg_prerequisites(root):
@@ -80,10 +82,18 @@ def test_prerequisites_doc_lists_every_script_api(repo):
 
 
 def test_ddg_requires_monitoring_api(repo):
-    assert "/apis/api/monitoring.googleapis.com/overview" in _ddg_prerequisites(
-        repo.root
+    assert {"monitoring.googleapis.com"} <= set(repo.required_apis())
+    urls = [
+        urlparse(url)
+        for url in _DDG_URL_RE.findall(_ddg_prerequisites(repo.root))
+    ]
+    assert any(
+        parsed.hostname
+        in {"console.developers.google.com", "console.cloud.google.com"}
+        and parsed.path == "/apis/api/monitoring.googleapis.com/overview"
+        for parsed in urls
     )
-    assert checks.EXTRA_APIS == ("monitoring.googleapis.com",)
+    assert checks.EXTRA_APIS == ()
 
 
 def test_prefix_limit_matches_resman(repo):

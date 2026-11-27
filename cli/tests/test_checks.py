@@ -852,7 +852,9 @@ class TestProject:
         }
 
     def test_missing_monitoring_api(self, make_ctx, repo, cloud):
-        cloud.services = set(repo.required_apis())
+        cloud.services = set(repo.required_apis()) - {
+            "monitoring.googleapis.com"
+        }
         found = by_id(checks.check_project(make_ctx()))
         apis = found["project.apis"]
         assert apis.status == Status.FAIL

@@ -48,8 +48,9 @@ DOC_FEATURES = "docs/prerequisites.md#organization-features-and-quotas"
 DOC_TROUBLESHOOTING = "docs/ddg.md#appendices"
 DDG_STAGE0 = "docs/ddg.md#stage-0---bootstrap"
 
-# DDG prerequisite that enableServices.sh does not cover yet.
-EXTRA_APIS = ("monitoring.googleapis.com",)
+# Extra APIs beyond enableServices.sh (empty now that the script enables
+# monitoring).
+EXTRA_APIS: tuple[str, ...] = ()
 BILLING_ADMIN_ROLE = "roles/billing.admin"
 # Lets Stage 0 create projects on a billing account whose IAM it does not
 # manage, which is what Billing Account User grants.
@@ -1905,7 +1906,8 @@ def check_manual(ctx):
         (
             "manual.quota",
             "Project quota",
-            "Confirm that the project quota allows at least 13 new projects.",
+            "Confirm that the project quota allows at least 10 + 6 * <tenants>"
+            " new projects (22 for the default two-tenant deployment).",
             DOC_FEATURES,
         ),
     )

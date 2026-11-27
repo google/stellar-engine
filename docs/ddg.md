@@ -117,11 +117,9 @@ permissions.**
 
 > [!TIP]
 > Run [`./fast/stages-aw/0-bootstrap/enableServices.sh`](../fast/stages-aw/0-bootstrap/enableServices.sh)
-> from the repository root to enable the 11 core Stage 0 APIs in the active
-> bootstrap project automatically, then run
-> `gcloud services enable monitoring.googleapis.com` for the Cloud Monitoring
-> API. Alternatively, enable each API listed below manually in the console or
-> with the `gcloud services enable` command.
+> from the repository root to enable all 12 prerequisite Stage 0 APIs in the
+> active bootstrap project automatically. Alternatively, enable each API listed
+> below manually in the console or with the `gcloud services enable` command.
 
 - Enable the following Google Cloud APIs in the bootstrap project.
   - `assuredworkloads.googleapis.com`
@@ -188,20 +186,15 @@ permissions.**
   - `gcp-vpc-network-admins@<domain>`
   - `gcp-organization-admins@<domain>`
   - `gcp-security-admins@<domain>`
-
-  **Application / Optional Groups (defined in `docs/tdd.md` role mappings):**
-  - `gcp-developers@<domain>`
-  - `gcp-logging-admins@<domain>`
-  - `gcp-logging-viewers@<domain>`
-  - `gcp-monitoring-admins@<domain>`
 - [Enable Access
   Transparency](https://console.cloud.google.com/iam-admin/settings) for your
   organization
   - Note: If this is unavailable, make sure you have the Access Transparency
     Admin role and try again
-- Request “13 projects” here
+- Request project quota of at least `10 + 6 * <tenants>` new projects (`22`
+  projects for the default 3-environment, 2-tenant deployment) at
   <https://support.google.com/code/contact/billing_quota_increase> if your
-  quota is below 13
+  quota is below that threshold
   - [View and Manage
     Quotas](https://cloud.google.com/docs/quotas/view-manage)
 - Verify the prerequisites with the `stellar preflight` command and fix every
@@ -227,6 +220,8 @@ state.
   - `cp terraform.tfvars.sample terraform.tfvars`
 - Copy file **providers.tf.tmp** to **0-bootstrap-providers.tf**
   - `cp providers.tf.tmp 0-bootstrap-providers.tf`
+- If your billing account belongs to a different organization, set `is_org_level = false` in `billing_account` (and ensure your deploying user holds `roles/billing.admin` on that billing account).
+- If Stage 0 must not manage billing IAM (for example, a shared billing account), set `no_iam = true` in `billing_account` and grant `roles/billing.user` (`Billing Account User`) on the billing account instead of `roles/billing.admin`.
 - Update information in **terraform.tfvars** as follows below, the variables
   from the above sections are already included
 
@@ -342,12 +337,11 @@ variable as seen below.
 
 - **Note:** If you are using an environment variable for the prefix, make sure it is set:
   - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
-- **Note:** If you are using an external billing account, you have to add the
-  Billing Account Administrator for the following service account to the external billing account:
-  - **`<prefix>`-prod-resman-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
-  
-- **Note:** If you are using an external billing account  where the resman service account cannot be granted billing permissions, 
-you can use a **billing override** to run the project creation/billing links under your personal credentials. 
+- If you are using an external billing account (`is_org_level = false`), Stage 0 grants `roles/billing.admin` on that billing account when `no_iam = false`. If `no_iam = true` (or if you manage billing IAM externally), grant Billing Account User (`roles/billing.user`) on the external billing account to:
+  - `<prefix>-prod-resman-0@<prefix>-prod-iac-core-0.iam.gserviceaccount.com`
+
+- If you are using an external billing account where the resman service account cannot be granted billing permissions,
+you can use a **billing override** to run the project creation and billing links under your personal credentials.
 To do this, define the `billing_override` variable in your **fast/stages-aw/1-resman/terraform.tfvars**:
 
   ```hcl
@@ -357,20 +351,12 @@ To do this, define the `billing_override` variable in your **fast/stages-aw/1-re
   }
   ```
 
-  **Steps to add the external billing account (if applicable):**
-  - In the Google Cloud console (External billing Account), go to the
-    Account management page for the Cloud Billing account, select the
-    Organization level and Go to Account management in Cloud Billing
-  - At the prompt, choose the Cloud Billing account you want to view.
-  - In the Permissions panel, To add new principals and assign permissions,
-    do the following:
-  - Click Add principal.
-  - In the New principals field, enter the email address for the principals
-    you want to add for example:
-    - `<prefix>`-prod-resman-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com
-  - Select a permission for the principal(s) from Select a role as “Billing
-    Account Administrator”.
-  - When done, click Save.
+  If you add the external billing account principal in the Google Cloud console instead:
+  - Open **Billing** and then **Account management** for the external billing account.
+  - Click **Add principal**.
+  - Enter `<prefix>-prod-resman-0@<prefix>-prod-iac-core-0.iam.gserviceaccount.com` in the **New principals** field.
+  - Select the **Billing Account User** (`roles/billing.user`) role.
+  - Click **Save**.
 - Change directory into **fast/stages-aw/1-resman**
 - Copy file **terraform.tfvars.sample** to **terraform.tfvars**
   - `cp terraform.tfvars.sample terraform.tfvars`
@@ -433,12 +419,11 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap
 
 - **Note:** If you are using an environment variable for the prefix, make sure it is set:
   - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
-- **Note:** If you are using an external billing account, you have to add the
-  Billing Account Administrator for the following service account to the external billing account:
-  - **`<prefix>`-prod-resman-net-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
+- If you are using an external billing account (`is_org_level = false` or `no_iam = true`), Stage 1 skips organization-level billing IAM grants. Grant Billing Account User (`roles/billing.user`) on the external billing account to:
+  - `<prefix>-prod-resman-net-0@<prefix>-prod-iac-core-0.iam.gserviceaccount.com`
 
-- **Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
-you can use a **billing override** to run the project creation/billing links under your personal credentials. 
+- If you are using an external billing account where the networking service account cannot be granted billing permissions,
+you can use a **billing override** to run the project creation and billing links under your personal credentials.
 To do this, define the `billing_override` variable in **fast/stages-aw/2-networking-a-fedramp/terraform.tfvars** file
 
   ```hcl
@@ -448,20 +433,12 @@ To do this, define the `billing_override` variable in **fast/stages-aw/2-network
   }
   ```
 
-  **Steps to add the external billing account (if applicable):**
-  - In the Google Cloud console (External billing Account), go to the
-    Account management page for the Cloud Billing account, select the
-    Organization level and Go to Account management in Cloud Billing
-  - At the prompt, choose the Cloud Billing account you want to view.
-  - In the Permissions panel, To add new principals and assign permissions,
-    do the following:
-  - Click Add principal.
-  - In the New principals field, enter the email address for the principals
-    you want to add for example:
-    - `<prefix>`-prod-resman-net-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com
-  - Select a permission for the principal(s) from Select a role as “Billing
-    Account Administrator”.
-  - When done, click Save.
+  If you add the external billing account principal in the Google Cloud console instead:
+  - Open **Billing** and then **Account management** for the external billing account.
+  - Click **Add principal**.
+  - Enter `<prefix>-prod-resman-net-0@<prefix>-prod-iac-core-0.iam.gserviceaccount.com` in the **New principals** field.
+  - Select the **Billing Account User** (`roles/billing.user`) role.
+  - Click **Save**.
 - Change directory into **fast/stages-aw/2-networking-a-fedramp**
 - Copy the provider and global tfvars files from the GCS buckets:
 ```bash
@@ -492,12 +469,11 @@ a VM code and register them. For more instructions, see the README in the the
 
 - **Note:** If you are using an environment variable for the prefix, make sure it is set:
   - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
-- **Note:** If you are using an external billing account, you have to add the
-  Billing Account Administrator for the following service account to the external billing account:
-  - **`<prefix>`-prod-resman-net-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com**
+- If you are using an external billing account (`is_org_level = false` or `no_iam = true`), Stage 1 skips organization-level billing IAM grants. Grant Billing Account User (`roles/billing.user`) on the external billing account to:
+  - `<prefix>-prod-resman-net-0@<prefix>-prod-iac-core-0.iam.gserviceaccount.com`
 
-- **Note:** If you are using an external billing account where the networking service account cannot be granted billing permissions, 
-you can use a **billing override** to run the project creation/billing links under your personal credentials. 
+- If you are using an external billing account where the networking service account cannot be granted billing permissions,
+you can use a **billing override** to run the project creation and billing links under your personal credentials.
 To do this, define the `billing_override` variable in **fast/stages-aw/2-networking-b-il5-ngfw/terraform.tfvars** file
 
   ```hcl
@@ -507,20 +483,12 @@ To do this, define the `billing_override` variable in **fast/stages-aw/2-network
   }
   ```
 
-  **Steps to add the external billing account (if applicable):**
-  - In the Google Cloud console (External billing Account), go to the
-    Account management page for the Cloud Billing account, select the
-    Organization level and Go to Account management in Cloud Billing
-  - At the prompt, choose the Cloud Billing account you want to view.
-  - In the Permissions panel, To add new principals and assign permissions,
-    do the following:
-  - Click Add principal.
-  - In the New principals field, enter the email address for the principals
-    you want to add for example:
-    - `<prefix>`-prod-resman-net-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com
-  - Select a permission for the principal(s) from Select a role as “Billing
-    Account Administrator”.
-  - When done, click Save.
+  If you add the external billing account principal in the Google Cloud console instead:
+  - Open **Billing** and then **Account management** for the external billing account.
+  - Click **Add principal**.
+  - Enter `<prefix>-prod-resman-net-0@<prefix>-prod-iac-core-0.iam.gserviceaccount.com` in the **New principals** field.
+  - Select the **Billing Account User** (`roles/billing.user`) role.
+  - Click **Save**.
 - Change directory into **fast/stages-aw/2-networking-b-il5-ngfw**
 - Copy the provider and global tfvars files from the GCS buckets:
 ```bash
@@ -583,12 +551,11 @@ are responsible for the audit project.
 
 - **Note:** If you are using an environment variable for the prefix, make sure it is set:
   - `export FAST_PREFIX=$(sed -n 's/^[[:space:]]*prefix[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' $(git rev-parse --show-toplevel)/fast/stages-aw/0-bootstrap/terraform.tfvars)`
-- **Note:** If you are using an external billing account, you have to add the
-  Billing Account Administrator for the following service account to the external billing account:**
-  - `<prefix>`-security-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com
-  
-- **Note:** If you are using an external billing account where the security service account cannot be granted billing permissions, 
-you can use a **billing override** to run the project creation/billing links under your personal credentials. 
+- If you are using an external billing account (`is_org_level = false` or `no_iam = true`), Stage 1 skips organization-level billing IAM grants. Grant Billing Account User (`roles/billing.user`) on the external billing account to:
+  - `<prefix>-security-0@<prefix>-prod-iac-core-0.iam.gserviceaccount.com`
+
+- If you are using an external billing account where the security service account cannot be granted billing permissions,
+you can use a **billing override** to run the project creation and billing links under your personal credentials.
 To do this, define the `billing_override` variable in **fast/stages-aw/3-security/terraform.tfvars** file
 
   ```hcl
@@ -598,20 +565,12 @@ To do this, define the `billing_override` variable in **fast/stages-aw/3-securit
   }
   ```
 
-  **Steps to add the external billing account:**
-  - In the Google Cloud console (External billing Account), go to the
-    Account management page for the Cloud Billing account, select the
-    Organization level and Go to Account management in Cloud Billing
-  - At the prompt, choose the Cloud Billing account you want to view.
-  - In the Permissions panel, To add new principals and assign permissions,
-    do the following:
-  - Click Add principal.
-  - In the New principals field, enter the email address for the principals
-    you want to add for example:
-    - `<prefix>`-security-0@`<prefix>`-prod-iac-core-0.iam.gserviceaccount.com
-  - Select a permission for the principal(s) from Select a role as “Billing
-    Account Administrator”.
-  - When done, click Save.
+  If you add the external billing account principal in the Google Cloud console instead:
+  - Open **Billing** and then **Account management** for the external billing account.
+  - Click **Add principal**.
+  - Enter `<prefix>-security-0@<prefix>-prod-iac-core-0.iam.gserviceaccount.com` in the **New principals** field.
+  - Select the **Billing Account User** (`roles/billing.user`) role.
+  - Click **Save**.
 - Change directory into **fast/stages-aw/3-security**
 - Copy the **terraform.tfvars** files from the GCS buckets
 ```
@@ -625,9 +584,9 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.au
   - Type `yes` when prompted
   - **Note:** Any issues with Service Accounts can be resolved by rerunning
     `terraform apply`
-- Run `./sa_lockdown.sh` to disable the Service Accounts used during the
-  deployment
-  - **Note:** You may be unable to deploy certain blueprints until the Service Accounts are re-enabled. If you are deploying additional services/blueprints into the Stellar Engine environment, do not run this script until deployments are complete.
+- Run `./sa_lockdown.sh` to disable the Stage 0 through Stage 3 automation service accounts used during deployment (apply accounts, read-only `-r` plan accounts, branch accounts, team accounts, and core tenant accounts)
+  - You may be unable to deploy certain blueprints until the service accounts are re-enabled. If you are deploying additional services or blueprints into the Stellar Engine environment, do not run this script until deployments are complete.
+- Run `./validation.sh --prefix "${FAST_PREFIX}"` to confirm that all Stage 0, Stage 1, Stage 2, and Stage 3 automation service accounts (including apply, read-only `-r` plan, branch, team, and core tenant accounts) are disabled
 
 **Congratulations, you have successfully deployed Stellar Engine\! For further
 securing of the environment, please see the** [**Stellar Engine Security Best
@@ -706,15 +665,13 @@ If you encounter `403 Forbidden` or `Permission 'iam.serviceAccounts.getAccessTo
 
 ### Additional Notes
 
-- When modifying modules is necessary, please copy the entire module over, and
-  use the naming convention \<module-se\> to avoid merge conflicts when
-  periodic updates are pulled in from the CFF
+- When modifying synced `modules/` directories is necessary, prefer upstream-first fixes where possible, maintain local changes in-place across three-way merges via `tools/sync-from-cff.sh`, and record them in the [Upstream Sync Guide](upstream-sync.md) (instead of creating duplicate `modules/<module>-se` copies).
 - If you receive KMS key errors during build, you may have to manually turn
   the keys back on in [KMS
   Management](https://console.cloud.google.com/security/kms/keyrings). If you
   receive these additional errors, please wait \~1 minute and rerun
   `terraform apply`
-- On a Windows Machine, symlinks may not work, and specific files may need to be copied over manually, specifically psc.tf and log-metric-alerts.tf during the “2-network” stages
+- On Windows, ensure Git symlinks are enabled (`git config core.symlinks true`) when working with shared blueprint symlinks under `blueprints/fedramp-high/` targeting `blueprints/il5/`.
 - If you run into billing/quota issues, make sure your quota project is set. You can set it by running `gcloud auth application-default set-quota-project ${FAST_PREFIX}-prod-iac-core-0`, or change it to a project of your choice.
 
 ####
