@@ -60,6 +60,8 @@ vpc_self_link                 = "https://www.googleapis.com/compute/v1/projects/
 
 Follow these steps to forward local ports to internal web services through the bastion host over Identity-Aware Proxy when `access_mode` is `iap`:
 
+- Ensure `allowed_source_ranges` (or the Stage 2 firewall policy) permits TCP port `22` ingress from the Identity-Aware Proxy forwarding range `35.235.240.0/20`, and ensure the operator holds `roles/iap.tunnelResourceAccessor` and Compute Engine OS Login access.
+
 1. Set the active `gcloud` project to the project hosting the bastion VM:
 
 ```bash

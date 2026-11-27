@@ -65,9 +65,7 @@ You should see this README and some terraform files.
 - ```zone``` with the zone to deploy the Dataflow project to.<br />
 - ```bucket_name``` with the name for the bucket. This will be combined with the prefix to create the full bucket name.<br />
 - ```template_gcs_path``` with the path to the Dataflow job template.<br />
-- ```parameters``` with a key/value pair. This is specific to the template.<br />
-- ```inputFile``` with the name of the file to pass into the Dataflow pipeline.<br />
-- ```output``` with the location for the output from the Dataflow pipeline.<br />
+- ```parameters``` map containing template-specific key/value pairs, including `inputFile` (the input Cloud Storage object path for the Dataflow pipeline) and `output` (the output Cloud Storage prefix inside `gs://<prefix>-<bucket_name>`).<br />
 - ```network_name``` with the name of the VPC network.<br />
 - ```subnetwork_name``` with the name of the VPC subnetwork.<br />
 - ```firewall_name``` with the name for the firewall rule.<br />
@@ -85,11 +83,13 @@ terraform destroy
 ```
 
 ## Verification of a successful deployment
-The apply will take about 30 seconds to a minute to complete. The Dataflow job will be deployed in the main project. It will take about 3-4 minutes to the job to complete. To see the status of the Dataflow job, go to [Dataflow](https://console.cloud.google.com/dataflow) and look for the latest instance of your dataflow_name. Once it completes, browse to the [Cloud Storage Bucket](https://console.cloud.google.com/storage/browser) and open the bucket that matches your ```prefix-bucket_name```. There will be a folder with the same name set as ```output``` that will contain the output of the Dataflow job.
+The apply will take about 30 seconds to a minute to complete. The Dataflow job will be deployed in the main project. It will take about 3-4 minutes to the job to complete. To see the status of the Dataflow job, go to [Dataflow](https://console.cloud.google.com/dataflow) and look for the latest instance of your dataflow_name. Once it completes, browse to the [Cloud Storage Bucket](https://console.cloud.google.com/storage/browser) and open the bucket that matches your ```prefix-bucket_name```. There will be a folder with the same name set as ```output``` inside `parameters` that will contain the output of the Dataflow job.
 Once the job completes, any additional applies will create a new Dataflow job with the same name rather than re-run the existing Dataflow.
 
 ## Notes
 The Apache Beam SDK for Java has a warning about a bug in the latest version as of this blueprint (2.64.0).
+
+In VPC Service Controls environments such as IL5 Assured Workloads, external public Cloud Storage buckets (`gs://dataflow-templates/...` and `gs://dataflow-samples/...`) reside outside the perimeter and are blocked by default. Stage template and input files inside a Cloud Storage bucket inside your VPC-SC perimeter (and update `template_gcs_path` and `parameters.inputFile`), or configure explicit VPC-SC egress rules if external template access is authorized.
 <!-- BEGIN TFDOC -->
 ## Variables
 

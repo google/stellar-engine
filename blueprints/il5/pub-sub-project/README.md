@@ -105,7 +105,7 @@ To verify a successful deployment:
 
 ## Important Notes
 -   This blueprint strictly **creates a Pub/Sub topic and its associated resources**; it does not consume an existing topic.
--   Pub/Sub topics are **regional or global** resources depending on configuration. `var.gcp_region` will determine the topic's location (persistence region).
+-   Pub/Sub topic message storage persistence regions are controlled by `var.allowed_persistence_regions` (defaulting to `["us-east4"]`), while `var.gcp_region` sets the default provider region and the Cloud KMS key ring lookup location.
 -   The `kms_key_name` and `kms_keyring_name` inputs refer to **existing** Cloud KMS resources. This blueprint consumes these existing keys for CMEK on the topic.
 -   The publisher service account holds `roles/pubsub.publisher` on the topic only, and the subscriber service account holds `roles/pubsub.subscriber` only on the subscriptions in `var.subscriptions`. The blueprint grants neither role at project level.
 -   The subscriber service account holds no Pub/Sub role while `var.subscriptions` is empty. For a subscription that you manage outside this blueprint, grant `roles/pubsub.subscriber` on that subscription to the `subscriber_service_account_email` output.
