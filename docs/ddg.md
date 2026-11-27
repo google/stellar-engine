@@ -75,7 +75,7 @@ To make using this deployment guide easier, the variables described below need t
 | **Prefix**               | `prefix`                     | This is the prefix appended to the beginning of projects and resources deployed selected by your or your organization. **Full project names must be globally unique and the prefix must use a maximum of 7 characters**. A 409 error will occur if a globally unique project name is not created. |
 | **Region**               | `assured_workloads.location` | This is the (US) based region that we are deploying resources into (Dual regions like “NAM9” or continents are currently not supported)                                                                                                                                                     |
 | **Tenant Name**          | `tenants` (Stage 1)          | The name for the first tenant that will be deployed via this document. **Full project names must be globally unique and the tenant-name must use a maximum of 6 characters**.                                                                                                               |
-| **KMS Protection Level** | `kms_protection_level`       | The Cloud KMS protection level for the keys the FAST stages create (`0-bootstrap`, `1-resman`, `3-security`). Use `"HSM"` for FedRAMP High and IL5 compliance; `"SOFTWARE"` is permitted for FedRAMP Moderate.                                                      |
+| **KMS Protection Level** | `kms_protection_level`       | The Cloud KMS protection level for the keys the FAST stages create (`0-bootstrap`, `1-resman`, `2-networking-b-il5-ngfw`, `3-security`). Use `"HSM"` for FedRAMP High and IL5 compliance; `"SOFTWARE"` is permitted for FedRAMP Moderate.                                                      |
 
 
 ## Prerequisites
@@ -222,6 +222,7 @@ state.
   - `cp providers.tf.tmp 0-bootstrap-providers.tf`
 - If your billing account belongs to a different organization, set `is_org_level = false` in `billing_account` (and ensure your deploying user holds `roles/billing.admin` on that billing account).
 - If Stage 0 must not manage billing IAM (for example, a shared billing account), set `no_iam = true` in `billing_account` and grant `roles/billing.user` (`Billing Account User`) on the billing account instead of `roles/billing.admin`.
+- If deploying into a shared organization without organization-level policy administration permissions, set `deploy_org_resources = { org_policies = false }` in `terraform.tfvars`. Stage 0 attaches non-Assured-Workloads baseline policies to the Assured Workloads folder (`module.root-folder-config[0]`) and skips organization-only custom constraints (`custom.kmsRotation`, `custom.restrictFirewallRanges`), `org_only_policies`, and the 12 Assured Workloads baseline policies.
 - Update information in **terraform.tfvars** as follows below, the variables
   from the above sections are already included
 
@@ -318,7 +319,7 @@ alert_email = "`<alert_email>`"
 - Migrate the state from local to remote using
   - `terraform init --migrate-state`
   - Type `yes` when prompted
-- Run `./import.sh` 
+- Run `./import.sh <organization_id>` (passing the organization ID avoids failures when your account can view multiple GCP organizations; when `deploy_org_resources.org_policies = false`, `import.sh` detects folder mode and imports folder-level policies into `module.root-folder-config[0]` while skipping org-only constraints)
 - Apply Terraform one more time before moving on to the next stage via
   `terraform apply`
   - Type `yes` when prompted
@@ -383,7 +384,7 @@ ten-1 = { ## Change tenant_name here - 6 or less characters
     kms = "<region>"
     }
   }
-## You can have “n” number of tenants
+## You can have “n” number of tenants; update subnets.<env>[*].tenant in Stage 2 terraform.tfvars to match these keys
 }
 fast_features = {
  envs = true
@@ -450,6 +451,7 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.au
 - Copy the sample `terraform.tfvars` file and configure your network settings:
   - `cp terraform.tfvars.sample terraform.tfvars`
 - Update custom subnets, proxy subnets, global network firewall policy rules (`firewall_policy_rules`), named CIDRs (`cidrs`), Private Service Connect settings (`psc_google_apis`), optional Private Services Access ranges (`psa_ranges`) for workloads such as `blueprints/fedramp-high/postgresql` that need them, optional centralized Secure Web Proxy egress (`centralized_egress`), and optional hybrid NCC spokes (`ncc_hubs`) inside **`terraform.tfvars`** (built-in Google APIs DNS response policy rules load automatically from `data/dns-policy-rules.yaml`).
+  - Whenever you rename, add, or remove `tenants` keys in Stage 1, update `subnets.<env>[*].tenant` in Stage 2 `terraform.tfvars` to match so `google_compute_subnetwork_iam_member.allow_admin_principals` grants `roles/compute.networkUser` to each tenant's `admin_principal` on its spoke subnet(s) (Stage 2 skips unmapped tenants with a plan warning rather than failing).
 - Replace every `<region>` placeholder in **`terraform.tfvars`** with the `regions.primary` value from the Stage 0 **`terraform.tfvars`** file.
 - Run `terraform init`
   - `terraform apply`
@@ -500,6 +502,7 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.au
 - Copy the sample `terraform.tfvars` file and configure your network settings:
   - `cp terraform.tfvars.sample terraform.tfvars`
 - Update custom subnets (including mgmt), proxy subnets, firewall rules, named CIDRs, and DNS response policy rules directly inside **`terraform.tfvars`**.
+  - Whenever you rename, add, or remove `tenants` keys in Stage 1, update `subnets.<env>[*].tenant` in Stage 2 `terraform.tfvars` to match so `google_compute_subnetwork_iam_member.allow_admin_principals` grants `roles/compute.networkUser` to each tenant's `admin_principal` on its spoke subnet(s) (Stage 2 skips unmapped tenants with a plan warning rather than failing).
 - Replace every `<region>` placeholder in **`terraform.tfvars`** with the `regions.primary` value from the Stage 0 **`terraform.tfvars`** file.
 - Run `terraform init`
 - Run `terraform apply`
@@ -524,20 +527,19 @@ to CMEK are enforced:
   - `denied_values: "container.googleapis.com"`
   - `denied_values: "storage.googleapis.com"`
   - `denied_values: "sqladmin.googleapis.com"`
-- `gcp.restrictCmekCryptoKeyProjects`: list CMEK key projects allowed to be used.
+- `gcp.restrictCmekCryptoKeyProjects` (commented out by default in `fast/stages-aw/0-bootstrap/data/org-policies/cloudkms_policy.yaml`): uncomment and list allowed CMEK key projects if you want to restrict which projects may host CMEK keys.
 
-In this step, prod-sec-core-0 project is created to host KMS and Secret Manager
-(optional) services. A restricted admin role (can grant decrypt permissions to
+In this step, `<prefix>-prod-sec-core-0` and `<prefix>-dev-sec-core-0` projects are created to host centralized Cloud KMS keyrings and keys, optional Secret Manager secrets, and CIS log metric alerts and monitoring policies. A restricted admin role (can grant decrypt permissions to
 other services) is granted to the KMS restricted admins. KMS key rings in
 different locations are also provisioned. (KMS Key ring locations must match the
 service locations, for example, a multi-regional keyring cannot be used in a
 single region storage bucket, or vice versa).
 
-The audit project (`audit-logs-0`) is created to centralize organization-level logs. By default, audit logs are routed to CMEK-encrypted Cloud Logging buckets within this project (`type = "logging"`).
+Organization audit logging and the `<prefix>-prod-audit-logs-0` project are provisioned in Stage 0 (`0-bootstrap`). By default, Stage 0 routes organization audit logs to CMEK-encrypted Cloud Logging buckets within `<prefix>-prod-audit-logs-0` (`type = "logging"`), while Stage 3 adds CIS log metric alerts and monitoring policies on top of those audit logs.
 
 #### Audit Log Retention
-- **Cloud Logging Buckets (Default):** The default retention for Cloud Logging buckets created in this stage is **365 days** (1 year) to comply with regulatory standards (e.g. NIST 800-53 AU-9 requirements).
-- **Adjusting Retention:** If you require a different retention period, configure the `logging_bucket_retention` variable in Stage 0. If you require long-term archival or external analytical processing, you can change the routing type to `storage` (for GCS buckets) or `bigquery` (for BigQuery dataset).
+- The default retention for Cloud Logging buckets created in Stage 0 (`0-bootstrap`) is 365 days (1 year) to comply with regulatory standards (such as NIST 800-53 AU-9 requirements).
+- To use a different retention period, configure the `logging_bucket_retention` variable in Stage 0. For long-term archival or external analytics, change the Stage 0 log sink routing type to `storage` (for GCS buckets) or `bigquery` (for BigQuery datasets).
 
 #### Transitioning to Pub/Sub Routing (SIEM Integration)
 To stream logs to an external SIEM or analytical platform, you can configure your log sinks to route to Pub/Sub (`type = "pubsub"`).
@@ -579,6 +581,9 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-globals.a
 gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/0-bootstrap.auto.tfvars.json ./ &&
 gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./
 ```
+- Copy the sample `terraform.tfvars` file and configure centralized KMS keys:
+  - `cp terraform.tfvars.sample terraform.tfvars`
+  - Review `kms_keys` (including `locations`, matching your `regions.primary` and workload regions). Note that Stage 3 creates **no** KMS keyrings or keys if `kms_keys` is omitted or `{}` (`terraform.tfvars` is absent or empty), and leaving `version_template` commented out in `terraform.tfvars.sample` inherits `kms_protection_level` from Stage 0.
 - Run `terraform init`
 - Run `terraform apply`
   - Type `yes` when prompted
@@ -587,6 +592,9 @@ gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.au
 - Run `./sa_lockdown.sh` to disable the Stage 0 through Stage 3 automation service accounts used during deployment (apply accounts, read-only `-r` plan accounts, branch accounts, team accounts, and core tenant accounts)
   - You may be unable to deploy certain blueprints until the service accounts are re-enabled. If you are deploying additional services or blueprints into the Stellar Engine environment, do not run this script until deployments are complete.
 - Run `./validation.sh --prefix "${FAST_PREFIX}"` to confirm that all Stage 0, Stage 1, Stage 2, and Stage 3 automation service accounts (including apply, read-only `-r` plan, branch, team, and core tenant accounts) are disabled
+- Optionally delete the temporary initial bootstrap project after validation succeeds (do not delete `<prefix>-prod-iac-core-0`):
+  - `./delete_gcp_project.sh --project-id=<bootstrap-project-id>`
+  - Generated Stage 0 through Stage 3 `*-providers.tf` files use `<prefix>-prod-iac-core-0` as the Terraform billing and quota project, so deleting the temporary bootstrap project does not affect Day-2 runs.
 
 **Congratulations, you have successfully deployed Stellar Engine\! For further
 securing of the environment, please see the** [**Stellar Engine Security Best
@@ -635,8 +643,9 @@ Perform the following steps when adding or removing tenants projects for an exis
 - Change directory into appropriate network folder for your Stellar Engine deployment:
   - fast/stages-aw/2-networking-a-fedramp
   - fast/stages-aw/2-networking-b-il5-ngfw
-- Copy the 1-resman 1-resman tfvars file from the GCS bucket
+- Copy the `1-resman` tfvars file from the GCS bucket:
   - `gcloud storage cp gs://${FAST_PREFIX}-prod-iac-core-outputs-0/tfvars/1-resman.auto.tfvars.json ./`
+- Update `subnets.<env>[*].tenant` (and add or remove spoke subnets as needed) in Stage 2 `terraform.tfvars` so `tenant` matches the Stage 1 `tenants` keys and `allow_admin_principals` grants `roles/compute.networkUser` to each tenant's `admin_principal` on its spoke subnet(s)
 - Run terraform init
 - Run terraform apply
   - Type yes when prompted

@@ -159,6 +159,10 @@ Before running Stage 0:
   `fast/stages-aw/0-bootstrap/terraform.tfvars`.
 - Copy `fast/stages-aw/0-bootstrap/providers.tf.tmp` to
   `fast/stages-aw/0-bootstrap/0-bootstrap-providers.tf`.
+- If deploying without organization-level policy administration permissions, set
+  `deploy_org_resources = { org_policies = false }` in Stage 0 `terraform.tfvars`
+  to attach baseline policies to the Assured Workloads folder instead (skipping
+  organization-only `custom.*` constraints).
 - Fill in the values listed in this checklist and in the DDG Variables table.
 - Export `FAST_PREFIX` from the Stage 0 `terraform.tfvars` if you want to reuse
   the DDG copy-and-paste commands.
