@@ -5,7 +5,7 @@
 main_project_id    = "xxxx-xxxx-gke-main-0"
 
 # The Landing Zone Project contains the Shared VPC network.
-landing_project_id = "xxxx-xxxx-net-host-0"
+landing_project_id = "xxxx-prod-net-host"
 
 # The Core Project contains the Cloud KMS key for encryption.
 core_project_id    = "xxxx-xxxx-iac-core-0"
@@ -18,8 +18,8 @@ gcp_region = "us-east4"
 # -----------------------------------------------------------------------------
 # EXISTING INFRASTRUCTURE DETAILS
 # -----------------------------------------------------------------------------
-existing_network_name                       = "xxxxxxxxxx-spoke-0"
-existing_subnetwork_name                    = "default-us-east4"
+existing_network_name                       = "prod-spoke-0"
+existing_subnetwork_name                    = "prod-tenant-1-subnet"
 existing_subnetwork_secondary_range_pods_name     = "xxxxxxxxxx"
 existing_subnetwork_secondary_range_services_name = "xxxxxxxxxx"
 existing_kms_keyring_name                   = "xxxxxxxxxx-keyring"

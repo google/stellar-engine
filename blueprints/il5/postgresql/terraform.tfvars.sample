@@ -1,12 +1,12 @@
 main_project_id    = "xxxx-xxxx-xxxx-main-0"
-network_project_id = "xxxx-xxxx-net-host"
+network_project_id = "xxxx-prod-net-host"
 
 database_name          = "postgres-name-00"
 database_version       = "POSTGRES_14"
 database_instance_tier = "db-g1-small"
 region                 = "us-east4"
 
-network_name = "xxxx-spoke-0" # Must already exist
+network_name = "prod-spoke-0" # Must already exist
 
 kms_key_name = "projects/<CORE-PROJECT-ID>/locations/us-east4/keyRings/xxxx-xxxx-keyring/cryptoKeys/default" # Must already exist
 
@@ -14,5 +14,5 @@ kms_key_name = "projects/<CORE-PROJECT-ID>/locations/us-east4/keyRings/xxxx-xxxx
 # for a network without a Private Services Access connection. List each
 # project that hosts a Private Service Connect endpoint for the instance.
 # psc_config = {
-#   allowed_consumer_projects = ["xxxx-xxxx-net-host"]
+#   allowed_consumer_projects = ["xxxx-prod-net-host"]
 # }
