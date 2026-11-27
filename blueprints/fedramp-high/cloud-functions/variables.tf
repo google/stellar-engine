@@ -25,8 +25,14 @@ variable "bucket_name" {
 
 variable "bundle_config" {
   description = "The configuration for the Cloud Function source bundle."
-  type        = any
-  default     = null
+  type = object({
+    path = string
+    folder_options = optional(object({
+      archive_path = optional(string)
+      excludes     = optional(list(string))
+    }), {})
+  })
+  default = null
 }
 
 variable "description" {

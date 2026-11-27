@@ -94,8 +94,8 @@ class TestCloudFunctionsIam(unittest.TestCase):
         self.assertRegex(grant, r'\n\s*role\s*=\s*"roles/run\.invoker"\n')
         self.assertRegex(grant, r"\n\s*member\s*=\s*" + _RUNNER + r"\n")
 
-    def test_invoker_grant_waits_for_the_gcloud_deployment(self):
-        # The gcloud deployment creates the Cloud Run service, so a grant
+    def test_invoker_grant_waits_for_the_function_deployment(self):
+        # The function module creates the Cloud Run service, so a grant
         # issued before it fails with a not found error.
         grant = _top_block(
             self.main_tf,
@@ -103,7 +103,7 @@ class TestCloudFunctionsIam(unittest.TestCase):
         )
         self.assertRegex(
             grant,
-            r"depends_on\s*=\s*\[null_resource\.cloud_function_deploy\]",
+            r"depends_on\s*=\s*\[module\.cloud-function\]",
         )
 
     def test_service_name_follows_the_cloud_run_naming_rules(self):
