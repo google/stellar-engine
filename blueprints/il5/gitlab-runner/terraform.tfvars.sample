@@ -35,6 +35,26 @@ docker_image       = "us-east4-docker.pkg.dev/example-sec-0/containers/google-cl
 boot_disk_size_gb  = 50
 boot_disk_type     = "pd-balanced"
 
+# Job images default to docker_image only; an empty service allowlist keeps
+# CI services disabled. docker_cap_add re-adds capabilities after cap drop
+# ALL for jobs that need them, such as CHOWN or SETUID.
+allowed_docker_images   = null
+allowed_docker_services = []
+docker_cap_add          = []
+
+# Repository-scoped roles/artifactregistry.reader grants for the private
+# mirrors that docker_image and the allowlists pull from.
+artifact_registry_repositories = [
+  {
+    project_id = "example-sec-0"
+    location   = "us-east4"
+    repository = "containers"
+  },
+]
+
+# Optional Compute Engine graceful shutdown period (1 to 21600 seconds).
+graceful_shutdown_secs = null
+
 create_runner_token_secret = false
 enable_boot_disk_snapshots = false
 enable_iap_ssh             = false

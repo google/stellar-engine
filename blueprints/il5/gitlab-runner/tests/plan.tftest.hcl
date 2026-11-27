@@ -132,12 +132,15 @@ run "plan_hardened_default_runner" {
       module.runner-vm.instance.metadata[
         "serial-port-enable"
       ] == "false" &&
-      strcontains(
+      can(regex(
+        join("", [
+          "(?s)systemctl stop gitlab-runner\\.service.*",
+          "gitlab-runner unregister --config /etc/gitlab-runner/config\\.toml",
+        ]),
         module.runner-vm.instance.metadata["shutdown-script"],
-        "gitlab-runner unregister --config /etc/gitlab-runner/config.toml",
-      )
+      ))
     )
-    error_message = "Expected OS Login, key block, serial off, and shutdown."
+    error_message = "Expected OS Login, key block, serial off, and drain."
   }
 
   assert {
@@ -231,6 +234,107 @@ run "plan_hardened_default_runner" {
       )
     )
     error_message = "Startup script failed regional SM or token assertions."
+  }
+
+  assert {
+    condition = (
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "add_drop_rule iptables 169.254.169.254/32",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "add_drop_rule ip6tables fd20:ce::254/128",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "iptables -w -C DOCKER-USER -d \"$${METADATA_IPV4}\" -j DROP",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "PartOf=docker.service",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "WantedBy=docker.service",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "Requires=gitlab-runner-metadata-guard.service",
+      ) &&
+      can(regex(
+        "(?s)if ! metadata_guard_active; then.*exit 1.*gitlab-runner register",
+        module.runner-vm.instance.metadata["startup-script"],
+      )) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "mv -f \"$${tmp}\" \"$${path}\"",
+      )
+    )
+    error_message = "Expected fail-closed metadata server guard for docker."
+  }
+
+  assert {
+    condition = alltrue([
+      for arg in [
+        "--docker-privileged=false",
+        "--docker-disable-entrypoint-overwrite",
+        "--docker-cap-drop ALL",
+        "--docker-security-opt no-new-privileges=true",
+        "--docker-allowed-images \"$${image}\"",
+        "--docker-services-limit 0",
+        "  '${var.docker_image}'",
+        "REGISTRY_HOSTS='us-docker.pkg.dev'",
+        "DOCKER_CONFIG=/root/.docker gcloud auth configure-docker",
+      ] :
+      strcontains(module.runner-vm.instance.metadata["startup-script"], arg)
+    ])
+    error_message = "Expected docker executor hardening and registry auth."
+  }
+
+  assert {
+    condition = (
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "KillSignal=SIGQUIT",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "KillMode=mixed",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "TimeoutStopSec=90",
+      ) &&
+      can(regex(
+        "readonly FINGERPRINT='[0-9a-f]{64}'",
+        module.runner-vm.instance.metadata["startup-script"],
+      )) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "/.registration-fingerprint",
+      ) &&
+      !strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "/instance/attributes/shutdown-status",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "systemctl disable --now \"$${WATCHER_UNIT}\"",
+      ) &&
+      length(
+        module.runner-vm.instance.scheduling[0].graceful_shutdown
+      ) == 0
+    )
+    error_message = "Expected SIGQUIT drain, fingerprint, and no watcher."
+  }
+
+  assert {
+    condition = (
+      length(google_artifact_registry_repository_iam_member.runner_reader)
+      == 0
+    )
+    error_message = "Expected no Artifact Registry grants by default."
   }
 }
 
@@ -337,11 +441,21 @@ run "plan_managed_regional_cmek_secret_and_shell_executor" {
   }
 
   assert {
-    condition = strcontains(
-      module.runner-vm.instance.metadata["startup-script"],
-      "EXECUTOR='shell'",
+    condition = (
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "EXECUTOR='shell'",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "TimeoutStopSec=90",
+      ) &&
+      !strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "Requires=gitlab-runner-metadata-guard.service",
+      )
     )
-    error_message = "Expected shell executor in startup script."
+    error_message = "Expected shell executor without the docker guard unit."
   }
 
   assert {
@@ -349,6 +463,95 @@ run "plan_managed_regional_cmek_secret_and_shell_executor" {
       length(google_kms_crypto_key_iam_member.secretmanager_cmek) == 1
     )
     error_message = "Expected Secret Manager SA CMEK binding."
+  }
+}
+
+run "plan_registry_allowlists_services_and_graceful_shutdown" {
+  command = apply
+
+  variables {
+    docker_image = join("", [
+      "us-east4-docker.pkg.dev/my-ar-project-0/ci-mirror/cli@sha256:",
+      "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    ])
+    allowed_docker_images = [
+      "us-east4-docker.pkg.dev/my-ar-project-0/ci-mirror/*",
+    ]
+    allowed_docker_services = [
+      "us-docker.pkg.dev/my-ar-project-0/svc/postgres:16",
+    ]
+    docker_cap_add = ["CHOWN", "SETUID"]
+    artifact_registry_repositories = [
+      {
+        project_id = "my-ar-project-0"
+        location   = "us-east4"
+        repository = "ci-mirror"
+      },
+      {
+        project_id = "my-ar-project-0"
+        location   = "us"
+        repository = "svc"
+      },
+    ]
+    graceful_shutdown_secs = 600
+  }
+
+  assert {
+    condition = (
+      length(google_artifact_registry_repository_iam_member.runner_reader)
+      == 2 &&
+      alltrue([
+        for m in google_artifact_registry_repository_iam_member.runner_reader :
+        m.role == "roles/artifactregistry.reader" &&
+        m.member == module.runner-sa.iam_email
+      ]) &&
+      google_artifact_registry_repository_iam_member.runner_reader[
+        "my-ar-project-0/us-east4/ci-mirror"
+      ].repository == "ci-mirror"
+    )
+    error_message = "Expected repository-scoped Artifact Registry readers."
+  }
+
+  assert {
+    condition = alltrue([
+      for arg in [
+        "REGISTRY_HOSTS='us-docker.pkg.dev,us-east4-docker.pkg.dev'",
+        "  'us-east4-docker.pkg.dev/my-ar-project-0/ci-mirror/*'",
+        "  'us-docker.pkg.dev/my-ar-project-0/svc/postgres:16'",
+        "  'CHOWN'",
+        "  'SETUID'",
+        "--docker-services-cap-drop ALL",
+        "--docker-services-security-opt no-new-privileges=true",
+        "--docker-allowed-services \"$${service}\"",
+        "--docker-services-cap-add \"$${cap}\"",
+      ] :
+      strcontains(module.runner-vm.instance.metadata["startup-script"], arg)
+    ])
+    error_message = "Expected allowlists, capabilities, and registry hosts."
+  }
+
+  assert {
+    condition = (
+      module.runner-vm.instance.scheduling[0].graceful_shutdown[
+        0
+      ].enabled == true &&
+      module.runner-vm.instance.scheduling[0].graceful_shutdown[
+        0
+      ].max_duration[0].seconds == 600 &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "TimeoutStopSec=690",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "systemctl restart \"$${WATCHER_UNIT}\"",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "/instance/attributes/shutdown-status",
+      )
+    )
+    error_message = "Expected graceful shutdown and a PENDING_STOP watcher."
   }
 }
 
@@ -475,6 +678,118 @@ run "reject_legacy_gcr_docker_image" {
 
   expect_failures = [
     var.docker_image,
+  ]
+}
+
+run "reject_uppercase_gcr_docker_image" {
+  command = plan
+
+  variables {
+    docker_image = "GCR.IO/project/image:latest"
+  }
+
+  expect_failures = [
+    var.docker_image,
+  ]
+}
+
+run "reject_docker_hub_docker_image" {
+  command = plan
+
+  variables {
+    docker_image = "docker.io/library/alpine:latest"
+  }
+
+  expect_failures = [
+    var.docker_image,
+  ]
+}
+
+run "reject_bare_docker_image" {
+  command = plan
+
+  variables {
+    docker_image = "alpine:latest"
+  }
+
+  expect_failures = [
+    var.docker_image,
+  ]
+}
+
+run "reject_empty_allowed_docker_images" {
+  command = plan
+
+  variables {
+    allowed_docker_images = []
+  }
+
+  expect_failures = [
+    var.allowed_docker_images,
+  ]
+}
+
+run "reject_wildcard_registry_host_in_allowed_images" {
+  command = plan
+
+  variables {
+    allowed_docker_images = ["*-docker.pkg.dev/my-ar-project-0/ci/*"]
+  }
+
+  expect_failures = [
+    var.allowed_docker_images,
+  ]
+}
+
+run "reject_docker_hub_allowed_service" {
+  command = plan
+
+  variables {
+    allowed_docker_services = ["docker.io/library/postgres:16"]
+  }
+
+  expect_failures = [
+    var.allowed_docker_services,
+  ]
+}
+
+run "reject_cap_add_all" {
+  command = plan
+
+  variables {
+    docker_cap_add = ["ALL"]
+  }
+
+  expect_failures = [
+    var.docker_cap_add,
+  ]
+}
+
+run "reject_graceful_shutdown_over_six_hours" {
+  command = plan
+
+  variables {
+    graceful_shutdown_secs = 21601
+  }
+
+  expect_failures = [
+    var.graceful_shutdown_secs,
+  ]
+}
+
+run "reject_null_runner_token_wo_version" {
+  command = plan
+
+  variables {
+    create_runner_token_secret = true
+    runner_token_secret_wo = {
+      value      = "test-placeholder-not-a-secret"
+      wo_version = null
+    }
+  }
+
+  expect_failures = [
+    var.runner_token_secret_wo,
   ]
 }
 

@@ -13,7 +13,22 @@
 # limitations under the License.
 
 locals {
+  # Registry hosts that need the gcloud Docker credential helper.
+  _docker_registry_hosts = sort(distinct([
+    for image in concat(
+      [var.docker_image],
+      local.allowed_docker_images,
+      var.allowed_docker_services,
+    ) : split("/", lower(image))[0]
+  ]))
   _iap_ssh_rule_name = "${var.instance_name}-allow-iap-ssh"
+  _runner_dropin = chomp(templatefile(
+    "${local._templates}/runner-dropin.conf.tpl",
+    {
+      executor          = var.executor
+      stop_timeout_secs = local.runner_stop_timeout_secs
+    }
+  ))
   _snapshot_schedules = var.enable_boot_disk_snapshots ? {
     daily-backup = {
       schedule = {
@@ -30,10 +45,39 @@ locals {
       }
     }
   } : {}
+  _startup_template = "${local._templates}/startup.sh.tpl"
+  _templates        = "${path.module}/templates"
+  allowed_docker_images = (
+    var.allowed_docker_images == null
+    ? [var.docker_image]
+    : var.allowed_docker_images
+  )
+  artifact_registry_readers = {
+    for repo in var.artifact_registry_repositories :
+    "${repo.project_id}/${repo.location}/${repo.repository}" => repo
+  }
   compute_service_agent = format(
     "serviceAccount:service-%s@compute-system.iam.gserviceaccount.com",
     data.google_project.current.number
   )
+  # Hash of every input that shapes the runner registration, including the
+  # startup template itself. The startup script stores it after registering
+  # and re-registers on the next boot when it differs.
+  registration_fingerprint = sha256(jsonencode({
+    allowed_docker_images   = local.allowed_docker_images
+    allowed_docker_services = var.allowed_docker_services
+    docker_cap_add          = var.docker_cap_add
+    docker_image            = var.docker_image
+    executor                = var.executor
+    gitlab_url              = var.gitlab_url
+    region                  = var.region
+    runner_name             = var.instance_name
+    secret_id               = var.runner_token_secret_id
+    secret_project_id       = local.runner_token_secret_project_id
+    secret_version          = var.runner_token_secret_version
+    secret_wo_version       = local.runner_token_wo_version
+    startup_template        = filesha256(local._startup_template)
+  }))
   required_apis = toset([
     "compute.googleapis.com",
     "logging.googleapis.com",
@@ -54,32 +98,49 @@ locals {
       }
     }
   )
+  # SIGQUIT drain budget: the graceful shutdown period plus 90 of the 120
+  # seconds Compute Engine gives the guest OS, which leaves 30 seconds for
+  # unregister and the rest of the OS shutdown.
+  runner_stop_timeout_secs = coalesce(var.graceful_shutdown_secs, 0) + 90
   runner_token_secret_project_id = coalesce(
     var.runner_token_secret_project_id,
     var.project_id
+  )
+  runner_token_wo_version = try(
+    nonsensitive(var.runner_token_secret_wo.wo_version), null
   )
   secretmanager_service_agent = format(
     "serviceAccount:service-%s@gcp-sa-secretmanager.iam.gserviceaccount.com",
     data.google_project.current.number
   )
-  shutdown_script = join(" ", [
-    "gitlab-runner unregister",
-    "--config /etc/gitlab-runner/config.toml",
-    "--all-runners || true",
-  ])
-  startup_script = templatefile(
-    "${path.module}/templates/startup.sh.tpl",
-    {
-      docker_image      = var.docker_image
-      executor          = var.executor
-      gitlab_url        = var.gitlab_url
-      region            = var.region
-      runner_name       = var.instance_name
-      secret_id         = var.runner_token_secret_id
-      secret_project_id = local.runner_token_secret_project_id
-      secret_version    = var.runner_token_secret_version
-    }
-  )
+  shutdown_script = file("${local._templates}/shutdown.sh")
+  startup_script = templatefile(local._startup_template, {
+    allowed_images    = local.allowed_docker_images
+    allowed_services  = var.allowed_docker_services
+    cap_add           = var.docker_cap_add
+    docker_image      = var.docker_image
+    executor          = var.executor
+    fingerprint       = local.registration_fingerprint
+    gitlab_url        = var.gitlab_url
+    graceful_shutdown = var.graceful_shutdown_secs != null
+    guard_script      = chomp(file("${local._templates}/metadata-guard.sh"))
+    guard_unit = chomp(
+      file("${local._templates}/metadata-guard.service")
+    )
+    region            = var.region
+    registry_hosts    = join(",", local._docker_registry_hosts)
+    runner_dropin     = local._runner_dropin
+    runner_name       = var.instance_name
+    secret_id         = var.runner_token_secret_id
+    secret_project_id = local.runner_token_secret_project_id
+    secret_version    = var.runner_token_secret_version
+    watcher_script = chomp(
+      file("${local._templates}/shutdown-watcher.sh")
+    )
+    watcher_unit = chomp(
+      file("${local._templates}/shutdown-watcher.service")
+    )
+  })
 }
 
 data "google_project" "current" {
@@ -137,6 +198,17 @@ module "runner-sa" {
     ]
   }
   depends_on = [google_project_service.apis]
+}
+
+# Repository-scoped Artifact Registry read access for the default, job, and
+# service images instead of a project-wide reader grant.
+resource "google_artifact_registry_repository_iam_member" "runner_reader" {
+  for_each   = local.artifact_registry_readers
+  project    = each.value.project_id
+  location   = each.value.location
+  repository = each.value.repository
+  role       = "roles/artifactregistry.reader"
+  member     = module.runner-sa.iam_email
 }
 
 resource "google_kms_crypto_key_iam_member" "compute_cmek" {
@@ -219,6 +291,14 @@ module "runner-vm" {
     encrypt_boot      = true
     kms_key_self_link = var.kms_key_id
   }
+  # Optional graceful shutdown period; the startup script installs a
+  # watcher that drains the runner when the VM enters PENDING_STOP.
+  lifecycle_config = {
+    graceful_shutdown = var.graceful_shutdown_secs == null ? null : {
+      enabled           = true
+      max_duration_secs = var.graceful_shutdown_secs
+    }
+  }
   metadata = {
     block-project-ssh-keys = "TRUE"
     enable-oslogin         = "TRUE"
@@ -245,6 +325,7 @@ module "runner-vm" {
   depends_on = [
     module.runner-sa,
     module.runner-token-secret,
+    google_artifact_registry_repository_iam_member.runner_reader,
     google_kms_crypto_key_iam_member.compute_cmek,
     google_secret_manager_regional_secret_iam_member.runner_token,
     time_sleep.service_agent_propagation,

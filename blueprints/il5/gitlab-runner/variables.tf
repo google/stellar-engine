@@ -12,6 +12,71 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "allowed_docker_images" {
+  description = "Job image allowlist patterns; null allows only docker_image."
+  type        = list(string)
+  default     = null
+  validation {
+    condition = (
+      var.allowed_docker_images == null ||
+      try(length(var.allowed_docker_images) > 0, false)
+    )
+    error_message = "Set allowed_docker_images to null or a non-empty list."
+  }
+  validation {
+    condition = alltrue([
+      for image in coalesce(var.allowed_docker_images, []) : (
+        can(regex("^[a-zA-Z0-9._/@:*-]{1,256}$", image)) &&
+        !can(regex("(^|\\.)gcr\\.io/", lower(image))) &&
+        can(regex("^[a-z0-9-]+-docker\\.pkg\\.dev/", lower(image)))
+      )
+    ])
+    error_message = (
+      "Allowed images must use <location>-docker.pkg.dev hosts, not gcr.io."
+    )
+  }
+}
+
+variable "allowed_docker_services" {
+  description = "Service image allowlist patterns; empty disables CI services."
+  type        = list(string)
+  default     = []
+  nullable    = false
+  validation {
+    condition = alltrue([
+      for service in var.allowed_docker_services : (
+        can(regex("^[a-zA-Z0-9._/@:*-]{1,256}$", service)) &&
+        !can(regex("(^|\\.)gcr\\.io/", lower(service))) &&
+        can(regex("^[a-z0-9-]+-docker\\.pkg\\.dev/", lower(service)))
+      )
+    ])
+    error_message = (
+      "Allowed services must use <location>-docker.pkg.dev hosts, not gcr.io."
+    )
+  }
+}
+
+variable "artifact_registry_repositories" {
+  description = "Artifact Registry repositories the runner SA may read."
+  type = list(object({
+    project_id = string
+    location   = string
+    repository = string
+  }))
+  default  = []
+  nullable = false
+  validation {
+    condition = alltrue([
+      for repo in var.artifact_registry_repositories : (
+        can(regex("^[a-z][a-z0-9-]{4,28}[a-z0-9]$", repo.project_id)) &&
+        can(regex("^[a-z]+(-[a-z]+[0-9]+)?$", repo.location)) &&
+        can(regex("^[a-z]([a-z0-9-]{0,61}[a-z0-9])?$", repo.repository))
+      )
+    ])
+    error_message = "Use valid project_id, location, and repository values."
+  }
+}
+
 variable "boot_disk_size_gb" {
   description = "Size of the runner boot disk in GiB."
   type        = number
@@ -41,6 +106,24 @@ variable "create_runner_token_secret" {
   nullable    = false
 }
 
+variable "docker_cap_add" {
+  description = "Capabilities re-added to job and service containers."
+  type        = list(string)
+  default     = []
+  nullable    = false
+  validation {
+    condition = alltrue([
+      for cap in var.docker_cap_add : (
+        can(regex("^[A-Z][A-Z0-9_]*$", cap)) &&
+        !contains(["ALL", "CAP_ALL"], cap)
+      )
+    ])
+    error_message = (
+      "Use uppercase capability names such as NET_BIND_SERVICE, never ALL."
+    )
+  }
+}
+
 variable "docker_image" {
   description = "Default Artifact Registry image when executor is docker."
   type        = string
@@ -51,8 +134,13 @@ variable "docker_image" {
     error_message = "Use a valid container image reference without whitespace."
   }
   validation {
-    condition     = !can(regex("(^|\\.)gcr\\.io/", var.docker_image))
-    error_message = "Legacy gcr.io registries are forbidden; use pkg.dev."
+    condition = (
+      !can(regex("(^|\\.)gcr\\.io/", lower(var.docker_image))) &&
+      can(regex("^[a-z0-9-]+-docker\\.pkg\\.dev/", lower(var.docker_image)))
+    )
+    error_message = (
+      "Use an Artifact Registry <location>-docker.pkg.dev image, not gcr.io."
+    )
   }
 }
 
@@ -123,6 +211,24 @@ variable "golden_image" {
       var.golden_image
     ))
     error_message = "Use a valid GCE image or image family reference."
+  }
+}
+
+variable "graceful_shutdown_secs" {
+  description = "Optional Compute Engine graceful shutdown period in seconds."
+  type        = number
+  default     = null
+  validation {
+    condition = (
+      var.graceful_shutdown_secs == null ||
+      try(
+        floor(var.graceful_shutdown_secs) == var.graceful_shutdown_secs &&
+        var.graceful_shutdown_secs >= 1 &&
+        var.graceful_shutdown_secs <= 21600,
+        false
+      )
+    )
+    error_message = "Use null or a whole number of seconds from 1 to 21600."
   }
 }
 
@@ -320,7 +426,7 @@ variable "runner_token_secret_wo" {
   validation {
     condition = (
       var.runner_token_secret_wo == null ||
-      var.runner_token_secret_wo.wo_version >= 1
+      try(var.runner_token_secret_wo.wo_version >= 1, false)
     )
     error_message = "runner_token_secret_wo.wo_version must be at least 1."
   }
