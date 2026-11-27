@@ -49,6 +49,15 @@ COMPLIANCE_REGIMES = [
     "NONE",
 ]
 REGULATED_COMPLIANCE_REGIMES = [r for r in COMPLIANCE_REGIMES if r != "NONE"]
+KG_DISABLED_REGIMES = (
+    "1",
+    "3",
+    "4",
+    "FEDRAMP_HIGH",
+    "FedRAMP High",
+    "IL4",
+    "IL5",
+)
 COMPLIANCE_REGIME_LABELS = {
     "1": "FedRAMP High",
     "2": "FedRAMP Moderate",
@@ -1125,34 +1134,7 @@ def onboard():
     click.echo(nl=True)
 
     if compliance_regime_id == "1":
-        click.echo(
-            click.style(
-                "Gemini Enterprise contains default features that are not yet "
-                "authorized for FedRAMP High and must be disabled. These "
-                "features are currently:",
-                fg="yellow",
-            )
-        )
-        click.echo(
-            click.style(
-                "- Grounding with OneDrive / Google Drive File Uploads",
-                fg="yellow",
-            )
-        )
-        click.echo(click.style("- Grounding with Google Search", fg="yellow"))
-        click.echo(click.style("- Image / Video Generation", fg="yellow"))
-        click.echo(click.style("- Implicit Model Data Caching", fg="yellow"))
-        click.echo(
-            click.style("- Knowledge Graph / People Connectors", fg="yellow")
-        )
-        click.echo(click.style("- Location Context", fg="yellow"))
-        click.echo(click.style("- Memory and Customization", fg="yellow"))
-        click.echo(click.style("- Model Armor", fg="yellow"))
-        click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
-        click.echo(click.style("- Prompt Gallery", fg="yellow"))
-        click.echo(click.style("- Session Sharing", fg="yellow"))
-        click.echo(click.style("- User Event Collection", fg="yellow"))
-        click.echo(click.style("- User Feedback", fg="yellow"))
+        _echo_unauthorized_features("FedRAMP High", include_model_armor=False)
         configure_gemini_enterprise_for_fedramp_high(
             credentials, project_id, engine_id
         )
@@ -1169,64 +1151,10 @@ def onboard():
             credentials, project_id, engine_id, regime_label
         )
     elif compliance_regime_id == "3":
-        click.echo(
-            click.style(
-                "Gemini Enterprise contains default features that are not yet "
-                "authorized for IL4 and must be disabled. These features are "
-                "currently:",
-                fg="yellow",
-            )
-        )
-        click.echo(
-            click.style(
-                "- Grounding with OneDrive / Google Drive File Uploads",
-                fg="yellow",
-            )
-        )
-        click.echo(click.style("- Grounding with Google Search", fg="yellow"))
-        click.echo(click.style("- Image / Video Generation", fg="yellow"))
-        click.echo(click.style("- Implicit Model Data Caching", fg="yellow"))
-        click.echo(
-            click.style("- Knowledge Graph / People Connectors", fg="yellow")
-        )
-        click.echo(click.style("- Location Context", fg="yellow"))
-        click.echo(click.style("- Memory and Customization", fg="yellow"))
-        click.echo(click.style("- Model Armor", fg="yellow"))
-        click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
-        click.echo(click.style("- Prompt Gallery", fg="yellow"))
-        click.echo(click.style("- Session Sharing", fg="yellow"))
-        click.echo(click.style("- User Event Collection", fg="yellow"))
-        click.echo(click.style("- User Feedback", fg="yellow"))
+        _echo_unauthorized_features("IL4", include_model_armor=True)
         configure_gemini_enterprise_for_il4(credentials, project_id, engine_id)
     elif compliance_regime_id == "4":
-        click.echo(
-            click.style(
-                "Gemini Enterprise contains default features that are not yet "
-                "authorized for IL5 and must be disabled. These features are "
-                "currently:",
-                fg="yellow",
-            )
-        )
-        click.echo(
-            click.style(
-                "- Grounding with OneDrive / Google Drive File Uploads",
-                fg="yellow",
-            )
-        )
-        click.echo(click.style("- Grounding with Google Search", fg="yellow"))
-        click.echo(click.style("- Image / Video Generation", fg="yellow"))
-        click.echo(click.style("- Implicit Model Data Caching", fg="yellow"))
-        click.echo(
-            click.style("- Knowledge Graph / People Connectors", fg="yellow")
-        )
-        click.echo(click.style("- Location Context", fg="yellow"))
-        click.echo(click.style("- Memory and Customization", fg="yellow"))
-        click.echo(click.style("- Model Armor", fg="yellow"))
-        click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
-        click.echo(click.style("- Prompt Gallery", fg="yellow"))
-        click.echo(click.style("- Session Sharing", fg="yellow"))
-        click.echo(click.style("- User Event Collection", fg="yellow"))
-        click.echo(click.style("- User Feedback", fg="yellow"))
+        _echo_unauthorized_features("IL5", include_model_armor=True)
         configure_gemini_enterprise_for_il5(credentials, project_id, engine_id)
 
     click.echo(nl=True)
@@ -1397,96 +1325,15 @@ def update_compliance(project_id, engine_id, compliance_regime):
     credentials = get_credentials()
 
     if compliance_regime == "FEDRAMP_HIGH":
-        click.echo(
-            click.style(
-                "Gemini Enterprise contains default features that are not yet "
-                "authorized for FedRAMP High and must be disabled. These "
-                "features are currently:",
-                fg="yellow",
-            )
-        )
-        click.echo(
-            click.style(
-                "- Grounding with OneDrive / Google Drive File Uploads",
-                fg="yellow",
-            )
-        )
-        click.echo(click.style("- Grounding with Google Search", fg="yellow"))
-        click.echo(click.style("- Image / Video Generation", fg="yellow"))
-        click.echo(click.style("- Implicit Model Data Caching", fg="yellow"))
-        click.echo(
-            click.style("- Knowledge Graph / People Connectors", fg="yellow")
-        )
-        click.echo(click.style("- Location Context", fg="yellow"))
-        click.echo(click.style("- Memory and Customization", fg="yellow"))
-        click.echo(click.style("- Model Armor", fg="yellow"))
-        click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
-        click.echo(click.style("- Prompt Gallery", fg="yellow"))
-        click.echo(click.style("- Session Sharing", fg="yellow"))
-        click.echo(click.style("- User Event Collection", fg="yellow"))
-        click.echo(click.style("- User Feedback", fg="yellow"))
+        _echo_unauthorized_features("FedRAMP High", include_model_armor=False)
         configure_gemini_enterprise_for_fedramp_high(
             credentials, project_id, engine_id
         )
     elif compliance_regime == "IL4":
-        click.echo(
-            click.style(
-                "Gemini Enterprise contains default features that are not yet "
-                "authorized for IL4 and must be disabled. These features are "
-                "currently:",
-                fg="yellow",
-            )
-        )
-        click.echo(
-            click.style(
-                "- Grounding with OneDrive / Google Drive File Uploads",
-                fg="yellow",
-            )
-        )
-        click.echo(click.style("- Grounding with Google Search", fg="yellow"))
-        click.echo(click.style("- Image / Video Generation", fg="yellow"))
-        click.echo(click.style("- Implicit Model Data Caching", fg="yellow"))
-        click.echo(
-            click.style("- Knowledge Graph / People Connectors", fg="yellow")
-        )
-        click.echo(click.style("- Location Context", fg="yellow"))
-        click.echo(click.style("- Memory and Customization", fg="yellow"))
-        click.echo(click.style("- Model Armor", fg="yellow"))
-        click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
-        click.echo(click.style("- Prompt Gallery", fg="yellow"))
-        click.echo(click.style("- Session Sharing", fg="yellow"))
-        click.echo(click.style("- User Event Collection", fg="yellow"))
-        click.echo(click.style("- User Feedback", fg="yellow"))
+        _echo_unauthorized_features("IL4", include_model_armor=True)
         configure_gemini_enterprise_for_il4(credentials, project_id, engine_id)
     elif compliance_regime == "IL5":
-        click.echo(
-            click.style(
-                "Gemini Enterprise contains default features that are not yet "
-                "authorized for IL5 and must be disabled. These features are "
-                "currently:",
-                fg="yellow",
-            )
-        )
-        click.echo(
-            click.style(
-                "- Grounding with OneDrive / Google Drive File Uploads",
-                fg="yellow",
-            )
-        )
-        click.echo(click.style("- Grounding with Google Search", fg="yellow"))
-        click.echo(click.style("- Image / Video Generation", fg="yellow"))
-        click.echo(click.style("- Implicit Model Data Caching", fg="yellow"))
-        click.echo(
-            click.style("- Knowledge Graph / People Connectors", fg="yellow")
-        )
-        click.echo(click.style("- Location Context", fg="yellow"))
-        click.echo(click.style("- Memory and Customization", fg="yellow"))
-        click.echo(click.style("- Model Armor", fg="yellow"))
-        click.echo(click.style("- NotebookLM Enterprise", fg="yellow"))
-        click.echo(click.style("- Prompt Gallery", fg="yellow"))
-        click.echo(click.style("- Session Sharing", fg="yellow"))
-        click.echo(click.style("- User Event Collection", fg="yellow"))
-        click.echo(click.style("- User Feedback", fg="yellow"))
+        _echo_unauthorized_features("IL5", include_model_armor=True)
         configure_gemini_enterprise_for_il5(credentials, project_id, engine_id)
     elif compliance_regime in REGULATED_COMPLIANCE_REGIMES:
         regime_label = COMPLIANCE_REGIME_LABELS.get(
@@ -2583,6 +2430,35 @@ def create_application_logic(
 ##############################################################
 
 
+def _echo_unauthorized_features(regime_label, include_model_armor=False):
+    """Prints the list of features disabled for a regulated regime."""
+    features = [
+        "Grounding with OneDrive / Google Drive File Uploads",
+        "Grounding with Google Search",
+        "Image / Video Generation",
+        "Implicit Model Data Caching",
+        "Knowledge Graph / People Connectors",
+        "Location Context",
+        "Memory and Customization",
+        *(["Model Armor"] if include_model_armor else []),
+        "NotebookLM Enterprise",
+        "Prompt Gallery",
+        "Session Sharing",
+        "User Event Collection",
+        "User Feedback",
+    ]
+    click.echo(
+        click.style(
+            "Gemini Enterprise contains default features that are not yet "
+            f"authorized for {regime_label} and must be disabled. These "
+            "features are currently:",
+            fg="yellow",
+        )
+    )
+    for feature in features:
+        click.echo(click.style(f"- {feature}", fg="yellow"))
+
+
 def get_project_number(credentials, project_id):
     """Gets the project number for a given project ID."""
     try:
@@ -3005,6 +2881,12 @@ def create_engine(
     if is_regulated:
         engine["features"] = engine_features.get("features")
 
+    if compliance_regime in KG_DISABLED_REGIMES:
+        engine["knowledgeGraphConfig"] = {
+            "enablePrivateKnowledgeGraph": False,
+            "enableCloudKnowledgeGraph": False,
+        }
+
     if enable_audit_logs:
         engine["observabilityConfig"] = {
             "observabilityEnabled": True,
@@ -3289,6 +3171,12 @@ def configure_gemini_enterprise_for_regime(
     )
     engine_patch_body = {"features": engine_features.get("features")}
     engine_update_mask = "features"
+    if regime_label in KG_DISABLED_REGIMES:
+        engine_patch_body["knowledgeGraphConfig"] = {
+            "enablePrivateKnowledgeGraph": False,
+            "enableCloudKnowledgeGraph": False,
+        }
+        engine_update_mask = "features,knowledgeGraphConfig"
 
     engine_request = (
         service.projects()
