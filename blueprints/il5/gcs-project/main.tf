@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-data "google_project" "current" {
-  project_id = var.main_project_id
-}
-
 data "google_kms_key_ring" "default" {
   name     = var.kms_keyring_name
   location = var.region
@@ -29,14 +25,21 @@ data "google_kms_crypto_key" "default" {
   key_ring = data.google_kms_key_ring.default.id
 }
 
-locals {
-  cloud_storage_service_account = "service-${data.google_project.current.number}@gs-project-accounts.iam.gserviceaccount.com"
+resource "google_project_service" "storage_api" {
+  project            = var.main_project_id
+  service            = "storage.googleapis.com"
+  disable_on_destroy = false
+}
+
+data "google_storage_project_service_account" "gcs_sa" {
+  project    = var.main_project_id
+  depends_on = [google_project_service.storage_api]
 }
 
 resource "google_kms_crypto_key_iam_member" "gcs_sa_kms_access" {
   crypto_key_id = data.google_kms_crypto_key.default.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:${local.cloud_storage_service_account}"
+  member        = data.google_storage_project_service_account.gcs_sa.member
 }
 
 module "gcs" {
@@ -44,6 +47,7 @@ module "gcs" {
   prefix         = var.prefix
   project_id     = var.main_project_id
   location       = var.region
+  autoclass      = var.autoclass
   storage_class  = var.storage_class
   encryption_key = data.google_kms_crypto_key.default.id
   name           = var.bucket_name
@@ -56,7 +60,8 @@ module "gcs" {
 
   retention_policy = var.retention_policy
   depends_on = [
-    google_kms_crypto_key_iam_member.gcs_sa_kms_access
+    google_kms_crypto_key_iam_member.gcs_sa_kms_access,
+    google_project_service.storage_api,
   ]
 }
 
