@@ -2,9 +2,9 @@
 
 | Field | Value |
 | :--- | :--- |
-| Date updated | December 5, 2025 |
-| Version | v3.0 |
-| Recent changes | Updates to reflect new architecture and administrative corrections |
+| Date updated | November 2026 |
+| Version | v7.0 |
+| Recent changes | Aligned Stages 0 through 3, organization policies, IAM, module inventory, networking, and Assured Workloads documentation with Stellar Engine v7 |
 
 This document serves as an illustrative technical working reference to guide project delivery. Its activities and design goals provide architectural detail and do not supersede any legal terms or conditions defined in the customer's written contract with Google.
 
@@ -16,10 +16,11 @@ This document serves as an illustrative technical working reference to guide pro
 - [3. Cloud foundation](#3-cloud-foundation)
   - [3.1 Project organization](#31-project-organization)
     - [Network security and isolation](#network-security-and-isolation)
-    - [Data security and encryption](#data-security-and-encryption)
+    - [Data security and compute hardening](#data-security-and-compute-hardening)
     - [IAM and service accounts](#iam-and-service-accounts)
     - [Serverless security](#serverless-security)
-    - [Resource management](#resource-management)
+    - [Resource management and logging](#resource-management-and-logging)
+    - [Optional guardrail policy packs](#optional-guardrail-policy-packs)
     - [Folder hierarchy](#folder-hierarchy)
     - [Example organization layout](#example-organization-layout)
   - [3.2 IAM](#32-iam)
@@ -32,13 +33,13 @@ This document serves as an illustrative technical working reference to guide pro
       - [Bootstrap service account](#bootstrap-service-account)
     - [IAM roles](#iam-roles)
       - [Organization node](#organization-node)
-      - [Data platform development folder](#data-platform-development-folder)
-      - [Data platform production folder](#data-platform-production-folder)
-      - [GKE development folder](#gke-development-folder)
-      - [GKE production folder](#gke-production-folder)
+      - [Data platform folders](#data-platform-folders)
+      - [GKE folders](#gke-folders)
       - [Networking folder](#networking-folder)
       - [Networking development folder](#networking-development-folder)
       - [Networking production folder](#networking-production-folder)
+      - [Security folder](#security-folder)
+      - [Teams and sandbox folders](#teams-and-sandbox-folders)
       - [Core automation project](#core-automation-project)
   - [3.3 Code control](#33-code-control)
     - [GitHub repositories](#github-repositories)
@@ -121,9 +122,9 @@ For post-deployment operational hardening procedures, see the [Security Best Pra
 
 ## 2. Executive summary
 
-The supplied directory structure and Terraform modules provide a starting foundation with pragmatic defaults that you can tailor to organizational requirements. Operators currently deploy the stages manually while evaluating IL5-compliant CI/CD automation options such as GitHub Actions, GitLab CI/CD, and Cloud Build.
+The supplied directory structure and Terraform modules provide a starting foundation with pragmatic defaults that you can tailor to organizational requirements. Operators apply Stage `0-bootstrap` once during initial setup to create core administrative projects, Cloud Storage state buckets, Workload Identity Federation providers in `fast/stages-aw/0-bootstrap/workload-identity.tf`, and CI/CD automation resources in `fast/stages-aw/0-bootstrap/cicd.tf` with templates for GitHub Actions, GitLab CI/CD, and Cloud Build or Source Repositories. Subsequent stages execute either through those keyless CI/CD pipelines or via operator impersonation of stage service accounts.
 
-Stage 0 creates a root folder at the top of the organization to hold foundational projects and policies. Under the root folder, you can provision tenant folders inside Assured Workloads boundaries configured for regimes such as FedRAMP Moderate, FedRAMP High, or IL5. Deployments typically validate workloads in non-production environments before promoting configurations to production.
+Stage 0 creates the root Assured Workloads enclave folder `StellarEngine-<prefix>` via `google_assured_workloads_workload.primary`, defaulting to `IL5` in `US`, together with a `<RegimeCode> Common Services` folder for core administrative projects. Stage `1-resman` creates environment folders named `<RegimeCode> <Env>` under the root enclave folder to isolate non-production and production tenant folders inside the deployment's Assured Workloads boundary. Workloads requiring separate compliance regimes deploy into separate landing zone installations unless isolated at separate organization or folder boundaries outside Terraform.
 
 ### 2.1 Overview
 
@@ -131,19 +132,19 @@ Bootstrap scripts and staged Terraform configurations provision a baseline landi
 
 ### 2.2 Project architecture
 
-In the `example.com` reference architecture, foundational projects reside under the organization hierarchy to host shared automation, audit logging, and billing telemetry created by the deployment pipeline.
+In the `example.com` reference architecture, Stage 0 provisions foundational projects inside the `<RegimeCode> Common Services` folder under `StellarEngine-<prefix>` to host shared automation, audit logging, and optional billing export telemetry:
 
 | Project | Description |
 | :--- | :--- |
-| `org-iac-core-0` | Hosts the Terraform state buckets and automation service accounts that build foundational organization components. Restrict access to this project tightly. |
-| `org-audit-logs-0` | Hosts centralized log sinks, retention buckets, and detective security controls. |
-| `org-billing-export-0` | Hosts an optional BigQuery dataset for organization [billing exports](https://cloud.google.com/billing/docs/how-to/export-data-bigquery). |
+| `<prefix>-prod-iac-core-0` | Hosts the Terraform state buckets, stage automation service accounts, and core KMS state encryption keys. Restrict access to this project tightly. |
+| `<prefix>-prod-audit-logs-0` | Hosts centralized organization log sinks, KMS keys for logging, and 365-day Cloud Logging retention buckets. |
+| `<prefix>-prod-billing-exp-0` | Optional project provisioned when `billing_account.is_org_level` is true to host a BigQuery dataset for organization [billing exports](https://cloud.google.com/billing/docs/how-to/export-data-bigquery). |
 
 ## 3. Cloud foundation
 
 ### 3.1 Project organization
 
-Terraform enforces the following organization policies at the organization level using Google-managed constraints and custom constraints defined in YAML files under `data/org-policies/` and `data/custom-org-policies/`.
+Stage `0-bootstrap` enforces organization policies defined under `fast/stages-aw/0-bootstrap/data/org-policies/`, `data/custom-org-policies/`, and `data/custom-constraint-policies/`. By default, Terraform attaches policies at the organization node. When `deploy_org_resources.org_policies` is `false` for folder-scoped deployments, `module.root-folder-config[0]` applies eligible policies onto the `StellarEngine-<prefix>` root folder while excluding organization-only `resourcemanager.accessBoundaries`, custom constraints under `custom.*`, and the 12 baseline constraints listed in `aw_managed_policies` (`compute.disableGlobalCloudArmorPolicy`, `compute.disableGlobalLoadBalancing`, `compute.setNewProjectDefaultToZonalDNSOnly`, `compute.skipDefaultNetworkCreation`, `gcp.resourceLocations`, `gcp.restrictCmekCryptoKeyProjects`, `gcp.restrictNonCmekServices`, `gcp.restrictServiceUsage`, `gcp.restrictTLSVersion`, `iam.automaticIamGrantsForDefaultServiceAccounts`, `iam.disableServiceAccountKeyCreation`, and `storage.publicAccessPrevention`) so folder applies do not collide with Assured Workloads controls.
 
 #### Network security and isolation
 
@@ -151,102 +152,139 @@ Terraform enforces the following organization policies at the organization level
 | :--- | :--- |
 | `compute.vmExternalIpAccess` | Denies all external IP addresses on Compute Engine VM instances. |
 | `compute.skipDefaultNetworkCreation` | Skips creation of the `default` VPC network in newly created projects. |
-| `compute.restrictProtocolForwardingCreationForTypes` | Restricts new forwarding rules to `INTERNAL` IP addresses. |
-| `compute.restrictLoadBalancerCreationForTypes` | Restricts load balancer creation to `INTERNAL` types only. |
-| `compute.disableGlobalLoadBalancing` | Disables global load balancing resources. |
-| `compute.disableGlobalCloudArmorPolicy` | Disables global Cloud Armor security policies. |
-| `compute.disableGlobalSelfManagedSslCertificate` | Disables global self-managed SSL certificates. |
-| `compute.restrictCloudNATUsage` | Restricts Cloud NAT gateways to organization resources. |
-| `compute.restrictDedicatedInterconnectUsage` | Restricts Dedicated Interconnect attachments to organization resources. |
-| `compute.restrictPartnerInterconnectUsage` | Restricts Partner Interconnect attachments to organization resources. |
-| `compute.restrictVpcPeering` | Restricts VPC Network Peering to organization resources and approved folders. |
+| `compute.requireVpcFlowLogs` | Requires `COMPREHENSIVE` VPC Flow Logs across managed subnetworks. |
+| `custom.restrictFirewallRanges` | Custom constraint denying ingress firewall rules that allow `0.0.0.0/0` or `::/0`. |
+| `compute.restrictProtocolForwardingCreationForTypes` | Restricts forwarding rules to `INTERNAL` addresses; skipped when `regime` is `FEDRAMP_MODERATE`. |
+| `compute.managed.restrictProtocolForwardingCreationForTypes` | Enforces Google-managed internal protocol forwarding; skipped when `regime` is `FEDRAMP_MODERATE`. |
+| `compute.restrictLoadBalancerCreationForTypes` | Restricts load balancer creation to `INTERNAL` types; skipped when `regime` is `FEDRAMP_MODERATE`. |
+| `compute.disableGlobalLoadBalancing` | Disables global load balancing resources; skipped when `regime` is `FEDRAMP_MODERATE`. |
+| `compute.disableGlobalCloudArmorPolicy` | Disables global Cloud Armor policies; skipped when `regime` is `FEDRAMP_MODERATE`. |
+| `compute.disableGlobalSelfManagedSslCertificate` | Disables global self-managed SSL certificates; skipped when `regime` is `FEDRAMP_MODERATE`. |
+| `compute.restrictCloudNATUsage` | Restricts Cloud NAT gateways to `under:organizations/<org_id>`. |
+| `compute.restrictDedicatedInterconnectUsage` | Restricts Dedicated Interconnect attachments to `under:organizations/<org_id>`. |
+| `compute.restrictPartnerInterconnectUsage` | Restricts Partner Interconnect attachments to `under:organizations/<org_id>`. |
+| `compute.restrictVpcPeering` | Restricts VPC Network Peering to `under:organizations/<org_id>` and configured `allowed_vpc_peering_producers`, defaulting to `under:folders/832634261155`. |
 | `compute.setNewProjectDefaultToZonalDNSOnly` | Configures newly created projects to use zonal internal DNS by default. |
+| `compute.disableAllIpv6` | Explicit baseline entry set to `enforce: false` to permit IPv6 configuration unless disabled by deployment policy. |
+| `compute.disableHybridCloudIpv6` | Explicit baseline entry set to `enforce: false` for hybrid Cloud Router, Interconnect, and VPN IPv6 stacks. |
+| `compute.disableInternetNetworkEndpointGroup` | Explicit baseline entry set to `enforce: false` for Internet Network Endpoint Groups. |
+| `compute.disableVpcExternalIpv6` | Explicit baseline entry set to `enforce: false` for external IPv6 subnetworks. |
+| `compute.disableVpcInternalIpv6` | Explicit baseline entry set to `enforce: false` for internal IPv6 subnetworks. |
+| `iap.requireGlobalIapWebDisabled` | Explicit baseline entry set to `enforce: false` for global Identity-Aware Proxy web backends. |
+| `iap.requireRegionalIapWebDisabled` | Explicit baseline entry set to `enforce: false` for regional Identity-Aware Proxy web backends. |
+| `datastream.disablePublicConnectivity` | Disables public IP connectivity for Datastream connection profiles. |
 | `sql.restrictAuthorizedNetworks` | Blocks unproxied authorized network ranges on Cloud SQL instances. |
 | `sql.restrictPublicIp` | Blocks public IP addresses on Cloud SQL instances. |
 
-#### Data security and encryption
+#### Data security and compute hardening
 
 | Constraint | Enforcement |
 | :--- | :--- |
-| `custom.kmsRotation` | Custom constraint enforcing the maximum rotation period on Cloud KMS keys. |
+| `custom.kmsRotation` | Custom constraint requiring `SYMMETRIC_ENCRYPTION` Cloud KMS key rotation periods of 90 days (`7776000s`) or less. |
+| `gcp.restrictNonCmekServices` | Denies `documentai.googleapis.com` by default unless configured with compliant CMEK settings. |
+| `gcp.restrictTLSVersion` | Denies `TLS_VERSION_1` and `TLS_VERSION_1_1` across TLS endpoints. |
+| `gcp.resourceLocations` | Enforces `in:us-locations` for `IL4`, `IL5`, and `FEDRAMP_HIGH`, and denies `in:asia-east2-locations` and `in:global` when `regime` is `FEDRAMP_MODERATE`. |
+| `compute.requireShieldedVm` | Requires Shielded VM vTPM and integrity monitoring features on Compute Engine instances. |
+| `compute.disableNestedVirtualization` | Disables nested virtualization on Compute Engine VM instances. |
+| `compute.disableSerialPortAccess` | Disables interactive serial port access on Compute Engine VM instances. |
+| `compute.disableGuestAttributesAccess` | Disables Compute Engine guest attributes metadata access. |
+| `compute.disableSshInBrowser` | Explicit baseline entry set to `enforce: false` for Cloud Console SSH-in-browser. |
+| `compute.trustedImageProjects` | Restricts instance boot images to 20 approved public and partner image projects including `paloaltonetworksgcp-public`. |
 | `storage.uniformBucketLevelAccess` | Requires uniform bucket-level access across Cloud Storage buckets. |
 | `storage.publicAccessPrevention` | Blocks public access on Cloud Storage buckets. |
 | `storage.secureHttpTransport` | Requires HTTPS transport for Cloud Storage requests. |
 | `appengine.disableCodeDownload` | Disables source code downloads from App Engine applications. |
 | `bigquery.disableBQOmniAWS` | Disables BigQuery Omni cross-cloud connections to AWS. |
 | `bigquery.disableBQOmniAzure` | Disables BigQuery Omni cross-cloud connections to Azure. |
+| `firestore.requireP4SAforImportExport` | Explicit baseline entry set to `enforce: false` for Firestore P4SA import and export enforcement. |
+| `clouddeploy.disableServiceLabelGeneration` | Explicit baseline entry set to `enforce: false` for Cloud Deploy service label generation. |
 
 #### IAM and service accounts
 
 | Constraint | Enforcement |
 | :--- | :--- |
-| `iam.managed.disableServiceAccountKeyCreation` | Disables user-managed service account key creation. |
-| `iam.managed.disableServiceAccountKeyUpload` | Disables uploading external public keys to service accounts. |
-| `iam.managed.preventPrivilegedBasicRolesForDefaultServiceAccounts` | Blocks privileged basic roles on default service accounts. |
+| `iam.disableServiceAccountKeyCreation` | Disables user-managed service account key creation. |
+| `iam.managed.disableServiceAccountKeyCreation` | Managed constraint disabling user-managed service account key creation. |
+| `iam.disableServiceAccountKeyUpload` | Disables uploading external public keys to service accounts. |
+| `iam.managed.disableServiceAccountKeyUpload` | Managed constraint disabling external public key uploads to service accounts. |
+| `iam.disableServiceAccountCreation` | Explicit baseline entry set to `enforce: false` so Terraform can create dedicated workload service accounts. |
+| `iam.managed.preventPrivilegedBasicRolesForDefaultServiceAccounts` | Managed constraint blocking privileged basic roles on default service accounts. |
 | `iam.automaticIamGrantsForDefaultServiceAccounts` | Prevents automatic Editor role grants on default service accounts. |
 | `iam.serviceAccountKeyExposureResponse` | Sets `DISABLE_KEY` to disable exposed service account keys automatically. |
-| `iam.allowedPolicyMemberDomains` | Restricts IAM policy principals to the customer ID and approved domains. |
-| `essentialcontacts.managed.allowedContactDomains` | Restricts Essential Contacts notifications to approved domains. |
-| `essentialcontacts.allowedContactDomains` | Restricts Essential Contacts addresses to the organization domain. |
+| `iam.allowedPolicyMemberDomains` | Restricts IAM policy principals to the customer ID and configured `allowed_domains`. |
+| `compute.requireOsLogin` | Enforces OS Login across Compute Engine VMs; skipped when `regime` is `IL4` or `IL5`. |
+| `essentialcontacts.managed.allowedContactDomains` | Managed constraint restricting Essential Contacts notifications to `@<domain_name>`. |
+| `essentialcontacts.allowedContactDomains` | Restricts Essential Contacts addresses to `@<domain_name>`. |
+| `essentialcontacts.disableProjectSecurityContacts` | Explicit baseline entry set to `enforce: false` so project security contacts remain configurable when needed. |
 
 #### Serverless security
 
 | Constraint | Enforcement |
 | :--- | :--- |
 | `cloudfunctions.allowedIngressSettings` | Sets `ALLOW_INTERNAL_AND_GCLB` to restrict Cloud Functions ingress. |
-| `cloudfunctions.allowedVpcConnectorEgressSettings` | Sets `ALL_TRAFFIC` to route all Cloud Functions egress through a VPC connector. |
-| `run.allowedIngress` | Sets `internal-and-cloud-load-balancing` to restrict Cloud Run ingress. |
-| `run.allowedVPCEgress` | Sets `all-traffic` to route all Cloud Run egress through VPC networking. |
+| `cloudfunctions.allowedVpcConnectorEgressSettings` | Sets `ALL_TRAFFIC` to route Cloud Functions VPC connector egress through the VPC. |
+| `cloudfunctions.requireVPCConnector` | Explicit baseline entry set to `enforce: false` unless a deployment requires VPC connectors on all functions. |
+| `run.allowedBinaryAuthorizationPolicies` | Restricts Cloud Run Binary Authorization policies to `default`. |
+| `run.allowedIngress` | Sets `is:internal-and-cloud-load-balancing` to restrict Cloud Run ingress. |
+| `run.allowedVPCEgress` | Sets `allow: all: true` so both `private-ranges-only` and `all-traffic` VPC egress modes remain permitted unless tightened. |
 | `cloudbuild.allowedIntegrations` | Restricts Cloud Build external repository integrations to `github.com`. |
+| `cloudscheduler.allowedTargetTypes` | Sets `allow: all: true` across supported Cloud Scheduler target types. |
 
-#### Resource management
+#### Resource management and logging
 
 | Constraint | Enforcement |
 | :--- | :--- |
-| `resourcemanager.allowedImportSources` | Restricts project imports to the organization. |
-| `resourcemanager.allowedExportDestinations` | Restricts project exports to the organization. |
-| `resourcemanager.accessBoundaries` | Restricts Google Cloud console visibility boundaries to the organization. |
+| `resourcemanager.allowedImportSources` | Restricts project imports to `under:organizations/<org_id>`. |
+| `resourcemanager.allowedExportDestinations` | Restricts project exports to `under:organizations/<org_id>`. |
+| `resourcemanager.accessBoundaries` | Organization-only constraint restricting Cloud Console visibility boundaries to `under:organizations/<org_id>`. |
+| `gcp.detailedAuditLoggingMode` | Enables detailed Cloud Storage request and response audit logging. |
+| `gcp.disableCloudLogging` | Explicit baseline entry set to `enforce: false` so Cloud Logging remains enabled for Healthcare API workloads. |
+
+#### Optional guardrail policy packs
+
+Additional opt-in organization policy bundles under `fast/assets/org-policy-packs/` provide `compute-data-managed`, `custom-constraints-dry-run`, and `gke-managed` rule packs for staged dry-run validation and stricter workload hardening. See the [Guardrails rubric and test plan](guardrails-rubric-and-test-plan.md) for adoption guidance.
 
 #### Folder hierarchy
 
-Stage `1-resman` creates the folder hierarchy below, and you can customize folder display names in the `1-resman` configuration:
+Stage `0-bootstrap` and Stage `1-resman` construct the landing zone folder hierarchy directly under the organization root:
 
-- Root-level folders represent the top-level organization or business unit boundary.
-- First-level folders separate Common Services, Test, Integration, and Production environments.
-- Second-level folders organize shared and tenant domains:
-  - The Network folder sits under Common Services and hosts centralized networking projects.
-  - The Security folder sits under Common Services and hosts centralized IaC Core, Audit Logs, and Billing Export projects.
-  - Tenant folders sit under the Test, Integration, and Production environment folders.
-- Third-level folders separate each tenant into a Tenant Core folder hosting the tenant IaC Core project and a Tenant Main folder hosting workload projects.
+- `StellarEngine-<prefix>` serves as the top-level Assured Workloads enclave folder provisioned in Stage `0-bootstrap`, with `module.no-compliance-folder` providing the same display name when `regime` is `COMPLIANCE_REGIME_UNSPECIFIED`.
+- `<RegimeCode> Common Services` sits directly inside `StellarEngine-<prefix>` and contains Stage 0 core projects (`<prefix>-prod-iac-core-0`, `<prefix>-prod-audit-logs-0`, and optional `<prefix>-prod-billing-exp-0`) alongside two Stage `1-resman` child folders:
+  - `Networking` hosts centralized Shared VPC host projects such as `<prefix>-net-hub-host` or `<prefix>-net-vdss-host` plus environment networking subfolders and projects.
+  - `Security` hosts optional Stage 3 security core projects (`<prefix>-dev-sec-core-0` and `<prefix>-prod-sec-core-0`).
+- Environment folders named `<RegimeCode> <Env>` such as `IL5 Prod` and `IL5 Dev` sit directly under the Assured Workloads root folder when configured through `1-resman/branch-envs.tf`.
+- Tenant folders named `Project <tenant> <env>` sit inside each `<RegimeCode> <Env>` folder via `1-resman/branch-tenants.tf` and directly hold each tenant's self-service IaC project `<prefix>-<env>-<tenant>-iac-core-0` and workload projects without intermediate Core or Self child folders.
+- Optional feature folders enabled via `fast_features` (`Data Platform`, `GKE`, `GCVE`, `Project Factory`, `Sandbox`, and `Teams`) also deploy under the root boundary when enabled.
 
 #### Example organization layout
 
-The hierarchy below illustrates a nested multi-workstream organization layout:
+The hierarchy below illustrates an `IL5` organization layout produced by Stage 0 and Stage 1:
 
-- Organization Root Folder
-  - Network-IL5
-    - Production
-      - `<prefix>-prod-net-landing-0`
-      - `<prefix>-prod-net-spoke-0`
-    - Development
-      - `<prefix>-dev-net-landing-0`
-      - `<prefix>-dev-net-spoke-0`
-  - Security
-    - `<prefix>-prod-security-core-0`
-    - `<prefix>-dev-security-core-0`
-  - Tenants
-    - Workstream-A-IL5
-      - Workstream Core
-        - `<prefix>-workstream-a-iac-core-0`
-      - Workstream Tenant
-        - Project-A
-        - Project-B
-    - Workstream-B-IL4
-      - Workstream Core
-        - `<prefix>-workstream-b-iac-core-0`
-      - Workstream Tenant
-        - Project-C
-        - Project-D
+```text
+Organization Root
+└── StellarEngine-<prefix> (Assured Workloads root folder)
+    ├── IL5 Common Services
+    │   ├── <prefix>-prod-iac-core-0
+    │   ├── <prefix>-prod-audit-logs-0
+    │   ├── <prefix>-prod-billing-exp-0 (optional, when org billing mode applies)
+    │   ├── Networking
+    │   │   ├── <prefix>-net-vdss-host (or <prefix>-net-hub-host in Stage 2a)
+    │   │   ├── Prod
+    │   │   │   └── <prefix>-prod-net-host
+    │   │   └── Dev
+    │   │       └── <prefix>-dev-net-host
+    │   └── Security
+    │       ├── <prefix>-prod-sec-core-0
+    │       └── <prefix>-dev-sec-core-0
+    ├── IL5 Prod
+    │   └── Project ten-1 prod
+    │       ├── <prefix>-prod-ten-1-iac-core-0
+    │       └── Workload Projects
+    └── IL5 Dev
+        └── Project ten-1 dev
+            ├── <prefix>-dev-ten-1-iac-core-0
+            └── Workload Projects
+```
 
 ### 3.2 IAM
 
@@ -274,43 +312,34 @@ Prefer Google Cloud predefined roles over custom IAM roles wherever possible to 
 Role groups align Google Cloud access with engineering, security, and platform operations teams:
 
 - Development and administrative teams identify required job functions before bootstrap.
-- Each role maps to a dedicated group following the `gcp-X-${tenant}-${role}@X.gov` naming convention, with the bootstrap Terraform service account retaining group ownership for automated provisioning.
-- Bootstrap Terraform configurations seed initial group memberships, while ongoing membership lifecycle management runs through your enterprise identity provider or Terraform state.
+- Stage `0-bootstrap` maps `var.groups` to organization identity groups such as `gcp-organization-admins@example.com`, `gcp-security-admins@example.com`, `gcp-vpc-network-admins@example.com`, `gcp-billing-admins@example.com`, and `gcp-devops@example.com` (with `gcp-support` defaulting to `gcp-devops`), while Stage `1-resman` tenant entries bind per-tenant `admin_principal` groups.
+- Your enterprise identity provider or Google Cloud Identity manages ongoing group membership lifecycle, while Terraform manages the IAM role bindings on folders and projects.
 
 ##### Initial role groups
 
-The initial role groups created during Google Cloud organization setup receive the following organization-level roles:
+The six group keys defined in `fast/stages-aw/0-bootstrap/variables.tf` receive the following organization-level roles in `0-bootstrap/organization-iam.tf` and `0-bootstrap/billing.tf` (`+` denotes additive bindings):
 
-| Role Group              | Description                                                                                                                          | Assigned Roles @ Org Level                                                                                                                                                                                                                                  |
-| :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| gcp-organization-admins | Org admins have access to administer all resources belong to the organization                                                        | - Billing Account User<br/>- Support Account Admin<br/>- Organization Role Admin<br/>- Organization Policy Admin<br/>- Folder Admin<br/>- Organization Admin                                                                                                |
-| gcp-billing-admins      | set up billing accounts and monitoring their usage                                                                                   | - Billing Account Administrator<br/>- Billing Account Creator<br/>- Organization Viewer                                                                                                                                                                     |
-| gcp-vpc-network-admins  | creating networks, subnets, firewall rules, and network devices such as router, vpn, and load balancers                              | - Compute Network Admin<br/>- Compute Security Admin<br/>- Compute Shared VPC Admin<br/>- Folder Viewer                                                                                                                                                     |
-| gcp-logging-admins      | have access to all features of logging                                                                                               | -Logging Admin                                                                                                                                                                                                                                              |
-| gcp-logging-viewers     | have read-only access to a specific subsets of logs ingested into logging                                                            | - Logging Viewer                                                                                                                                                                                                                                            |
-| gcp-monitoring-admins   | have access to use and configure all features of Cloud Monitoring                                                                    | - Monitoring Admin                                                                                                                                                                                                                                          |
-| gcp-security-admins     | establish and manage security policies for the entire organization, including access management and organization constraint policies | - Compute Viewer<br/>- Kubernetes Engine Viewer<br/>- Organization Role Viewer<br/>- Security Reviewer<br/>- Logs Configuration Writer<br/>- Private Logs Viewer<br/>- Organization Policy Administrator<br/>- Folder IAM Admin<br/>- Security Center Admin |
-| gcp-developers          | design, develop and test applications                                                                                                | No default roles at the organization level.                                                                                                                                                                                                                 |
-| gcp-devops              | create or manage end-to-end pipelines that support CICD, monitoring, and system provisioning                                         | - Folder Viewer<br/>- Organization Viewer*<br/>- Organization Policy Viewer*<br/>- Logging Viewer\*                                                                                                                                                         |
-
-Not all above role groups are mandatory, and one GCP group can be mapped to
-multiple role groups.
+| Role group | Description | Assigned roles at organization level |
+| :--- | :--- | :--- |
+| `gcp-organization-admins` | Administers organization structure, Assured Workloads enclaves, and identity pools. | `roles/axt.admin`, `roles/cloudasset.owner`, `roles/cloudsupport.admin`, `roles/resourcemanager.folderAdmin`, `roles/resourcemanager.organizationAdmin`, `roles/resourcemanager.projectCreator`, `roles/resourcemanager.tagAdmin`, `roles/iam.workforcePoolAdmin`, `roles/assuredworkloads.admin`, `roles/orgpolicy.policyAdmin` `+`, `roles/iam.organizationRoleAdmin` `+`, and `roles/billing.admin` `+` when billing is organization-scoped |
+| `gcp-billing-admins` | Administers Cloud Billing accounts and billing export visibility. | `roles/billing.admin` `+` when billing is organization-scoped, or billing-resource bindings in `0-bootstrap/billing.tf`; `roles/billing.creator` is explicitly removed via `iam_delete_roles` |
+| `gcp-vpc-network-admins` | Creates and governs Shared VPC host projects, networks, firewalls, and connectivity. | `roles/cloudasset.owner`, `roles/cloudsupport.techSupportEditor`, `roles/compute.orgFirewallPolicyAdmin` `+`, and `roles/compute.xpnAdmin` `+` |
+| `gcp-security-admins` | Establishes and audits security policies, logging, Security Command Center, and VPC-SC perimeters. | `roles/cloudasset.owner`, `roles/cloudsupport.techSupportEditor`, `roles/iam.securityReviewer`, `roles/logging.admin`, `roles/securitycenter.admin`, `roles/accesscontextmanager.policyAdmin` `+`, `roles/iam.organizationRoleAdmin` `+`, and `roles/orgpolicy.policyAdmin` `+` |
+| `gcp-support` | Provides read-only observability and technical support escalation; defaults to `gcp-devops`. | `roles/cloudsupport.techSupportEditor`, `roles/logging.viewer`, and `roles/monitoring.viewer` |
+| `gcp-devops` | Operates CI/CD automation and impersonates stage service accounts. | Inherits `gcp-support` organization roles by default, plus `roles/iam.serviceAccountAdmin` and `roles/iam.serviceAccountTokenCreator` on `<prefix>-prod-iac-core-0` |
 
 ##### Role group mappings
 
-Stellar Engine configures additional role groups and role bindings at the top-level organization or folder node and across project hierarchies:
+Stellar Engine also grants `domain:<organization_domain>` the `roles/browser` role at the organization level and supplements organization bindings with stage-specific folder and project access:
 
-| Group                   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| :---------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| gcp-organization-admins | Administer all organization resources. Assign this role only to your most trusted users.                                                                                                                                                                                                                                                                                                                                                                         |
-| gcp-billing-admins      | Set up billing accounts and monitor usage.                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| gcp-vpc-network-admins  | Create networks, subnets, firewall rules, and network devices such as Cloud Router, Cloud VPN, and load balancers.                                                                                                                                                                                                                                                                                                                                               |
-| gcp-logging-admins      | Use all Cloud Logging features.                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| gcp-logging-viewers     | Read-only access to a subset of logs.                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| gcp-monitoring-admins   | Establishing and managing security policies for the entire organization, including access management and <a href='https://cloud.google.com/resource-manager/docs/organization-policy/org-policy-constraints'>organization constraint policies</a>. See the <a href='https://cloud.google.com/architecture/security-foundations'>Google Cloud enterprise foundations blueprint</a> for more information about planning your Google Cloud security infrastructure. |
-| gcp-security-admins     | Establish and manage security policies for the entire organization, including access management and organization constraint policies.                                                                                                                                                                                                                                                                                                                            |
-| gcp-developers          | Design, code, and test applications.                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| gcp-devops              | Create or manage end-to-end pipelines that support continuous integration and delivery, monitoring, and system provisioning.                                                                                                                                                                                                                                                                                                                                     |
+| Group | Scope and operational role |
+| :--- | :--- |
+| `gcp-organization-admins` | Organization administration, plus `roles/iam.serviceAccountTokenCreator` and `roles/iam.workloadIdentityPoolAdmin` on `<prefix>-prod-iac-core-0` and owner access on `<prefix>-prod-billing-exp-0`. |
+| `gcp-billing-admins` | Billing administration across organization or linked billing accounts and billing export datasets in `<prefix>-prod-billing-exp-0`. |
+| `gcp-vpc-network-admins` | Organization-wide network firewall policy and Shared VPC admin roles, plus `roles/editor` on the Stage `1-resman` `Networking` folder. |
+| `gcp-security-admins` | Organization security audit, policy, Access Context Manager, and Security Command Center admin roles, plus `roles/editor` on the Stage `1-resman` `Security` folder. |
+| `gcp-devops` | Technical support, logging viewer, and monitoring viewer across the organization via `gcp-support`, plus service account impersonation and administration inside `<prefix>-prod-iac-core-0`. |
+| `gcp-support` | Dedicated read-only support and observability group when separated from `gcp-devops`. |
 
 ##### Application-specific groups
 
@@ -341,9 +370,9 @@ Apply these organization policy restrictions to harden service accounts, where i
 
 ##### Bootstrap service account
 
-An administrator can execute Stage 0 bootstrap using an individual Google Cloud user account or by impersonating a bootstrap service account. Using a tightly controlled individual account assigned to the `gcp_org_admins` group is preferred, and you must disable that account when it is not actively executing bootstrap tasks.
+An administrator executes Stage 0 bootstrap using an individual Google Cloud user account in `gcp-organization-admins` or by impersonating a temporary bootstrap account before service account lockdown.
 
-To run the bootstrap phase through a service account at the organization root, grant these roles outside Terraform beforehand:
+To run the bootstrap phase at the organization root, grant these roles outside Terraform beforehand:
 
 - Organization Admin on the Google Cloud organization when targeting the organization root node.
 - Organization Policy Admin on the organization to manage organization policy constraints.
@@ -363,103 +392,70 @@ To run the bootstrap phase scoped to an existing Assured Workloads folder, grant
 
 #### IAM roles
 
-Stellar Engine project and folder IAM bindings follow the Cloud Foundation Fabric design guidelines:
+Stage 0 and Stage 1 service account and group bindings follow the [Stage 0 IAM reference](../fast/stages-aw/0-bootstrap/IAM.md) and [Stage 1 IAM reference](../fast/stages-aw/1-resman/IAM.md). In Stage `1-resman`, additive bindings (`+`) and conditional bindings (`•`) keep automation privileges scoped to their target branches:
 
 ##### Organization node
 
-| <strong>members</strong>                                               | <strong>roles</strong>                                                                                                                                                                                                                                            |
-| :--------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <strong>dev-resman-pf-0</strong><br/><strong>serviceAccount</strong>   | <a href='https://cloud.google.com/iam/docs/understanding-roles#orgpolicy.policyAdmin'>roles/orgpolicy.policyAdmin</a> +•                                                                                                                                          |
-| <strong>prod-resman-net-0</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.orgFirewallPolicyAdmin'>roles/compute.orgFirewallPolicyAdmin</a> +<br/><a href='https://cloud.google.com/iam/docs/understanding-roles#compute.xpnAdmin'>roles/compute.xpnAdmin</a> +       |
-| <strong>prod-resman-pf-0</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#orgpolicy.policyAdmin'>roles/orgpolicy.policyAdmin</a> +•                                                                                                                                          |
-| <strong>prod-resman-sec-0</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#cloudasset.viewer'>roles/cloudasset.viewer</a> +<br/><a href='https://cloud.google.com/iam/docs/understanding-roles#accesscontextmanager.policyAdmin'>roles/accesscontextmanager.policyAdmin</a> + |
+| Member | Roles |
+| :--- | :--- |
+| `<prefix>-dev-resman-pf-0` (`serviceAccount`) | [roles/orgpolicy.policyAdmin](https://cloud.google.com/iam/docs/understanding-roles#orgpolicy.policyAdmin) `+` `•` |
+| `<prefix>-prod-resman-net-0` (`serviceAccount`) | [roles/compute.orgFirewallPolicyAdmin](https://cloud.google.com/iam/docs/understanding-roles#compute.orgFirewallPolicyAdmin) `+`, [roles/compute.xpnAdmin](https://cloud.google.com/iam/docs/understanding-roles#compute.xpnAdmin) `+` |
+| `<prefix>-prod-resman-pf-0` (`serviceAccount`) | [roles/orgpolicy.policyAdmin](https://cloud.google.com/iam/docs/understanding-roles#orgpolicy.policyAdmin) `+` `•` |
+| `<prefix>-security-0` (`serviceAccount`) | [roles/accesscontextmanager.policyAdmin](https://cloud.google.com/iam/docs/understanding-roles#accesscontextmanager.policyAdmin) `+` |
 
-##### Data platform development folder
+##### Data platform folders
 
-| <strong>members</strong>                                              | <strong>roles</strong>                                                                                                                                                                                                          |
-| :-------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| <strong>dev-resman-dp-0</strong><br/><strong>serviceAccount</strong>  | organizations/[organization #0]/roles/serviceProjectNetworkAdmin<br/>roles/logging.admin<br/>roles/owner<br/>roles/resourcemanager.folderAdmin<br/>roles/resourcemanager.projectCreator                                         |
-| <strong>dev-resman-dp-0r</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderViewer'>roles/resourcemanager.folderViewer</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#viewer'>roles/viewer</a> |
+When `fast_features.data_platform` is enabled, `1-resman` creates `Data Platform/Development` and `Data Platform/Production` folders with `dev-resman-dp-0` and `prod-resman-dp-0` holding `organizations/<org_id>/roles/serviceProjectNetworkAdmin`, `roles/logging.admin`, `roles/owner`, `roles/resourcemanager.folderAdmin`, and `roles/resourcemanager.projectCreator`, while `dev-resman-dp-0r` and `prod-resman-dp-0r` receive `roles/resourcemanager.folderViewer` and `roles/viewer`.
 
-##### Data platform production folder
+##### GKE folders
 
-| <strong>members</strong>                                               | <strong>roles</strong>                                                                                                                                                                                                          |
-| :--------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| <strong>prod-resman-dp-0</strong><br/><strong>serviceAccount</strong>  | organizations/[organization #0]/roles/serviceProjectNetworkAdmin<br/>roles/logging.admin<br/>roles/owner<br/>roles/resourcemanager.folderAdmin<br/>roles/resourcemanager.projectCreator                                         |
-| <strong>prod-resman-dp-0r</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderViewer'>roles/resourcemanager.folderViewer</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#viewer'>roles/viewer</a> |
-
-##### GKE development folder
-
-| <strong>members</strong>                                               | <strong>roles</strong>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| :--------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| <strong>dev-resman-gke-0</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.xpnAdmin'>roles/compute.xpnAdmin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#logging.admin'>roles/logging.admin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#owner'>roles/owner</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderAdmin'>roles/resourcemanager.folderAdmin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.projectCreator'>roles/resourcemanager.projectCreator</a> |
-| <strong>dev-resman-gke-0r</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderViewer'>roles/resourcemanager.folderViewer</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#viewer'>roles/viewer</a>                                                                                                                                                                                                                                                                                                                                                                   |
-
-##### GKE production folder
-
-| <strong>members</strong>                                                | <strong>roles</strong>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| :---------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| <strong>prod-resman-gke-0</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.xpnAdmin'>roles/compute.xpnAdmin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#logging.admin'>roles/logging.admin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#owner'>roles/owner</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderAdmin'>roles/resourcemanager.folderAdmin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.projectCreator'>roles/resourcemanager.projectCreator</a> |
-| <strong>prod-resman-gke-0r</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderViewer'>roles/resourcemanager.folderViewer</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#viewer'>roles/viewer</a>                                                                                                                                                                                                                                                                                                                                                                   |
+When `fast_features.gke` is enabled, `1-resman` creates `GKE/Development` and `GKE/Production` folders with `dev-resman-gke-0` and `prod-resman-gke-0` holding `roles/compute.xpnAdmin`, `roles/logging.admin`, `roles/owner`, `roles/resourcemanager.folderAdmin`, and `roles/resourcemanager.projectCreator`, while `dev-resman-gke-0r` and `prod-resman-gke-0r` receive `roles/resourcemanager.folderViewer` and `roles/viewer`.
 
 ##### Networking folder
 
-| <strong>members</strong>                                                | <strong>roles</strong>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| :---------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| <strong>gcp-network-admins</strong><br/><strong>group</strong>          | <a href='https://cloud.google.com/iam/docs/understanding-roles#editor'>roles/editor</a>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| <strong>prod-resman-net-0</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.xpnAdmin'>roles/compute.xpnAdmin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#logging.admin'>roles/logging.admin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#owner'>roles/owner</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderAdmin'>roles/resourcemanager.folderAdmin</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.projectCreator'>roles/resourcemanager.projectCreator</a> |
-| <strong>prod-resman-net-0r</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderViewer'>roles/resourcemanager.folderViewer</a><br/><a href='https://cloud.google.com/iam/docs/understanding-roles#viewer'>roles/viewer</a>                                                                                                                                                                                                                                                                                                                                                                   |
+| Member | Roles |
+| :--- | :--- |
+| `gcp-vpc-network-admins` (`group`) | [roles/editor](https://cloud.google.com/iam/docs/understanding-roles#editor) |
+| `<prefix>-prod-resman-net-0` (`serviceAccount`) | [roles/compute.xpnAdmin](https://cloud.google.com/iam/docs/understanding-roles#compute.xpnAdmin), [roles/logging.admin](https://cloud.google.com/iam/docs/understanding-roles#logging.admin), [roles/owner](https://cloud.google.com/iam/docs/understanding-roles#owner), [roles/resourcemanager.folderAdmin](https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderAdmin), [roles/resourcemanager.projectCreator](https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.projectCreator) |
+| `<prefix>-prod-resman-net-0r` (`serviceAccount`) | [roles/resourcemanager.folderViewer](https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderViewer), [roles/viewer](https://cloud.google.com/iam/docs/understanding-roles#viewer) |
 
 ##### Networking development folder
 
-| <strong>members</strong>                                               | <strong>roles</strong>                                                                                                |
-| :--------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- |
-| <strong>dev-resman-dp-0</strong><br/><strong>serviceAccount</strong>   | organizations/[organization #0]/roles/serviceProjectNetworkAdmin                                                      |
-| <strong>dev-resman-dp-0r</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer'>roles/compute.networkViewer</a> |
-| <strong>dev-resman-gke-0</strong><br/><strong>serviceAccount</strong>  | organizations/[organization #0]/roles/serviceProjectNetworkAdmin                                                      |
-| <strong>dev-resman-gke-0r</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer'>roles/compute.networkViewer</a> |
-| <strong>dev-resman-pf-0</strong><br/><strong>serviceAccount</strong>   | organizations/[organization #0]/roles/serviceProjectNetworkAdmin                                                      |
-| <strong>dev-resman-pf-0r</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer'>roles/compute.networkViewer</a> |
+| Member | Roles |
+| :--- | :--- |
+| `<prefix>-dev-resman-dp-0` (`serviceAccount`) | `organizations/<org_id>/roles/serviceProjectNetworkAdmin` |
+| `<prefix>-dev-resman-gke-0` (`serviceAccount`) | `organizations/<org_id>/roles/serviceProjectNetworkAdmin` |
+| `<prefix>-dev-resman-pf-0` (`serviceAccount`) | `organizations/<org_id>/roles/serviceProjectNetworkAdmin` |
+| `<prefix>-prod-resman-dp-0r` (`serviceAccount`) | [roles/compute.networkViewer](https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer) |
+| `<prefix>-prod-resman-gke-0r` (`serviceAccount`) | [roles/compute.networkViewer](https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer) |
+| `<prefix>-prod-resman-pf-0r` (`serviceAccount`) | [roles/compute.networkViewer](https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer) |
 
 ##### Networking production folder
 
-| <strong>members</strong>                                                | <strong>roles</strong>                                                                                                |
-| :---------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- |
-| <strong>prod-resman-dp-0</strong><br/><strong>serviceAccount</strong>   | organizations/[organization #0]/roles/serviceProjectNetworkAdmin                                                      |
-| <strong>prod-resman-dp-0r</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer'>roles/compute.networkViewer</a> |
-| <strong>prod-resman-gke-0</strong><br/><strong>serviceAccount</strong>  | organizations/[organization #0]/roles/serviceProjectNetworkAdmin                                                      |
-| <strong>prod-resman-gke-0r</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer'>roles/compute.networkViewer</a> |
-| <strong>prod-resman-pf-0</strong><br/><strong>serviceAccount</strong>   | organizations/[organization #0]/roles/serviceProjectNetworkAdmin                                                      |
-| <strong>prod-resman-pf-0r</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer'>roles/compute.networkViewer</a> |
+| Member | Roles |
+| :--- | :--- |
+| `<prefix>-prod-resman-dp-0` (`serviceAccount`) | `organizations/<org_id>/roles/serviceProjectNetworkAdmin` |
+| `<prefix>-prod-resman-dp-0r` (`serviceAccount`) | [roles/compute.networkViewer](https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer) |
+| `<prefix>-prod-resman-gke-0` (`serviceAccount`) | `organizations/<org_id>/roles/serviceProjectNetworkAdmin` |
+| `<prefix>-prod-resman-gke-0r` (`serviceAccount`) | [roles/compute.networkViewer](https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer) |
+| `<prefix>-prod-resman-pf-0` (`serviceAccount`) | `organizations/<org_id>/roles/serviceProjectNetworkAdmin` |
+| `<prefix>-prod-resman-pf-0r` (`serviceAccount`) | [roles/compute.networkViewer](https://cloud.google.com/iam/docs/understanding-roles#compute.networkViewer) |
+
+##### Security folder
+
+| Member | Roles |
+| :--- | :--- |
+| `gcp-security-admins` (`group`) | [roles/editor](https://cloud.google.com/iam/docs/understanding-roles#editor) |
+| `<prefix>-security-0` (`serviceAccount`) | [roles/logging.admin](https://cloud.google.com/iam/docs/understanding-roles#logging.admin), [roles/owner](https://cloud.google.com/iam/docs/understanding-roles#owner), [roles/resourcemanager.folderAdmin](https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderAdmin), [roles/resourcemanager.projectCreator](https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.projectCreator) |
+| `<prefix>-prod-resman-sec-0r` (`serviceAccount`) | [roles/resourcemanager.folderViewer](https://cloud.google.com/iam/docs/understanding-roles#resourcemanager.folderViewer), [roles/viewer](https://cloud.google.com/iam/docs/understanding-roles#viewer) |
+
+##### Teams and sandbox folders
+
+When enabled via `fast_features`, `dev-resman-sbox-0`, `prod-resman-teams-0`, `prod-teams-<name>-0`, and `dev-resman-pf-0` / `prod-resman-pf-0` hold folder-scoped `roles/logging.admin`, `roles/owner`, `roles/resourcemanager.folderAdmin`, and `roles/resourcemanager.projectCreator` on their respective branches, while tenant Stage 1 service accounts `tn-<env>-<tenant>-prod-0` govern `Project <tenant> <env>`. See the [Stage 1 IAM reference](../fast/stages-aw/1-resman/IAM.md) for the complete table.
 
 ##### Core automation project
 
-| <strong>members</strong>                                                  | <strong>roles</strong>                                                                                                                          |
-| :------------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------- |
-| <strong>dev-resman-dp-0</strong><br/><strong>serviceAccount</strong>      | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>dev-resman-dp-0r</strong><br/><strong>serviceAccount</strong>     | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>dev-resman-gke-0</strong><br/><strong>serviceAccount</strong>     | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>dev-resman-gke-0r</strong><br/><strong>serviceAccount</strong>    | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>dev-resman-pf-0</strong><br/><strong>serviceAccount</strong>      | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>dev-resman-pf-0r</strong><br/><strong>serviceAccount</strong>     | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>dev-resman-sbox-0</strong><br/><strong>serviceAccount</strong>    | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>prod-resman-dp-0r</strong><br/><strong>serviceAccount</strong>    | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>prod-resman-gke-0</strong><br/><strong>serviceAccount</strong>    | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>prod-resman-gke-0r</strong><br/><strong>serviceAccount</strong>   | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>prod-resman-net-0</strong><br/><strong>serviceAccount</strong>    | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>prod-resman-net-0r</strong><br/><strong>serviceAccount</strong>   | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>prod-resman-net-1</strong><br/><strong>serviceAccount</strong>    | <a href='https://cloud.google.com/iam/docs/understanding-roles#logging.logWriter'>roles/logging.logWriter</a> +                                 |
-| <strong>prod-resman-net-1r</strong><br/><strong>serviceAccount</strong>   | <a href='https://cloud.google.com/iam/docs/understanding-roles#logging.logWriter'>roles/logging.logWriter</a> +                                 |
-| <strong>prod-resman-pf-0</strong><br/><strong>serviceAccount</strong>     | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>prod-resman-pf-0r</strong><br/><strong>serviceAccount</strong>    | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>prod-resman-sec-0</strong><br/><strong>serviceAccount</strong>    | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>prod-resman-sec-0r</strong><br/><strong>serviceAccount</strong>   | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>prod-resman-sec-1</strong><br/><strong>serviceAccount</strong>    | <a href='https://cloud.google.com/iam/docs/understanding-roles#logging.logWriter'>roles/logging.logWriter</a> +                                 |
-| <strong>prod-resman-sec-1r</strong><br/><strong>serviceAccount</strong>   | <a href='https://cloud.google.com/iam/docs/understanding-roles#logging.logWriter'>roles/logging.logWriter</a> +                                 |
-| <strong>prod-resman-teams-0</strong><br/><strong>serviceAccount</strong>  | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-| <strong>prod-resman-test-3-0</strong><br/><strong>serviceAccount</strong> | <a href='https://cloud.google.com/iam/docs/understanding-roles#serviceusage.serviceUsageConsumer'>roles/serviceusage.serviceUsageConsumer</a> + |
-
-Additive bindings use `+` and conditional bindings use `*`. These role definitions derive from the upstream [Cloud Foundation Fabric Stage 1 IAM reference](https://github.com/GoogleCloudPlatform/cloud-foundation-fabric/blob/master/fast/stages/1-resman/IAM.md).
+On `<prefix>-prod-iac-core-0`, apply and read-only service accounts (`dev-resman-dp-0`/`0r`, `dev-resman-gke-0`/`0r`, `dev-resman-pf-0`/`0r`, `dev-resman-sbox-0`, `prod-resman-dp-0r`, `prod-resman-gke-0`/`0r`, `prod-resman-net-0`/`0r`, `prod-resman-pf-0`/`0r`, `prod-resman-sec-0r`, `prod-resman-teams-0`, `security-0`, and `tn-<env>-<tenant>-prod-0`) receive additive `roles/serviceusage.serviceUsageConsumer`, while CI/CD accounts (`prod-resman-net-1`/`1r` and `prod-resman-sec-1`/`1r`) receive additive `roles/logging.logWriter`. Stage-specific state bucket and token-creator permissions are generated alongside the [Stage 0 IAM reference](../fast/stages-aw/0-bootstrap/IAM.md) and [Stage 1 IAM reference](../fast/stages-aw/1-resman/IAM.md).
 
 ### 3.3 Code control
 
@@ -487,162 +483,125 @@ Stellar Engine adopts the staged Terraform architecture from [Google Cloud Found
 
 #### Repository layout
 
-Foundational bootstrap and landing zone code lives under `fast/stages` and `fast/stages-aw`. Reusable service modules live under `modules`, while compliance-scoped workload compositions live under `blueprints` organized by target regime subfolder such as `il5` and `fedramp-high`:
+Foundational bootstrap and landing zone stages live under `fast/stages-aw`, optional organization policy guardrail bundles live under `fast/assets/org-policy-packs`, reusable service modules live under `modules` with 101 module subdirectories aligned to Cloud Foundation Fabric v60.0.0, and compliance-scoped workload compositions live under `blueprints`. Under `blueprints`, 15 shared workload blueprints reside canonically under `blueprints/il5/` alongside `bigquery`, while matching Git `120000` directory symlinks expose those 15 blueprints under `blueprints/fedramp-high/` alongside standalone FedRAMP High, Gemini Enterprise, stand-alone, and third-party blueprints:
 
-- **blueprints**
-  - **fedramp-high**
-    - **access-context-manager**
-    - **app-engine**
-    - **artifact-registry**
-    - **bastion-pattern**
-    - **bcap**
-    - **beyondcorp**
-    - **bigtable**
-    - **bq-project**
-    - **cloud-armor**
-    - **cloud-composer-environment**
-    - **cloud-functions**
-    - **cloud-ids**
-    - **cloud-run**
-    - **cloud-scheduler-job**
-    - **cloud-spanner**
-    - **cloud-translation**
-    - **cloud-workstations**
-    - **cnap**
-    - **compute-engine**
-    - **dataflow**
-    - **datafusion**
-    - **dataproc-cluster**
-    - **datastore**
-    - **document-ai**
-    - **firestore**
-    - **gcs-project**
-    - **gitlab**
-    - **gke**
-    - **gke-hardened**
-    - **kms-project**
-    - **network-connectivity-center**
-    - **postgresql**
-    - **private-service-connect**
-    - **pub-sub-project**
-    - **secret-manager**
-    - **shielded-vm-project**
-    - **vertex-mlops**
-    - **workflows**
-  - **gemini-enterprise**
-  - **il5**
-    - **artifact-registry**
-    - **bastion-pattern**
-    - **bcap**
-    - **bigquery**
-    - **bq-project**
-    - **compute-engine**
-    - **dataflow**
-    - **gcs-project**
-    - **gke**
-    - **gke-hardened**
-    - **kms-project**
-    - **postgresql**
-    - **private-service-connect**
-    - **pub-sub-project**
-    - **shielded-vm-project**
-- **fast**
-  - **stages-aw**
-    - **0-bootstrap**
-    - **1-resman**
-    - **2-networking-a-fedramp**
-    - **2-networking-b-il5-ngfw**
-    - **3-security**
-- **modules**
-  - **access-context-manager**
-  - **alloydb**
-  - **analytics-hub**
-  - **api-gateway**
-  - **apigee**
-  - **app-engine**
-  - **artifact-registry**
-  - **beyondcorp**
-  - **biglake-catalog**
-  - **bigquery-dataset**
-  - **bigtable-instance**
-  - **billing-account**
-  - **binauthz**
-  - **certificate-authority-service**
-  - **certificate-manager**
-  - **cis-log-alerts**
-  - **cis-log-metrics**
-  - **cloud-config-container**
-  - **cloud-function-v1**
-  - **cloud-function-v2**
-  - **cloud-identity-group**
-  - **cloud-run-v2**
-  - **cloud-scheduler**
-  - **cloudsql-instance**
-  - **compute-mig**
-  - **compute-vm**
-  - **container-registry**
-  - **data-catalog-policy-tag**
-  - **data-catalog-tag**
-  - **data-catalog-tag-template**
-  - **dataform-repository**
-  - **datafusion**
-  - **datafusion-se**
-  - **dataplex**
-  - **dataplex-datascan**
-  - **dataproc**
-  - **dns**
-  - **dns-response-policy**
-  - **endpoints**
-  - **firestore**
-  - **folder**
-  - **gcs**
-  - **gcve-private-cloud**
-  - **gke-cluster-autopilot**
-  - **gke-cluster-standard**
-  - **gke-cluster-standard-se**
-  - **gke-hub**
-  - **gke-nodepool**
-  - **iam-service-account**
-  - **intrusion-detection-system**
-  - **kms**
-  - **logging-bucket**
-  - **looker-core**
-  - **ncc-spoke-ra**
-  - **net-address**
-  - **net-cloudnat**
-  - **net-firewall-policy**
-  - **net-ipsec-over-interconnect**
-  - **net-lb-app-ext**
-  - **net-lb-app-ext-regional**
-  - **net-lb-app-int**
-  - **net-lb-app-int-cross-region**
-  - **net-lb-ext**
-  - **net-lb-int**
-  - **net-lb-proxy-int**
-  - **net-swp**
-  - **net-vlan-attachment**
-  - **net-vpc**
-  - **net-vpc-firewall**
-  - **net-vpc-peering**
-  - **net-vpn-dynamic**
-  - **net-vpn-ha**
-  - **net-vpn-static**
-  - **organization**
-  - **organization-se**
-  - **private-service-connect**
-  - **project**
-  - **project-factory**
-  - **projects-data-source**
-  - **pubsub**
-  - **secret-manager**
-  - **secure-source-manager-instance**
-  - **service-directory**
-  - **source-repository**
-  - **spanner-instance**
-  - **spanner-instance-se**
-  - **vpc-sc**
-  - **workflows**
-  - **workstation-cluster**
+```text
+blueprints/
+  fedramp-high/
+    access-context-manager
+    app-engine
+    artifact-registry -> ../il5/artifact-registry
+    bastion-pattern -> ../il5/bastion-pattern
+    bcap -> ../il5/bcap
+    beyondcorp
+    bigtable
+    bq-project -> ../il5/bq-project
+    cloud-armor
+    cloud-composer-environment
+    cloud-functions
+    cloud-ids
+    cloud-run
+    cloud-scheduler-job
+    cloud-spanner
+    cloud-translation
+    cloud-workstations
+    cnap
+    compute-engine -> ../il5/compute-engine
+    dataflow -> ../il5/dataflow
+    datafusion
+    dataproc-cluster
+    datastore
+    document-ai
+    firestore
+    gcs-project -> ../il5/gcs-project
+    gitlab
+    gke -> ../il5/gke
+    gke-hardened -> ../il5/gke-hardened
+    ha-vpn-multicloud -> ../il5/ha-vpn-multicloud
+    kms-project -> ../il5/kms-project
+    network-connectivity-center
+    postgresql -> ../il5/postgresql
+    private-service-connect -> ../il5/private-service-connect
+    pub-sub-project -> ../il5/pub-sub-project
+    secret-manager
+    shielded-vm-project -> ../il5/shielded-vm-project
+    vertex-mlops
+    workflows
+  gemini-enterprise/
+    analytics
+    deploy.sh
+    gem4gov-cli
+    gemini-stage-0
+    gemini-stage-1
+  il5/
+    artifact-registry
+    bastion-pattern
+    bcap
+    bigquery
+    bq-project
+    compute-engine
+    dataflow
+    gcs-project
+    gke
+    gke-hardened
+    ha-vpn-multicloud
+    kms-project
+    postgresql
+    private-service-connect
+    pub-sub-project
+    shielded-vm-project
+  stand-alone/
+    vpc-peering-project
+  third-party-solutions/
+    gitlab
+fast/
+  assets/
+    org-policy-packs/
+      compute-data-managed
+      custom-constraints-dry-run
+      gke-managed
+  stages-aw/
+    0-bootstrap
+    1-resman
+    2-networking-a-fedramp
+    2-networking-b-il5-ngfw
+    3-security
+modules/
+  access-context-manager      data-catalog-policy-tag     net-cloudnat
+  alloydb                     data-catalog-tag            net-firewall-policy
+  analytics-hub               data-catalog-tag-template   net-ipsec-over-interconnect
+  api-gateway                 dataform-repository         net-lb-app-ext
+  apigee                      datafusion                  net-lb-app-ext-regional
+  app-engine                  datafusion-se               net-lb-app-int
+  artifact-registry           dataplex                    net-lb-app-int-cross-region
+  backup-dr                   dataplex-aspect-types       net-lb-ext
+  beyondcorp                  dataplex-datascan           net-lb-int
+  biglake-catalog             dataproc                    net-lb-proxy-int
+  bigquery-connection         dns                         net-lb-proxy-int-cross-region
+  bigquery-dataset            dns-response-policy         net-swp
+  bigtable-instance           endpoints                   net-vlan-attachment
+  billing-account             firestore                   net-vpc
+  binauthz                    folder                      net-vpc-firewall
+  certificate-authority-service  gcs                      net-vpc-peering
+  certificate-manager         gcve-private-cloud          net-vpn-dynamic
+  cis-log-alerts              geap-agent-gateway          net-vpn-ha
+  cis-log-metrics             geap-agent-runtime          net-vpn-static
+  cloud-build-v2-connection   geap-workbench              organization
+  cloud-config-container      gke-cluster-autopilot       organization-se
+  cloud-deploy                gke-cluster-standard        private-service-connect
+  cloud-function-v1           gke-cluster-standard-se     project
+  cloud-function-v2           gke-hub                     project-factory
+  cloud-identity-group        gke-nodepool                projects-data-source
+  cloud-run-v2                iam-service-account         pubsub
+  cloud-scheduler             intrusion-detection-system  secops-rules
+  cloudsql-instance           kms                         secret-manager
+  compute-mig                 logging-bucket              secure-source-manager-instance
+  compute-vm                  looker-core                 service-directory
+  container-registry          managed-kafka               source-repository
+  ncc-spoke-ra                net-address                 spanner-instance
+  net-cloud-armor             spanner-instance-se         vpc-sc
+  workflows                   workstation-cluster
+```
 
 ### 3.5 Terraform design principles
 
@@ -650,30 +609,33 @@ Foundational bootstrap and landing zone code lives under `fast/stages` and `fast
 
 Terraform configurations partition infrastructure into standalone, per-environment root modules, allowing additional customer tenants to onboard per environment. Keeping each tenant-and-environment configuration explicit and local-driven minimizes blast radius so changes in one tenant or environment do not affect another.
 
-Example configuration:
+Example configuration from `fast/stages-aw/1-resman`:
 
 ```hcl
-# project-specific locals
 locals {
-  step_terraform_sa = [
-    "serviceAccount:${google_service_account.terraform-env-sa["bootstrap"].email}",
-    "serviceAccount:${google_service_account.terraform-env-sa["org"].email}",
-    "serviceAccount:${google_service_account.terraform-env-sa["env"].email}",
-    "serviceAccount:${google_service_account.terraform-env-sa["net"].email}",
-    "serviceAccount:${google_service_account.terraform-env-sa["proj"].email}",
-  ]
-  org_project_creators           = distinct(concat(var.org_project_creators, local.step_terraform_sa))
-  parent                         = var.parent_folder != "" ? "folders/${var.parent_folder}" : "organizations/${var.org_id}"
-  org_admins_org_iam_permissions = var.org_policy_admin_role == true ? [
-    "roles/orgpolicy.policyAdmin", "roles/resourcemanager.organizationAdmin", "roles/billing.user"
-  ] : ["roles/resourcemanager.organizationAdmin", "roles/billing.user"]
-  group_org_admins     = var.groups.create_groups ? var.groups.required_groups.group_org_admins : var.group_org_admins
-  group_billing_admins = var.groups.create_groups ? var.groups.required_groups.group_billing_admins : var.group_billing_admins
+  tenant_envs = merge([for e, _ in var.envs_folders : {
+    for t, v in var.tenants : "${e}-${t}" => {
+      env         = e
+      tenant      = t
+      tenant_info = v
+    }
+  }]...)
 }
 
-resource "google_folder" "bootstrap" {
-  display_name = "${var.folder_prefix}-bootstrap"
-  parent       = local.parent
+module "branch-envs-folders" {
+  source       = "../../../modules/folder"
+  for_each     = var.envs_folders
+  parent       = var.assured_workloads.folder
+  name         = "${lookup(var.regime_mapping, var.assured_workloads.regime, var.assured_workloads.regime)} ${each.key}"
+  iam          = local._envs_folder_iam
+  tag_bindings = null
+}
+
+module "tenant-top-folders" {
+  source   = "../../../modules/folder"
+  for_each = local.tenant_envs
+  parent   = module.branch-envs-folders[each.value.env].id
+  name     = "Project ${each.value.tenant} ${each.value.env}"
 }
 ```
 
@@ -683,15 +645,15 @@ See the [Google Cloud security foundations networking guide](https://cloud.googl
 
 #### Shared VPC topology
 
-Google Cloud connects Virtual Private Clouds privately across Google's backbone using VPC Network Peering and [Shared VPC](https://cloud.google.com/vpc/docs/shared-vpc). Centralizing Shared VPC subnets, routes, and firewall policies in dedicated host projects simplifies network governance while allowing service project teams to deploy and manage workload resources independently.
+Google Cloud connects Virtual Private Clouds privately across Google's backbone using Network Connectivity Center, VPC Network Peering, and [Shared VPC](https://cloud.google.com/vpc/docs/shared-vpc). Centralizing Shared VPC subnets, routes, and firewall policies in dedicated host projects simplifies network governance while allowing service project teams to deploy and manage workload resources independently.
 
-Resources attached to Shared VPC networks communicate across project boundaries over internal IP addresses. Managing shared network constructs such as subnets, routes, and firewalls from a central host project enforces consistent network security policies across tenant projects.
+Resources attached to Shared VPC networks communicate across project boundaries over internal IP addresses. Managing shared network constructs such as subnets, routes, and firewalls from central host projects enforces consistent network security policies across attached service projects.
 
-In the `example.com` reference model, each environment separates workloads across two Shared VPC host projects: a `base` Shared VPC for workloads handling non-sensitive data and a `restricted` Shared VPC protected by [VPC Service Controls](https://cloud.google.com/vpc-service-controls) for workloads handling sensitive data.
+In the Stage 2 reference topologies, each deployment uses a single unified Shared VPC tier per hub and environment rather than separate `base` and `restricted` Shared VPC tiers:
 
-Deploying this dual-Shared-VPC model independently across the common, development, non-production, and production environments provides strict network segmentation between lifecycle tiers.
-
-In the hub-and-spoke variant, all environment spokes communicate with shared operational services in the common environment hub, such as CI/CD runners, directory services, and security tooling. A base Shared VPC hub connects the base spoke networks across development, non-production, and production, while a restricted Shared VPC hub connects the restricted spoke networks across those same environments. Select the restricted Shared VPC hub-and-spoke topology whenever workloads require VPC Service Controls data exfiltration protections.
+- Stage `2-networking-a-fedramp` provisions a central `hub-0` Shared VPC in `<prefix>-net-hub-host`, an optional `egress-0` Secure Web Proxy VPC, and environment `<env>-spoke-0` Shared VPCs in `<prefix>-<env>-net-host` projects connected via Network Connectivity Center `STAR` groups.
+- Stage `2-networking-b-il5-ngfw` provisions a three-VPC Virtual Datacenter Security Stack (`Landing`, `DMZ`, and `Mgmt`) in `<prefix>-net-vdss-host` peered through inline VM-Series Next-Generation Firewalls to environment `<env>-spoke-0` Shared VPCs.
+- When [VPC Service Controls](https://cloud.google.com/vpc-service-controls) is enabled in Stage `3-security`, perimeters protect designated projects and APIs across those Shared VPC environments without maintaining duplicate network tiers.
 
 #### Virtual Private Clouds
 
@@ -701,47 +663,32 @@ VPC Network Peering connects VPC networks within the same project or across sepa
 
 #### Subnet allocations
 
-Subnet allocation divides a VPC primary CIDR block into regional IP segments for Compute Engine VMs, Google Kubernetes Engine clusters, and managed services. The reference subnet allocation scheme supports up to eight organizations, eight tenants per organization, and eight projects per tenant, for a maximum of 512 projects.
+Subnet allocation divides a VPC primary CIDR block into regional IP segments for Compute Engine VMs, Google Kubernetes Engine clusters, and managed services. The reference subnet allocation scheme partitions a `/16` address space across up to eight `/19` blocks for tenants and up to eight `/23` project blocks per tenant.
 
-The table below shows the four `/25` subnet allocations inside Project 1's `10.200.2.0/23` CIDR block (`512` total addresses):
+The table below shows the four `/25` subnet allocations inside Project 1's `10.200.2.0/23` CIDR block, totaling 512 addresses:
 
-| <strong>Subnet Address</strong> | <strong>Range of Addresses</strong> | <strong>Useable IPs</strong> | <strong>Hosts</strong> |
-| :------------------------------ | :---------------------------------- | :--------------------------- | :--------------------- |
-| 10.200.2.0/25                   | 10.200.2.0 - 10.200.2.127           | 10.200.2.1 - 10.200.2.126    | 126                    |
-| 10.200.2.128/25                 | 10.200.2.128 - 10.200.2.255         | 10.200.2.129 - 10.200.2.254  | 126                    |
-| 10.200.3.0/25                   | 10.200.3.0 - 10.200.3.127           | 10.200.3.1 - 10.200.3.126    | 126                    |
-| 10.200.3.128/25                 | 10.200.3.128 - 10.200.3.255         | 10.200.3.129 - 10.200.3.254  | 126                    |
+| Subnet Address | Range of Addresses | Useable IPs | Hosts |
+| :--- | :--- | :--- | :--- |
+| `10.200.2.0/25` | `10.200.2.0 - 10.200.2.127` | `10.200.2.1 - 10.200.2.126` | 126 |
+| `10.200.2.128/25` | `10.200.2.128 - 10.200.2.255` | `10.200.2.129 - 10.200.2.254` | 126 |
+| `10.200.3.0/25` | `10.200.3.0 - 10.200.3.127` | `10.200.3.1 - 10.200.3.126` | 126 |
+| `10.200.3.128/25` | `10.200.3.128 - 10.200.3.255` | `10.200.3.129 - 10.200.3.254` | 126 |
 
-Subnets are logical partitions within a VPC that define IP address ranges for
-resources deployed in specific geographic locations (regions or availability
-zones). Each subnet is associated with a specific region and availability zone
-within that region. It is recommended to allocate a subnet for each application.
-For example, a Google Kubernetes Engine (GKE) cluster would require a subnet and
-two secondary ranges (one for pods and one for services). You can add the subnet
-in the environments section in the Terraform networks stage, and reference the
-subnet when configuring your cluster. When creating a VPC, you define a primary
-IP address range (CIDR block) in IPv4 format (e.g., 10.200.2.0/23). This range
-determines the total number of IP addresses available for allocation across all
-subnets within the VPC.
+Subnets are logical partitions within a VPC that define IP address ranges for resources deployed in specific regions. Allocate separate subnets per application tier and configure Google Kubernetes Engine clusters with dedicated secondary ranges for pods and services. Define subnet CIDR ranges in the Stage 2 networking configuration as non-overlapping subsets of each VPC address block.
 
-When creating subnets within a VPC, you specify a subnet IP address range that
-is a subset of the VPC's primary IP range. For example, if your VPC has the
-range 10.200.2.0/23, you might create subnets with ranges
-like 10.200.2.0/25, 10.200.2.128/25, 10.200.3.0/25 and 10.200.3.128/25 so on.
+The table below shows an aligned CIDR allocation across the organization, tenant, and project tiers inside `10.200.0.0/16`:
 
-The Distribution of the CIDR as per Organization, Tenants and Projects
+| Component | CIDR | Notes |
+| :--- | :--- | :--- |
+| Organization (all tenants) | `10.200.0.0/16` | Eight `/19` blocks for tenants |
+| Tenant 1 | `10.200.0.0/19` | Covers `10.200.0.0` through `10.200.31.255`; reserves `10.200.0.0/23` for shared hub/infra services |
+| Project 1 | `10.200.2.0/23` | First workload `/23` block (`10.200.2.0 - 10.200.3.255`) |
+| Project 2 | `10.200.4.0/23` | Second workload `/23` block (`10.200.4.0 - 10.200.5.255`) |
+| Project 3 | `10.200.6.0/23` | Third workload `/23` block (`10.200.6.0 - 10.200.7.255`) |
+| Project 4 | `10.200.8.0/23` | Fourth workload `/23` block (`10.200.8.0 - 10.200.9.255`) |
+| Project 5 | `10.200.10.0/23` | Fifth workload `/23` block (`10.200.10.0 - 10.200.11.255`) |
 
-| <strong>Component</strong> | <strong>CIDR</strong> | <strong>Notes</strong>     |
-| :------------------------- | :-------------------- | :------------------------- |
-| Organization (All Tenants) | 10.200.0.0/16         | 8 Tenants per Organization |
-| Tenants 1                  | 10.200.3.0/19         | 8 projects per tenant      |
-| Project 1                  | 10.200.2.0/23         |                            |
-| Project 2                  | 10.200.4.0/23         |                            |
-| Project 3                  | 10.200.6.0/23         |                            |
-| Project 4                  | 10.200.8.0/23         |                            |
-| Project 5                  | 10.200.10.0/23        |                            |
-
-Use the table above when allocating CIDRs for new projects within the `10.200.0.0/16` tenant range.
+Use the hierarchy above when allocating non-overlapping CIDRs for new projects within the `10.200.0.0/16` tenant range.
 
 #### Private Google Access
 
@@ -753,7 +700,7 @@ Route synchronous microservice-to-microservice traffic inside the VPC through [I
 
 #### VPC firewall rules
 
-By default, VPC networks deny all unsolicited ingress traffic and allow egress traffic unless overridden. Define ingress and egress firewall rules in `2-networking-a-peering` or your active Stage 2 networking configuration. Google Cloud VPC firewall rules are stateful and evaluate in numeric priority order: the highest-priority rule matching source IP, destination IP, protocol, and port governs the flow, and lower-priority rules are skipped.
+By default, VPC networks deny all unsolicited ingress traffic and allow egress traffic unless overridden. Define firewall policies and rules in `fast/stages-aw/2-networking-a-fedramp` (which attaches the folder hierarchical firewall policy `<prefix>-net-default` and global network firewall policies such as `<prefix>-hub-fw-policy-0` and `<prefix>-<env>-fw-policy-0` with `BEFORE_CLASSIC_FIREWALL` precedence) or in `fast/stages-aw/2-networking-b-il5-ngfw`. Google Cloud firewall rules are stateful and evaluate in numeric priority order: the highest-priority rule matching source IP, destination IP, protocol, and port governs the flow, and lower-priority rules are skipped.
 
 #### Hub-and-spoke topology
 
@@ -787,21 +734,17 @@ Stage `2-networking-b-il5-ngfw` implements the DoD IL4 and IL5 Virtual Datacente
 
 ## 4. Assured Workloads
 
-Google Cloud Assured Workloads enforces compliance guardrails across regulated folders, enabling FedRAMP Moderate by default on the Assured Workloads root folder so child folders and projects inherit the selected compliance constraints automatically.
+Google Cloud Assured Workloads enforces compliance guardrails across regulated folders. In `fast/stages-aw/0-bootstrap/variables.tf`, `var.assured_workloads` defaults to `regime = "IL5"` and `location = "US"` on the `StellarEngine-<prefix>` root folder so child folders and projects inherit the selected compliance constraints automatically. Supported `regime` values include `IL4`, `IL5`, `FEDRAMP_HIGH`, `FEDRAMP_MODERATE`, and `COMPLIANCE_REGIME_UNSPECIFIED` when deploying without an Assured Workloads enclave.
 
-When you provision an Assured Workloads environment and select a compliance regime, Assured Workloads applies regional `constraints/gcp.resourceLocations` organization policies to keep data at rest within authorized geographic regions.
+When you provision an Assured Workloads environment, Assured Workloads enforces baseline compliance controls and `constraints/gcp.resourceLocations` boundaries to keep data at rest within authorized regions.
 
-Define tenant folders and compliance settings in the `1-resman` `terraform.tfvars` file. The following configuration defines an example tenant with IL5 Assured Workloads settings:
+Define tenant entries in the `1-resman` `terraform.tfvars` file under `var.tenants`. Tenant map keys must be strictly fewer than 7 characters, such as `ten-1`:
 
 ```hcl
 tenants = {
-  dino-runner = {
-    admin_principal  = "group:gcp-devops@dino-runner.cloud"
-    descriptive_name = "dino-runner"
-    compliance = {
-      regime   = "IL5"
-      location = "us"
-    }
+  ten-1 = {
+    admin_principal  = "group:gcp-ten-1-admins@example.com"
+    descriptive_name = "ten-1"
     locations = {
       gcs = "us-east4"
       kms = "us-east4"
@@ -810,7 +753,7 @@ tenants = {
 }
 ```
 
-Omitting the `compliance` block generates the tenant folder without an Assured Workloads configuration. See the [Terraform Assured Workloads documentation](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/assured_workloads_workload#compliance_regime) for supported compliance regimes.
+Although `var.tenants` includes an optional `compliance` attribute on the variable type in `fast/stages-aw/1-resman/variables.tf`, `fast/stages-aw/1-resman/branch-tenants.tf` does not provision per-tenant Assured Workloads folders from `tenants[*].compliance`. All tenant folders inherit the single Assured Workloads enclave created in `0-bootstrap`, so separate compliance regimes require separate landing zone deployments. See the [Terraform Assured Workloads documentation](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/assured_workloads_workload#compliance_regime) for supported compliance regimes.
 
 ## 5. Information security
 
