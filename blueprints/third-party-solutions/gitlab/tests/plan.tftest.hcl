@@ -208,3 +208,29 @@ run "legacy_replica_zone_fallback_creates_regional_disk" {
     error_message = "Top-level gitlab_instance_config.replica_zone must remain supported as a fallback."
   }
 }
+
+run "plan_without_shared_vpc_host_project" {
+  command = plan
+
+  providers = {
+    google      = google
+    google-beta = google-beta
+    null        = null
+    random      = random
+    tls         = tls
+  }
+
+  variables {
+    admin_principals = ["user:admin@example.com"]
+    network_config = {
+      host_project      = null
+      network_self_link = "projects/my-project/global/networks/default"
+      subnet_self_link  = "projects/my-project/regions/us-east4/subnetworks/default"
+    }
+  }
+
+  assert {
+    condition     = module.project.id == "my-project"
+    error_message = "Project must plan cleanly when network_config.host_project is null."
+  }
+}
