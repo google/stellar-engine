@@ -12,8 +12,8 @@ existing_kms_keys = {
     iam_members = {
       "roles/cloudkms.cryptoKeyEncrypterDecrypter" = [
         "serviceAccount:my-app-sa@xxxx-xxxx-app-0.iam.gserviceaccount.com",
-        "user:app-dev@yourdomain.com",
-        "group:app-admins@yourdomain.com"
+        "user:app-dev@example.com",
+        "group:app-admins@example.com"
       ]
     }
     # Example: Optionally manage rotation period on this existing key
@@ -22,7 +22,7 @@ existing_kms_keys = {
   "my-other-key" = { # Another existing CryptoKey
     iam_members = {
       "roles/cloudkms.viewer" = [
-        "user:viewer@yourdomain.com"
+        "user:viewer@example.com"
       ]
     }
   }
@@ -31,6 +31,6 @@ existing_kms_keys = {
 # These emails are used by the default_encrypter_decrypter resources in main.tf
 # They grant 'roles/cloudkms.cryptoKeyEncrypterDecrypter' to *all* keys specified in 'existing_kms_keys'.
 # Set to null if not needed for the default grants.
-email       = "user@yourdomain.com" # Example user email for default encrypter/decrypter role
-group_email = "group@yourdomain.com" # Example group email for default encrypter/decrypter role
+email       = "user@example.com" # Example user email for default encrypter/decrypter role
+group_email = "group@example.com" # Example group email for default encrypter/decrypter role
 

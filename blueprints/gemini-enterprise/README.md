@@ -499,7 +499,7 @@ The goal is to configure your internal, on-premise DNS to resolve the domain nam
 - **Public DNS:** Used by the internet.
 - **Private DNS:** Used within your corporate network for internal resources.
 
-You need to make your on-premise DNS server authoritative for resolving the internal service name (e.g., `gemini-internal.mycompany.com`) to the reserved internal IP in GCP (e.g., `10.10.10.5`).
+You need to make your on-premise DNS server authoritative for resolving the internal service name (e.g., `gemini-internal.example.com`) to the reserved internal IP in GCP (e.g., `10.10.10.5`).
 
 **Steps:**
 
@@ -508,10 +508,10 @@ You need to make your on-premise DNS server authoritative for resolving the inte
 3.  **Configure the 'A' Record:**
     - **Name/Host:** The desired subdomain (e.g., `gemini-internal`).
     - **IP Address:** The reserved internal IP of the GCP load balancer (from Stage 0 output).
-    - Example: `gemini-internal.mycompany.com -> 10.10.10.5`
+    - Example: `gemini-internal.example.com -> 10.10.10.5`
 4.  **Test from On-Premise:** Use `nslookup` or `ping` from an on-premise machine to verify resolution to the internal IP.
     ```bash
-    ping gemini-internal.mycompany.com
+    ping gemini-internal.example.com
     ```
     Flush DNS cache if needed (`ipconfig /flushdns` on Windows).
 
@@ -541,7 +541,7 @@ To enable HTTPS on the internal load balancer, an SSL certificate signed by your
     openssl req -new -key gemini-internal.key -out gemini-internal.csr
     ```
 
-    Provide the requested information. The **Common Name** MUST match the internal domain name users will access (e.g., `gemini-internal.mycompany.gov`).
+    Provide the requested information. The **Common Name** MUST match the internal domain name users will access (e.g., `gemini-internal.example.com`).
 
     | Field                          | Example Value                 | Description                                         |
     | :----------------------------- | :---------------------------- | :-------------------------------------------------- |
@@ -550,8 +550,8 @@ To enable HTTPS on the internal load balancer, an SSL certificate signed by your
     | Locality Name (eg, city)       | Reston                        | Your city.                                          |
     | Organization Name              | Department of Example         | Your official organization name.                    |
     | Organizational Unit Name       | IT Security                   | Your specific department or unit.                   |
-    | Common Name (e.g. server FQDN) | gemini-internal.mycompany.gov | **Crucial:** Exact internal domain name for access. |
-    | Email Address                  | your-email@mycompany.gov      | An administrative contact email.                    |
+    | Common Name (e.g. server FQDN) | gemini-internal.example.com   | **Crucial:** Exact internal domain name for access. |
+    | Email Address                  | admin@example.com             | An administrative contact email.                    |
 
 3.  **Get the CSR Signed by Your Internal CA:** Submit `gemini-internal.csr` to your internal IT/Cybersecurity team for signature. They will return:
 
@@ -574,13 +574,13 @@ To enable HTTPS on the internal load balancer, an SSL certificate signed by your
     ```
     Example:
     ```bash
-    openssl s_client -connect 10.10.10.5:443 -servername gemini-internal.mycompany.gov
+    openssl s_client -connect 10.10.10.5:443 -servername gemini-internal.example.com
     ```
     Look for `Verify return code: 0 (ok)` and check that the certificate details match.
 
 ### Access Flow
 
-1.  User on on-premise network opens `https://gemini-internal.mycompany.com`.
+1.  User on on-premise network opens `https://gemini-internal.example.com`.
 2.  Client queries the _internal_ DNS server.
 3.  Internal DNS server responds with the ILB's private IP (e.g., `10.10.10.5`).
 4.  Traffic is routed over the Cloud VPN/Interconnect to the GCP VPC.
@@ -1128,7 +1128,7 @@ This Terraform module (`gemini-stage-1`) provisions the network frontend compone
 1.  **Complete gemini-stage-0:** Ensure the `gemini-stage-0` Terraform module has been successfully applied and has provisioned the search applications.
 
 2.  **Domain and SSL Certificate:**
-    - **DNS Configuration:** Ensure you have pointed an 'A' record for your desired domain (e.g., `gemini.yourdomain.com`) to the static IP address (`gemini_enterprise_ip`) output by Stage 0.
+    - **DNS Configuration:** Ensure you have pointed an 'A' record for your desired domain (e.g., `gemini.example.com`) to the static IP address (`gemini_enterprise_ip`) output by Stage 0.
     - **Upload SSL Certificate:**
       - Upload your SSL certificate to Google Cloud Certificate Manager in the target project. For regional load balancers using self-managed certificates, upload it via the `gcloud` CLI:
         ```bash
@@ -1148,7 +1148,7 @@ This Terraform module (`gemini-stage-1`) provisions the network frontend compone
     - **Manual:** Create or update the `terraform.tfvars` file in the `gemini-stage-1` directory with the following:
       ```hcl
       stage_0_state_bucket     = "YOUR_STAGE_0_STATE_BUCKET"
-      gemini_enterprise_domain = "gemini.yourdomain.com"
+      gemini_enterprise_domain = "gemini.example.com"
       ssl_certificate_name     = "YOUR_SSL_CERTIFICATE_NAME"
       ssl_certificate_path     = "/path/to/certificate.pem" # Optional: let Terraform create the regional SSL certificate
       ssl_private_key_path     = "/path/to/private_key.pem" # Optional: let Terraform create the regional SSL certificate

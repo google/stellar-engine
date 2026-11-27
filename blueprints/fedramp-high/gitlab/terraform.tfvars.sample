@@ -1,4 +1,4 @@
-gitlab_uri         = "https://gitlab.mine.com"
+gitlab_uri         = "https://gitlab.example.com"
 network            = "projects/<net_project_id>/global/networks/<spoke>"
 subnetwork         = "projects/<net_project_id>/regions/us-east4/subnetworks/<subnet>"
 project_id         = "xxxx-xxxx-main-0"
