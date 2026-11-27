@@ -23,6 +23,20 @@ override_data {
   }
 }
 
+override_data {
+  target = data.google_compute_subnetwork.builder
+  values = {
+    network = "projects/my-net-host-0/global/networks/vpc-hub"
+  }
+}
+
+override_data {
+  target = data.google_project.builder_subnetwork_host[0]
+  values = {
+    number = "123456789012"
+  }
+}
+
 variables {
   project_id   = "my-image-factory-0"
   region       = "us-east4"
@@ -188,7 +202,21 @@ run "plan_private_image_factory" {
   }
 
   assert {
-    condition     = strcontains(local.cloudbuild_config, "SEV_CAPABLE")
+    condition = (
+      strcontains(
+        local.cloudbuild_config,
+        "--maintenance-policy=TERMINATE",
+      )
+      && !strcontains(local.cloudbuild_config, "--min-cpu-platform")
+    )
+    error_message = "SEV builders must TERMINATE without a Milan pin."
+  }
+
+  assert {
+    condition = strcontains(
+      local.cloudbuild_config,
+      "_GUEST_OS_FEATURES: \"SEV_CAPABLE,UEFI_COMPATIBLE,GVNIC\"",
+    )
     error_message = "Rendered config must include SEV_CAPABLE."
   }
 
@@ -233,8 +261,22 @@ run "plan_private_image_factory" {
   }
 
   assert {
-    condition     = strcontains(local.cloudbuild_config, "trap cleanup EXIT")
-    error_message = "Rendered config must delete builder VM on exit."
+    condition = (
+      strcontains(local.cloudbuild_config, "trap cleanup EXIT")
+      && strcontains(local.cloudbuild_config, "trap 'cleanup 130' INT")
+      && strcontains(local.cloudbuild_config, "trap 'cleanup 143' TERM")
+      && strcontains(local.cloudbuild_config, "cleanup_done=1")
+      && strcontains(local.cloudbuild_config, "local status=\"$$${1:-$$?}\"")
+    )
+    error_message = "Rendered config must delete builder VM once on exit."
+  }
+
+  assert {
+    condition = (
+      strcontains(local.cloudbuild_config, "--ssh-flag=-oConnectTimeout=10")
+      && strcontains(local.cloudbuild_config, "--ssh-flag=-oBatchMode=yes")
+    )
+    error_message = "SSH readiness probe must bound connect time."
   }
 
   assert {
@@ -283,6 +325,13 @@ run "plan_peered_network_project_id_and_ssh_firewall" {
     }
   }
 
+  override_data {
+    target = data.google_project.builder_subnetwork_host[0]
+    values = {
+      number = "987654321098"
+    }
+  }
+
   variables {
     peered_network = join("", [
       "projects/my-net-host-0/global/networks/vpc-hub",
@@ -306,6 +355,9 @@ run "plan_peered_network_project_id_and_ssh_firewall" {
       && module.builder-ssh-firewall[0].rules[
         "acme-il5-allow-builder-ssh"
       ].project == "my-net-host-0"
+      && module.builder-ssh-firewall[0].rules[
+        "acme-il5-allow-builder-ssh"
+      ].network == "vpc-hub"
       && contains(
         tolist(
           module.builder-ssh-firewall[0].rules[
@@ -328,6 +380,168 @@ run "plan_peered_network_project_id_and_ssh_firewall" {
     )
     error_message = "Expected confidential flag omitted when set to null."
   }
+}
+
+run "plan_builder_network_mismatch_opt_out" {
+  command = plan
+
+  override_data {
+    target = data.google_compute_subnetwork.builder
+    values = {
+      network = "projects/my-net-host-0/global/networks/vpc-spoke"
+    }
+  }
+
+  variables {
+    allow_builder_network_mismatch = true
+    enable_ssh_firewall_rule       = true
+  }
+
+  assert {
+    condition = (
+      length(data.google_project.builder_subnetwork_host) == 0
+      && module.builder-ssh-firewall[0].rules[
+        "acme-il5-allow-builder-ssh"
+      ].project == "my-net-host-0"
+      && module.builder-ssh-firewall[0].rules[
+        "acme-il5-allow-builder-ssh"
+      ].network == "vpc-spoke"
+    )
+    error_message = "Expected opt-out to skip the check and use builder VPC."
+  }
+}
+
+run "reject_builder_subnetwork_in_other_vpc" {
+  command = plan
+
+  override_data {
+    target = data.google_compute_subnetwork.builder
+    values = {
+      network = "projects/my-net-host-0/global/networks/vpc-spoke"
+    }
+  }
+
+  expect_failures = [
+    google_cloudbuild_worker_pool.default,
+  ]
+}
+
+run "reject_builder_subnetwork_in_other_host_project" {
+  command = plan
+
+  override_data {
+    target = data.google_project.builder_subnetwork_host[0]
+    values = {
+      number = "111111111111"
+    }
+  }
+
+  expect_failures = [
+    google_cloudbuild_worker_pool.default,
+  ]
+}
+
+run "plan_sev_snp_builder_with_milan_platform" {
+  command = plan
+
+  variables {
+    builder_confidential_compute_type = "SEV_SNP"
+    guest_os_features = [
+      "SEV_SNP_CAPABLE",
+      "UEFI_COMPATIBLE",
+      "GVNIC",
+    ]
+  }
+
+  assert {
+    condition = (
+      strcontains(
+        local.cloudbuild_config,
+        "--confidential-compute-type=SEV_SNP",
+      )
+      && strcontains(
+        local.cloudbuild_config,
+        "--min-cpu-platform=\"AMD Milan\"",
+      )
+      && strcontains(
+        local.cloudbuild_config,
+        "--maintenance-policy=TERMINATE",
+      )
+    )
+    error_message = "SEV_SNP builders must pin AMD Milan and TERMINATE."
+  }
+}
+
+run "plan_tdx_builder_with_tdx_capable" {
+  command = plan
+
+  variables {
+    builder_confidential_compute_type = "TDX"
+    builder_machine_type              = "c3-standard-4"
+    guest_os_features = [
+      "TDX_CAPABLE",
+      "UEFI_COMPATIBLE",
+      "GVNIC",
+    ]
+  }
+
+  assert {
+    condition = (
+      strcontains(local.cloudbuild_config, "--confidential-compute-type=TDX")
+      && strcontains(
+        local.cloudbuild_config,
+        "--maintenance-policy=TERMINATE",
+      )
+      && !strcontains(local.cloudbuild_config, "--min-cpu-platform")
+    )
+    error_message = "TDX builders must TERMINATE without a Milan pin."
+  }
+}
+
+run "plan_non_confidential_without_sev_capable" {
+  command = plan
+
+  variables {
+    builder_confidential_compute_type = null
+    builder_machine_type              = "e2-standard-2"
+    guest_os_features                 = ["UEFI_COMPATIBLE", "GVNIC"]
+  }
+
+  assert {
+    condition = (
+      !strcontains(local.cloudbuild_config, "--confidential-compute-type=")
+      && strcontains(
+        local.cloudbuild_config,
+        "_GUEST_OS_FEATURES: \"UEFI_COMPATIBLE,GVNIC\"",
+      )
+    )
+    error_message = "Expected non-Confidential build without SEV_CAPABLE."
+  }
+}
+
+run "reject_sev_snp_without_sev_snp_capable" {
+  command = plan
+
+  variables {
+    builder_confidential_compute_type = "SEV_SNP"
+  }
+
+  expect_failures = [
+    var.guest_os_features,
+  ]
+}
+
+run "reject_tdx_without_tdx_capable" {
+  command = plan
+
+  variables {
+    builder_confidential_compute_type = "TDX"
+    builder_machine_type              = "c3-standard-4"
+  }
+
+  expect_failures = [
+    var.guest_os_features,
+  ]
 }
 
 run "plan_repository_trigger_enabled" {

@@ -16,10 +16,10 @@
 # Executes exclusively inside a private Cloud Build worker pool using a
 # SHA-256 digest-pinned Artifact Registry builder image, reaches the
 # ephemeral Shielded VM over private VPC peering (--internal-ip) with
-# 1-hour expiring OS Login keys, cleans up the ephemeral builder VM on any
-# exit via trap, configures Google Guest Agent run_dir to bypass /tmp
-# noexec hardening, and stamps SEV_CAPABLE alongside UEFI_COMPATIBLE and
-# GVNIC on the captured image.
+# 1-hour expiring OS Login keys, deletes the ephemeral builder VM exactly
+# once on EXIT, INT, or TERM, configures Google Guest Agent run_dir to
+# bypass /tmp noexec hardening, and stamps the configured guest OS features
+# (SEV_CAPABLE, UEFI_COMPATIBLE, and GVNIC by default) on the captured image.
 
 steps:
   - name: "${builder_image_digest}"
@@ -90,14 +90,27 @@ steps:
 
         INSTANCE_NAME="rhel9-stig-builder-$${BUILD_ID}"
         IMAGE_NAME="$${_IMAGE_NAME_PREFIX}-$${BUILD_ID}"
+        cleanup_done=0
 
+        # Delete the builder VM and its CMEK boot disk exactly once on exit,
+        # failure, interrupt, or termination. EXIT keeps the original exit
+        # status; INT and TERM exit with the conventional 130 and 143.
         cleanup() {
-          gcloud compute instances delete "$$${INSTANCE_NAME}" \
-            --project="$${_PROJECT_ID}" \
-            --zone="$${_ZONE}" \
-            --quiet || true
+          local status="$$${1:-$$?}"
+          trap '' INT TERM
+          trap - EXIT
+          if [ "$$${cleanup_done}" -eq 0 ]; then
+            cleanup_done=1
+            gcloud compute instances delete "$$${INSTANCE_NAME}" \
+              --project="$${_PROJECT_ID}" \
+              --zone="$${_ZONE}" \
+              --quiet || true
+          fi
+          exit "$$${status}"
         }
         trap cleanup EXIT
+        trap 'cleanup 130' INT
+        trap 'cleanup 143' TERM
 
         gcloud compute instances create "$$${INSTANCE_NAME}" \
           --project="$${_PROJECT_ID}" \
@@ -105,6 +118,9 @@ steps:
           --machine-type="$${_BUILDER_MACHINE_TYPE}" \
 %{ if builder_confidential_compute_type != null ~}
           --confidential-compute-type=${builder_confidential_compute_type} \
+%{ if builder_confidential_compute_type == "SEV_SNP" ~}
+          --min-cpu-platform="AMD Milan" \
+%{ endif ~}
 %{ endif ~}
           --image="$${_BASE_IMAGE}" \
           --boot-disk-size=50GB \
@@ -122,6 +138,9 @@ steps:
           --metadata=enable-oslogin=TRUE,block-project-ssh-keys=TRUE
 
         echo "Waiting for private SSH readiness on ephemeral builder VM."
+        # A 10-second connect timeout and batch mode bound each probe, so 30
+        # attempts against a dropped TCP 22 path fail in roughly 10 to 15
+        # minutes, well inside the default 3600s build timeout.
         attempt=1
         ssh_ready=0
         while [ "$$${attempt}" -le 30 ]; do
@@ -130,6 +149,8 @@ steps:
             --zone="$${_ZONE}" \
             --internal-ip \
             --ssh-key-expire-after=1h \
+            --ssh-flag=-oConnectTimeout=10 \
+            --ssh-flag=-oBatchMode=yes \
             --quiet \
             --command="echo 'SSH Ready'"; then
             echo "Private SSH connection established."

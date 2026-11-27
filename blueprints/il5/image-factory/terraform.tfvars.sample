@@ -24,6 +24,9 @@ base_image = "projects/rhel-cloud/global/images/rhel-9-v20250514"
 
 kms_key_id = "projects/my-kms-0/locations/us-east4/keyRings/kr/cryptoKeys/img"
 
+# builder_subnetwork must be a subnet of peered_network (same host project
+# and VPC). Set allow_builder_network_mismatch = true only when HA VPN or
+# NCC routes peered_network_ip_range to the builder network.
 peered_network           = "projects/123456789012/global/networks/vpc-hub"
 peered_network_ip_range  = "10.250.0.0/24"
 enable_ssh_firewall_rule = false

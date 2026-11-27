@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+variable "allow_builder_network_mismatch" {
+  description = "Allow builder_subnetwork in a VPC other than peered_network."
+  type        = bool
+  default     = false
+  nullable    = false
+}
+
 variable "artifact_registry_name" {
   description = "Name of the private CMEK Artifact Registry Docker repository."
   type        = string
@@ -262,8 +269,27 @@ variable "guest_os_features" {
   default     = ["SEV_CAPABLE", "UEFI_COMPATIBLE", "GVNIC"]
   nullable    = false
   validation {
-    condition     = contains(var.guest_os_features, "SEV_CAPABLE")
-    error_message = "Include SEV_CAPABLE in guest_os_features."
+    condition = (
+      var.builder_confidential_compute_type != "SEV"
+      || contains(var.guest_os_features, "SEV_CAPABLE")
+    )
+    error_message = "SEV builders require SEV_CAPABLE in guest_os_features."
+  }
+  validation {
+    condition = (
+      var.builder_confidential_compute_type != "SEV_SNP"
+      || contains(var.guest_os_features, "SEV_SNP_CAPABLE")
+    )
+    error_message = (
+      "SEV_SNP builders require SEV_SNP_CAPABLE in guest_os_features."
+    )
+  }
+  validation {
+    condition = (
+      var.builder_confidential_compute_type != "TDX"
+      || contains(var.guest_os_features, "TDX_CAPABLE")
+    )
+    error_message = "TDX builders require TDX_CAPABLE in guest_os_features."
   }
   validation {
     condition = alltrue([

@@ -38,6 +38,7 @@ For more information, please see the individual README files in each blueprint's
 |  [GitLab](./fedramp-high/gitlab/)                                            |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |
 |  [GKE](./il5/gke/)                                                           |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [GKE Hardened](./il5/gke-hardened/)                                         |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
+|  [Image Factory](./il5/image-factory/)                                       |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [KMS Project](./il5/kms-project/)                                           |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |
 |  [Network Connectivity Center](./fedramp-high/network-connectivity-center/)  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |  &nbsp; &nbsp; ❌ &nbsp; &nbsp;  |
 |  [PostgreSQL](./il5/postgresql/)                                             |  &nbsp; &nbsp; 🔗 &nbsp; &nbsp;  |  &nbsp; &nbsp; ✅ &nbsp; &nbsp;  |

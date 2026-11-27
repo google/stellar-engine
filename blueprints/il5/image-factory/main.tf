@@ -21,6 +21,19 @@ data "google_project" "peered_network_host" {
   project_id = local._peered_network_parts[0]
 }
 
+# Resolve the VPC network that actually owns builder_subnetwork so the SSH
+# firewall rule and the peering alignment check never trust peered_network.
+data "google_compute_subnetwork" "builder" {
+  project = local.subnetwork_host_project
+  region  = local.subnetwork_region
+  name    = local.subnetwork_name
+}
+
+data "google_project" "builder_subnetwork_host" {
+  count      = var.allow_builder_network_mismatch ? 0 : 1
+  project_id = local.subnetwork_host_project
+}
+
 locals {
   _peered_network_parts = regex(
     "^projects/([^/]+)/global/networks/([^/]+)$",
@@ -47,6 +60,18 @@ locals {
     var.trigger_config.substitutions,
   )
 
+  builder_network_name = reverse(
+    split("/", data.google_compute_subnetwork.builder.network)
+  )[0]
+  # Same projects/<number>/global/networks/<name> shape as
+  # peered_network_normalized, or null when the check is disabled.
+  builder_network_normalized = (
+    var.allow_builder_network_mismatch ? null : format(
+      "projects/%s/global/networks/%s",
+      data.google_project.builder_subnetwork_host[0].number,
+      local.builder_network_name,
+    )
+  )
   builder_project_roles = [
     "roles/compute.instanceAdmin.v1",
     "roles/compute.osAdminLogin",
@@ -218,7 +243,7 @@ module "builder-ssh-firewall" {
   source     = "../../../modules/net-vpc-firewall"
   count      = var.enable_ssh_firewall_rule ? 1 : 0
   project_id = local.subnetwork_host_project
-  network    = local._peered_network_parts[1]
+  network    = local.builder_network_name
   default_rules_config = {
     disabled = true
   }
@@ -320,6 +345,23 @@ resource "google_cloudbuild_worker_pool" "default" {
     disk_size_gb   = var.worker_pool_disk_size_gb
     machine_type   = var.worker_pool_machine_type
     no_external_ip = true
+  }
+
+  lifecycle {
+    # Private pools attach through non-transitive VPC Network Peering, so
+    # workers only reach builders that live in peered_network itself.
+    precondition {
+      condition = (
+        var.allow_builder_network_mismatch
+        || local.builder_network_normalized == local.peered_network_normalized
+      )
+      error_message = join(" ", [
+        "The builder_subnetwork VPC must match peered_network because VPC",
+        "Network Peering is non-transitive. Set",
+        "allow_builder_network_mismatch = true only when HA VPN or NCC",
+        "routes peered_network_ip_range to the builder network.",
+      ])
+    }
   }
 
   depends_on = [time_sleep.service_agent_propagation]
