@@ -225,9 +225,6 @@ module "cluster" {
     boot_disk_kms_key = data.google_kms_crypto_key.existing_kms_key.id
     service_account   = google_service_account.gke_cluster_sa.email
     tags              = var.node_config_tags
-    metadata = {
-      "block-project-ssh-keys" = "true" # CIS Compliance Benchmark 4.3 - Block project-wide SSH keys.
-    }
   }
 
   enable_features = {
