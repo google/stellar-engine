@@ -18,7 +18,7 @@ variable "core_project_id" {
 }
 
 variable "kms_key_name" {
-  description = "Short name of the existing KMS crypto key (for example `my-key`) used for Pub/Sub, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. Required in practice: the lookup fails when this is left at the `null` default."
+  description = "Short name of the existing KMS crypto key (for example `my-key`) used for Data Fusion instance and bucket encryption, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. Required in practice: the lookup fails when this is left at the `null` default."
   type        = string
   default     = null
 }

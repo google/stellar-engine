@@ -47,7 +47,7 @@ variable "instance_type" {
 variable "kms_key_name" {
   description = "Short name of the existing KMS crypto key (for example `my-key`) used for disk encryption, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`."
   type        = string
-  # Example: "projects/my-kms-project/locations/us-central1/keyRings/my-keyring/cryptoKeys/my-compute-key"
+  # Example: "my-compute-key"
 }
 
 variable "kms_keyring_name" {

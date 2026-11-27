@@ -55,7 +55,7 @@ Navigate to [Data Fusion](https://console.cloud.google.com/data-fusion) within t
 | [network_project_id](variables.tf#L46) | Landing project id. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L51) | Location to deploy job. | <code>string</code> | ✓ |  |
 | [subnetwork_name](variables.tf#L56) | Short name of the existing subnetwork (for example `prod-subnet-0`), not the full resource path. It is looked up in `region` and `network_project_id`. | <code>string</code> | ✓ |  |
-| [kms_key_name](variables.tf#L20) | Short name of the existing KMS crypto key (for example `my-key`) used for Pub/Sub, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. Required in practice: the lookup fails when this is left at the `null` default. | <code>string</code> |  | <code>null</code> |
+| [kms_key_name](variables.tf#L20) | Short name of the existing KMS crypto key (for example `my-key`) used for Data Fusion instance and bucket encryption, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. Required in practice: the lookup fails when this is left at the `null` default. | <code>string</code> |  | <code>null</code> |
 
 ## Outputs
 

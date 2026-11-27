@@ -102,7 +102,7 @@ Add additional entries under `docker:` to proxy more upstream container registri
 |---|---|:---:|:---:|:---:|
 | [core_project_id](variables.tf#L15) | Core project ID. | <code>string</code> | ✓ |  |
 | [developer_registries](variables.tf#L20) | A map of developer registries and readers/writers for those developer registries. | <code>map&#40;object&#40;&#123;&#8230;&#125;&#41;&#41;</code> | ✓ |  |
-| [kms_key_name](variables.tf#L28) | Short name of the existing KMS crypto key (for example `my-key`) used for disk encryption, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. | <code>string</code> | ✓ |  |
+| [kms_key_name](variables.tf#L28) | Short name of the existing KMS crypto key (for example `my-key`) used to encrypt Artifact Registry repositories, not the full resource path. It is looked up in the key ring named by `kms_keyring_name`. | <code>string</code> | ✓ |  |
 | [kms_keyring_name](variables.tf#L33) | Keyring attributes. | <code>string</code> | ✓ |  |
 | [main_project_id](variables.tf#L38) | GCP Project to deploy Google Artifact Registries into. | <code>string</code> | ✓ |  |
 | [network_project_id](variables.tf#L43) | Project that the Consumer Compute Engine VPC is located. | <code>string</code> | ✓ |  |
