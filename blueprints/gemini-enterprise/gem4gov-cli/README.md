@@ -149,7 +149,7 @@ gem4gov app update-compliance --project-id <PROJECT_ID> --engine-id <ENGINE_ID> 
 *   `--compliance-regime`: (Required) `FEDRAMP_MODERATE`, `FEDRAMP_HIGH`, `IL4`, or `IL5`.
 
 **Actions:**
-*   Disables unauthorized features (e.g., Private Knowledge Graph, Location Context).
+*   Disables unauthorized features (including Private Knowledge Graph for FedRAMP High, IL4, and IL5, and Location Context).
 *   Updates the Default Search Widget to disable user event collection.
 *   Disables Implicit Model Caching for the project.
 
