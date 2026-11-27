@@ -22,25 +22,10 @@ locals {
 
   shared_vpc_project = var.network_config.network_project_id
 
-  shared_vpc_bindings = {
-    "roles/compute.networkUser" = [
-      "robot-df", "notebooks"
-    ]
-  }
-
-  shared_vpc_role_members = {
-    robot-df  = module.project.service_agents.dataflow.iam_email
-    notebooks = module.project.service_agents.notebooks.iam_email
-  }
-
-  # reassemble in a format suitable for for_each
-  shared_vpc_bindings_map = {
-    for binding in flatten([
-      for role, members in local.shared_vpc_bindings : [
-        for member in members : { role = role, member = member }
-      ]
-    ]) : "${binding.role}-${binding.member}" => binding
-  }
+  attach_shared_vpc = coalesce(
+    var.network_config.attach,
+    var.project_config.billing_account_id != null
+  )
 
   # Cloud Storage roles are granted on the buckets this blueprint creates
   # instead of on the project, so they do not reach any other bucket.
@@ -124,6 +109,7 @@ module "project" {
   name            = var.project_config.project_id
   parent          = var.project_config.parent
   billing_account = var.project_config.billing_account_id
+  project_reuse   = var.project_config.billing_account_id == null ? {} : null
   iam_bindings_additive = {
     # we manage aiplatform.user additively since it is also granted to
     # the vertex-shtune service agent by the project module
@@ -203,8 +189,10 @@ module "project" {
     "storage.googleapis.com",
     "storage-component.googleapis.com"
   ]
-  shared_vpc_service_config = local.shared_vpc_project == null ? null : {
-    attach       = true
+  shared_vpc_service_config = local.shared_vpc_project == null || !local.attach_shared_vpc ? {
+    host_project             = tostring(null)
+    service_agent_subnet_iam = {}
+    } : {
     host_project = local.shared_vpc_project
     # roles/compute.networkUser for the Notebooks service agent is granted on
     # the subnet the Workbench instances use instead of on the host project.
@@ -212,6 +200,18 @@ module "project" {
       "${var.region}/${var.network_config.subnetwork_name}" = ["notebooks"]
     }
   }
+}
+
+# Grant subnet access directly when reusing a pre-attached project so Terraform
+# does not require org-level compute.xpnAdmin or detach on destroy.
+resource "google_compute_subnetwork_iam_member" "notebooks_subnet_user" {
+  count      = local.attach_shared_vpc ? 0 : 1
+  project    = var.network_config.network_project_id
+  region     = var.region
+  subnetwork = var.network_config.subnetwork_name
+  role       = "roles/compute.networkUser"
+  member     = module.project.service_agents.notebooks.iam_email
+  depends_on = [module.project]
 }
 
 module "service-account-mlops" {
