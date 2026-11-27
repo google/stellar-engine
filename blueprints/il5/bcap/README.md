@@ -38,6 +38,8 @@ This blueprint provisions four core networking components inside `hub_project_id
 ## 3 Deployment steps
 
 1. Copy `terraform.tfvars.sample` to `terraform.tfvars` and populate values for your environment. Set `create_vpc = false` when attaching BCAP resources to an existing Stage 2 VPC, and populate `additional_regions` with two additional region entries for a 4-region 8-attachment deployment.
+   - In IL4/IL5 deployments using `2-networking-b-il5-ngfw`, keep `create_vpc = true` to create a dedicated `vdss-bcap-0` VPC inside `xxxx-net-vdss-host`, or set `create_vpc = false` and target the existing `vdss-dmz-0` or `vdss-landing-0` VPC in `xxxx-net-vdss-host` (routing across VDSS NGFW appliances as required by mission inspection policies).
+   - In FedRAMP High deployments using `2-networking-a-fedramp` (which provisions `hub-0` in `xxxx-net-hub-host` rather than `xxxx-net-vdss-host` VDSS VPCs), set `hub_project_id = "xxxx-net-hub-host"` and either set `network_name = "hub-0"` with `create_vpc = false` or keep `create_vpc = true` for an isolated BCAP VPC.
 2. Initialize and apply the Terraform configuration:
 
 ```bash
