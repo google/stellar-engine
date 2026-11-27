@@ -1,0 +1,55 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+project_id   = "my-image-factory-0"
+region       = "us-east4"
+builder_zone = "us-east4-a"
+prefix       = "acme-il5"
+
+# Resolve a current immutable RHEL 9 image with:
+# gcloud compute images describe-from-family rhel-9 \
+#   --project=rhel-cloud --format='value(selfLink)'
+base_image = "projects/rhel-cloud/global/images/rhel-9-v20250514"
+
+kms_key_id = "projects/my-kms-0/locations/us-east4/keyRings/kr/cryptoKeys/img"
+
+# builder_subnetwork must be a subnet of peered_network (same host project
+# and VPC). Set allow_builder_network_mismatch = true only when HA VPN or
+# NCC routes peered_network_ip_range to the builder network.
+peered_network           = "projects/123456789012/global/networks/vpc-hub"
+peered_network_ip_range  = "10.250.0.0/24"
+enable_ssh_firewall_rule = false
+builder_subnetwork       = "projects/my-net-0/regions/us-east4/subnetworks/img"
+
+builder_image_digest = "us-east4-docker.pkg.dev/my-image-factory-0/image-factory-builders/cloud-sdk@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+builder_confidential_compute_type = "SEV"
+worker_pool_machine_type          = "e2-standard-4"
+guest_os_features                 = ["SEV_CAPABLE", "UEFI_COMPATIBLE", "GVNIC"]
+
+labels = {
+  environment = "shared-services"
+  workload    = "image-factory"
+}
+
+# Optional automated trigger using a Cloud Build 2nd generation repository:
+# trigger_config = {
+#   name              = "rhel9-stig-golden-image"
+#   approval_required = true
+#   filename          = "cloudbuild/cloudbuild-rhel9-stig.yaml"
+#   repository_event = {
+#     branch     = "^main$"
+#     repository = "projects/my-p-0/locations/us-east4/connections/c/repositories/r"
+#   }
+# }
