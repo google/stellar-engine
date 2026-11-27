@@ -8,7 +8,7 @@ Compute Engine is an Infrastructure-as-a-Service product offering flexible, self
 2. Enable the Customer-Managed Encryption Keys (CMEK) Cloud KMS for Google Compute Engine and Disk
 3.  The IL5 Requirements as of the creation of the project the region of deployment to US Only for example in us-east4 and us-central1
 
-4. __Important Note__: The project is scoped around the computer engine VM, and in order to deploy the code, there is a dependency on the Google VPC module (VPC and subnet), and the code uses the Google VPC module along with the Google KMS module.
+4. This blueprint is scoped around the Compute Engine VM and consumes an existing Shared VPC network, subnetwork, and Cloud KMS CryptoKey through Terraform data sources rather than provisioning new VPC or KMS modules.
 
 ## Pre-requisite
 1. The Principal (user or group) must have Cloud KMS Admin permission at the GCP Level.
@@ -62,60 +62,22 @@ terraform apply
 
 It will take a few minutes. When complete, you should see an output stating the command completed successfully, a list of the created resources.
 
-The Output will look like following
-```
-Apply complete! Resources: 13 added, 0 changed, 0 destroyed.
-
+The Output will look like following:
+```text
 Outputs:
 
 compute_engine_vm_instance = <sensitive>
-compute_engine_vm_instance_id = "projects/project-name/zones/gcp-zone/instances/instance-name"
-compute_engine_vm_internal_ip = "some-ip-address"
+compute_engine_vm_instance_id = "projects/my-project/zones/us-east4-c/instances/my-instance"
+compute_engine_vm_internal_ip = "10.0.0.10"
 compute_engine_vm_internal_ips = [
-  "some-ip-address",
+  "10.0.0.10",
 ]
-compute_engine_vm_service_account_email = "compute@project-name.iam.gserviceaccount.com"
-keyring-id = "projects/project-name/locations/gcp-region/keyRings/keyring-name"
-keyring-location = "gcp-region"
-keyring-name = "keyring-name"
-keyring-resource = {
-  "id" = "projects/project-name/locations/gcp-region/keyRings/keyring-name"
-  "location" = "gcp-region"
-  "name" = "keyring-name"
-  "project" = "project-name"
-  "timeouts" = null /* object */
+compute_engine_vm_service_account = {
+  "email" = "compute-sa@my-project.iam.gserviceaccount.com"
+  "iam_email" = "serviceAccount:compute-sa@my-project.iam.gserviceaccount.com"
 }
-keyrings-keys = {
-  "default" = {
-    "crypto_key_backend" = ""
-    "destroy_scheduled_duration" = "2592000s"
-    "effective_labels" = tomap({})
-    "id" = "projects/project-name/locations/gcp-region/keyRings/keyring-name/cryptoKeys/default"
-    "import_only" = false
-    "key_ring" = "projects/project-name/locations/gcp-region/keyRings/keyring-name"
-    "labels" = tomap(null) /* of string */
-    "name" = "default"
-    "primary" = tolist([
-      {
-        "name" = "projects/project-name/locations/gcp-region/keyRings/keyring-name/cryptoKeys/default/cryptoKeyVersions/1"
-        "state" = "ENABLED"
-      },
-    ])
-    "purpose" = "ENCRYPT_DECRYPT"
-    "rotation_period" = ""
-    "skip_initial_version_creation" = false
-    "terraform_labels" = tomap({})
-    "timeouts" = null /* object */
-    "version_template" = tolist([
-      {
-        "algorithm" = "GOOGLE_SYMMETRIC_ENCRYPTION"
-        "protection_level" = "HSM"
-      },
-    ])
-  }
-}
-
+compute_engine_vm_service_account_email = "compute-sa@my-project.iam.gserviceaccount.com"
 ```
 ## Verification of a successful deployment?
 
-- Go to the Compute Engine in the GCP Console. Select the VM. Check the Presistent Disk Encryption
+- Go to the Compute Engine in the GCP Console. Select the VM. Check the Persistent Disk Encryption.
