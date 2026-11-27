@@ -46,9 +46,9 @@ To validate this baseline against real-world attacker tactics, techniques, and p
 
 Enforce least privilege across all principals and manage IAM bindings through Terraform rather than manual console edits. Restrict human permissions to create or modify resources to tightly controlled development projects, and execute `terraform apply` operations in higher environments exclusively through the dedicated Cloud Resource Manager automation service account in your CI/CD pipeline.
 
-Configure role groups matching administrative and engineering functions using the `gcp-X-${tenant}-${role}@X.gov` naming convention. Seed initial memberships in Terraform and manage ongoing membership through your enterprise identity provider or Terraform state.
+Configure role groups matching administrative and engineering functions in `fast/stages-aw/0-bootstrap` (`var.groups`, such as `gcp-organization-admins@example.com`, `gcp-security-admins@example.com`, `gcp-vpc-network-admins@example.com`, `gcp-billing-admins@example.com`, and `gcp-devops@example.com`) and per-tenant `admin_principal` groups in `1-resman`. Seed initial bindings in Terraform and manage ongoing membership through your enterprise identity provider or Terraform state.
 
-Run the Stage 0 bootstrap phase using a tightly controlled individual administrator account belonging to the `gcp_org_admins` group, and disable that bootstrap account when it is not actively in use. Bootstrap execution requires Organization Admin or Viewer, Organization Policy Admin, Billing Admin or User, Folder Creator, Access Context Manager Admin or User, and Security Admin permissions. Independent Software Vendors must scope custom and predefined IAM roles strictly to system requirements.
+Run the Stage 0 bootstrap phase using a tightly controlled individual administrator account belonging to the `gcp-organization-admins` group, and disable that account or revoke bootstrap privileges when bootstrap is not actively running. Bootstrap execution requires Organization Admin or Viewer, Organization Policy Admin, Billing Admin or User, Folder Creator, Access Context Manager Admin or User, Assured Workloads Admin, and Security Admin permissions. Independent Software Vendors must scope custom and predefined IAM roles strictly to system requirements.
 
 ### Human access
 
@@ -152,7 +152,7 @@ Independent Software Vendors must deploy a dedicated Security Information and Ev
 
 Enforce multi-factor authentication across all accounts as described in section 3 so compromised user credentials cannot read or exfiltrate sensitive objects from Cloud Storage.
 
-Layer Context-Aware Access policies and VPC Service Controls perimeters around Cloud Storage buckets wherever your target compliance regime supports them. Note that Identity-Aware Proxy is not compliant with IL5, and VPC Service Controls are currently unavailable within an IL5 environment.
+Layer Access Context Manager access levels and VPC Service Controls perimeters (configured in Stage `fast/stages-aw/3-security/vpc-sc.tf`) around Cloud Storage buckets and sensitive APIs across supported IL5 and FedRAMP High environments. Check the [Assured Workloads supported products list](https://cloud.google.com/assured-workloads/docs/supported-products) for current service compliance scope before enabling Identity-Aware Proxy inside IL5 enclaves.
 
 ### Storage boundary references
 
@@ -170,32 +170,27 @@ Google Cloud enforces the `essentialcontacts.managed.allowedContactDomains` orga
 
 Verify and update allowed contact domains through your Infrastructure as Code workflow:
 
-1. Inspect the active [Essential Contacts](https://cloud.google.com/resource-manager/docs/managing-notification-contacts) `essentialcontacts.managed.allowedContactDomains` policy on your organization.
-2. Add each trusted recipient domain prefixed with `@`, such as `@myorgdomain.com` or `@`[partnerdomain.com](http://partnerdomain.com).
-3. Commit these domain policy updates in Terraform or your active policy automation tool rather than editing them manually in the Google Cloud console or `gcloud`, so subsequent pipeline runs do not overwrite your changes.
+1. Inspect the active [Essential Contacts](https://cloud.google.com/resource-manager/docs/managing-notification-contacts) `essentialcontacts.managed.allowedContactDomains` and `essentialcontacts.allowedContactDomains` policies configured in `fast/stages-aw/0-bootstrap/data/custom-org-policies/platform_policy.yaml`.
+2. Set the primary organization domain without a leading `@` in Stage `0-bootstrap` `var.organization.domain`, such as `example.com`; `platform_policy.yaml` prepends `@` automatically when templating those policies.
+3. Add any secondary or partner recipient domains prefixed with `@`, such as `@partner.example.com`, directly to `essentialcontacts.allowedContactDomains` and `essentialcontacts.managed.allowedContactDomains` in `fast/stages-aw/0-bootstrap/data/custom-org-policies/platform_policy.yaml`.
+4. Commit these domain policy updates in Terraform rather than editing them manually in the Google Cloud console or `gcloud`, so subsequent pipeline runs do not overwrite your changes.
 
 ### Adding contacts
 
-Register notification recipients at the organization level for inherited coverage or override them on specific folders and projects:
+Configure notification recipients declaratively in `fast/stages-aw/0-bootstrap` using `var.essential_contacts`, which accepts either a single email string or a map of recipient emails to notification category lists (`SUSPENSION`, `SECURITY`, `TECHNICAL`, `BILLING`, `LEGAL`, `PRODUCT_UPDATES`, or `ALL`):
 
-1. Open <https://console.cloud.google.com> and select the target organization, folder, or project.
-2. Search for and select **Essential Contacts**, then click **Add Contact**.
-3. Enter the recipient group email address and select the notification categories to subscribe:
-   - Select **Suspension** for imminent account or resource suspension alerts.
-   - Select **Security** for security advisories, privacy notices, and vulnerability alerts.
-   - Select **Technical** for service outages, errors, and platform bugs.
-   - Select **Billing** for payment notices, pricing updates, and credit alerts.
-   - Select **Legal** for regulatory compliance and government notices.
-   - Select **Product Updates** for new releases, terms updates, and deprecations.
-   - Select **All** to subscribe the recipient to every notification category.
-4. Click **Save**.
+```hcl
+essential_contacts = {
+  "security@example.com" = ["ALL"]
+  "billing@example.com"  = ["BILLING"]
+}
+```
+
+Stage 0 passes `var.essential_contacts` to the organization (`module.organization`), core administrative projects, and folders so contact coverage inherits automatically across the landing zone.
 
 ### Managing contacts
 
-Update or remove existing Essential Contacts from the Google Cloud console:
-
-1. Select the contact entry under the target notification category.
-2. Click **Edit** to update subscribed categories or click **Delete** to remove the contact.
+Update or remove notification recipients by modifying `essential_contacts` in `fast/stages-aw/0-bootstrap/terraform.tfvars` and applying through your reviewed Terraform pipeline rather than making ad-hoc edits in the Google Cloud console, preventing Terraform state drift and organization policy conflicts.
 
 ### Essential Contacts references
 
@@ -222,11 +217,10 @@ Use Cloud Key Management Service to manage cryptographic keys and application-le
 Because unauthenticated callers can probe Cloud Storage bucket and object existence through error responses, apply strict naming and access hygiene across all buckets:
 
 - Include random suffixes in bucket names such as `stellar-engine-mybucket-gxl3` so external parties cannot guess or enumerate bucket names or infer stored contents.
-- Configure uniform access or default object ACLs before uploading objects so individual objects do not require retroactive permission fixes.
-- Isolate intentionally public assets in dedicated, explicitly labeled buckets such as `stellar-engine-mybucket-public-3vxa`, completely separate from private tenant buckets.
-- Review object access controls before publishing any data as publicly readable, because internet-exposed objects can be replicated immediately beyond your control.
-- Never grant public write access on Cloud Storage buckets, because writable buckets expose your organization to malware hosting, abuse, and legal or financial liability for uploaded content.
-- Issue time-bounded Signed URLs with explicit read, write, or delete scope whenever external users without Google accounts need temporary authenticated access to specific objects.
+- Enforce `constraints/storage.uniformBucketLevelAccess` (`true`) across all buckets so Cloud IAM governs access uniformly and legacy object ACLs remain disabled.
+- Enforce `constraints/storage.publicAccessPrevention` (`true`) and `constraints/iam.allowedPolicyMemberDomains` so buckets and objects cannot grant `allUsers` or `allAuthenticatedUsers` read or write access.
+- Enforce `constraints/storage.secureHttpTransport` (`true`) and configure CMEK encryption keys where mandated by the compliance regime.
+- Issue time-bounded Signed URLs with explicit read or write scope only where temporary authenticated access by approved external parties is strictly required.
 
 ### Data residency
 
