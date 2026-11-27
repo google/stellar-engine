@@ -1,6 +1,7 @@
-main_project_id    = "xxxx-xxxx-main-0"
+main_project_id = "xxxx-xxxx-main-0"
 
 region              = "us-east4"
 deletion_protection = false
+kms_key_self_link   = "projects/xxxx-xxxx-xxxx-iac-core-0/locations/us-east4/keyRings/xxxx-xxxx-keyring/cryptoKeys/default"
 src_lang            = "en" # https://cloud.google.com/translate/docs/languages
 target_lang         = "es"

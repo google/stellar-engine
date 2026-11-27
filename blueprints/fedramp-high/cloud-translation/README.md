@@ -17,17 +17,19 @@ Google Cloud Translation provides real-time text translation, document and batch
 
 ## 2 Blueprint scope
 
-This blueprint enables the Cloud Translation API, creates input and output Cloud Storage buckets, and deploys a `translate-workflow` Workflows pipeline with optional CMEK encryption for asynchronous batch translation.
+This blueprint enables the Cloud Translation, Cloud Storage, and Workflows APIs, provisions service identities and Cloud KMS IAM grants when `kms_key_self_link` is set, creates CMEK-encrypted input and output Cloud Storage buckets in `region`, and deploys a `translate-workflow` Workflows pipeline that calls Cloud Translation in `locations/<region>` for asynchronous batch translation.
 
 ## 3 Compliance scope
 
-- Deploy this blueprint inside a FedRAMP High Assured Workloads folder within your Google Cloud organization, and ensure the Cloud Translation API is enabled on `main_project_id`.
+- Deploy this blueprint inside a FedRAMP High Assured Workloads folder within your Google Cloud organization.
+- Set `kms_key_self_link` to a Cloud KMS CryptoKey in `region` so both Cloud Storage buckets and the Workflows pipeline use Customer-Managed Encryption Keys. Terraform grants `roles/cloudkms.cryptoKeyEncrypterDecrypter` to the Cloud Storage, Cloud Translation, and Workflows service agents after a 60-second propagation wait.
 
 ## 4 Deployment steps
 
 1. Copy `terraform.tfvars.sample` to `terraform.tfvars` and configure your input values:
    - Set `main_project_id` to the target Google Cloud project ID.
    - Set `region` to the target Google Cloud region.
+   - Set `kms_key_self_link` to the regional Cloud KMS CryptoKey resource ID in `region`.
    - Set `deletion_protection` to control workflow deletion protection.
    - Set `src_lang` and `target_lang` to [supported language codes](https://cloud.google.com/translate/docs/languages).
 2. Initialize and apply the Terraform configuration from this directory:
@@ -57,20 +59,19 @@ curl https://www.gutenberg.org/cache/epub/2554/pg2554.txt > ./samples/crime-and-
 2. Upload the sample files from `./samples/` to `<main_project_id>-translate-input`.
 3. Open `translate-workflow` in Workflows and select Execute twice to start the run.
 4. Inspect the translated documents inside `<main_project_id>-translate-output` once execution completes.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
 | name | description | type | required | default |
 |---|---|:---:|:---:|:---:|
-| [main_project_id](variables.tf#L33) | The Google Project ID. | <code>string</code> | ✓ |  |
-| [region](variables.tf#L44) | The Google Cloud region. | <code>string</code> | ✓ |  |
-| [deletion_protection](variables.tf#L15) | Deletion proteciton. | <code>bool</code> |  | <code>true</code> |
+| [main_project_id](variables.tf#L43) | The Google Project ID. | <code>string</code> | ✓ |  |
+| [region](variables.tf#L54) | The Google Cloud region. | <code>string</code> | ✓ |  |
+| [deletion_protection](variables.tf#L15) | Deletion protection. | <code>bool</code> |  | <code>true</code> |
 | [file](variables.tf#L21) | File path of the yaml instructions for the workflow. | <code>string</code> |  | <code>&#34;code&#47;example.yaml&#34;</code> |
-| [kms_key_self_link](variables.tf#L27) | The full self-link of the existing KMS key to use for Workflow encryption (CMEK). | <code>string</code> |  | <code>null</code> |
-| [output_folder](variables.tf#L38) | Name of the folder that will be created in the output bucket to store the translated text. | <code>string</code> |  | <code>&#34;output&#34;</code> |
-| [src_lang](variables.tf#L49) | The source language of the text. | <code>string</code> |  | <code>&#34;es&#34;</code> |
-| [target_lang](variables.tf#L55) | The target language to translate into. | <code>string</code> |  | <code>&#34;en&#34;</code> |
+| [kms_key_self_link](variables.tf#L27) | The full self-link of the existing Cloud KMS CryptoKey in var.region to use for Cloud Storage bucket and Workflow encryption (CMEK). | <code>string</code> |  | <code>null</code> |
+| [output_folder](variables.tf#L48) | Name of the folder that will be created in the output bucket to store the translated text. | <code>string</code> |  | <code>&#34;output&#34;</code> |
+| [src_lang](variables.tf#L59) | The source language of the text. | <code>string</code> |  | <code>&#34;es&#34;</code> |
+| [target_lang](variables.tf#L65) | The target language to translate into. | <code>string</code> |  | <code>&#34;en&#34;</code> |
 
 ## Outputs
 
