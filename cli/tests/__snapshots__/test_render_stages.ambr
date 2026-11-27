@@ -77,8 +77,7 @@
   
   # KMS protection level for CMEK keys. stellar derives it from the
   # regime: SOFTWARE for FEDRAMP_MODERATE, HSM for every other regime.
-  # The variable has no default, so stellar always writes it. Set
-  # kms_protection_level in answers.yaml to choose another level.
+  # Set kms_protection_level in answers.yaml to choose another level.
   kms_protection_level = "HSM"
   
   '''
@@ -211,8 +210,7 @@
   
   # KMS protection level for CMEK keys. stellar derives it from the
   # regime: SOFTWARE for FEDRAMP_MODERATE, HSM for every other regime.
-  # The variable has no default, so stellar always writes it. Set
-  # kms_protection_level in answers.yaml to choose another level.
+  # Set kms_protection_level in answers.yaml to choose another level.
   kms_protection_level = "SOFTWARE"
   
   essential_contacts = "contacts@example.com"
@@ -336,8 +334,7 @@
   
   # KMS protection level for CMEK keys. stellar derives it from the
   # regime: SOFTWARE for FEDRAMP_MODERATE, HSM for every other regime.
-  # The variable has no default, so stellar always writes it. Set
-  # kms_protection_level in answers.yaml to choose another level.
+  # Set kms_protection_level in answers.yaml to choose another level.
   kms_protection_level = "HSM"
   
   essential_contacts = {
@@ -576,8 +573,7 @@
   
   # KMS protection level for CMEK keys. stellar derives it from the
   # regime: SOFTWARE for FEDRAMP_MODERATE, HSM for every other regime.
-  # The variable has no default, so stellar always writes it. Set
-  # kms_protection_level in answers.yaml to choose another level.
+  # Set kms_protection_level in answers.yaml to choose another level.
   kms_protection_level = "HSM"
   
   billing_override = {
@@ -721,8 +717,7 @@
   
   # KMS protection level for CMEK keys. stellar derives it from the
   # regime: SOFTWARE for FEDRAMP_MODERATE, HSM for every other regime.
-  # The variable has no default, so stellar always writes it. Set
-  # kms_protection_level in answers.yaml to choose another level.
+  # Set kms_protection_level in answers.yaml to choose another level.
   kms_protection_level = "HSM"
   
   '''
