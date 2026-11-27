@@ -53,6 +53,3 @@ variable "region" {
   type        = string
 }
 
-
-
-
