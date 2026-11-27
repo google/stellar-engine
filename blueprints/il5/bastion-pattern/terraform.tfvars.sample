@@ -1,6 +1,6 @@
 main_project_id    = "xxxx-xxxx-xxxx-main-0"
 core_project_id    = "xxxx-xxxx-xxxx-iac-core-0"
-network_project_id = "xxxx-xxxx-net-host"
+network_project_id = "xxxx-prod-net-host"
 
 instance_name              = "bastion-instance-00"
 compute_service_account_id = "compute-engine-sa"
@@ -8,8 +8,8 @@ disk_name                  = "data-00"
 region                     = "us-east4"
 zone                       = "us-east4-a"
 
-network_name           = "xxxx-spoke-0"
-subnetwork_name        = "default-us-east4"
+network_name           = "prod-spoke-0"
+subnetwork_name        = "prod-tenant-1-subnet"
 allowed_firewall_ports = ["80", "22", "443"]
 allowed_source_ranges  = [
   "192.168.1.0/24"
