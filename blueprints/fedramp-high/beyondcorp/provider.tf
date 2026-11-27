@@ -23,10 +23,6 @@ terraform {
       source  = "hashicorp/google-beta"
       version = ">= 8.6.0, < 9.0.0" # tftest
     }
-    tls = {
-      source  = "hashicorp/tls"
-      version = "4.0.6"
-    }
   }
 }
 

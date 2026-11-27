@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+resource "google_project_service" "compute_api" {
+  project            = var.main_project_id
+  service            = "compute.googleapis.com"
+  disable_on_destroy = false
+}
+
 module "beyondcorp" {
   source              = "../../../modules/beyondcorp"
   project_id          = var.main_project_id
@@ -21,4 +27,5 @@ module "beyondcorp" {
   iap_user_email      = var.iap_user_email
   endpoint_name       = var.endpoint_name
   policy_title        = var.policy_title
+  depends_on          = [google_project_service.compute_api]
 }
