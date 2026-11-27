@@ -17,24 +17,23 @@ resource "google_project_service" "documentai" {
   project = var.main_project_id
   for_each = toset([
     "documentai.googleapis.com",
+    "storage.googleapis.com",
     "workflows.googleapis.com",
   ])
   service            = each.key
   disable_on_destroy = false
 }
 
-data "google_project" "project" {
-  project_id = var.main_project_id
-}
-
 resource "google_document_ai_processor" "processor" {
+  project      = var.main_project_id
   location     = "us"
   display_name = var.name
   type         = var.type
-  kms_key_name = var.kms_key_name
+  kms_key_name = var.processor_kms_key_name
 
   depends_on = [
     google_project_service.documentai,
+    google_kms_crypto_key_iam_member.documentai_cmek,
   ]
 }
 
@@ -63,7 +62,12 @@ module "input-bucket" {
   location                    = var.region
   force_destroy               = true
   uniform_bucket_level_access = true
-  encryption_key              = var.kms_key_name
+  encryption_key              = var.regional_kms_key_name
+
+  depends_on = [
+    google_project_service.documentai,
+    google_kms_crypto_key_iam_member.gcs_cmek,
+  ]
 }
 
 moved {
@@ -79,7 +83,12 @@ module "output-bucket" {
   location                    = var.region
   force_destroy               = true
   uniform_bucket_level_access = true
-  encryption_key              = var.kms_key_name
+  encryption_key              = var.regional_kms_key_name
+
+  depends_on = [
+    google_project_service.documentai,
+    google_kms_crypto_key_iam_member.gcs_cmek,
+  ]
 }
 
 module "workflows" {
@@ -91,7 +100,7 @@ module "workflows" {
   description         = "Document AI example workflow."
   file                = var.file
   service_account     = google_service_account.workflow_sa.email
-  kms_key_self_link   = var.kms_key_name
+  kms_key_self_link   = var.regional_kms_key_name
   env_vars = {
     project_id    = var.main_project_id
     input_bucket  = module.input-bucket.url
@@ -110,5 +119,6 @@ module "workflows" {
   depends_on = [
     google_project_service.documentai,
     google_service_account.workflow_sa,
+    google_kms_crypto_key_iam_member.workflows_cmek,
   ]
 }

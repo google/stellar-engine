@@ -13,7 +13,7 @@
 # limitations under the License.
 
 variable "deletion_protection" {
-  description = "Deletion proteciton."
+  description = "Deletion protection."
   type        = bool
   default     = true
 }
@@ -22,11 +22,6 @@ variable "file" {
   description = "File path of the yaml instructions for the workflow."
   type        = string
   default     = "code/example.yaml"
-}
-
-variable "kms_key_name" {
-  description = "KMS customer managed encryption key (CMEK) name."
-  type        = string
 }
 
 variable "main_project_id" {
@@ -39,9 +34,36 @@ variable "name" {
   type        = string
 }
 
+variable "processor_kms_key_name" {
+  description = "Cloud KMS CryptoKey resource ID in the us multi-region for Document AI processor encryption."
+  type        = string
+  validation {
+    condition = can(regex(
+      "^projects/[^/]+/locations/us/keyRings/[^/]+/cryptoKeys/[A-Za-z0-9_-]+$",
+      var.processor_kms_key_name
+    ))
+    error_message = "processor_kms_key_name must be a Cloud KMS CryptoKey in locations/us (projects/../locations/us/keyRings/../cryptoKeys/..)."
+  }
+}
+
 variable "region" {
   description = "The Google Cloud region."
   type        = string
+}
+
+variable "regional_kms_key_name" {
+  description = "Cloud KMS CryptoKey resource ID in var.region for Cloud Storage bucket and Workflows encryption."
+  type        = string
+  validation {
+    condition = (
+      can(regex(
+        "^projects/[^/]+/locations/[^/]+/keyRings/[^/]+/cryptoKeys/[A-Za-z0-9_-]+$",
+        var.regional_kms_key_name
+      )) &&
+      try(split("/", var.regional_kms_key_name)[3], "") == var.region
+    )
+    error_message = "regional_kms_key_name must be a Cloud KMS CryptoKey in var.region (projects/../locations/<region>/keyRings/../cryptoKeys/..)."
+  }
 }
 
 variable "type" {
