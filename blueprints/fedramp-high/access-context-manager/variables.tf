@@ -21,22 +21,24 @@ variable "access_levels" {
       ip_subnetworks = list(string)
       members        = list(string)
       negate         = bool
-      device_policy = object({
+      device_policy = optional(object({
         require_screen_lock = bool
-      })
+      }))
       regions = list(string)
     }))
   }))
 }
 
 variable "access_policy_title" {
-  description = "The title for the Access Context Manager policy."
+  description = "Deprecated unused input retained for backwards compatibility; the module looks up the existing organization access policy."
   type        = string
+  default     = null
 }
 
 variable "domain" {
+  description = "Deprecated unused input retained for backwards compatibility."
   type        = string
-  description = "Domain of the project that you will be using."
+  default     = null
 }
 
 variable "main_project_id" {
