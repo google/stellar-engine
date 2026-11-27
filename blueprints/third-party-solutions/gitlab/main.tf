@@ -33,13 +33,20 @@ module "project" {
     "iam.googleapis.com",
   ]
   shared_vpc_service_config = {
-    attach       = true
     host_project = var.network_config.host_project
-    service_identity_iam = {
-      "roles/compute.networkUser" = [
-        "cloudservices", "compute"
-      ]
-    }
-    network_users = var.admin_principals
+    service_agent_iam = (
+      var.network_config.host_project == null
+      ? {}
+      : {
+        "roles/compute.networkUser" = [
+          "cloudservices", "compute"
+        ]
+      }
+    )
+    network_users = (
+      var.network_config.host_project == null
+      ? []
+      : var.admin_principals
+    )
   }
 }
