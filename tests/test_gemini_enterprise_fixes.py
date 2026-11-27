@@ -409,7 +409,17 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
 
         with patch.object(gem4gov, "build") as mock_build:
             mock_service = MagicMock()
-            mock_build.return_value = mock_service
+            mock_crm = MagicMock()
+            mock_crm.projects().get.return_value.execute.return_value = {
+                "projectNumber": "123456789012"
+            }
+
+            def _build_service(api_name, *_args, **_kwargs):
+                if api_name == "cloudresourcemanager":
+                    return mock_crm
+                return mock_service
+
+            mock_build.side_effect = _build_service
             mock_us = mock_service.projects().locations().userStores()
             batch_update = mock_us.batchUpdateUserLicenses
             batch_update.return_value.execute.return_value = {
@@ -439,7 +449,7 @@ class TestGeminiEnterpriseFixes(unittest.TestCase):
                 assign_kwargs["body"]["inlineSource"]["userLicenses"][0][
                     "licenseConfig"
                 ],
-                "projects/proj-1/locations/us/licenseConfigs/lic-abc",
+                "projects/123456789012/locations/us/licenseConfigs/lic-abc",
             )
 
             gem4gov._batch_update_user_licenses(

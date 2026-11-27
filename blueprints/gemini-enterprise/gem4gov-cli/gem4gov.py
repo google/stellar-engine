@@ -1916,8 +1916,19 @@ def _batch_update_user_licenses(
         if license_config_id.startswith("projects/"):
             full_license_config = license_config_id
         else:
+            project_number = get_project_number(credentials, project_id)
+            if not project_number:
+                click.echo(
+                    click.style(
+                        "Error: Could not resolve project number for project "
+                        f"{project_id}. Pass a full license config resource "
+                        "name or verify Cloud Resource Manager access.",
+                        fg="red",
+                    )
+                )
+                sys.exit(1)
             full_license_config = (
-                f"projects/{project_id}/locations/{location}"
+                f"projects/{project_number}/locations/{location}"
                 f"/licenseConfigs/{license_config_id}"
             )
 
