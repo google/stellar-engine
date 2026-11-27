@@ -58,6 +58,9 @@ variable "subnetwork_name" {
 variable "vpc_network_name" {
   description = "Name of the VPC where the subnet is deployed."
   type        = string
-  default     = ""
   nullable    = false
+  validation {
+    condition     = trimspace(var.vpc_network_name) != ""
+    error_message = "vpc_network_name must be a non-empty VPC network name."
+  }
 }

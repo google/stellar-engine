@@ -94,7 +94,6 @@ docker:
 ```
 
 Add additional entries under `docker:` to proxy more upstream container registries.
-
 <!-- BEGIN TFDOC -->
 ## Variables
 
@@ -108,7 +107,7 @@ Add additional entries under `docker:` to proxy more upstream container registri
 | [network_project_id](variables.tf#L43) | Project that the Consumer Compute Engine VPC is located. | <code>string</code> | ✓ |  |
 | [region](variables.tf#L48) | GCP Region to deploy Consumer VM into. | <code>string</code> | ✓ |  |
 | [subnetwork_name](variables.tf#L53) | VPC Subnet to deploy Consumer VM into. | <code>string</code> | ✓ |  |
-| [vpc_network_name](variables.tf#L58) | Name of the VPC where the subnet is deployed. | <code>string</code> |  | <code>&#34;&#34;</code> |
+| [vpc_network_name](variables.tf#L58) | Name of the VPC where the subnet is deployed. | <code>string</code> | ✓ |  |
 
 ## Outputs
 
