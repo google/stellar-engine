@@ -14,16 +14,14 @@
 
 name: tenantKeyManager
 title: "Tenant Cryptographic Key Manager"
-description: "Cryptographic officer role for Cloud KMS key rings, crypto keys, and CMEK lifecycle management. Excludes encrypt, decrypt, sign, log payload read, and IAM policy modification permissions to enforce separation of duties."
+description: "Cryptographic officer role for Cloud KMS key rings, crypto keys, and CMEK lifecycle management. Excludes encrypt, decrypt, sign, log payload read, tag binding writes, and IAM policy modification permissions to enforce separation of duties."
 stage: "GA"
 includedPermissions:
   # Resource discovery
   - resourcemanager.projects.get
 
-  # Cloud KMS key rings
+  # Cloud KMS key rings (tag binding writes belong to tagEditor)
   - cloudkms.keyRings.create
-  - cloudkms.keyRings.createTagBinding
-  - cloudkms.keyRings.deleteTagBinding
   - cloudkms.keyRings.get
   - cloudkms.keyRings.getIamPolicy
   - cloudkms.keyRings.list

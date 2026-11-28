@@ -209,7 +209,7 @@ See the [project module](../../../modules/project/) documentation for examples o
 
 Set `enable_tenant_sod_roles = true` alongside `deploy_org_resources.custom_roles = true` to create four hardened organization-level custom roles from `data/custom-roles-sod/`:
 
-- `tenantKeyManager` (`tenant_key_manager`) manages Cloud KMS key rings, crypto keys, key versions, and import jobs while excluding encrypt, decrypt, sign, log entry payload reads (`logging.logEntries.list` and `logging.views.access`), and IAM policy modification permissions.
+- `tenantKeyManager` (`tenant_key_manager`) manages Cloud KMS key rings, crypto keys, key versions, and import jobs while excluding encrypt, decrypt, sign, log entry payload reads (`logging.logEntries.list` and `logging.views.access`), tag binding writes, and IAM policy modification permissions.
 - `tenantReadOnly` (`tenant_readonly`) grants metadata-only visibility across compute, networking, data stores, analytics, logging, and monitoring while excluding object reads, table data reads, log entry payload reads, secret version access, and write operations.
 - `tagEditor` (`tag_editor`) inspects resources and is the only one of the four roles that creates or deletes resource tag bindings, without organization IAM, organization policy, tag key, hierarchy node tag binding, or Access Context Manager permissions.
 - `tenantProjectAdmin` (`tenant_project_admin`) administers tenant workload services while excluding central networking, network tag writes, Cloud KMS, organization policy, IAM policy modification, tag binding writes, service account impersonation, service account key creation, and service account enable, disable, delete, or undelete.

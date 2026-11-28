@@ -356,6 +356,22 @@ class TestBootstrapSodCustomRoles(unittest.TestCase):
                 f"Unexpected permission in tag_editor: {perm}",
             )
 
+    def test_only_tag_editor_writes_tag_bindings(self):
+        tag_value_writes = {
+            "resourcemanager.tagValueBindings.create",
+            "resourcemanager.tagValueBindings.delete",
+        }
+        for path in sorted(_SOD_ROLES_DIR.glob("*.yaml")):
+            if path.name == "tag_editor.yaml":
+                continue
+            perms = _load_role(path.name)["includedPermissions"]
+            for perm in perms:
+                with self.subTest(role=path.name, perm=perm):
+                    self.assertNotIn(
+                        perm.rsplit(".", 1)[-1], _TAG_BINDING_WRITE_VERBS
+                    )
+                    self.assertNotIn(perm, tag_value_writes)
+
     def test_tenant_project_admin_blocks_privilege_escalation(self):
         perms = set(
             _load_role("tenant_project_admin.yaml")["includedPermissions"]
