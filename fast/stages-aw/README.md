@@ -31,3 +31,7 @@ Stage 2 centralizes Shared VPC host projects, subnets, Cloud DNS zones, and fire
 
 - [3-security](3-security/README.md) provisions security projects, centralized Cloud KMS keys, CIS log metric alerts, and VPC Service Controls perimeters across the landing zone. See the [Security Best Practices Guide](../../docs/security-best-practices.md) for additional hardening guidance.
 
+## 5 Tenant factory stage
+
+- [4-tenant-factory](4-tenant-factory/README.md) provisions environment-scoped tenant folders, multi-project tenant workloads, per-tenant automation, and Shared VPC attachments from YAML manifests with plan-time IAM and network isolation guardrails. It consumes Stage 0 `custom_roles`, Stage 1 `folder_ids`, and Stage 2 `host_project_ids` and keeps tenant onboarding out of `1-resman` state.
+

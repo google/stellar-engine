@@ -1,0 +1,520 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tenant Factory Manifest",
+  "description": "Schema for decoupled multi-project Stage 4 tenants.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "environment",
+    "lifecycle_state",
+    "projects"
+  ],
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "pattern": "^[a-z]([a-z0-9-]{0,18}[a-z0-9])?$",
+      "description": "Lowercase tenant slug; defaults to YAML filename stem."
+    },
+    "descriptive_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 30,
+      "description": "Display name for the environment-scoped tenant folder."
+    },
+    "environment": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Environment key matching an environment_folders entry."
+    },
+    "lifecycle_state": {
+      "type": "string",
+      "enum": [
+        "active",
+        "archived"
+      ],
+      "description": "Controls folder protection, deletion policy, and liens."
+    },
+    "automation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "project_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+        },
+        "create_bucket": {
+          "type": "boolean"
+        },
+        "bucket_location": {
+          "type": "string",
+          "minLength": 2
+        },
+        "bucket_kms_key": {
+          "$ref": "#/definitions/kms_key_ref"
+        },
+        "service_accounts": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ro": {
+              "$ref": "#/definitions/automation_service_account"
+            },
+            "rw": {
+              "$ref": "#/definitions/automation_service_account"
+            }
+          }
+        }
+      }
+    },
+    "contacts": {
+      "$ref": "#/definitions/contacts_map"
+    },
+    "iam": {
+      "$ref": "#/definitions/iam_role_map"
+    },
+    "labels": {
+      "$ref": "#/definitions/labels_map"
+    },
+    "tag_bindings": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "projects": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9-]{0,20}$": {
+          "type": "object",
+          "additionalProperties": false,
+          "if": {
+            "required": [
+              "shared_vpc_network_users"
+            ],
+            "properties": {
+              "shared_vpc_network_users": {
+                "minItems": 1
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "shared_vpc_subnets"
+            ],
+            "properties": {
+              "shared_vpc_subnets": {
+                "minItems": 1
+              }
+            }
+          },
+          "properties": {
+            "name": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,23}[a-z0-9]$"
+            },
+            "descriptive_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 30
+            },
+            "project_template": {
+              "type": "string",
+              "minLength": 1
+            },
+            "contacts": {
+              "$ref": "#/definitions/contacts_map"
+            },
+            "iam": {
+              "$ref": "#/definitions/iam_role_map"
+            },
+            "iam_bindings_additive": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/iam_binding_additive"
+              }
+            },
+            "iam_by_principals": {
+              "$ref": "#/definitions/iam_by_principals_map"
+            },
+            "kms_services": {
+              "type": "object",
+              "propertyNames": {
+                "pattern": "^[a-z0-9-]+\\.googleapis\\.com$"
+              },
+              "additionalProperties": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/definitions/kms_key_ref"
+                }
+              }
+            },
+            "labels": {
+              "$ref": "#/definitions/labels_map"
+            },
+            "lien_reason": {
+              "type": "string",
+              "minLength": 1
+            },
+            "metric_scopes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "service_accounts": {
+              "type": "object",
+              "additionalProperties": false,
+              "patternProperties": {
+                "^[a-z][a-z0-9-]{4,28}[a-z0-9]$": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "description": {
+                      "type": "string"
+                    },
+                    "display_name": {
+                      "type": "string"
+                    },
+                    "iam": {
+                      "$ref": "#/definitions/sa_iam_role_map"
+                    },
+                    "iam_self_roles": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/definitions/allowed_role"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "services": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]+\\.googleapis\\.com$"
+              }
+            },
+            "shared_vpc_host_project": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{4,28}[a-z0-9]$"
+            },
+            "shared_vpc_network_users": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "shared_vpc_service_agent_iam": {
+              "$ref": "#/definitions/shared_vpc_service_agent_iam_map"
+            },
+            "shared_vpc_service_grants": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^\\$service_agents:[a-z0-9-]+\\.googleapis\\.com$"
+              }
+            },
+            "shared_vpc_subnets": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z]+-[a-z]+[0-9]+/[a-z][a-z0-9-]*$"
+              }
+            },
+            "tag_bindings": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "vpc_sc_perimeter": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "perimeter_name"
+              ],
+              "properties": {
+                "perimeter_name": {
+                  "type": "string",
+                  "pattern": "^accessPolicies/[0-9]+/servicePerimeters/[A-Za-z0-9_]+$"
+                },
+                "is_dry_run": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "allowed_role": {
+      "description": "Folder, project, and iam_self_roles grant role.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/role_id"
+        }
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/forbidden_role"
+          },
+          {
+            "$ref": "#/definitions/service_agent_role"
+          }
+        ]
+      }
+    },
+    "automation_service_account": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        }
+      }
+    },
+    "contacts_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string",
+          "enum": [
+            "ALL",
+            "BILLING",
+            "LEGAL",
+            "PRODUCT_UPDATES",
+            "SECURITY",
+            "SUSPENSION",
+            "TECHNICAL"
+          ]
+        }
+      }
+    },
+    "forbidden_role": {
+      "description": "Mirrors local._forbidden_roles in main.tf.",
+      "enum": [
+        "roles/cloudkms.admin",
+        "roles/compute.networkAdmin",
+        "roles/compute.securityAdmin",
+        "roles/compute.xpnAdmin",
+        "roles/dns.admin",
+        "roles/editor",
+        "roles/iam.denyAdmin",
+        "roles/iam.organizationRoleAdmin",
+        "roles/iam.roleAdmin",
+        "roles/iam.securityAdmin",
+        "roles/iam.serviceAccountAdmin",
+        "roles/iam.serviceAccountKeyAdmin",
+        "roles/iam.serviceAccountTokenCreator",
+        "roles/iam.serviceAccountUser",
+        "roles/iam.workloadIdentityPoolAdmin",
+        "roles/iam.workloadIdentityUser",
+        "roles/logging.admin",
+        "roles/logging.configWriter",
+        "roles/orgpolicy.policyAdmin",
+        "roles/owner",
+        "roles/resourcemanager.folderAdmin",
+        "roles/resourcemanager.folderIamAdmin",
+        "roles/resourcemanager.lienModifier",
+        "roles/resourcemanager.organizationAdmin",
+        "roles/resourcemanager.projectIamAdmin",
+        "roles/resourcemanager.tagAdmin",
+        "roles/resourcemanager.tagUser",
+        "roles/serviceusage.serviceUsageAdmin"
+      ]
+    },
+    "iam_binding_additive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "member",
+        "role"
+      ],
+      "properties": {
+        "member": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "$ref": "#/definitions/allowed_role"
+        },
+        "condition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expression",
+            "title"
+          ],
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "expression": {
+              "type": "string",
+              "minLength": 1
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "iam_by_principals_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/definitions/allowed_role"
+        }
+      }
+    },
+    "iam_role_map": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/allowed_role"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "kms_key_ref": {
+      "description": "kms_keys alias or full Cloud KMS crypto key ID.",
+      "type": "string",
+      "anyOf": [
+        {
+          "pattern": "^[^/\\s]+$"
+        },
+        {
+          "pattern": "^projects/[^/]+/locations/[^/]+/keyRings/[^/]+/cryptoKeys/[^/]+$"
+        }
+      ]
+    },
+    "labels_map": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-z0-9_-]{0,63}$"
+      }
+    },
+    "role_id": {
+      "description": "Mirrors local._role_id_regexes in main.tf.",
+      "type": "string",
+      "anyOf": [
+        {
+          "pattern": "^organizations/[0-9]+/roles/[A-Za-z0-9_.]{3,64}$"
+        },
+        {
+          "pattern": "^roles/[A-Za-z0-9_.-]+$"
+        },
+        {
+          "pattern": "^projects/[a-z0-9.:-]+/roles/[A-Za-z0-9_.]{3,64}$"
+        },
+        {
+          "pattern": "^\\$custom_roles:[A-Za-z0-9_-]+$"
+        }
+      ]
+    },
+    "sa_allowed_role": {
+      "description": "Role granted on a tenant workload service account.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/role_id"
+        }
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/definitions/forbidden_role"
+              },
+              {
+                "not": {
+                  "$ref": "#/definitions/sa_scoped_role"
+                }
+              }
+            ]
+          },
+          {
+            "$ref": "#/definitions/service_agent_role"
+          }
+        ]
+      }
+    },
+    "sa_iam_role_map": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/definitions/sa_allowed_role"
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "sa_scoped_role": {
+      "description": "Mirrors local._sa_scoped_privileged_roles in main.tf.",
+      "enum": [
+        "roles/iam.serviceAccountTokenCreator",
+        "roles/iam.serviceAccountUser",
+        "roles/iam.workloadIdentityUser"
+      ]
+    },
+    "service_agent_role": {
+      "description": "Case-insensitive serviceAgent role name match.",
+      "type": "string",
+      "pattern": "[Ss][Ee][Rr][Vv][Ii][Cc][Ee][Aa][Gg][Ee][Nn][Tt]"
+    },
+    "shared_vpc_service_agent_iam_map": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "enum": [
+          "roles/composer.sharedVpcAgent",
+          "roles/compute.networkUser",
+          "roles/container.hostServiceAgentUser",
+          "roles/vpcaccess.user"
+        ]
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string",
+          "pattern": "^\\$service_agents:[a-z0-9-]+$"
+        }
+      }
+    }
+  }
+}
