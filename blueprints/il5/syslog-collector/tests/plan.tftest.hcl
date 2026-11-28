@@ -400,6 +400,8 @@ run "apply_mock_hardened_syslog_collector" {
       for directive in [
         "/usr/local/sbin/fluent-bit-tls-fetch",
         "Type=oneshot",
+        "User=root",
+        "/usr/sbin:/usr/bin:/snap/bin",
         "RemainAfterExit=yes",
         "Wants=network-online.target",
         "After=network-online.target",

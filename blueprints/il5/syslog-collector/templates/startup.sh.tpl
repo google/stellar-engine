@@ -107,6 +107,10 @@ Before=fluent-bit.service
 
 [Service]
 Type=oneshot
+# User= makes systemd set HOME, and /snap/bin covers images that ship the
+# Google Cloud CLI as a Snap package.
+User=root
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/snap/bin
 RemainAfterExit=yes
 UMask=0077
 TimeoutStartSec=300

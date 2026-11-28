@@ -41,10 +41,17 @@ cleanup_tmp() {
 }
 trap cleanup_tmp EXIT
 
-if ! command -v gcloud >/dev/null 2>&1; then
+# Mirror the FB_BIN fallback: Snap-packaged Google Cloud CLI images install
+# gcloud under /snap/bin.
+if command -v gcloud >/dev/null 2>&1; then
+  GCLOUD_BIN="$(command -v gcloud)"
+elif [[ -x /snap/bin/gcloud ]]; then
+  GCLOUD_BIN="/snap/bin/gcloud"
+else
   echo "ERROR: Pre-baked binary 'gcloud' missing in golden image." >&2
   exit 1
 fi
+readonly GCLOUD_BIN
 
 # Fail closed if /run is not RAM-backed tmpfs so private keys never touch disk.
 if command -v findmnt >/dev/null 2>&1; then
@@ -81,7 +88,7 @@ fetch_regional_secret() {
 
   while (( attempt <= max_attempts )); do
     rm -f "$${tmp_path}"
-    if gcloud secrets versions access latest \
+    if "$${GCLOUD_BIN}" secrets versions access latest \
       --project="$${SECRET_PROJECT_ID}" \
       --location="$${REGION}" \
       --secret="$${secret_id}" \
