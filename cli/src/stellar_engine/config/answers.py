@@ -579,8 +579,10 @@ def to_preflight(answers: models.Answers) -> dict:
 
     Returns:
         Field values without unset ones, including the tenant project IDs,
-        the project IDs and Stage 0 addresses that import blocks adopt, and
-        the organization policies that Stage 0 imports.
+        the project IDs and Stage 0 addresses that import blocks adopt, the
+        organization policies that Stage 0 imports, and whether the
+        `overrides.0-bootstrap` answer enables the optional
+        separation-of-duties custom roles.
     """
     tenant_ids = [
         project_id
@@ -618,5 +620,9 @@ def to_preflight(answers: models.Answers) -> dict:
         "compliance_location": answers.compliance.location,
         "billing_budget": answers.budget.amount is not None,
         "existing_org_policies": tuple(answers.existing_org_policies),
+        # The answers model leaves this Stage 0 variable to the overrides.
+        "enable_tenant_sod_roles": answers.overrides.get(
+            paths.BOOTSTRAP, {}
+        ).get("enable_tenant_sod_roles"),
     }
     return {key: value for key, value in values.items() if value is not None}

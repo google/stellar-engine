@@ -256,7 +256,29 @@ class TestCustomRoles:
         found = by_id(checks.check_custom_roles(resolved(make_ctx)))
         item = found["iam.custom_roles"]
         assert item.status == Status.PASS
-        assert f"{len(repo.custom_roles())} custom roles" in item.detail
+        expected_count = len(repo.custom_roles(include_optional=True))
+        assert f"{expected_count} custom roles" in item.detail
+
+    def test_sod_custom_role_unsupported_permission_fails(
+        self, make_ctx, cloud, tmp_path
+    ):
+        sod_dir = tmp_path / "fast/stages-aw/0-bootstrap/data/custom-roles-sod"
+        sod_dir.mkdir(parents=True)
+        (sod_dir / "tenant_key_manager.yaml").write_text(
+            "name: tenantKeyManager\nincludedPermissions:\n"
+            "  - cloudkms.keyRings.get\n"
+            "  - cloudkms.keyRings.fakePermission\n",
+            encoding="utf-8",
+        )
+        cloud.org_testable = {"cloudkms.keyRings.get"}
+        ctx = resolved(make_ctx)
+        ctx.repo = repo_lib.Repo(tmp_path)
+        found = by_id(checks.check_custom_roles(ctx))
+        item = found["iam.custom_roles"]
+        assert item.status == Status.FAIL
+        assert "tenant_key_manager.yaml" in item.detail
+        assert "cloudkms.keyRings.fakePermission" in item.detail
+        assert "custom-roles-sod/*.yaml" in remedy(item)
 
     def test_unsupported_permission_fails_with_filename(
         self, make_ctx, cloud, tmp_path
@@ -1262,6 +1284,22 @@ class TestSharedOrg:
         assert found["shared.resources"].status == Status.WARN
         for name in ("tagViewer", "custom.kmsRotation", "audit-logs"):
             assert name in detail
+
+    def test_existing_sod_roles_warn_only_when_opted_in(self, make_ctx, cloud):
+        sod_role_ids = (
+            "tagEditor",
+            "tenantKeyManager",
+            "tenantProjectAdmin",
+            "tenantReadOnly",
+        )
+        cloud.custom_roles = set(sod_role_ids)
+        found = by_id(checks.check_shared_org(resolved(make_ctx)))
+        assert found["shared.resources"].status == Status.PASS
+        ctx = resolved(make_ctx, enable_tenant_sod_roles=True)
+        item = by_id(checks.check_shared_org(ctx))["shared.resources"]
+        assert item.status == Status.WARN
+        for role_id in sod_role_ids:
+            assert f"custom role {role_id}" in item.detail
 
     def test_foreign_grants_on_authoritative_roles_warn(self, make_ctx, cloud):
         prefix_sa = (

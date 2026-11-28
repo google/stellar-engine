@@ -161,7 +161,9 @@ class FakeCloud:
         if self.org_testable is not None:
             return self.org_testable
         perms = {p for group in self._all_role_perms() for p in group}
-        for role in repo_lib.Repo(REPO_ROOT).custom_roles():
+        for role in repo_lib.Repo(REPO_ROOT).custom_roles(
+            include_optional=True
+        ):
             perms.update(role.permissions)
         return perms
 

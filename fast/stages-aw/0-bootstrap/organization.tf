@@ -103,6 +103,27 @@ locals {
     keys(local._iam)
   ))
 
+  _sod_custom_roles_path = "${path.module}/data/custom-roles-sod"
+  _sod_custom_roles_raw = (
+    var.deploy_org_resources.custom_roles && var.enable_tenant_sod_roles
+    ? {
+      for f in try(fileset(local._sod_custom_roles_path, "*.yaml"), []) :
+      replace(f, ".yaml", "") => yamldecode(
+        file("${local._sod_custom_roles_path}/${f}")
+      )
+    }
+    : {}
+  )
+  _sod_custom_roles = {
+    for k, v in local._sod_custom_roles_raw :
+    k => {
+      name        = lookup(v, "name", k)
+      title       = try(v.title, null)
+      description = try(v.description, null)
+      stage       = try(v.stage, null)
+      permissions = v["includedPermissions"]
+    }
+  }
   _org_policy_factory_path = pathexpand(coalesce(var.factories_config.org_policy, "-"))
   # Some of the org policies require templating to construct, they have been moved to data/custom-org-policies
   # load org policy yaml files from a subdirectory
@@ -282,7 +303,13 @@ locals {
   }
   custom_roles = (
     var.deploy_org_resources.custom_roles
-    ? module.organization.custom_role_id
+    ? merge(
+      module.organization.custom_role_id,
+      {
+        for k, v in google_organization_iam_custom_role.sod :
+        k => "organizations/${var.organization.id}/roles/${local._sod_custom_roles[k].name}"
+      }
+    )
     : {}
   )
   deploy_root_folder_config = (
@@ -317,6 +344,41 @@ module "branch-common-services-folder" {
   depends_on = [module.organization-logging]
 }
 
+
+resource "google_organization_iam_custom_role" "sod" {
+  for_each    = local._sod_custom_roles
+  org_id      = tostring(var.organization.id)
+  role_id     = each.value.name
+  title       = coalesce(each.value.title, "Custom role ${each.value.name}")
+  description = coalesce(each.value.description, "Terraform-managed.")
+  stage       = each.value.stage
+  permissions = each.value.permissions
+  lifecycle {
+    # Fail the plan when var.custom_roles or factories_config.custom_roles
+    # reuses an SoD map key or role_id, instead of silently overwriting the
+    # exported custom_roles entry or failing the apply with AlreadyExists.
+    precondition {
+      condition = !contains(
+        keys(module.organization.custom_role_id), each.key
+      )
+      error_message = join(" ", [
+        "SoD custom role key ${each.key} is already defined by custom_roles",
+        "or factories_config.custom_roles; rename or remove that role.",
+      ])
+    }
+    precondition {
+      condition = !contains(
+        values(module.organization.custom_role_id),
+        "organizations/${var.organization.id}/roles/${each.value.name}"
+      )
+      error_message = join(" ", [
+        "SoD custom role_id ${each.value.name} is already defined by",
+        "custom_roles or factories_config.custom_roles; rename or remove",
+        "that role.",
+      ])
+    }
+  }
+}
 
 module "organization" {
   source          = "../../../modules/organization-se"

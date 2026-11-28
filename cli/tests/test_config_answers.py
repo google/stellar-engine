@@ -614,6 +614,20 @@ def test_to_preflight_reports_a_budget():
     assert answers_lib.to_preflight(answers)["billing_budget"] is True
 
 
+def test_to_preflight_reports_tenant_sod_roles():
+    # The answers model leaves enable_tenant_sod_roles to the 0-bootstrap
+    # overrides, so preflight reads it there to check the optional roles.
+    values = answers_lib.to_preflight(helpers.minimal_answers())
+    assert "enable_tenant_sod_roles" not in values
+    answers = helpers.minimal_answers(
+        overrides={"0-bootstrap": {"enable_tenant_sod_roles": True}}
+    )
+    values = answers_lib.to_preflight(answers)
+    assert values["enable_tenant_sod_roles"] is True
+    resolved = inputs_lib.resolve({}, None, values)
+    assert resolved.enable_tenant_sod_roles is True
+
+
 def test_to_preflight_fits_preflight_inputs():
     values = answers_lib.to_preflight(
         helpers.minimal_answers(bootstrap_user=None, stage0_phase="final")

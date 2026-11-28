@@ -112,6 +112,17 @@ def preflight(
             ),
         ),
     ] = None,
+    enable_tenant_sod_roles: Annotated[
+        bool,
+        typer.Option(
+            "--enable-tenant-sod-roles",
+            envvar="STELLAR_ENABLE_TENANT_SOD_ROLES",
+            help=(
+                "Match a Stage 0 enable_tenant_sod_roles of true: also check "
+                "the optional separation-of-duties custom role IDs."
+            ),
+        ),
+    ] = False,
     config_env: Annotated[
         pathlib.Path | None,
         typer.Option(
@@ -166,6 +177,7 @@ def preflight(
         "groups": _parse_groups(group),
         "bootstrap_user": bootstrap_user,
         "redeploy": redeploy,
+        "enable_tenant_sod_roles": enable_tenant_sod_roles,
     }
     err_console = common.console(stderr=True)
     session = common.session(home, repo)

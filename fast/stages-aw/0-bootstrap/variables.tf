@@ -160,6 +160,13 @@ variable "deploy_org_resources" {
   default  = {}
 }
 
+variable "enable_tenant_sod_roles" {
+  description = "Create optional organization-level separation-of-duties custom roles for tenant operations from data/custom-roles-sod when deploy_org_resources.custom_roles is true."
+  type        = bool
+  nullable    = false
+  default     = false
+}
+
 variable "essential_contacts" {
   description = "Email or map of emails to notification category lists used for essential contacts, unset if null or empty."
   type        = any

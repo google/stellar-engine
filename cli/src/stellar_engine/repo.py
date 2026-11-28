@@ -59,6 +59,7 @@ _VERSION_FLOOR_RE = re.compile(r">=\s*([0-9.]+)")
 # `*_policy.yaml` file of the plain directory with `yamldecode`, and renders
 # the files of the templated directory with `templatefile` first.
 _CUSTOM_ROLES_DIR = "data/custom-roles"
+_SOD_CUSTOM_ROLES_DIR = "data/custom-roles-sod"
 _ORG_POLICY_DIR = "data/org-policies"
 _TEMPLATED_ORG_POLICY_DIR = "data/custom-org-policies"
 _ORG_POLICY_GLOB = "*_policy.yaml"
@@ -603,56 +604,71 @@ class Repo:
         default = self._bootstrap_variables["log_sinks"].get("default", {})
         return sorted(hcl.unquote(name) for name in default)
 
-    def custom_roles(self) -> list[CustomRole]:
+    def custom_roles(
+        self, *, include_optional: bool = False
+    ) -> list[CustomRole]:
         """Returns the organization custom role definitions Stage 0 creates.
 
-        Reads `fast/stages-aw/0-bootstrap/data/custom-roles/*.yaml`. Returns
-        an empty list when the directory is missing or contains no YAML files.
+        Reads `fast/stages-aw/0-bootstrap/data/custom-roles/*.yaml`, and also
+        `data/custom-roles-sod/*.yaml` when `include_optional` is true. Returns
+        an empty list when the directories are missing or contain no YAML files.
 
         Raises:
             RepoError: If a custom role YAML file cannot be parsed or declares
                 an invalid `includedPermissions` field.
         """
-        directory = self.bootstrap_dir / _CUSTOM_ROLES_DIR
-        if not directory.is_dir():
-            return []
+        subdirs = (
+            (_CUSTOM_ROLES_DIR, _SOD_CUSTOM_ROLES_DIR)
+            if include_optional
+            else (_CUSTOM_ROLES_DIR,)
+        )
         roles = []
-        for path in sorted(directory.glob("*.yaml")):
-            try:
-                data = yaml.safe_load(path.read_text(encoding="utf-8"))
-            except yaml.YAMLError as error:
-                raise RepoError(
-                    f"Cannot parse custom role file {path.name}: {error}"
-                ) from error
-            if data is None:
-                data = {}
-            if not isinstance(data, dict):
-                raise RepoError(
-                    f"Custom role file {path.name} must contain a YAML mapping."
-                )
-            raw_perms = data.get("includedPermissions")
-            if raw_perms is None:
-                perms: tuple[str, ...] = ()
-            elif isinstance(raw_perms, list) and all(
-                isinstance(item, str) for item in raw_perms
-            ):
-                perms = tuple(raw_perms)
-            else:
-                raise RepoError(
-                    f"Custom role file {path.name} must declare "
-                    "`includedPermissions` as a list of strings."
-                )
-            role_id = str(data.get("name") or path.stem)
-            roles.append(CustomRole(path.name, role_id, perms))
+        for subdir in subdirs:
+            directory = self.bootstrap_dir / subdir
+            if not directory.is_dir():
+                continue
+            for path in sorted(directory.glob("*.yaml")):
+                try:
+                    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+                except yaml.YAMLError as error:
+                    raise RepoError(
+                        f"Cannot parse custom role file {path.name}: {error}"
+                    ) from error
+                if data is None:
+                    data = {}
+                if not isinstance(data, dict):
+                    raise RepoError(
+                        f"Custom role file {path.name} must contain a YAML "
+                        "mapping."
+                    )
+                raw_perms = data.get("includedPermissions")
+                if raw_perms is None:
+                    perms: tuple[str, ...] = ()
+                elif isinstance(raw_perms, list) and all(
+                    isinstance(item, str) for item in raw_perms
+                ):
+                    perms = tuple(raw_perms)
+                else:
+                    raise RepoError(
+                        f"Custom role file {path.name} must declare "
+                        "`includedPermissions` as a list of strings."
+                    )
+                role_id = str(data.get("name") or path.stem)
+                roles.append(CustomRole(path.name, role_id, perms))
         return roles
 
-    def custom_role_ids(self):
+    def custom_role_ids(self, *, include_optional: bool = False):
         """Returns the organization custom role IDs that Stage 0 creates.
 
         A role file without a `name` key falls back to its file name, which
-        matches how the organization module names it.
+        matches how the organization module names it. With
+        `include_optional`, the IDs also cover the opt-in roles under
+        `data/custom-roles-sod/`.
         """
-        return [role.role_id for role in self.custom_roles()]
+        return [
+            role.role_id
+            for role in self.custom_roles(include_optional=include_optional)
+        ]
 
     def custom_constraint_names(self):
         """Returns the organization custom constraint names Stage 0 creates."""
