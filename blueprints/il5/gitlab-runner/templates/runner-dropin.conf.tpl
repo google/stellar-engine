@@ -24,6 +24,14 @@ After=gitlab-runner-metadata-guard.service
 
 %{ endif ~}
 [Service]
+%{ if executor == "docker" ~}
+# GitLab Runner reads /root/.docker/config.json and docker-credential-gcloud
+# reads its gcloud configuration through HOME, which systemd leaves unset
+# for units without User= before systemd 255.
+Environment=HOME=/root
+%{ endif ~}
+# /snap/bin covers images that ship the Google Cloud CLI as a Snap package.
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/snap/bin
 KillMode=mixed
 KillSignal=SIGQUIT
 TimeoutStopSec=${stop_timeout_secs}

@@ -304,6 +304,14 @@ run "plan_hardened_default_runner" {
       ) &&
       strcontains(
         module.runner-vm.instance.metadata["startup-script"],
+        "Environment=HOME=/root",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        ":/usr/bin:/snap/bin",
+      ) &&
+      strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
         "TimeoutStopSec=90",
       ) &&
       can(regex(
@@ -453,6 +461,10 @@ run "plan_managed_regional_cmek_secret_and_shell_executor" {
       !strcontains(
         module.runner-vm.instance.metadata["startup-script"],
         "Requires=gitlab-runner-metadata-guard.service",
+      ) &&
+      !strcontains(
+        module.runner-vm.instance.metadata["startup-script"],
+        "Environment=HOME=/root",
       )
     )
     error_message = "Expected shell executor without the docker guard unit."

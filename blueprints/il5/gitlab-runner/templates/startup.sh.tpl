@@ -19,6 +19,9 @@
 
 set -euo pipefail
 umask 077
+# Images that ship the Google Cloud CLI as a Snap package install gcloud and
+# docker-credential-gcloud under /snap/bin.
+export PATH="$${PATH}:/snap/bin"
 
 readonly GITLAB_URL='${gitlab_url}'
 readonly REGION='${region}'
