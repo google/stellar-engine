@@ -117,6 +117,7 @@ _FORBIDDEN_READONLY_VERB_PREFIXES = (
 _FORBIDDEN_PROJECT_ADMIN_PERMS = {
     "cloudbuild.builds.create",
     "compute.instances.setMetadata",
+    "compute.instances.setTags",
     "iam.serviceAccounts.delete",
     "iam.serviceAccounts.disable",
     "iam.serviceAccounts.enable",

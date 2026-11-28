@@ -14,7 +14,7 @@
 
 name: tenantProjectAdmin
 title: "Tenant Project Administrator"
-description: "Hardened tenant workload administrator for compute, data, CI/CD, and analytics. Excludes central networking, Cloud KMS, organization policy, IAM policy changes, tag binding writes, and service account impersonation, key creation, enable, or undelete."
+description: "Hardened tenant workload administrator for compute, data, CI/CD, and analytics. Excludes central networking, network tags, Cloud KMS, organization policy, IAM policy changes, tag binding writes, and service account impersonation, key creation, enable, or undelete."
 stage: "GA"
 includedPermissions:
   # Resource Manager, service discovery, read-only tag discovery, and
@@ -77,7 +77,9 @@ includedPermissions:
   - compute.instances.resume
   - compute.instances.setDiskAutoDelete
   - compute.instances.setLabels
-  - compute.instances.setTags
+  # No compute.instances.setTags: network tags select Shared VPC firewall
+  # rules, so only network administrators may set them, including at
+  # instance creation.
   - compute.instances.start
   - compute.instances.stop
   - compute.instances.suspend
